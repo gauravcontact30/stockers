@@ -1,3 +1,5 @@
+import { getPerformanceSummary, type PerformanceSummary } from "./stock-performance";
+
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 function toStringArray(value: unknown, fallback: string[]): string[] {
@@ -107,6 +109,27 @@ export function buildDemoAnalysis(stock: string) {
   };
 }
 
+function pct(value: number | null): string {
+  return typeof value === "number" && Number.isFinite(value) ? `${value >= 0 ? "+" : ""}${value.toFixed(2)}%` : "not available";
+}
+
+// An LLM asked about a stock will happily invent a price or a "up 40% this year" claim. Rather
+// than hope it doesn't, the real Yahoo Finance figures are handed to it as the only numbers it
+// is allowed to quote — so the narrative it writes is anchored to the same data the cards show.
+function buildMarketFacts(performance: PerformanceSummary): string {
+  const price =
+    typeof performance.price === "number"
+      ? `${performance.currency} ${performance.price.toFixed(2)}`
+      : "not available";
+
+  return [
+    `Verified market data for ${performance.symbol} from Yahoo Finance${performance.asOf ? ` as of ${performance.asOf}` : ""}:`,
+    `- Last traded price: ${price}`,
+    `- Returns — 1D: ${pct(performance.oneDay)}, 1W: ${pct(performance.oneWeek)}, 1M: ${pct(performance.oneMonth)}, 6M: ${pct(performance.sixMonth)}, 1Y: ${pct(performance.oneYear)}, 3Y: ${pct(performance.threeYear)}, 5Y: ${pct(performance.fiveYear)}, Overall${performance.overallSince ? ` (since ${performance.overallSince})` : ""}: ${pct(performance.overall)}`,
+    "Use ONLY these numbers when referring to price or performance. Do not state, estimate, or round any other price, return, target, market cap, or valuation figure. If a figure is marked \"not available\", say so rather than supplying one. Keep every other claim qualitative.",
+  ].join("\n");
+}
+
 // The LLM call itself takes 15-25s, so an in-memory, server-side cache is the single biggest
 // lever for perceived speed: re-opening a report you (or another visitor) already researched
 // recently returns instantly instead of re-paying that latency and OpenRouter cost.
@@ -124,6 +147,7 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
   }
 
   try {
+    const performance = await getPerformanceSummary(stock);
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -139,11 +163,12 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
             role: "system",
             content:
               "You are stockers, an AI research assistant for Indian equities and ETFs. Return compact JSON only, with these keys: stock, marketPulse, summary, positiveSignals, negativeSignals, score, risk, nextSteps, prediction, newsFocus, outlook, recommendation, recommendationReasons, keyInsights, marketTrends, companyActions, positiveNews. " +
-              "recommendation must be exactly one of \"Buy\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there.",
+              "recommendation must be exactly one of \"Buy\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
+              "Accuracy rule: the user message supplies verified live market data. Every price or performance number you write must be copied from it verbatim. Never invent or estimate prices, returns, price targets, market caps, valuation multiples, or percentages.",
           },
           {
             role: "user",
-            content: `Analyze ${stock} for Indian investors using current market news and trend themes. Give a clear Buy, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
+            content: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Buy, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
           },
         ],
         temperature: 0.7,

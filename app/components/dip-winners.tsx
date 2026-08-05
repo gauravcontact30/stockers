@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { CapTierPill, LiveIndicator } from "./market-badges";
+import { LiveMarketValue, StockReturns } from "./stock-returns";
 import { sectors, type CapTier } from "../lib/indian-stocks";
 
 type ReturnPeriod = "1mo" | "6mo" | "1y" | "3y" | "5y" | "max";
@@ -35,7 +36,6 @@ type Filters = {
   period: ReturnPeriod;
   minReturn: number;
   declinePeriod: ReturnPeriod;
-  minDecline: number;
 };
 
 const CAP_TIER_OPTIONS: CapTier[] = ["Large", "Mid", "Small"];
@@ -70,7 +70,6 @@ const DEFAULT_FILTERS: Filters = {
   period: "6mo",
   minReturn: 20,
   declinePeriod: "1mo",
-  minDecline: 0,
 };
 
 function buildQuery(filters: Filters) {
@@ -86,7 +85,6 @@ function buildQuery(filters: Filters) {
   params.set("period", filters.period);
   params.set("minReturn", String(filters.minReturn));
   params.set("declinePeriod", filters.declinePeriod);
-  params.set("minDecline", String(filters.minDecline));
   params.set("limit", String(RESULT_LIMIT));
   return params.toString();
 }
@@ -114,11 +112,6 @@ function DipLogo({ src, name }: { src: string; name: string }) {
       className="h-9 w-9 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1.5 dark:border-slate-700"
     />
   );
-}
-
-function formatRupees(value: number | null) {
-  if (value === null) return "—";
-  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const inputClass =
@@ -259,7 +252,7 @@ export function DipWinners() {
         </label>
 
         <label className={labelClass}>
-          Down at least X% over
+          Measure the pullback over
           <select
             value={draftFilters.declinePeriod}
             onChange={(e) => setDraftFilters((prev) => ({ ...prev, declinePeriod: e.target.value as ReturnPeriod }))}
@@ -271,18 +264,6 @@ export function DipWinners() {
               </option>
             ))}
           </select>
-        </label>
-
-        <label className={labelClass}>
-          Min decline over that period (%)
-          <input
-            type="number"
-            min={0}
-            step={5}
-            value={draftFilters.minDecline}
-            onChange={(e) => setDraftFilters((prev) => ({ ...prev, minDecline: Number(e.target.value) }))}
-            className={inputClass}
-          />
         </label>
 
         <div className={labelClass}>
@@ -359,8 +340,8 @@ export function DipWinners() {
 
             {!loading &&
               stocks.map((stock) => (
+                <Fragment key={stock.symbol}>
                 <tr
-                  key={stock.symbol}
                   onClick={() => handleRowSelect(stock.symbol)}
                   className={`cursor-pointer border-t border-slate-100 transition hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40 ${
                     selected === stock.symbol ? "bg-rose-50/60 dark:bg-rose-500/10" : ""
@@ -380,7 +361,7 @@ export function DipWinners() {
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{stock.sector}</td>
                   <td className="px-4 py-3 text-right">
-                    <p className="font-semibold text-slate-900 dark:text-white">{formatRupees(stock.price)}</p>
+                    <LiveMarketValue symbol={stock.symbol} fallbackPrice={stock.price} showChange={false} className="justify-end" />
                     <LiveIndicator className="justify-end" />
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-rose-600 dark:text-rose-400">
@@ -397,6 +378,20 @@ export function DipWinners() {
                     {stock.declineReturn < 0 ? `▼ ${Math.abs(stock.declineReturn).toFixed(1)}%` : "—"}
                   </td>
                 </tr>
+                <tr
+                  onClick={() => handleRowSelect(stock.symbol)}
+                  className={`cursor-pointer transition ${selected === stock.symbol ? "bg-rose-50/60 dark:bg-rose-500/10" : ""}`}
+                >
+                  <td colSpan={6} className="px-4 pb-3">
+                    <StockReturns
+                      symbol={stock.symbol}
+                      columns={8}
+                      label="Returns"
+                      className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40"
+                    />
+                  </td>
+                </tr>
+                </Fragment>
               ))}
           </tbody>
         </table>

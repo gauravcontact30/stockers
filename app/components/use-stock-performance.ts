@@ -37,7 +37,7 @@ const cache = new Map<string, StockPerformance>();
 const inFlight = new Map<string, Promise<StockPerformance | null>>();
 
 let queue: string[] = [];
-let resolvers = new Map<string, ((value: StockPerformance | null) => void)[]>();
+let resolvers = new Map<string, (value: StockPerformance | null) => void>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function flush() {
@@ -48,9 +48,11 @@ async function flush() {
   resolvers = new Map();
 
   const settle = (symbol: string, value: StockPerformance | null) => {
+    // A null result stays out of the cache so the symbol is retried rather than being stuck
+    // showing dashes for the rest of the session after one bad response.
     if (value) cache.set(symbol, value);
     inFlight.delete(symbol);
-    pending.get(symbol)?.forEach((resolve) => resolve(value));
+    pending.get(symbol)?.(value);
   };
 
   for (let start = 0; start < symbols.length; start += MAX_BATCH) {
@@ -69,19 +71,15 @@ async function flush() {
   }
 }
 
+// The in-flight map guarantees a symbol is queued at most once, so a single resolver per symbol
+// is enough — every later caller for the same symbol shares that one pending promise.
 function requestPerformance(symbol: string): Promise<StockPerformance | null> {
-  const cached = cache.get(symbol);
-  if (cached) return Promise.resolve(cached);
-
   const existing = inFlight.get(symbol);
   if (existing) return existing;
 
   const promise = new Promise<StockPerformance | null>((resolve) => {
     queue.push(symbol);
-    const waiting = resolvers.get(symbol);
-    if (waiting) waiting.push(resolve);
-    else resolvers.set(symbol, [resolve]);
-
+    resolvers.set(symbol, resolve);
     if (flushTimer === null) flushTimer = setTimeout(flush, FLUSH_DELAY_MS);
   });
 
@@ -89,31 +87,20 @@ function requestPerformance(symbol: string): Promise<StockPerformance | null> {
   return promise;
 }
 
+// State is derived during render rather than synchronised through the effect: the cache is an
+// external store, so reading it while rendering keeps a cached symbol instant, and the only
+// setState left is the async one in the response handler. Tagging the resolved value with the
+// symbol it belongs to stops a slow response for the previous symbol from being shown against
+// the current one.
 export function useStockPerformance(symbol: string | null) {
-  const [performance, setPerformance] = useState<StockPerformance | null>(() => (symbol ? (cache.get(symbol) ?? null) : null));
-  const [loading, setLoading] = useState(() => Boolean(symbol) && !cache.has(symbol ?? ""));
+  const [resolved, setResolved] = useState<{ symbol: string; data: StockPerformance | null } | null>(null);
 
   useEffect(() => {
-    if (!symbol) {
-      setPerformance(null);
-      setLoading(false);
-      return;
-    }
-
-    const cached = cache.get(symbol);
-    if (cached) {
-      setPerformance(cached);
-      setLoading(false);
-      return;
-    }
+    if (!symbol || cache.has(symbol)) return;
 
     let cancelled = false;
-    setLoading(true);
-
     requestPerformance(symbol).then((data) => {
-      if (cancelled) return;
-      setPerformance(data);
-      setLoading(false);
+      if (!cancelled) setResolved({ symbol, data });
     });
 
     return () => {
@@ -121,5 +108,12 @@ export function useStockPerformance(symbol: string | null) {
     };
   }, [symbol]);
 
-  return { performance, loading };
+  if (!symbol) return { performance: null, loading: false };
+
+  const cached = cache.get(symbol);
+  if (cached) return { performance: cached, loading: false };
+
+  if (resolved?.symbol === symbol) return { performance: resolved.data, loading: false };
+
+  return { performance: null, loading: true };
 }

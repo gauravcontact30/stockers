@@ -49,3 +49,22 @@ body {
 @utility animate-marquee {
   animation: marquee 32s linear infinite;
 }
+
+/* Breathing glow for the live market-pulse bars. It signals that the feed is live; the bar's
+   height underneath is the real advance/decline share and is never animated. */
+@keyframes pulse-bar {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleY(0.85);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
+}
+
+@utility animate-pulse-bar {
+  animation: pulse-bar 1s ease-in-out infinite;
+  transform-origin: bottom;
+}

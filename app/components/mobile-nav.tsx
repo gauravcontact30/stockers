@@ -44,16 +44,21 @@ export function MobileNav({ links }: { links: NavLink[] }) {
         </div>
 
         <nav className="mt-4 flex flex-col gap-1">
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-            >
-              {link.label}
-            </a>
-          ))}
+          {links.map((link) => {
+            // Same-page anchors stay plain <a> so the browser handles smooth scrolling; links to
+            // another route go through Link for client-side navigation.
+            const NavTag = link.href.startsWith("/") ? Link : "a";
+            return (
+              <NavTag
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
+              >
+                {link.label}
+              </NavTag>
+            );
+          })}
         </nav>
 
         <div className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">

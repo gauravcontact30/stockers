@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { CapTierPill, LiveIndicator } from "./market-badges";
+import { LiveMarketValue, StockReturns } from "./stock-returns";
 import type { CapTier } from "../lib/indian-stocks";
 
 type Pick = {
@@ -68,11 +69,6 @@ function normalizeRecommendation(recommendation?: string) {
     return { label: "Hold", className: "bg-amber-500 text-white" };
   }
   return { label: "Buy", className: "bg-emerald-600 text-white" };
-}
-
-function formatRupees(value: number | null) {
-  if (value === null) return "—";
-  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function relativeTime(iso?: string) {
@@ -146,8 +142,6 @@ export function TopPicksToday() {
 
         {!loading &&
           picks.map((pick, index) => {
-            const isUp = (pick.changePercent ?? 0) >= 0;
-            const changeClass = pick.changePercent === null ? "text-slate-400 dark:text-slate-500" : isUp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
             const isActive = index === selected;
             const rec = normalizeRecommendation(pick.analysis.recommendation);
             const why = pick.analysis.recommendationReasons?.[0] || pick.analysis.keyInsights?.[0];
@@ -181,16 +175,21 @@ export function TopPicksToday() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="font-semibold text-slate-900 dark:text-white">{formatRupees(pick.price)}</span>
-                  <span className={`text-sm font-medium ${changeClass}`}>
-                    {pick.changePercent === null ? "—" : `${isUp ? "▲" : "▼"} ${Math.abs(pick.changePercent).toFixed(2)}%`}
-                  </span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-end">
+                <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <LiveMarketValue
+                    symbol={pick.symbol}
+                    fallbackPrice={pick.price}
+                    fallbackChangePercent={pick.changePercent}
+                    className="min-w-0 flex-1"
+                  />
                   <LiveIndicator />
                 </div>
+
+                <StockReturns
+                  symbol={pick.symbol}
+                  label="Returns"
+                  className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40"
+                />
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${outlookClass(pick.outlook)}`}>

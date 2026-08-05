@@ -2,6 +2,32 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TopPicksToday } from "../../app/components/top-picks-today";
 
+// Only the data layer behind the price/returns strip is stubbed — the real LiveMarketValue and
+// StockReturns still render, so these tests keep asserting that each card is actually wired to
+// the live feed. BBB stands in for a symbol the feed has no data for.
+jest.mock("../../app/components/use-stock-performance", () => ({
+  useStockPerformance: (symbol: string | null) => ({
+    performance:
+      symbol && symbol !== "BBB"
+        ? {
+            symbol,
+            currency: "INR",
+            price: 111.11,
+            oneDay: 3.33,
+            oneWeek: 1.11,
+            oneMonth: -2.22,
+            sixMonth: 12.5,
+            oneYear: 40,
+            threeYear: 150.5,
+            fiveYear: 480,
+            overall: 12345,
+            overallSince: "1999-04-01",
+          }
+        : null,
+    loading: false,
+  }),
+}));
+
 jest.mock("../../app/components/ai-report-modal", () => ({
   AiReportModal: (props: any) => (
     <div
@@ -115,16 +141,29 @@ describe("TopPicksToday", () => {
     // Top pick badge only on first card
     expect(screen.getAllByText("★ Top pick")).toHaveLength(1);
 
-    // Price formatting
+    // The live quote wins over the price snapshot baked into the daily picks cache (₹100.50).
     const aaaCard = screen.getByText("AAA").closest("button")!;
-    expect(within(aaaCard).getByText("₹100.50")).toBeInTheDocument();
-    const bbbCard = screen.getByText("BBB").closest("button")!;
-    expect(within(bbbCard).getAllByText("—")).toHaveLength(2);
+    expect(within(aaaCard).getByText("₹111.11")).toBeInTheDocument();
+    // Today's move appears twice: once next to the price, once as the 1D cell of the strip.
+    expect(within(aaaCard).getAllByText("+3.33%")).toHaveLength(2);
 
-    // Change classes
-    expect(within(aaaCard).getByText("▲ 2.50%")).toBeInTheDocument();
+    // Every card carries the full trailing-return strip.
+    expect(within(aaaCard).getByText("+1.11%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("-2.22%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("+12.50%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("+40.00%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("+150.5%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("+480.0%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("+12345%")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("Returns")).toBeInTheDocument();
+    expect(within(aaaCard).getByText("since 1999")).toBeInTheDocument();
+
+    // With no feed data, price, today's move and all eight return cells fall back to a dash.
+    const bbbCard = screen.getByText("BBB").closest("button")!;
+    expect(within(bbbCard).getAllByText("—")).toHaveLength(10);
+
     const cccCard = screen.getByText("CCC").closest("button")!;
-    expect(within(cccCard).getByText("▼ 1.20%")).toBeInTheDocument();
+    expect(within(cccCard).getByText("₹111.11")).toBeInTheDocument();
 
     // Outlook badges (all three variants)
     expect(screen.getByText("Bullish · 80%")).toBeInTheDocument();

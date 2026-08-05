@@ -39,6 +39,7 @@ const pricing = [
 
 const navLinks = [
   { href: "#market-pulse", label: "Market Pulse" },
+  { href: "/news", label: "News" },
   { href: "#top-picks", label: "Top Picks" },
   { href: "#buy-tomorrow", label: "Buy Tomorrow" },
   { href: "#ipos", label: "IPOs" },
@@ -58,15 +59,20 @@ export default function Home() {
           </Link>
 
           <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto whitespace-nowrap rounded-full border border-slate-200/70 bg-slate-50/80 p-1 lg:flex dark:border-slate-800 dark:bg-slate-950/50 [scrollbar-width:thin]">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              // Same-page anchors stay plain <a> so the browser handles smooth scrolling;
+              // links to another route go through Link for client-side navigation.
+              const NavTag = link.href.startsWith("/") ? Link : "a";
+              return (
+                <NavTag
+                  key={link.href}
+                  href={link.href}
+                  className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
+                >
+                  {link.label}
+                </NavTag>
+              );
+            })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">

@@ -8,6 +8,31 @@ const links = [
 ];
 
 describe("MobileNav", () => {
+  // Same-page anchors stay plain <a> so the browser scrolls; links to another route go through
+  // next/link for client-side navigation. Both must end up as working links in the drawer.
+  it("renders both same-page anchors and route links", async () => {
+    const user = userEvent.setup();
+    render(<MobileNav links={[...links, { href: "/news", label: "News" }]} />);
+
+    await user.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "News" })).toHaveAttribute("href", "/news");
+    });
+    expect(screen.getByRole("link", { name: "Pricing" })).toHaveAttribute("href", "#pricing");
+  });
+
+  it("closes the drawer when a route link is followed", async () => {
+    const user = userEvent.setup();
+    render(<MobileNav links={[{ href: "/news", label: "News" }]} />);
+
+    await user.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    await waitFor(() => expect(screen.getByRole("link", { name: "News" })).toBeInTheDocument());
+
+    await user.click(screen.getByRole("link", { name: "News" }));
+    await waitFor(() => expect(screen.queryByRole("link", { name: "News" })).not.toBeInTheDocument());
+  });
+
   it("does not render the drawer before the open button is clicked", () => {
     render(<MobileNav links={links} />);
     expect(screen.queryByLabelText("Close navigation menu")).not.toBeInTheDocument();

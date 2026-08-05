@@ -2,6 +2,19 @@ import { render, screen, fireEvent, within, act, waitFor } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { DipWinners } from "../../app/components/dip-winners";
 
+// Only the data layer behind the price/returns strip is stubbed — the real LiveMarketValue and
+// StockReturns still render, so these tests keep asserting that each row is actually wired to
+// the live feed. CCC stands in for a symbol the feed has no data for.
+jest.mock("../../app/components/use-stock-performance", () => ({
+  useStockPerformance: (symbol: string | null) => ({
+    performance:
+      symbol && symbol !== "CCC"
+        ? { symbol, currency: "INR", price: 111.11, oneDay: 3.33, oneWeek: 1.11, oneMonth: -2.22, sixMonth: 12.5, oneYear: 40, threeYear: 150.5, fiveYear: 480, overall: 12345, overallSince: "1999-04-01" }
+        : null,
+    loading: false,
+  }),
+}));
+
 jest.mock("../../app/components/ai-report-modal", () => ({
   AiReportModal: (props: any) => (
     <div
@@ -83,7 +96,8 @@ describe("DipWinners", () => {
 
     expect(await screen.findByText("AAA")).toBeInTheDocument();
     const aaaRow = screen.getByText("AAA").closest("tr")!;
-    expect(within(aaaRow).getByText("₹100.50")).toBeInTheDocument();
+    // The live quote wins over the price the screener snapshot shipped with (₹100.50).
+    expect(within(aaaRow).getByText("₹111.11")).toBeInTheDocument();
     expect(within(aaaRow).getByText("▼ 2.50%")).toBeInTheDocument();
     expect(within(aaaRow).getByText("+45%")).toBeInTheDocument();
     expect(within(aaaRow).getByText("▼ 12.3%")).toBeInTheDocument();
@@ -95,15 +109,48 @@ describe("DipWinners", () => {
 
     const cccRow = screen.getByText("CCC").closest("tr")!;
     expect(within(cccRow).getByText("Small Cap")).toBeInTheDocument();
-    // Null price and a non-negative declineReturn (2.5) both render the muted "—" placeholder.
+    // No live quote and a non-negative declineReturn (2.5) both render the muted "—" placeholder.
     expect(within(cccRow).getAllByText("—")).toHaveLength(2);
     expect(within(cccRow).queryByText(/▼.*2\.5/)).not.toBeInTheDocument();
+
+    // Each stock's trailing returns render in a sub-row directly beneath its data row.
+    const aaaReturnsRow = aaaRow.nextElementSibling as HTMLElement;
+    ["1D", "1W", "1M", "6M", "1Y", "3Y", "5Y", "Overall"].forEach((label) => {
+      expect(within(aaaReturnsRow).getByText(label)).toBeInTheDocument();
+    });
+    expect(within(aaaReturnsRow).getByText("+40.00%")).toBeInTheDocument();
+    expect(within(aaaReturnsRow).getByText("Returns")).toBeInTheDocument();
+    expect(within(aaaReturnsRow).getByText("since 1999")).toBeInTheDocument();
 
     // Default period is 6-Month / decline period is 1-Month, reflected in heading/badge/columns.
     expect(screen.getByText("Proven 6-Month winners, trading cheaper today")).toBeInTheDocument();
     expect(screen.getByText("Losers today • Winners over 6-Month")).toBeInTheDocument();
     expect(screen.getByText("6-Month return")).toBeInTheDocument();
     expect(screen.getByText("1-Month decline")).toBeInTheDocument();
+  });
+
+  // The returns strip sits in its own row, so it needs the same click target as the data row
+  // above it — otherwise clicking a stock's returns would feel like a dead zone.
+  it("opens the report when the returns sub-row is clicked", async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn((url: RequestInfo | URL) => {
+      if (String(url).includes("/api/research")) {
+        return Promise.resolve({ ok: true, json: async () => ({ stock: "AAA" }) } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ stocks: baseStocks, generatedAt: "", asOfDate: "2026-08-04", source: "yahoo" }),
+      } as Response);
+    }) as unknown as typeof fetch;
+
+    render(<DipWinners />);
+    await screen.findByText("AAA");
+
+    const returnsRow = screen.getByText("AAA").closest("tr")!.nextElementSibling as HTMLElement;
+    await user.click(within(returnsRow).getByText("1Y"));
+
+    await waitFor(() => expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true"));
+    expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-company", "Alpha Co");
   });
 
   it("shows an error banner when the response is not ok", async () => {
@@ -187,14 +234,13 @@ describe("DipWinners", () => {
     expect(initialUrl).not.toMatch(/capTier=/);
     expect(initialUrl).toMatch(/period=6mo/);
     expect(initialUrl).toMatch(/declinePeriod=1mo/);
-    expect(initialUrl).toMatch(/minDecline=0/);
+    expect(initialUrl).not.toMatch(/minDecline=/);
     expect(initialUrl).toMatch(/limit=10/);
 
     fireEvent.change(screen.getByLabelText("Sector"), { target: { value: "it" } });
     fireEvent.change(screen.getByLabelText("Performance period"), { target: { value: "1y" } });
     fireEvent.change(screen.getByLabelText("Min return over period (%)"), { target: { value: "30" } });
-    fireEvent.change(screen.getByLabelText("Down at least X% over"), { target: { value: "3y" } });
-    fireEvent.change(screen.getByLabelText("Min decline over that period (%)"), { target: { value: "15" } });
+    fireEvent.change(screen.getByLabelText("Measure the pullback over"), { target: { value: "3y" } });
 
     // Uncheck one cap tier (Small) -> subset selected -> capTier param should be set
     fireEvent.click(screen.getByRole("checkbox", { name: "Small" }));
@@ -207,7 +253,6 @@ describe("DipWinners", () => {
     expect(appliedUrl).toMatch(/period=1y/);
     expect(appliedUrl).toMatch(/minReturn=30/);
     expect(appliedUrl).toMatch(/declinePeriod=3y/);
-    expect(appliedUrl).toMatch(/minDecline=15/);
     expect(appliedUrl).toMatch(/limit=10/);
     expect(appliedUrl).toMatch(/capTier=Large%2CMid/);
 

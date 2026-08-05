@@ -1,4 +1,4 @@
-import { indianStocks } from "./indian-stocks";
+import { indianStocks, type CapTier } from "./indian-stocks";
 import { getAllQuotes } from "./market-data";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
@@ -7,6 +7,21 @@ const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 export type Mood = "Risk-On" | "Neutral" | "Risk-Off";
+
+export type Mover = {
+  symbol: string;
+  name: string;
+  sector: string;
+  capTier: CapTier;
+  price: number | null;
+  changePercent: number;
+};
+
+/** Top gainers and losers within a single market-cap tier, best/worst first. */
+export type CapMovers = { gainers: Mover[]; losers: Mover[]; tracked: number };
+
+export const CAP_TIERS: CapTier[] = ["Large", "Mid", "Small"];
+const MOVERS_PER_LIST = 5;
 
 export type MarketBreadth = {
   totalTracked: number;
@@ -18,6 +33,7 @@ export type MarketBreadth = {
   bottomSector: { name: string; averageChangePercent: number } | null;
   topGainer: { symbol: string; name: string; changePercent: number } | null;
   topLoser: { symbol: string; name: string; changePercent: number } | null;
+  movers: Record<CapTier, CapMovers>;
 };
 
 export type MarketPulse = {
@@ -28,13 +44,47 @@ export type MarketPulse = {
   sectorsToWatch: string[];
   generatedAt: string;
   source: "ai" | "heuristic";
+  /** Most recent trade timestamp across the tracked universe; lets the client tell a trading day from an exchange holiday. */
+  lastTradeAt: string | null;
+  /** When the breadth numbers below were computed — distinct from the narrative's generatedAt. */
+  breadthAsOf: string;
 };
 
-let cache: { data: MarketPulse; expiresAt: number } | null = null;
+// Only the written narrative is cached: it costs a 20s model call and reads the same either way
+// a few minutes later. Breadth itself is recomputed on every request from the 60s quote cache,
+// so the numbers and the live pulse bars stay current without paying for the model each time.
+type Narrative = { summary: string; themes: string[]; sectorsToWatch: string[]; generatedAt: string; source: "ai" | "heuristic" };
 
-function computeBreadth(quotes: { symbol: string; changePercent: number | null }[]): MarketBreadth {
+let cache: { data: Narrative; expiresAt: number } | null = null;
+
+// Ranked within each cap tier rather than across the whole universe, because a small cap's 8%
+// day and a large cap's 3% day are not comparable — pooling them would let small caps crowd out
+// every list.
+function computeMovers(entries: Mover[]): Record<CapTier, CapMovers> {
+  const byTier = {} as Record<CapTier, CapMovers>;
+
+  for (const tier of CAP_TIERS) {
+    const tierEntries = entries.filter((entry) => entry.capTier === tier);
+    const ranked = [...tierEntries].sort((a, b) => b.changePercent - a.changePercent);
+
+    byTier[tier] = {
+      tracked: tierEntries.length,
+      // Only genuine movers make a list: a flat or falling stock is never shown as a "gainer".
+      gainers: ranked.filter((entry) => entry.changePercent > 0).slice(0, MOVERS_PER_LIST),
+      losers: ranked
+        .filter((entry) => entry.changePercent < 0)
+        .slice(-MOVERS_PER_LIST)
+        .reverse(),
+    };
+  }
+
+  return byTier;
+}
+
+function computeBreadth(quotes: { symbol: string; changePercent: number | null; price?: number | null }[]): MarketBreadth {
   const stockMap = new Map(indianStocks.map((stock) => [stock.symbol, stock]));
   const live = quotes.filter((q) => typeof q.changePercent === "number");
+  const moverEntries: Mover[] = [];
 
   let advancing = 0;
   let declining = 0;
@@ -60,6 +110,15 @@ function computeBreadth(quotes: { symbol: string; changePercent: number | null }
 
       if (!topGainer || pct > topGainer.changePercent) topGainer = { symbol: stock.symbol, name: stock.name, changePercent: pct };
       if (!topLoser || pct < topLoser.changePercent) topLoser = { symbol: stock.symbol, name: stock.name, changePercent: pct };
+
+      moverEntries.push({
+        symbol: stock.symbol,
+        name: stock.name,
+        sector: stock.sector,
+        capTier: stock.capTier,
+        price: quote.price ?? null,
+        changePercent: pct,
+      });
     }
   }
 
@@ -79,6 +138,7 @@ function computeBreadth(quotes: { symbol: string; changePercent: number | null }
     bottomSector: sectorAverages[sectorAverages.length - 1] ?? null,
     topGainer,
     topLoser,
+    movers: computeMovers(moverEntries),
   };
 }
 
@@ -91,13 +151,21 @@ function moodFromBreadth(breadth: MarketBreadth): Mood {
   return "Neutral";
 }
 
-function buildHeuristicPulse(breadth: MarketBreadth): MarketPulse {
+function buildHeuristicNarrative(breadth: MarketBreadth): Narrative {
   const mood = moodFromBreadth(breadth);
   const direction = breadth.averageChangePercent >= 0 ? "higher" : "lower";
 
+  // Deliberately number-free, for the same reason the AI prompt is: the live counts render
+  // beside this sentence and keep updating, while the sentence itself is cached for minutes.
+  const spread =
+    breadth.advancing > breadth.declining
+      ? "Advancers are outnumbering decliners"
+      : breadth.declining > breadth.advancing
+        ? "Decliners are outnumbering advancers"
+        : "Advancers and decliners are evenly matched";
+
   const summary =
-    `${breadth.advancing} of ${breadth.totalTracked} tracked stocks are trading ${breadth.averageChangePercent >= 0 ? "higher" : "lower"} today, ` +
-    `with the average move running ${direction} at ${breadth.averageChangePercent.toFixed(2)}%.` +
+    `${spread} across the tracked universe, with the average stock drifting ${direction}.` +
     (breadth.topSector ? ` ${breadth.topSector.name} is leading the tape.` : "") +
     (breadth.bottomSector && breadth.bottomSector.name !== breadth.topSector?.name ? ` ${breadth.bottomSector.name} is lagging.` : "");
 
@@ -110,8 +178,6 @@ function buildHeuristicPulse(breadth: MarketBreadth): MarketPulse {
   const sectorsToWatch = [breadth.topSector?.name, breadth.bottomSector?.name].filter((s): s is string => Boolean(s));
 
   return {
-    breadth,
-    mood,
     summary,
     themes,
     sectorsToWatch,
@@ -120,7 +186,7 @@ function buildHeuristicPulse(breadth: MarketBreadth): MarketPulse {
   };
 }
 
-async function generatePulseWithAI(breadth: MarketBreadth): Promise<MarketPulse | null> {
+async function generateNarrativeWithAI(breadth: MarketBreadth): Promise<Narrative | null> {
   if (!process.env.OPENROUTER_API_KEY) return null;
 
   try {
@@ -138,11 +204,28 @@ async function generatePulseWithAI(breadth: MarketBreadth): Promise<MarketPulse 
           {
             role: "system",
             content:
-              "You are stockers, an AI market-breadth analyst for Indian equities. You are given real, computed breadth statistics (advancers/decliners, average move, leading/lagging sectors) from a live universe of Indian stocks — not the full market. Return compact JSON only, with these keys: mood, summary, themes, sectorsToWatch. mood must be exactly one of \"Risk-On\", \"Neutral\", or \"Risk-Off\", consistent with the advance/decline data given. summary is 2-3 sentences on today's mood grounded in the numbers provided. themes is an array of 3 short (2-5 word) theme labels. sectorsToWatch is an array of 2-3 sector names to watch, drawn from the data given.",
+              "You are stockers, an AI market-breadth analyst for Indian equities. You are given real, computed breadth statistics (advancers/decliners, average move, leading/lagging sectors) from a live universe of Indian stocks — not the full market. Return compact JSON only, with these keys: mood, summary, themes, sectorsToWatch. mood must be exactly one of \"Risk-On\", \"Neutral\", or \"Risk-Off\", consistent with the advance/decline data given. summary is 2-3 sentences on today's mood grounded in the data provided. themes is an array of 3 short (2-5 word) theme labels. sectorsToWatch is an array of 2-3 sector names to watch, drawn from the data given. " +
+              // The live counts and averages are rendered beside this text and keep ticking, while
+              // the narrative is cached for minutes. If the model quotes a figure it will visibly
+              // disagree with the tiles next to it, so it is told to stay qualitative and name
+              // sectors and stocks instead.
+              "IMPORTANT: write the summary qualitatively. Do not state any counts, percentages, or numeric figures — the live numbers are displayed alongside your text and would contradict you. Refer to breadth in words (\"advancers comfortably outnumber decliners\") and name the leading and lagging sectors and stocks instead.",
           },
           {
             role: "user",
-            content: `Real breadth data from our tracked Indian stock universe: ${JSON.stringify(breadth)}. Write today's market pulse from this data.`,
+            // Only the aggregate figures go to the model — the per-tier mover lists are rendered
+            // straight from the quote feed and would just inflate the prompt.
+            content: `Real breadth data from our tracked Indian stock universe: ${JSON.stringify({
+              totalTracked: breadth.totalTracked,
+              advancing: breadth.advancing,
+              declining: breadth.declining,
+              unchanged: breadth.unchanged,
+              averageChangePercent: breadth.averageChangePercent,
+              topSector: breadth.topSector,
+              bottomSector: breadth.bottomSector,
+              topGainer: breadth.topGainer,
+              topLoser: breadth.topLoser,
+            })}. Write today's market pulse from this data.`,
           },
         ],
         temperature: 0.6,
@@ -158,17 +241,15 @@ async function generatePulseWithAI(breadth: MarketBreadth): Promise<MarketPulse 
     if (!match) return null;
 
     const parsed = JSON.parse(match[0]);
-    const mood: Mood = ["Risk-On", "Neutral", "Risk-Off"].includes(parsed.mood) ? parsed.mood : moodFromBreadth(breadth);
-    const summary = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary : buildHeuristicPulse(breadth).summary;
+    const fallback = buildHeuristicNarrative(breadth);
+    const summary = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary : fallback.summary;
     const themes = Array.isArray(parsed.themes) ? parsed.themes.filter((t: unknown) => typeof t === "string") : [];
     const sectorsToWatch = Array.isArray(parsed.sectorsToWatch) ? parsed.sectorsToWatch.filter((t: unknown) => typeof t === "string") : [];
 
     return {
-      breadth,
-      mood,
       summary,
-      themes: themes.length > 0 ? themes : buildHeuristicPulse(breadth).themes,
-      sectorsToWatch: sectorsToWatch.length > 0 ? sectorsToWatch : buildHeuristicPulse(breadth).sectorsToWatch,
+      themes: themes.length > 0 ? themes : fallback.themes,
+      sectorsToWatch: sectorsToWatch.length > 0 ? sectorsToWatch : fallback.sectorsToWatch,
       generatedAt: new Date().toISOString(),
       source: "ai",
     };
@@ -177,13 +258,35 @@ async function generatePulseWithAI(breadth: MarketBreadth): Promise<MarketPulse 
   }
 }
 
-export async function getMarketPulse(): Promise<MarketPulse> {
-  if (cache && cache.expiresAt > Date.now()) return cache.data;
+function latestTradeAt(quotes: { asOf: string | null }[]): string | null {
+  let latest: string | null = null;
+  for (const quote of quotes) {
+    if (quote.asOf && (latest === null || quote.asOf > latest)) latest = quote.asOf;
+  }
+  return latest;
+}
 
+export async function getMarketPulse(): Promise<MarketPulse> {
   const quotes = await getAllQuotes();
   const breadth = computeBreadth(quotes);
-  const pulse = (await generatePulseWithAI(breadth)) ?? buildHeuristicPulse(breadth);
 
-  cache = { data: pulse, expiresAt: Date.now() + CACHE_TTL_MS };
-  return pulse;
+  let narrative = cache && cache.expiresAt > Date.now() ? cache.data : null;
+  if (!narrative) {
+    narrative = (await generateNarrativeWithAI(breadth)) ?? buildHeuristicNarrative(breadth);
+    cache = { data: narrative, expiresAt: Date.now() + CACHE_TTL_MS };
+  }
+
+  return {
+    breadth,
+    // Always derived from the breadth being displayed, never taken from the model, so the mood
+    // badge can never contradict the advance/decline numbers rendered beside it.
+    mood: moodFromBreadth(breadth),
+    summary: narrative.summary,
+    themes: narrative.themes,
+    sectorsToWatch: narrative.sectorsToWatch,
+    generatedAt: narrative.generatedAt,
+    source: narrative.source,
+    lastTradeAt: latestTradeAt(quotes),
+    breadthAsOf: new Date().toISOString(),
+  };
 }

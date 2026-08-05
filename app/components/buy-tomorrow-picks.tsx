@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { CapTierPill, LiveIndicator } from "./market-badges";
+import { LiveMarketValue, StockReturns } from "./stock-returns";
 import type { CapTier } from "../lib/indian-stocks";
 
 type Pick = {
@@ -60,11 +61,6 @@ function institutionalTagClass(tag: string) {
   if (tag === "Government / PSU") return "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400";
   if (tag === "FII & DII favourite") return "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400";
   return "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400";
-}
-
-function formatRupees(value: number | null) {
-  if (value === null) return "—";
-  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function BuyTomorrowPicks() {
@@ -148,8 +144,6 @@ export function BuyTomorrowPicks() {
 
         {!loading &&
           picks.map((pick) => {
-            const isUp = (pick.changePercent ?? 0) >= 0;
-            const changeClass = pick.changePercent === null ? "text-slate-400 dark:text-slate-500" : isUp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
             const isActive = selected === pick.symbol;
 
             return (
@@ -175,16 +169,21 @@ export function BuyTomorrowPicks() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="font-semibold text-slate-900 dark:text-white">{formatRupees(pick.price)}</span>
-                  <span className={`text-sm font-medium ${changeClass}`}>
-                    {pick.changePercent === null ? "—" : `${isUp ? "▲" : "▼"} ${Math.abs(pick.changePercent).toFixed(2)}%`}
-                  </span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-end">
+                <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <LiveMarketValue
+                    symbol={pick.symbol}
+                    fallbackPrice={pick.price}
+                    fallbackChangePercent={pick.changePercent}
+                    className="min-w-0 flex-1"
+                  />
                   <LiveIndicator />
                 </div>
+
+                <StockReturns
+                  symbol={pick.symbol}
+                  label="Returns"
+                  className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40"
+                />
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
