@@ -29,6 +29,50 @@ const baseState = {
       Small: { tracked: 50, gainers: [], losers: [] },
     },
   },
+  indices: [
+    {
+      symbol: "NIFTY50",
+      name: "NIFTY 50",
+      exchange: "NSE",
+      description: "50 large caps across sectors",
+      price: 24624.65,
+      previousClose: 24614.9,
+      change: 9.75,
+      changePercent: 0.0396,
+      dayHigh: 24677.6,
+      dayLow: 24497.95,
+      live: true,
+      asOf: "2026-08-04T10:00:00.000Z",
+    },
+    {
+      symbol: "SENSEX",
+      name: "SENSEX",
+      exchange: "BSE",
+      description: "30 blue chips on the BSE",
+      price: 78581,
+      previousClose: 78428.95,
+      change: 152.05,
+      changePercent: 0.19,
+      dayHigh: 79055.38,
+      dayLow: 78285.74,
+      live: true,
+      asOf: "2026-08-04T10:00:00.000Z",
+    },
+    {
+      symbol: "BANKNIFTY",
+      name: "Bank NIFTY",
+      exchange: "NSE",
+      description: "12 most liquid banking stocks",
+      price: 57739.95,
+      previousClose: 57907.2,
+      change: -167.25,
+      changePercent: -0.29,
+      dayHigh: 57931.85,
+      dayLow: 57456.35,
+      live: true,
+      asOf: "2026-08-04T10:00:00.000Z",
+    },
+  ],
   mood: "Risk-On" as const,
   lastTradeAt: "2026-08-04T10:00:00.000Z",
   breadthAsOf: "2026-08-04T10:00:00.000Z",
@@ -74,6 +118,12 @@ describe("MarketPulse", () => {
     expect(screen.getByText("LGAIN")).toBeInTheDocument();
     expect(screen.getByText("LLOSE")).toBeInTheDocument();
     expect(screen.getByText("Ranked within Large Cap · 60 stocks tracked")).toBeInTheDocument();
+
+    // The three benchmarks, with their live level and today's move.
+    expect(screen.getByText("Benchmark indices")).toBeInTheDocument();
+    expect(screen.getByLabelText("NIFTY 50, 24,624.65, +0.04%")).toBeInTheDocument();
+    expect(screen.getByLabelText("SENSEX, 78,581.00, +0.19%")).toBeInTheDocument();
+    expect(screen.getByLabelText("Bank NIFTY, 57,739.95, -0.29%")).toBeInTheDocument();
 
     expect(screen.getByText("AI capex boom")).toBeInTheDocument();
     expect(screen.getByText("Rate-cut hopes")).toBeInTheDocument();

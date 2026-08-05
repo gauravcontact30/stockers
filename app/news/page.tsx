@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GatedSection } from "../components/ai-gate";
 import { AuthHeader } from "../components/auth-header";
 import { BackToTop } from "../components/back-to-top";
 import { MarketNews } from "../components/market-news";
@@ -27,7 +28,9 @@ export default function NewsPage() {
           </p>
         </section>
 
-        <MarketNews compact />
+        <GatedSection feature="news" label="AI market news">
+          <MarketNews compact />
+        </GatedSection>
 
         <SiteFooter />
       </div>

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { GatedSection } from "./components/ai-gate";
 import { AiStockCompare } from "./components/ai-stock-compare";
 import { BackToTop } from "./components/back-to-top";
 import { BuyTomorrowPicks } from "./components/buy-tomorrow-picks";
 import { DipWinners } from "./components/dip-winners";
+import { DividendBoard } from "./components/dividend-board";
+import { EtfBoard } from "./components/etf-board";
 import { EtfResearch } from "./components/etf-research";
 import { HeroCarousel } from "./components/hero-carousel";
 import { IpoListings } from "./components/ipo-listings";
@@ -10,7 +13,12 @@ import { LandingResearch } from "./components/landing-research";
 import { Logo } from "./components/logo";
 import { MarketPulse } from "./components/market-pulse";
 import { MobileNav } from "./components/mobile-nav";
+import { MostTraded } from "./components/most-traded";
+import { MtfTraded } from "./components/mtf-traded";
+import { SectorTrends } from "./components/sector-trends";
 import { SiteFooter } from "./components/site-footer";
+import { StocksInNews } from "./components/stocks-in-news";
+import { SubscriptionBadge } from "./components/subscription-reminder";
 import { SupportSection } from "./components/support-section";
 import { ThemeToggle } from "./components/theme-toggle";
 import { TopPicksToday } from "./components/top-picks-today";
@@ -39,10 +47,16 @@ const pricing = [
 
 const navLinks = [
   { href: "#market-pulse", label: "Market Pulse" },
+  { href: "#sectors", label: "Sectors" },
+  { href: "#most-traded", label: "Most Traded" },
+  { href: "#mtf", label: "MTF" },
   { href: "/news", label: "News" },
+  { href: "#stocks-in-news", label: "Stock News" },
+  { href: "#dividends", label: "Dividends" },
   { href: "#top-picks", label: "Top Picks" },
   { href: "#buy-tomorrow", label: "Buy Tomorrow" },
   { href: "#ipos", label: "IPOs" },
+  { href: "#most-bought-etfs", label: "ETFs" },
   { href: "#research", label: "Research" },
   { href: "#pricing", label: "Pricing" },
   { href: "#support", label: "Support" },
@@ -76,6 +90,7 @@ export default function Home() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">
+            <SubscriptionBadge />
             <ThemeToggle />
             <Link href="/signin" className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
               Sign in
@@ -94,37 +109,63 @@ export default function Home() {
           <HeroCarousel />
         </div>
 
-        <div id="market-pulse" className="scroll-mt-28">
+        {/* The pulse is not fully gated: its breadth, index levels and movers are exchange data
+            and stay visible. Only the AI narrative inside it is withheld, server-side. */}
+        <GatedSection id="market-pulse" feature="market-pulse" label="AI market pulse" gate={false}>
           <MarketPulse />
+        </GatedSection>
+
+        <div className="scroll-mt-28">
+          <SectorTrends />
         </div>
 
-        <div id="top-picks" className="scroll-mt-28">
+        <div className="scroll-mt-28">
+          <MostTraded />
+        </div>
+
+        <div className="scroll-mt-28">
+          <MtfTraded />
+        </div>
+
+        <GatedSection id="top-picks" feature="top-picks" label="Today's AI picks">
           <TopPicksToday />
-        </div>
+        </GatedSection>
 
-        <div id="buy-tomorrow" className="scroll-mt-28">
+        <GatedSection id="buy-tomorrow" feature="buy-tomorrow" label="Buy tomorrow screener">
           <BuyTomorrowPicks />
+        </GatedSection>
+
+        <GatedSection id="dip-winners" feature="dip-winners" label="Today's dip screener">
+          <DipWinners />
+        </GatedSection>
+
+        <div className="scroll-mt-28">
+          <StocksInNews />
         </div>
 
-        <div id="dip-winners" className="scroll-mt-28">
-          <DipWinners />
+        <div className="scroll-mt-28">
+          <DividendBoard />
         </div>
 
         <div id="ipos" className="scroll-mt-28">
           <IpoListings />
         </div>
 
-        <div id="research" className="scroll-mt-28">
+        <GatedSection id="research" feature="research" label="AI stock research">
           <LandingResearch />
-        </div>
+        </GatedSection>
 
-        <div id="compare" className="scroll-mt-28">
+        <GatedSection id="compare" feature="compare" label="AI stock compare">
           <AiStockCompare />
+        </GatedSection>
+
+        <div className="scroll-mt-28">
+          <EtfBoard />
         </div>
 
-        <div id="etfs" className="scroll-mt-28">
+        <GatedSection id="etfs" feature="etf-research" label="AI ETF research">
           <EtfResearch />
-        </div>
+        </GatedSection>
 
         <section id="pricing" className="scroll-mt-28 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

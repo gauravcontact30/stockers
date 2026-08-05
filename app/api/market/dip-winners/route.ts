@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { companyLogoUrl, indianStocks, sectors, type CapTier } from "../../../lib/indian-stocks";
 import { getReturnsForPeriod, type ReturnPeriod } from "../../../lib/historical-returns";
 import { getAllQuotes } from "../../../lib/market-data";
@@ -30,6 +31,9 @@ function parsePeriod(value: string | null, fallback: ReturnPeriod): ReturnPeriod
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await guardFeature(request, "dip-winners");
+  if (!guard.allowed) return lockedResponse(guard, "dip-winners");
+
   const params = request.nextUrl.searchParams;
 
   const period = parsePeriod(params.get("period"), DEFAULT_PERIOD);

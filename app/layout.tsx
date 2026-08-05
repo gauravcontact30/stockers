@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./lib/theme-provider";
+import { SubscriptionProvider } from "./components/subscription-provider";
+import { SubscriptionReminder } from "./components/subscription-reminder";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +45,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {/* Wraps the whole app so any section can ask whether a feature is unlocked, and the
+              renewal reminder can appear on whichever page the user lands on. */}
+          <SubscriptionProvider>
+            {children}
+            <SubscriptionReminder />
+          </SubscriptionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

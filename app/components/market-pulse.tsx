@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MarketClock, marketSession, useClockTick } from "./market-clock";
+import { MarketIndices, type IndexQuote } from "./market-indices";
 import { MarketMovers, type CapMovers } from "./market-movers";
 import { MarketPulseBars } from "./market-pulse-bars";
 import type { CapTier } from "../lib/indian-stocks";
@@ -21,6 +22,7 @@ type MarketPulseState = {
     topLoser: { symbol: string; name: string; changePercent: number } | null;
     movers: Record<CapTier, CapMovers>;
   };
+  indices: IndexQuote[];
   mood: Mood;
   summary: string;
   themes: string[];
@@ -109,6 +111,12 @@ export function MarketPulse() {
           </span>
         </div>
       </div>
+
+      <MarketIndices
+        indices={state.indices}
+        live={live}
+        className="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800"
+      />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MarketPulseBars

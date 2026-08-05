@@ -46,8 +46,12 @@ function MoverRow({ mover, rank, direction }: { mover: Mover; rank: number; dire
   const tone = direction === "up" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
 
   return (
-    <li className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-white dark:hover:bg-slate-900/60">
-      <span className="w-4 shrink-0 text-[11px] font-semibold tabular-nums text-slate-400 dark:text-slate-500">{rank}</span>
+    // Each stock is its own ribbon — bordered and raised off the panel, with a gap between rows —
+    // so one company's figures can't be misread as the next one's.
+    <li className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:shadow-[0_4px_12px_-4px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold tabular-nums text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+        {rank}
+      </span>
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{mover.symbol}</p>
@@ -79,7 +83,7 @@ function MoverList({ title, movers, direction }: { title: string; movers: Mover[
           No {direction === "up" ? "advancing" : "declining"} stocks in this tier right now.
         </p>
       ) : (
-        <ul className="mt-2 space-y-0.5">
+        <ul className="mt-3 space-y-2.5">
           {movers.map((mover, index) => (
             <MoverRow key={mover.symbol} mover={mover} rank={index + 1} direction={direction} />
           ))}

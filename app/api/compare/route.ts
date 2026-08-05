@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { guardFeature, lockedResponse } from "../../lib/feature-guard";
 import { generateComparison } from "../../lib/stock-compare";
 
 export async function POST(request: Request) {
+  const guard = await guardFeature(request, "compare");
+  if (!guard.allowed) return lockedResponse(guard, "compare");
+
   const body = await request.json().catch(() => null);
   const stockA = typeof body?.stockA === "string" ? body.stockA.trim() : "";
   const stockB = typeof body?.stockB === "string" ? body.stockB.trim() : "";

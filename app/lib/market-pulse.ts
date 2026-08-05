@@ -1,5 +1,6 @@
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getAllQuotes } from "./market-data";
+import { getBenchmarkIndices, type IndexQuote } from "./market-indices";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 // Market breadth shifts through the trading session, so this is cached far shorter than the
@@ -38,6 +39,8 @@ export type MarketBreadth = {
 
 export type MarketPulse = {
   breadth: MarketBreadth;
+  /** NIFTY 50, SENSEX and Bank NIFTY levels, as of the same moment as the breadth above. */
+  indices: IndexQuote[];
   mood: Mood;
   summary: string;
   themes: string[];
@@ -267,7 +270,8 @@ function latestTradeAt(quotes: { asOf: string | null }[]): string | null {
 }
 
 export async function getMarketPulse(): Promise<MarketPulse> {
-  const quotes = await getAllQuotes();
+  // Fetched together so the index levels and the constituent breadth describe the same instant.
+  const [quotes, indices] = await Promise.all([getAllQuotes(), getBenchmarkIndices()]);
   const breadth = computeBreadth(quotes);
 
   let narrative = cache && cache.expiresAt > Date.now() ? cache.data : null;
@@ -278,6 +282,7 @@ export async function getMarketPulse(): Promise<MarketPulse> {
 
   return {
     breadth,
+    indices,
     // Always derived from the breadth being displayed, never taken from the model, so the mood
     // badge can never contradict the advance/decline numbers rendered beside it.
     mood: moodFromBreadth(breadth),
@@ -286,7 +291,9 @@ export async function getMarketPulse(): Promise<MarketPulse> {
     sectorsToWatch: narrative.sectorsToWatch,
     generatedAt: narrative.generatedAt,
     source: narrative.source,
-    lastTradeAt: latestTradeAt(quotes),
+    // Indices are included because they always print on a trading day, so the session/holiday
+    // check still works even if the individual stock quotes come back empty.
+    lastTradeAt: latestTradeAt([...quotes, ...indices]),
     breadthAsOf: new Date().toISOString(),
   };
 }

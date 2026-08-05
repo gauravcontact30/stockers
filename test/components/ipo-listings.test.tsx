@@ -1,6 +1,13 @@
 import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { IpoListings } from "../../app/components/ipo-listings";
+import {
+  IpoListings,
+  formatBand,
+  formatDate,
+  formatIssueSize,
+  formatTimes,
+  subscriptionWidth,
+} from "../../app/components/ipo-listings";
 
 jest.mock("../../app/components/ai-report-modal", () => ({
   AiReportModal: (props: any) => (
@@ -28,55 +35,66 @@ function deferred<T>() {
 }
 
 function mockListFetch(response: unknown, ok = true) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok,
-    json: async () => response,
-  } as Response);
+  global.fetch = jest.fn().mockResolvedValue({ ok, json: async () => response } as Response);
 }
 
 const ipos = [
   {
-    id: "ipo-1",
-    company: "Alpha Manufacturing",
-    sector: "Capital Goods",
-    domain: "alpha.example.com",
-    exchange: "NSE",
-    summary: "A leading maker of industrial components.",
-    logo: "https://logo.test/alpha.png",
+    id: "ARDEE",
+    symbol: "ARDEE",
+    company: "Ardee Industries Limited",
+    board: "Mainboard" as const,
     status: "open" as const,
-    priceBandMin: 100,
-    priceBandMax: 120,
-    issueSizeCr: 500,
-    openDate: "2026-08-01",
-    closeDate: "2026-08-05",
-    listingDate: "2026-08-10",
-  },
-  {
-    id: "ipo-2",
-    company: "Beta Digital",
-    sector: "IT Services",
-    domain: "beta.example.com",
-    exchange: "BSE",
-    summary: "A cloud services provider entering public markets.",
-    logo: "https://logo.test/beta.png",
-    status: "listing_soon" as const,
-    // no price band / dates -> exercise all the falsy conditional branches
-  },
-  {
-    id: "ipo-3",
-    company: "Gamma Retail",
-    sector: "Retail",
-    domain: "gamma.example.com",
-    exchange: "NSE",
-    summary: "A growing omni-channel retail chain.",
-    logo: "https://logo.test/gamma.png",
-    status: "upcoming" as const,
+    logo: "https://logo.test/ardee.png",
+    openDate: "2026-08-05",
+    closeDate: "2026-08-07",
+    listingDate: "2026-08-12",
+    priceBand: "Rs.50 to Rs.53",
     priceBandMin: 50,
-    priceBandMax: 60,
-    // no issueSizeCr -> price band shown without the "Cr issue" suffix
-    openDate: "2026-08-15",
-    closeDate: "2026-08-18",
-    // no listingDate
+    priceBandMax: 53,
+    lotSize: 280,
+    issueSizeCr: 309.64,
+    subscription: {
+      overall: 2.5136,
+      categories: [
+        { label: "Qualified Institutional Buyers(QIBs)", times: 1.0954, offered: 16435297, bid: 18003670 },
+        { label: "Retail Individual Investors(RIIs)", times: 2.5247, offered: 29391053, bid: 74204794 },
+      ],
+    },
+  },
+  {
+    id: "LEAP",
+    symbol: "LEAP",
+    company: "Leap India Limited",
+    board: "SME" as const,
+    status: "upcoming" as const,
+    logo: "https://logo.test/leap.png",
+    openDate: "2026-08-07",
+    closeDate: "2026-08-11",
+    listingDate: null,
+    priceBand: "Rs.151 to Rs.159",
+    priceBandMin: 151,
+    priceBandMax: 159,
+    lotSize: null,
+    issueSizeCr: null,
+    subscription: null,
+  },
+  {
+    id: "JNPR",
+    symbol: "JNPR",
+    company: "Juniper Green Energy Limited",
+    board: "Mainboard" as const,
+    status: "closed" as const,
+    logo: "https://logo.test/jnpr.png",
+    openDate: "2026-07-30",
+    closeDate: "2026-08-03",
+    listingDate: null,
+    priceBand: "Rs.214 to Rs.225",
+    priceBandMin: 214,
+    priceBandMax: 225,
+    lotSize: null,
+    issueSizeCr: null,
+    subscription: null,
   },
 ];
 
@@ -89,61 +107,146 @@ const anticipated = [
   },
 ];
 
+const feed = {
+  ipos,
+  anticipated: [],
+  counts: { open: 1, upcoming: 1, closed: 1 },
+  today: "2026-08-05",
+  live: true,
+  source: "Live IPO calendar and subscription figures from NSE India",
+};
+
+describe("IPO formatters", () => {
+  it("formats a price band, collapsing a fixed price to one value", () => {
+    expect(formatBand(50, 53)).toBe("₹50 – ₹53");
+    expect(formatBand(50, 50)).toBe("₹50");
+    expect(formatBand(null, 53)).toBe("—");
+    expect(formatBand(50, null)).toBe("—");
+  });
+
+  it("formats an issue size in whole crore", () => {
+    expect(formatIssueSize(309.64)).toBe("₹310 Cr");
+    expect(formatIssueSize(null)).toBe("—");
+  });
+
+  it("formats subscription as a multiple", () => {
+    expect(formatTimes(2.5136)).toBe("2.51x");
+    expect(formatTimes(null)).toBe("—");
+  });
+
+  it("formats a date, and refuses an unparseable one", () => {
+    expect(formatDate("2026-08-07")).toBe("7 Aug 2026");
+    expect(formatDate(null)).toBe("—");
+    expect(formatDate("nonsense")).toBe("—");
+  });
+
+  // 1x fills a third of the bar so a heavily oversubscribed issue still has somewhere to grow.
+  it("scales the subscription meter with headroom above 1x", () => {
+    expect(subscriptionWidth(3)).toBe(100);
+    expect(subscriptionWidth(1.5)).toBe(50);
+    expect(subscriptionWidth(10)).toBe(100);
+    expect(subscriptionWidth(0)).toBe(0);
+    expect(subscriptionWidth(null)).toBe(0);
+  });
+});
+
 describe("IpoListings", () => {
   it("shows loading skeletons before data arrives", () => {
     global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
     const { container } = render(<IpoListings />);
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
-    expect(screen.getByText("Snapshot as of …")).toBeInTheDocument();
+    expect(screen.getByText("As of … IST")).toBeInTheDocument();
   });
 
-  it("renders open/listing_soon/upcoming statuses and all date/price-band branches", async () => {
-    mockListFetch({ ipos, anticipated: [], asOfDate: "2026-08-04", source: "Curated by our editorial team" });
+  it("renders OPEN, UPCOMING and CLOSED issues with their full details", async () => {
+    mockListFetch(feed);
     render(<IpoListings />);
 
-    expect(await screen.findByText("Alpha Manufacturing")).toBeInTheDocument();
-    expect(screen.getByText("Snapshot as of 2026-08-04")).toBeInTheDocument();
-    expect(screen.getByText(/Curated by our editorial team/)).toBeInTheDocument();
+    expect(await screen.findByText("Ardee Industries Limited")).toBeInTheDocument();
+    expect(screen.getByText("As of 2026-08-05 IST")).toBeInTheDocument();
+    expect(screen.getByText(/Live IPO calendar and subscription figures from NSE India/)).toBeInTheDocument();
 
-    expect(screen.getByText("Open for subscription")).toBeInTheDocument();
-    expect(screen.getByText("Subscription closed · listing soon")).toBeInTheDocument();
-    expect(screen.getByText("Opening soon")).toBeInTheDocument();
+    expect(screen.getByText("OPEN")).toBeInTheDocument();
+    expect(screen.getByText("UPCOMING")).toBeInTheDocument();
+    expect(screen.getByText("CLOSED")).toBeInTheDocument();
 
-    const alphaCard = screen.getByText("Alpha Manufacturing").closest("button")!;
-    expect(within(alphaCard).getByText(/Price band:/)).toBeInTheDocument();
-    expect(within(alphaCard).getByText(/₹100–₹120/)).toBeInTheDocument();
-    expect(within(alphaCard).getByText(/500 Cr issue/)).toBeInTheDocument();
-    expect(within(alphaCard).getByText(/Subscription: 1 Aug 2026 – 5 Aug 2026/)).toBeInTheDocument();
-    expect(within(alphaCard).getByText(/Tentative listing: 10 Aug 2026/)).toBeInTheDocument();
+    const ardee = screen.getByText("Ardee Industries Limited").closest("button")!;
+    expect(within(ardee).getByText("ARDEE · Mainboard")).toBeInTheDocument();
+    expect(within(ardee).getByText("₹50 – ₹53")).toBeInTheDocument();
+    expect(within(ardee).getByText("280")).toBeInTheDocument();
+    expect(within(ardee).getByText("₹310 Cr")).toBeInTheDocument();
+    expect(within(ardee).getByText("5 Aug 2026")).toBeInTheDocument();
+    expect(within(ardee).getByText("7 Aug 2026")).toBeInTheDocument();
+    expect(within(ardee).getByText("12 Aug 2026")).toBeInTheDocument();
 
-    const betaCard = screen.getByText("Beta Digital").closest("button")!;
-    expect(within(betaCard).queryByText(/Price band:/)).not.toBeInTheDocument();
-    expect(within(betaCard).queryByText(/Subscription:/)).not.toBeInTheDocument();
-    expect(within(betaCard).queryByText(/Tentative listing:/)).not.toBeInTheDocument();
+    // Live subscription demand, category by category.
+    expect(within(ardee).getByText("2.51x")).toBeInTheDocument();
+    expect(within(ardee).getByText("Qualified Institutional Buyers(QIBs)")).toBeInTheDocument();
+    expect(within(ardee).getByText("1.10x")).toBeInTheDocument();
+    expect(within(ardee).getByText("Retail Individual Investors(RIIs)")).toBeInTheDocument();
 
-    const gammaCard = screen.getByText("Gamma Retail").closest("button")!;
-    expect(within(gammaCard).getByText(/₹50–₹60/)).toBeInTheDocument();
-    expect(within(gammaCard).queryByText(/Cr issue/)).not.toBeInTheDocument();
-    expect(within(gammaCard).getByText(/Subscription: 15 Aug 2026 – 18 Aug 2026/)).toBeInTheDocument();
-    expect(within(gammaCard).queryByText(/Tentative listing:/)).not.toBeInTheDocument();
+    // Unknown fields render as an em dash, never as zero.
+    const leap = screen.getByText("Leap India Limited").closest("button")!;
+    expect(within(leap).getByText("LEAP · SME")).toBeInTheDocument();
+    expect(within(leap).getAllByText("—")).toHaveLength(3);
+    expect(within(leap).queryByText("Subscribed")).not.toBeInTheDocument();
+  });
+
+  it("filters the board down to a single status", async () => {
+    const user = userEvent.setup();
+    mockListFetch(feed);
+    render(<IpoListings />);
+
+    await screen.findByText("Ardee Industries Limited");
+    expect(screen.getByRole("button", { name: /All \(3\)/ })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: /Open \(1\)/ }));
+    expect(screen.getByText("Ardee Industries Limited")).toBeInTheDocument();
+    expect(screen.queryByText("Leap India Limited")).not.toBeInTheDocument();
+    expect(screen.queryByText("Juniper Green Energy Limited")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Closed \(1\)/ }));
+    expect(screen.getByText("Juniper Green Energy Limited")).toBeInTheDocument();
+    expect(screen.queryByText("Ardee Industries Limited")).not.toBeInTheDocument();
+  });
+
+  it("explains an empty filter result in terms of that filter", async () => {
+    const user = userEvent.setup();
+    mockListFetch({ ...feed, ipos: [ipos[0]], counts: { open: 1, upcoming: 0, closed: 0 } });
+    render(<IpoListings />);
+
+    await screen.findByText("Ardee Industries Limited");
+    await user.click(screen.getByRole("button", { name: /Upcoming \(0\)/ }));
+    expect(screen.getByText(/No upcoming IPOs on NSE's calendar right now/)).toBeInTheDocument();
+  });
+
+  it("shows the empty state when the calendar is bare", async () => {
+    mockListFetch({ ...feed, ipos: [], counts: { open: 0, upcoming: 0, closed: 0 } });
+    render(<IpoListings />);
+    expect(await screen.findByText(/No IPOs on NSE's calendar right now/)).toBeInTheDocument();
   });
 
   it("shows anticipated IPOs when present and hides the section when empty", async () => {
-    // source omitted (undefined) -> falls back to the default snapshot caption ( ?? only
-    // triggers on null/undefined, not on an empty string, so this must be genuinely absent).
-    mockListFetch({ ipos: [], anticipated, asOfDate: "2026-08-04" });
+    mockListFetch({ ...feed, ipos: [], anticipated });
     render(<IpoListings />);
     expect(await screen.findByText("Delta Logistics")).toBeInTheDocument();
     expect(screen.getByText("On the radar · no filing window yet")).toBeInTheDocument();
-    expect(screen.getByText("Filed DRHP privately; expected to launch next quarter.")).toBeInTheDocument();
-    expect(screen.getByText(/Listing details are a manually curated snapshot/)).toBeInTheDocument();
+    expect(screen.getByText("Ports & Logistics")).toBeInTheDocument();
   });
 
   it("hides the anticipated section entirely when there are none", async () => {
-    mockListFetch({ ipos: [], anticipated: [], asOfDate: "2026-08-04", source: "" });
+    mockListFetch({ ...feed, ipos: [], anticipated: [] });
     render(<IpoListings />);
-    await screen.findByText(/No open or upcoming IPOs/);
+    await screen.findByText(/No IPOs on NSE's calendar/);
     expect(screen.queryByText("On the radar · no filing window yet")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the default caption when the payload carries no source", async () => {
+    // ?? only triggers on null/undefined, so the key must be genuinely absent.
+    const { source: _source, ...withoutSource } = feed;
+    mockListFetch({ ...withoutSource, ipos: [] });
+    render(<IpoListings />);
+    expect(await screen.findByText(/Loading the NSE IPO calendar…/)).toBeInTheDocument();
   });
 
   it("shows an error banner when the response is not ok", async () => {
@@ -158,16 +261,10 @@ describe("IpoListings", () => {
     expect(await screen.findByText(/Couldn't reach the IPO data feed/)).toBeInTheDocument();
   });
 
-  it("shows the empty state when there are no IPOs and no error", async () => {
-    mockListFetch({ ipos: [], anticipated: [], asOfDate: "2026-08-04", source: "" });
-    render(<IpoListings />);
-    expect(await screen.findByText("No open or upcoming IPOs in the current snapshot.")).toBeInTheDocument();
-  });
-
   it("falls back to initials when the logo image fails to load", async () => {
-    mockListFetch({ ipos: [ipos[0]], anticipated: [], asOfDate: "2026-08-04", source: "" });
+    mockListFetch({ ...feed, ipos: [ipos[0]] });
     render(<IpoListings />);
-    const img = await screen.findByAltText("Alpha Manufacturing logo");
+    const img = await screen.findByAltText("Ardee Industries Limited logo");
     fireEvent.error(img);
     expect(screen.getByText("A")).toBeInTheDocument();
   });
@@ -177,33 +274,30 @@ describe("IpoListings", () => {
     const research = deferred<Response>();
     global.fetch = jest.fn((url: any) => {
       if (String(url).includes("/api/research")) return research.promise;
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ ipos, anticipated: [], asOfDate: "2026-08-04", source: "" }),
-      } as Response);
+      return Promise.resolve({ ok: true, json: async () => feed } as Response);
     }) as unknown as typeof fetch;
 
     render(<IpoListings />);
-    await screen.findByText("Alpha Manufacturing");
+    await screen.findByText("Ardee Industries Limited");
 
-    const alphaCard = screen.getByText("Alpha Manufacturing").closest("button")!;
-    await user.click(alphaCard);
+    const card = screen.getByText("Ardee Industries Limited").closest("button")!;
+    await user.click(card);
 
     let modal = screen.getByTestId("ai-report-modal");
     expect(modal).toHaveAttribute("data-open", "true");
     expect(modal).toHaveAttribute("data-loading", "true");
-    expect(modal).toHaveAttribute("data-logo", "https://logo.test/alpha.png");
-    expect(modal).toHaveAttribute("data-company", "Alpha Manufacturing");
-    expect(alphaCard).toHaveClass("border-indigo-400");
+    expect(modal).toHaveAttribute("data-logo", "https://logo.test/ardee.png");
+    expect(modal).toHaveAttribute("data-company", "Ardee Industries Limited");
+    expect(card).toHaveClass("border-indigo-400");
 
     await act(async () => {
-      research.resolve({ ok: true, json: async () => ({ stock: "Alpha Manufacturing", score: 70 }) } as Response);
+      research.resolve({ ok: true, json: async () => ({ stock: "Ardee Industries Limited", score: 70 }) } as Response);
       await research.promise;
     });
 
     modal = screen.getByTestId("ai-report-modal");
     expect(modal).toHaveAttribute("data-loading", "false");
-    expect(modal).toHaveAttribute("data-symbol", "Alpha Manufacturing");
+    expect(modal).toHaveAttribute("data-symbol", "Ardee Industries Limited");
 
     await user.click(screen.getByTestId("modal-close"));
     expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
@@ -215,10 +309,7 @@ describe("IpoListings", () => {
       if (String(url).includes("/api/research")) {
         return Promise.resolve({ ok: true, json: async () => ({ stock: "Delta Logistics", score: 55 }) } as Response);
       }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ ipos: [], anticipated, asOfDate: "2026-08-04", source: "" }),
-      } as Response);
+      return Promise.resolve({ ok: true, json: async () => ({ ...feed, ipos: [], anticipated }) } as Response);
     }) as unknown as typeof fetch;
 
     render(<IpoListings />);
