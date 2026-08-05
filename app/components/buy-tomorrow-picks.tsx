@@ -1,0 +1,231 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { AnalysisResponse } from "./ai-analysis-report";
+import { AiReportModal } from "./ai-report-modal";
+import { CapTierPill, LiveIndicator } from "./market-badges";
+import type { CapTier } from "../lib/indian-stocks";
+
+type Pick = {
+  symbol: string;
+  name: string;
+  sector: string;
+  businessType: string;
+  logo: string;
+  capTier: CapTier;
+  price: number | null;
+  changePercent: number | null;
+  oneMonthReturn: number | null;
+  outlook: string;
+  confidence: number;
+  newsSignal: string;
+  priceSignal: string;
+  institutionalTag: string;
+  institutionalSignal: string;
+};
+
+type BuyTomorrowState = {
+  date: string;
+  generatedAt: string;
+  source: "ai" | "heuristic";
+  picks: Pick[];
+};
+
+function PickLogo({ src, name }: { src: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+        {name.charAt(0)}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- external favicon host, not part of the Next/Image domain allowlist
+    <img
+      src={src}
+      alt={`${name} logo`}
+      width={44}
+      height={44}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-11 w-11 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1.5 dark:border-slate-700"
+    />
+  );
+}
+
+function institutionalTagClass(tag: string) {
+  if (tag === "Government / PSU") return "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400";
+  if (tag === "FII & DII favourite") return "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400";
+  return "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400";
+}
+
+function formatRupees(value: number | null) {
+  if (value === null) return "—";
+  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export function BuyTomorrowPicks() {
+  const [state, setState] = useState<BuyTomorrowState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch("/api/predictions/buy-tomorrow");
+      if (!response.ok) throw new Error("Failed to load buy-tomorrow picks");
+      const data = await response.json();
+      setState(data);
+      setError(null);
+    } catch {
+      setError("Couldn't reach the AI screening engine right now. Please try again shortly.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch-on-mount; setState only ever runs after the async fetch resolves, not synchronously in this callback.
+    load();
+  }, [load]);
+
+  const picks = state?.picks ?? [];
+  const selectedPick = picks.find((p) => p.symbol === selected);
+
+  const handleSelect = async (symbol: string) => {
+    setSelected(symbol);
+    setAnalysisLoading(true);
+    setAnalysis(null);
+
+    const response = await fetch("/api/research", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stock: symbol }),
+    });
+    const data = await response.json();
+    setAnalysisLoading(false);
+    setAnalysis(data);
+  };
+
+  return (
+    <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600 dark:text-amber-400">Buy tomorrow screener</p>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">10 stocks to watch for the next session</h3>
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+            Screened for three signals: positive AI-read market news, a cheaper entry price than recent levels, and the kind of
+            stock that typically draws government/PSU, FII, DII, or NRI investor interest.
+          </p>
+        </div>
+        <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+          {state ? (state.source === "ai" ? "Generated by AI agent" : "Heuristic demo (no AI key configured)") : "Loading…"}
+        </div>
+      </div>
+
+      <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400">
+        Educational research only, not investment advice. Ownership notes (e.g. &ldquo;Government / PSU&rdquo;) reflect publicly known
+        shareholding structure; FII/DII/NRI notes describe typical participation patterns for stocks of this size, not confirmed
+        real-time flows. Always verify with your broker or a SEBI-registered advisor before trading.
+      </p>
+
+      {error && (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+        {loading &&
+          Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40" />
+          ))}
+
+        {!loading &&
+          picks.map((pick) => {
+            const isUp = (pick.changePercent ?? 0) >= 0;
+            const changeClass = pick.changePercent === null ? "text-slate-400 dark:text-slate-500" : isUp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
+            const isActive = selected === pick.symbol;
+
+            return (
+              <button
+                key={pick.symbol}
+                type="button"
+                onClick={() => handleSelect(pick.symbol)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  isActive
+                    ? "border-amber-400 bg-amber-50/60 ring-2 ring-amber-400 dark:border-amber-500/50 dark:bg-amber-500/10"
+                    : "border-slate-200 bg-white hover:border-amber-200 hover:bg-amber-50/40 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-amber-500/30"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <PickLogo src={pick.logo} name={pick.name} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="font-semibold text-slate-900 dark:text-white">{pick.symbol}</p>
+                      <CapTierPill tier={pick.capTier} />
+                    </div>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{pick.name}</p>
+                    <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">{pick.businessType}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="font-semibold text-slate-900 dark:text-white">{formatRupees(pick.price)}</span>
+                  <span className={`text-sm font-medium ${changeClass}`}>
+                    {pick.changePercent === null ? "—" : `${isUp ? "▲" : "▼"} ${Math.abs(pick.changePercent).toFixed(2)}%`}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-end">
+                  <LiveIndicator />
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+                    {pick.outlook} · {pick.confidence}%
+                  </span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${institutionalTagClass(pick.institutionalTag)}`}>
+                    {pick.institutionalTag}
+                  </span>
+                </div>
+
+                <ul className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <li>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">News: </span>
+                    {pick.newsSignal}
+                  </li>
+                  <li>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Price: </span>
+                    {pick.priceSignal}
+                  </li>
+                  <li>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Interest: </span>
+                    {pick.institutionalSignal}
+                  </li>
+                </ul>
+              </button>
+            );
+          })}
+
+        {!loading && picks.length === 0 && !error && (
+          <p className="col-span-full text-sm text-slate-500 dark:text-slate-400">No picks available right now.</p>
+        )}
+      </div>
+
+      <AiReportModal
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        loading={analysisLoading}
+        analysis={analysis}
+        logoUrl={selectedPick?.logo}
+        companyName={selectedPick?.name}
+      />
+    </section>
+  );
+}
