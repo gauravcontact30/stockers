@@ -1,56 +1,20 @@
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
 import { BseMarketBoard } from "./components/bse-market-board";
-import { BseStockDirectory } from "./components/bse-stock-directory";
-import { DividendBoard } from "./components/dividend-board";
-import { EtfBoard } from "./components/etf-board";
 import { HeroCarousel } from "./components/hero-carousel";
-import { IpoListings } from "./components/ipo-listings";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
-import { MostTraded } from "./components/most-traded";
-import { MtfTraded } from "./components/mtf-traded";
-import { SectorTrends } from "./components/sector-trends";
+import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
-import { StocksInNews } from "./components/stocks-in-news";
 import { SubscriptionBadge } from "./components/subscription-reminder";
-import { SupportSection } from "./components/support-section";
 import { ThemeToggle } from "./components/theme-toggle";
-
-const pricing = [
-  {
-    name: "Starter",
-    price: "₹499",
-    period: "/month",
-    features: ["3 AI stock scans", "Daily market pulse", "Basic sentiment board"],
-  },
-  {
-    name: "Pro",
-    price: "₹1499",
-    period: "/month",
-    featured: true,
-    features: ["Unlimited stock research", "Positive/negative news tracker", "Priority alerts"],
-  },
-  {
-    name: "Elite",
-    price: "₹4999",
-    period: "/year",
-    features: ["Annual insights bundle", "Advanced prediction view", "Dedicated investor workspace"],
-  },
-];
 
 const navLinks = [
   { href: "#bse-board", label: "BSE Board" },
-  { href: "#bse-directory", label: "Companies" },
-  { href: "#sectors", label: "Sectors" },
-  { href: "#most-traded", label: "Most Traded" },
-  { href: "#mtf", label: "MTF" },
+  { href: "#workspace", label: "Workspace" },
   { href: "/news", label: "News" },
-  { href: "#stocks-in-news", label: "Stock News" },
-  { href: "#dividends", label: "Dividends" },
-  { href: "#ipos", label: "IPOs" },
-  { href: "#most-bought-etfs", label: "ETFs" },
   { href: "#pricing", label: "Pricing" },
+  { href: "/dashboard#support", label: "Getting Started" },
   { href: "/dashboard", label: "AI Dashboard" },
 ];
 
@@ -62,16 +26,55 @@ const coverage = [
   { figure: "Official", label: "Exchange sources", note: "BSE scrip master, Bhavcopy and NSE feeds" },
 ];
 
-// The AI surfaces now live in the signed-in dashboard; the landing page points at them by name so
-// a visitor can still see what they get, and land directly on the one they came for.
-const aiFeatures = [
-  { href: "/dashboard#market-pulse", label: "AI market pulse", blurb: "Live breadth and indices with an AI read on the day's mood." },
-  { href: "/dashboard#top-picks", label: "Today's AI picks", blurb: "The stocks our agent rates highest right now." },
-  { href: "/dashboard#buy-tomorrow", label: "Buy tomorrow", blurb: "Names set up for tomorrow's session, scored overnight." },
-  { href: "/dashboard#dip-winners", label: "Dip winners", blurb: "Quality stocks trading below their recent range." },
-  { href: "/dashboard#research", label: "AI stock research", blurb: "A deep dive with predictions and news sentiment." },
-  { href: "/dashboard#compare", label: "AI stock compare", blurb: "Two stocks head to head, with an AI verdict." },
-  { href: "/dashboard#etf-research", label: "AI ETF research", blurb: "Every major Indian ETF, decoded by AI." },
+// Every board now lives in the signed-in workspace, each with an AI layer on top of it. The
+// landing page names them so a visitor can see what they get and land directly on the one they
+// came for, rather than scrolling through a copy of the dashboard.
+// Each card carries its own pale wash so the fifteen destinations read as fifteen places rather
+// than one grid repeated. The tints are deliberately light — they tell cards apart at a glance
+// without competing with the text sitting on them.
+const CARD_TINTS = {
+  emerald: "border-emerald-200 bg-emerald-50/70 hover:border-emerald-400 dark:border-emerald-500/25 dark:bg-emerald-500/10",
+  teal: "border-teal-200 bg-teal-50/70 hover:border-teal-400 dark:border-teal-500/25 dark:bg-teal-500/10",
+  sky: "border-sky-200 bg-sky-50/70 hover:border-sky-400 dark:border-sky-500/25 dark:bg-sky-500/10",
+  indigo: "border-indigo-200 bg-indigo-50/70 hover:border-indigo-400 dark:border-indigo-500/25 dark:bg-indigo-500/10",
+  violet: "border-violet-200 bg-violet-50/70 hover:border-violet-400 dark:border-violet-500/25 dark:bg-violet-500/10",
+  fuchsia: "border-fuchsia-200 bg-fuchsia-50/70 hover:border-fuchsia-400 dark:border-fuchsia-500/25 dark:bg-fuchsia-500/10",
+  rose: "border-rose-200 bg-rose-50/70 hover:border-rose-400 dark:border-rose-500/25 dark:bg-rose-500/10",
+  amber: "border-amber-200 bg-amber-50/70 hover:border-amber-400 dark:border-amber-500/25 dark:bg-amber-500/10",
+  lime: "border-lime-200 bg-lime-50/70 hover:border-lime-400 dark:border-lime-500/25 dark:bg-lime-500/10",
+  cyan: "border-cyan-200 bg-cyan-50/70 hover:border-cyan-400 dark:border-cyan-500/25 dark:bg-cyan-500/10",
+  orange: "border-orange-200 bg-orange-50/70 hover:border-orange-400 dark:border-orange-500/25 dark:bg-orange-500/10",
+  blue: "border-blue-200 bg-blue-50/70 hover:border-blue-400 dark:border-blue-500/25 dark:bg-blue-500/10",
+} as const;
+
+const workspace = [
+  {
+    group: "AI screeners",
+    tint: "text-emerald-600 dark:text-emerald-400",
+    items: [
+      { href: "/dashboard#market-pulse", label: "Market Pulse", blurb: "Live indices and breadth with an AI read on the day's mood.", tint: CARD_TINTS.emerald },
+      { href: "/dashboard#top-picks", label: "Top Picks", blurb: "The stocks our agent rates highest right now.", tint: CARD_TINTS.amber },
+      { href: "/dashboard#buy-tomorrow", label: "Buy Tomorrow", blurb: "Names set up for tomorrow's session, scored overnight.", tint: CARD_TINTS.indigo },
+      { href: "/dashboard#dip-winners", label: "Dip Winners", blurb: "Pullbacks whose longer trend is still intact.", tint: CARD_TINTS.rose },
+      { href: "/dashboard#research", label: "Stock Research", blurb: "One company in depth, with predictions and news sentiment.", tint: CARD_TINTS.teal },
+      { href: "/dashboard#compare", label: "Compare", blurb: "Two or three stocks head to head, with a call on each.", tint: CARD_TINTS.violet },
+      { href: "/dashboard#etf-research", label: "ETF Research", blurb: "Every major Indian ETF, decoded by AI.", tint: CARD_TINTS.cyan },
+    ],
+  },
+  {
+    group: "Exchange boards",
+    tint: "text-sky-600 dark:text-sky-400",
+    items: [
+      { href: "/dashboard#directory", label: "Company Directory", blurb: "All 4,900+ listed companies by name, ticker, code or ISIN.", tint: CARD_TINTS.sky },
+      { href: "/dashboard#sectors", label: "Sector Trends", blurb: "Every NSE sectoral index, ranked by today's move.", tint: CARD_TINTS.lime },
+      { href: "/dashboard#most-traded", label: "Most Traded", blurb: "Where the day's money actually went, by turnover.", tint: CARD_TINTS.blue },
+      { href: "/dashboard#mtf", label: "MTF Watch", blurb: "Most-traded names you can buy on margin, and the cost.", tint: CARD_TINTS.orange },
+      { href: "/dashboard#stock-news", label: "Stocks in News", blurb: "Today's corporate filings, grouped by sector.", tint: CARD_TINTS.fuchsia },
+      { href: "/dashboard#dividends", label: "Dividends", blurb: "Declared payouts and the ex-dates still ahead of you.", tint: CARD_TINTS.teal },
+      { href: "/dashboard#ipos", label: "IPO Watch", blurb: "Open and upcoming issues with live subscription figures.", tint: CARD_TINTS.indigo },
+      { href: "/dashboard#etf-board", label: "ETF Board", blurb: "Every NSE ETF by asset class, ranked by money traded.", tint: CARD_TINTS.violet },
+    ],
+  },
 ];
 
 /**
@@ -161,56 +164,20 @@ export default function Home() {
 
         <BseMarketBoard />
 
-        <BseStockDirectory />
-
         <BandHeading
-          eyebrow="02 · Around the market"
-          title="Sectors, flows, news and issues"
-          blurb="Where money rotated, what traded heaviest, which companies made news, and what is coming to market."
+          eyebrow="02 · Everything else, in one workspace"
+          title="Sixteen boards behind one sidebar"
+          blurb="The board above is the free sample. Company lookup, sector rotation, turnover, filings, dividends, IPOs and ETFs each live in the signed-in dashboard now — every one of them with an AI layer reading it for you."
         />
 
-        <div className="scroll-mt-28">
-          <SectorTrends />
-        </div>
-
-        <div className="scroll-mt-28">
-          <MostTraded />
-        </div>
-
-        <div className="scroll-mt-28">
-          <MtfTraded />
-        </div>
-
-        <div className="scroll-mt-28">
-          <StocksInNews />
-        </div>
-
-        <div className="scroll-mt-28">
-          <DividendBoard />
-        </div>
-
-        <div id="ipos" className="scroll-mt-28">
-          <IpoListings />
-        </div>
-
-        <div className="scroll-mt-28">
-          <EtfBoard />
-        </div>
-
-        <BandHeading
-          eyebrow="03 · Where the AI lives"
-          title="Your signed-in workspace"
-          blurb="Everything above is exchange data, free and open. The AI screeners, research and comparisons run in the dashboard."
-        />
-
-        <section id="ai" className="scroll-mt-28 overflow-hidden rounded-[32px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-[0_20px_60px_-30px_rgba(5,150,105,0.45)] transition-colors sm:p-8 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-slate-900 dark:to-slate-900">
+        <section id="workspace" className="scroll-mt-28 overflow-hidden rounded-[32px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-[0_20px_60px_-30px_rgba(5,150,105,0.45)] transition-colors sm:p-8 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-slate-900 dark:to-slate-900">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI workspace</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Seven AI tools, one dashboard</h3>
+              <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Pick a question, land on the board that answers it</h3>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Picks, screeners, research and head-to-head comparisons sit side by side in a signed-in workspace, each on its
-                own tab.
+                Screeners score stocks for you; exchange boards show you the market as the exchanges publish it. Every link
+                below opens straight onto its own tab in the dashboard.
               </p>
             </div>
             <Link
@@ -221,66 +188,33 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {aiFeatures.map((feature) => (
-              <Link
-                key={feature.href}
-                href={feature.href}
-                className="group rounded-2xl border border-slate-200 bg-white/80 p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.6)] dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-emerald-500/40"
-              >
-                <p className="text-sm font-semibold text-slate-900 transition group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
-                  {feature.label}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{feature.blurb}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section id="pricing" className="scroll-mt-28 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Pricing</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Flexible plans for every investor</h3>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Flexible monthly and yearly options for every investing style.</p>
-          </div>
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
-            {pricing.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-3xl border p-6 transition-colors ${
-                  plan.featured
-                    ? "border-emerald-300 bg-emerald-50 shadow-[0_20px_40px_-25px_rgba(5,150,105,0.5)] dark:border-emerald-500/40 dark:bg-emerald-500/10"
-                    : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60"
-                }`}
-              >
-                {plan.featured && (
-                  <span className="absolute -top-3 right-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
-                    Most popular
-                  </span>
-                )}
-                <p className="text-xl font-semibold text-slate-900 dark:text-white">{plan.name}</p>
-                <div className="mt-4 flex items-end gap-2">
-                  <span className="text-4xl font-semibold text-emerald-600 dark:text-emerald-400">{plan.price}</span>
-                  <span className="pb-1 text-slate-500 dark:text-slate-400">{plan.period}</span>
-                </div>
-                <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>• {feature}</li>
-                  ))}
-                </ul>
-                <Link href="/signup" className="mt-6 inline-flex rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
-                  Choose {plan.name}
-                </Link>
+          {workspace.map((band) => (
+            <div key={band.group} className="mt-6">
+              <p className={`text-[11px] font-bold uppercase tracking-[0.28em] ${band.tint}`}>{band.group}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {band.items.map((feature) => (
+                  <Link
+                    key={feature.href}
+                    href={feature.href}
+                    className={`group rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.6)] ${feature.tint}`}
+                  >
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{feature.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{feature.blurb}</p>
+                  </Link>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+
+          <Link
+            href="/dashboard#support"
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-white dark:border-emerald-500/40 dark:bg-slate-950/50 dark:text-emerald-400"
+          >
+            New here? Start with the guided tour →
+          </Link>
         </section>
 
-        <div id="support" className="scroll-mt-28">
-          <SupportSection />
-        </div>
+        <PricingPlans />
 
         <SiteFooter />
       </div>

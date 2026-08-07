@@ -81,6 +81,77 @@ export const VERDICT_SOURCES: Record<string, VerdictSource> = {
     blurb: "The same momentum read applied to funds rather than single stocks.",
     symbols: (payload) => symbolsOf(list((payload as Payload)?.etfs)).slice(0, 6),
   },
+
+  // The exchange boards. Each reads the symbols out of its own feed, so the calls are always
+  // about the companies that section is showing rather than a fixed list beside them.
+  directory: {
+    feed: "/api/market/bse/stocks?sort=mcap&direction=desc",
+    feature: "directory",
+    heading: "AI desk: the exchange's largest companies",
+    blurb: "Standing calls on the biggest names in the directory, before you search for your own.",
+    symbols: (payload) =>
+      list((payload as Payload)?.rows)
+        .map((row) => (typeof row.ticker === "string" ? row.ticker : ""))
+        .filter(Boolean)
+        .slice(0, 6),
+  },
+  sectors: {
+    feature: "sectors",
+    heading: "AI desk: bellwethers of the moving sectors",
+    blurb: "Rotation shows up in the index; these are the stocks doing the moving.",
+    symbols: () => HEAVYWEIGHTS,
+  },
+  "most-traded": {
+    feed: "/api/market/most-traded",
+    feature: "most-traded",
+    heading: "AI desk: heavy turnover, but worth owning?",
+    blurb: "A stock can trade hard on its way down — here is which side of that these are on.",
+    symbols: (payload) => symbolsOf(list((payload as Payload)?.byValue)).slice(0, 6),
+  },
+  mtf: {
+    feed: "/api/market/most-traded",
+    feature: "mtf",
+    heading: "AI desk: would you borrow to hold these?",
+    blurb: "Leverage magnifies the trend you buy into, so the trend is the thing to check first.",
+    symbols: (payload) => symbolsOf(list((payload as Payload)?.mtf)).slice(0, 6),
+  },
+  "stock-news": {
+    feed: "/api/market/stock-news",
+    feature: "stock-news",
+    heading: "AI desk: the companies that filed today",
+    blurb: "A filing is news; whether the stock behind it is worth owning is a separate question.",
+    symbols: (payload) =>
+      list((payload as Payload)?.sectors)
+        .flatMap((sector) => symbolsOf(list(sector.items)))
+        .slice(0, 6),
+  },
+  dividends: {
+    feed: "/api/market/dividends",
+    feature: "dividends",
+    heading: "AI desk: is the dividend worth the holding?",
+    blurb: "A payout is only worth capturing if the stock behind it is not falling faster.",
+    symbols: (payload) =>
+      list((payload as Payload)?.sectors)
+        .flatMap((sector) => list(sector.dividends).map((row) => (typeof row.symbol === "string" ? row.symbol : "")))
+        .filter(Boolean)
+        .slice(0, 6),
+  },
+  ipos: {
+    feature: "ipos",
+    heading: "AI desk: what the listed market is paying for",
+    blurb: "An issue is priced against its listed peers, so start from where those peers stand.",
+    symbols: () => HEAVYWEIGHTS,
+  },
+  "etf-board": {
+    feed: "/api/market/etf-board",
+    feature: "etf-board",
+    heading: "AI desk: the funds carrying the most money",
+    blurb: "The busiest funds on the board, scored on the same measured returns as any stock.",
+    symbols: (payload) =>
+      list((payload as Payload)?.groups)
+        .flatMap((group) => symbolsOf(list(group.etfs)))
+        .slice(0, 6),
+  },
 };
 
 /**

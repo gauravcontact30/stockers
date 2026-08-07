@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { MtfTraded } from "../../app/components/mtf-traded";
+import { MtfTraded, mtfBrief } from "../../app/components/mtf-traded";
 import type { TradedStock } from "../../app/components/most-traded";
 
 function stock(overrides: Partial<TradedStock> = {}): TradedStock {
@@ -90,5 +90,33 @@ describe("MtfTraded", () => {
     mockFeed({}, false);
     render(<MtfTraded />);
     expect(await screen.findByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
+  });
+});
+
+describe("mtfBrief", () => {
+  const rows = [stock({ symbol: "RELIANCE", changePercent: 1.4 }), stock({ symbol: "SBIN", changePercent: -0.5 })];
+
+  it("frames the board around what leverage does to a trend", () => {
+    const brief = mtfBrief(rows, 214)!;
+
+    expect(brief.question).toMatch(/leverage magnifies/);
+    expect(brief.facts).toContainEqual({ label: "Eligible universe", value: "214 stocks" });
+    expect(brief.facts).toContainEqual({ label: "Trading higher", value: "1 of 2" });
+    expect(brief.highlights).toHaveLength(2);
+  });
+
+  it("labels a stock NSE has not classified", () => {
+    expect(mtfBrief([stock({ sector: null })], 1)!.highlights[0]).toMatch(/\(unclassified\)/);
+  });
+
+  it("treats a stock with no move as not rising", () => {
+    expect(mtfBrief([stock({ changePercent: null })], 1)!.facts).toContainEqual({
+      label: "Trading higher",
+      value: "0 of 1",
+    });
+  });
+
+  it("has nothing to read when no eligible stock is active", () => {
+    expect(mtfBrief([], 214)).toBeNull();
   });
 });

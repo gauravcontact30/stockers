@@ -9,6 +9,7 @@
  * playful spirit is met with artwork that is ours to ship.
  */
 
+import type { CallSound } from "./reminder-sound";
 import type { VoiceProfile } from "./reminder-voice";
 
 export type CharacterKey = "hero" | "dog" | "cat" | "robot" | "narrator" | "kid";
@@ -21,8 +22,12 @@ export type Character = {
   shout: string;
   /** Onomatopoeia shown alongside the sound button. */
   noise: string;
-  /** Base frequency of the synthesised call, in hertz. */
-  tone: number;
+  /**
+   * The synthesised call. Each is shaped so it is recognisable on its own: the dog's two short
+   * falling sawtooth beats bark, the cat's long rise-and-fall sine mews, the robot's flat square
+   * beats beep.
+   */
+  call: CallSound;
   accent: string;
   /**
    * How this character's line is spoken. Pitch and rate are what turn a plain system voice into
@@ -41,7 +46,8 @@ export const CHARACTERS: Character[] = [
     name: "The Masked Investor",
     shout: "With great charts comes great responsibility!",
     noise: "THWIP!",
-    tone: 520,
+    // A quick rising whip-crack, then a second one an instant later.
+    call: { tone: 520, pattern: [0, 0.14], wave: "sawtooth", bend: [1.6, 2.4], length: 0.12, volume: 0.16 },
     accent: "from-rose-500 to-indigo-600",
     voice: { gender: "male", pitch: 0.6, rate: 0.88 },
   },
@@ -50,7 +56,8 @@ export const CHARACTERS: Character[] = [
     name: "Bruno the Watchdog",
     shout: "Woof! Your trial is running out!",
     noise: "WOOF! WOOF!",
-    tone: 240,
+    // Two short rough beats that drop hard in pitch — the shape of a bark.
+    call: { tone: 260, pattern: [0, 0.26], wave: "sawtooth", bend: [0.5, 0.4], length: 0.18, volume: 0.2 },
     accent: "from-amber-500 to-orange-600",
     voice: { gender: "male", pitch: 0.4, rate: 1.15 },
   },
@@ -59,7 +66,8 @@ export const CHARACTERS: Character[] = [
     name: "Mitthu the Cat",
     shout: "Meow… renew before I knock this off the table.",
     noise: "MEEEOW!",
-    tone: 700,
+    // One long smooth beat that climbs and then falls away — a mew.
+    call: { tone: 620, pattern: [0], wave: "sine", bend: [1.4, 0.72], length: 0.72, volume: 0.18 },
     accent: "from-violet-500 to-fuchsia-600",
     voice: { gender: "female", pitch: 1.7, rate: 0.85 },
   },
@@ -68,7 +76,8 @@ export const CHARACTERS: Character[] = [
     name: "Unit CANDLE-9",
     shout: "BEEP BOOP. SUBSCRIPTION STATUS: HUNGRY.",
     noise: "BEEP BOOP!",
-    tone: 400,
+    // Three flat square beats, the middle one a fifth lower — electronic, not animal.
+    call: { tone: 440, pattern: [0, 0.16, 0.32], wave: "square", bend: [1, 0.66], length: 0.1, volume: 0.12 },
     accent: "from-cyan-500 to-teal-600",
     voice: { gender: "any", pitch: 0.3, rate: 0.8 },
   },
@@ -77,7 +86,8 @@ export const CHARACTERS: Character[] = [
     name: "The Narrator",
     shout: "Meanwhile, in a portfolio not far from here…",
     noise: "DUN DUN DUUUN!",
-    tone: 180,
+    // Two short low notes and a third that sinks — the cliffhanger sting.
+    call: { tone: 175, pattern: [0, 0.3, 0.6], wave: "triangle", bend: [0.95, 0.55], length: 0.34, volume: 0.22 },
     accent: "from-slate-600 to-slate-900",
     voice: { gender: "male", pitch: 0.5, rate: 0.78 },
   },
@@ -86,7 +96,8 @@ export const CHARACTERS: Character[] = [
     name: "Chikki the Chart Whiz",
     shout: "Hey! Hey! Are you gonna renew or what?!",
     noise: "WHEEE!",
-    tone: 880,
+    // A single bright slide upward, like a party whistle.
+    call: { tone: 700, pattern: [0], wave: "triangle", bend: [1.7, 2.6], length: 0.5, volume: 0.14 },
     accent: "from-emerald-500 to-lime-600",
     voice: { gender: "female", pitch: 1.9, rate: 1.25 },
   },

@@ -7,25 +7,35 @@ import { GatedSection } from "./ai-gate";
 import { AiReportModal } from "./ai-report-modal";
 import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
-import { AnalyticsPanel } from "./analytics-panel";
+import { BseStockDirectory } from "./bse-stock-directory";
 import { BuyTomorrowPicks } from "./buy-tomorrow-picks";
+import { OverviewHeader } from "./dashboard-overview";
 import {
-  AI_SECTIONS,
   DashboardSectionTabs,
   DashboardSidebar,
+  isAiSection,
   isDashboardSectionId,
+  SECTION_BY_ID,
   type AiSectionId,
+  type DashboardSection,
   type DashboardSectionId,
 } from "./dashboard-sidebar";
 import { DipWinners } from "./dip-winners";
+import { DividendBoard } from "./dividend-board";
+import { EtfBoard } from "./etf-board";
 import { EtfResearch } from "./etf-research";
+import { GettingStarted } from "./getting-started";
+import { IpoListings } from "./ipo-listings";
 import { LandingResearch } from "./landing-research";
 import { MarketNews } from "./market-news";
 import { MarketPulse } from "./market-pulse";
-import { PortfolioCard } from "./portfolio-card";
+import { MostTraded } from "./most-traded";
+import { MtfTraded } from "./mtf-traded";
 import { PredictionPanel } from "./prediction-panel";
 import { SectorShowdowns } from "./sector-showdowns";
-import { StockSearch } from "./stock-search";
+import { SectorTrends } from "./sector-trends";
+import { StockExplorer } from "./stock-explorer";
+import { StocksInNews } from "./stocks-in-news";
 import { TopPicksToday } from "./top-picks-today";
 import { TripleCompare } from "./triple-compare";
 import { WatchlistCard } from "./watchlist-card";
@@ -92,6 +102,30 @@ function openSection(id: DashboardSectionId) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/**
+ * The heading and paywall around whichever section is open.
+ *
+ * Only sections with an AI layer are gated, and the exchange boards set `gate: false` so their
+ * public market data still renders for a lapsed reader — the lock lands on the AI panels alone.
+ */
+function SectionShell({ section, children }: { section: DashboardSection; children: ReactElement }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.label}</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{section.description}</p>
+      </div>
+      {isAiSection(section) ? (
+        <GatedSection feature={section.feature} label={section.featureLabel} gate={section.gate}>
+          {children}
+        </GatedSection>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
 export function DashboardClient() {
   const router = useRouter();
   const [user] = useState<UserData | null>(readStoredUser);
@@ -111,23 +145,29 @@ export function DashboardClient() {
     }
   }, [user, router]);
 
-  const handleAnalyze = async (event: React.FormEvent) => {
-    event.preventDefault();
+  /** The deep read of one stock: opens the report, then fills it in when the desk answers. */
+  const runAnalysis = async (symbol: string) => {
+    setStock(symbol);
     setLoading(true);
     setMessage(null);
     setModalOpen(true);
-    setSelectedSymbol(stock.toUpperCase());
+    setSelectedSymbol(symbol.toUpperCase());
 
     const response = await fetch("/api/research", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock }),
+      body: JSON.stringify({ stock: symbol }),
     });
 
     const data = await response.json();
     setLoading(false);
     setAnalysis(data);
     setMessage(`Analysis ready for ${data.stock}.`);
+  };
+
+  const handleAnalyze = (event: React.FormEvent) => {
+    event.preventDefault();
+    return runAnalysis(stock);
   };
 
   const logout = () => {
@@ -139,16 +179,23 @@ export function DashboardClient() {
 
   const overview = (
     <div className="flex flex-col gap-6">
+      <OverviewHeader name={user?.name || "investor"} />
       <AiVerdictPanel section="overview" />
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI research</p>
           <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Analyze a stock</h2>
+          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
+            Name a company, a ticker or a scrip code. The report that comes back is scored from measured returns —
+            the model writes the reasoning, not the call.
+          </p>
         </div>
 
+        {/* Picking from the catalogue runs the analysis straight away — the extra click on
+            "Research stock" said nothing the selection had not already said. */}
         <div className="mt-6">
-          <StockSearch onSelect={(symbol) => setStock(symbol)} />
+          <StockExplorer selected={selectedSymbol} onSelect={runAnalysis} />
         </div>
 
         <form onSubmit={handleAnalyze} className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -196,33 +243,14 @@ export function DashboardClient() {
             <li>• Technical breakout and support levels</li>
           </ul>
         </div>
-        <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Suggested focus</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Buy or avoid?</h3>
-          {analysis ? (
-            <div className="mt-3">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {analysis.recommendation || "Buy"} — open the full research report for key insights, market trends, company
-                actions, positive news, and reasons.
-              </p>
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                className="mt-3 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
-              >
-                Open report
-              </button>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Select a stock to unlock the AI buy/avoid recommendation and full research report.</p>
-          )}
-        </div>
-        <AnalyticsPanel />
-        <MarketNews />
-        <PortfolioCard />
         <WatchlistCard />
       </aside>
       </div>
+
+      {/* News is a grid of cards with its own pager now, so it gets the full width rather than
+          being squeezed into the sidebar column it used to share. */}
+      <MarketNews />
+
     </div>
   );
 
@@ -242,6 +270,14 @@ export function DashboardClient() {
       </div>
     ),
     "etf-research": <EtfResearch />,
+    directory: <BseStockDirectory />,
+    sectors: <SectorTrends />,
+    "most-traded": <MostTraded />,
+    mtf: <MtfTraded />,
+    "stock-news": <StocksInNews />,
+    dividends: <DividendBoard />,
+    ipos: <IpoListings />,
+    "etf-board": <EtfBoard />,
   };
 
   return (
@@ -278,22 +314,16 @@ export function DashboardClient() {
             {section === "overview" ? (
               overview
             ) : (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{AI_SECTIONS[section].label}</h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{AI_SECTIONS[section].description}</p>
-                </div>
-                <GatedSection
-                  feature={AI_SECTIONS[section].feature}
-                  label={AI_SECTIONS[section].featureLabel}
-                  gate={AI_SECTIONS[section].gate}
-                >
+              <SectionShell section={SECTION_BY_ID[section]}>
+                {section === "support" ? (
+                  <GettingStarted onOpen={openSection} />
+                ) : (
                   <div className="flex flex-col gap-6">
                     {section !== "compare" && <AiVerdictPanel section={section} />}
                     {aiPanels[section]}
                   </div>
-                </GatedSection>
-              </div>
+                )}
+              </SectionShell>
             )}
           </div>
         </div>

@@ -1,35 +1,30 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import { TickerTape } from "./hero-scenes";
+import { useEffect, useState, type ReactElement } from "react";
+import { CompareScene, DipBuysScene, TopGainersScene, TripleReportScene } from "./hero-scenes";
 
-const slides = [
-  {
-    title: "Every signal, gathered in one place",
-    description:
-      "From Sensex drawdowns to FII/DII flows — AI reads the charts and headlines of the Indian market so you don't have to.",
-    image: "/hero/research-desk.webp",
-  },
-  {
-    title: "Every stock, priced and tracked live",
-    description:
-      "Watch the Sensex move in real time against a live chart — the same view our AI reads before it calls a trend.",
-    image: "/hero/trading-laptop.webp",
-    withTicker: true,
-  },
-  {
-    title: "Real BSE prices, decoded by AI",
-    description:
-      "From BSE scrip codes to a clear buy, hold, or avoid call — AI ranks the board every trading day.",
-    image: "/hero/bse-ticker-board.webp",
-  },
-  {
-    title: "Where breaking news becomes a trading signal",
-    description:
-      "From boardrooms to trading desks — AI turns policy shifts and earnings headlines into buy and sell calls in seconds.",
-    image: "/hero/market-analysis.webp",
-  },
+/** How long each slide holds before the carousel advances on its own. */
+const SLIDE_MS = 6000;
+
+type Slide = {
+  /** Names the slide for the dot's accessible label — never drawn over the scene. */
+  caption: string;
+  scene: ReactElement;
+};
+
+/**
+ * Four scenes, each answering one question in the order a reader asks it: what is running today,
+ * how do two names compare, what does a full report look like, and how does any of this work.
+ *
+ * Nothing is written over them. The scenes carry their own labels — index levels, scrip codes,
+ * panel headings — and a headline laid on top only competed with those. The pitch and the calls
+ * to action sit underneath the frame instead, where they obscure nothing.
+ */
+const slides: Slide[] = [
+  { caption: "Today's top performers by theme", scene: <TopGainersScene /> },
+  { caption: "Two stocks compared by AI", scene: <CompareScene /> },
+  { caption: "A three-stock buy, hold or sell report", scene: <TripleReportScene /> },
+  { caption: "How the AI works, and what it likes cheap today", scene: <DipBuysScene /> },
 ];
 
 export function HeroCarousel() {
@@ -41,68 +36,73 @@ export function HeroCarousel() {
     // by a stale auto-advance tick.
     const timer = window.setTimeout(() => {
       setActiveSlide((previous) => (previous + 1) % slides.length);
-    }, 4000);
+    }, SLIDE_MS);
 
     return () => window.clearTimeout(timer);
   }, [activeSlide]);
 
   return (
-    <div className="relative w-full overflow-hidden bg-slate-950 text-white">
-      {slides.map((slide, index) => (
+    <>
+      {/* The page still needs exactly one h1 for a screen reader and for search, but the visible
+          headline was cut, so the site name carries it out of sight instead. */}
+      <h1 className="sr-only">Stockers.AI — AI stock research for Indian investors</h1>
+
+      {/* The scenes are light now, so the panel around them is too — a dark band under a pale
+          frame read as two unrelated sections stacked on top of each other. */}
+      <section className="w-full bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-white">
         <div
-          key={slide.title}
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            index === activeSlide ? "opacity-100" : "opacity-0"
-          }`}
+          className="relative min-h-[560px] w-full overflow-hidden sm:min-h-[620px] lg:min-h-[680px]"
+          aria-roledescription="carousel"
+          aria-label="Stockers.AI product scenes"
         >
-          <Image
-            src={slide.image}
-            alt=""
-            fill
-            priority={index === 0}
-            sizes="100vw"
-            className="object-cover"
-          />
-          {slide.withTicker && <TickerTape />}
-        </div>
-      ))}
-      <div className="relative mx-auto flex min-h-[460px] max-w-7xl flex-col justify-end px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
-        <div className="max-w-2xl space-y-5">
-          <span className="inline-flex w-fit rounded-full border border-emerald-400/40 bg-black/40 px-3 py-1 text-sm font-medium text-emerald-300 backdrop-blur-sm">
-            AI stock research for Indian investors
-          </span>
-          <h1 className="text-4xl font-semibold leading-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] sm:text-5xl">
-            {slides[activeSlide].title}
-          </h1>
-          <p className="max-w-xl text-lg text-slate-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">{slides[activeSlide].description}</p>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="/signup"
-              className="rounded-full bg-emerald-500 px-5 py-3 font-medium text-slate-950 transition hover:bg-emerald-400"
+          {slides.map((slide, index) => (
+            <div
+              key={slide.caption}
+              aria-hidden={index !== activeSlide}
+              className={`absolute inset-0 transition-opacity duration-700 ${index === activeSlide ? "opacity-100" : "opacity-0"}`}
             >
-              Start free
-            </a>
-            <a
-              href="/dashboard"
-              className="rounded-full border border-white/30 bg-black/40 px-5 py-3 font-medium text-white backdrop-blur-sm transition hover:bg-black/60"
-            >
-              Explore dashboard
-            </a>
-          </div>
+              {slide.scene}
+            </div>
+          ))}
         </div>
-        <div className="mt-8 flex gap-2">
+
+        {/* The slide picker belongs to the carousel, so it stays inside this panel. */}
+        <div className="flex justify-center gap-2 py-3">
           {slides.map((slide, index) => (
             <button
-              key={slide.title}
-              aria-label={`Go to slide ${index + 1}`}
+              key={slide.caption}
+              aria-label={`Go to slide ${index + 1}: ${slide.caption}`}
+              aria-current={index === activeSlide}
               className={`h-2.5 rounded-full transition-all ${
-                index === activeSlide ? "w-8 bg-emerald-400" : "w-2.5 bg-white/50"
+                index === activeSlide ? "w-8 bg-emerald-500" : "w-2.5 bg-slate-400/50 dark:bg-white/40"
               }`}
               onClick={() => setActiveSlide(index)}
             />
           ))}
         </div>
+      </section>
+
+      {/* A ribbon of its own, outside the slider panel: its own band, its own border, and three
+          controls each in its own translucent tint. */}
+      <div className="w-full border-y border-slate-200 bg-gradient-to-r from-emerald-50 via-sky-50 to-violet-50 dark:border-slate-800 dark:from-emerald-950/40 dark:via-sky-950/40 dark:to-violet-950/40">
+        <div className="flex flex-wrap items-center justify-center gap-3 py-4">
+          <a
+            href="/signup"
+            className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-5 py-2.5 font-medium text-emerald-800 backdrop-blur-sm transition hover:bg-emerald-500/25 dark:text-emerald-300"
+          >
+            Start free
+          </a>
+          <a
+            href="/dashboard"
+            className="rounded-full border border-sky-400/60 bg-sky-500/15 px-5 py-2.5 font-medium text-sky-800 backdrop-blur-sm transition hover:bg-sky-500/25 dark:text-sky-300"
+          >
+            Explore dashboard
+          </a>
+          <span className="rounded-full border border-violet-400/60 bg-violet-500/15 px-5 py-2.5 text-sm font-medium text-violet-800 backdrop-blur-sm dark:text-violet-300">
+            AI stock research for Indian investors
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

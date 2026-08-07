@@ -64,7 +64,6 @@ export type BseBoard = {
     /** The trading session the board reflects, as YYYY-MM-DD. */
     sessionDate: string | null;
   };
-  movers: Record<"all" | Lowercase<BseCapTier>, { gainers: BseRow[]; losers: BseRow[] }>;
 };
 
 // SEBI's own definition, which is what "large / mid / small cap" means to an Indian investor:
@@ -77,7 +76,6 @@ const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
 const TAPE_TTL_MS = 15 * 60 * 1000;
 const SECTOR_TTL_MS = 24 * 60 * 60 * 1000;
 const SECTOR_CONCURRENCY = 8;
-const TOP_N = 10;
 
 type RawScrip = {
   SCRIP_CD?: unknown;
@@ -332,8 +330,9 @@ function join(stock: BseStock, tape: BseTape): (BseStock & BseQuote) | null {
 }
 
 /**
- * The landing page's market board: exchange-wide breadth, the same split by cap tier, and the ten
- * biggest moves in each direction for the market as a whole and for each tier.
+ * The board's headline figures: how much is listed, and how the session's breadth split overall
+ * and by cap tier. The movers themselves are paged separately through getBseMovers, so nothing
+ * here resolves a sector or slices a top ten that a reader may never scroll to.
  */
 export async function getBseBoard(): Promise<BseBoard> {
   const [universe, tape] = await Promise.all([getBseUniverse(), getBseTape()]);
@@ -353,31 +352,6 @@ export async function getBseBoard(): Promise<BseBoard> {
     };
   }
 
-  const pick = (rows: typeof priced, direction: "gainers" | "losers") =>
-    [...rows]
-      .sort((a, b) =>
-        direction === "gainers"
-          ? (b.changePercent as number) - (a.changePercent as number)
-          : (a.changePercent as number) - (b.changePercent as number),
-      )
-      .filter((row) => (direction === "gainers" ? (row.changePercent as number) > 0 : (row.changePercent as number) < 0))
-      .slice(0, TOP_N);
-
-  const groups = {
-    all: priced,
-    large: priced.filter((row) => row.capTier === "Large"),
-    mid: priced.filter((row) => row.capTier === "Mid"),
-    small: priced.filter((row) => row.capTier === "Small"),
-  };
-
-  // Sectors are looked up once for the whole board rather than per group, so a name that appears
-  // in both the "all" and its own tier list costs a single upstream call.
-  const shortlist = Object.values(groups).flatMap((rows) => [...pick(rows, "gainers"), ...pick(rows, "losers")]);
-  const withSectors = await attachSectors(dedupeByCode(shortlist));
-  const sectorByCode = new Map(withSectors.map((row) => [row.code, row]));
-  const decorate = (rows: (BseStock & BseQuote)[]): BseRow[] =>
-    rows.map((row) => sectorByCode.get(row.code) ?? { ...row, sector: null, industry: null });
-
   return {
     summary: {
       listed: universe.stocks.length,
@@ -387,19 +361,71 @@ export async function getBseBoard(): Promise<BseBoard> {
       byTier,
       sessionDate: tape.sessionDate,
     },
-    movers: {
-      all: { gainers: decorate(pick(groups.all, "gainers")), losers: decorate(pick(groups.all, "losers")) },
-      large: { gainers: decorate(pick(groups.large, "gainers")), losers: decorate(pick(groups.large, "losers")) },
-      mid: { gainers: decorate(pick(groups.mid, "gainers")), losers: decorate(pick(groups.mid, "losers")) },
-      small: { gainers: decorate(pick(groups.small, "gainers")), losers: decorate(pick(groups.small, "losers")) },
-    },
   };
 }
 
-function dedupeByCode<T extends { code: string }>(rows: T[]): T[] {
-  const seen = new Map<string, T>();
-  for (const row of rows) if (!seen.has(row.code)) seen.set(row.code, row);
-  return [...seen.values()];
+export type MoverQuery = {
+  tier?: "all" | Lowercase<BseCapTier>;
+  direction?: "gainers" | "losers";
+  page?: number;
+  pageSize?: number;
+};
+
+export type BseMoverPage = {
+  rows: BseRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
+  sessionDate: string | null;
+};
+
+const MOVER_PAGE_SIZE = 5;
+const MAX_MOVER_PAGE_SIZE = 25;
+
+const TIER_FOR_KEY: Record<Lowercase<BseCapTier>, BseCapTier> = { large: "Large", mid: "Mid", small: "Small" };
+
+/**
+ * One page of the day's movers, over the whole list rather than a top ten.
+ *
+ * The board used to ship a fixed ten each way. Paging happens here rather than in the browser for
+ * the same reason the directory does it: every mover in both directions across four cap tiers is
+ * thousands of rows, and — more to the point — each row's sector costs an upstream call, so only
+ * the five actually being looked at are ever resolved.
+ */
+export async function getBseMovers(query: MoverQuery): Promise<BseMoverPage> {
+  const [universe, tape] = await Promise.all([getBseUniverse(), getBseTape()]);
+
+  const tier = query.tier ?? "all";
+  const direction = query.direction ?? "gainers";
+  const pageSize = Math.min(Math.max(query.pageSize ?? MOVER_PAGE_SIZE, 1), MAX_MOVER_PAGE_SIZE);
+
+  const priced = universe.stocks
+    .map((stock) => join(stock, tape))
+    .filter((row): row is BseStock & BseQuote => row !== null && row.changePercent !== null)
+    .filter((row) => tier === "all" || row.capTier === TIER_FOR_KEY[tier]);
+
+  const rows = priced
+    .filter((row) => (direction === "gainers" ? (row.changePercent as number) > 0 : (row.changePercent as number) < 0))
+    // Biggest move of the day first in both directions, so page one is always the sharpest.
+    .sort((a, b) =>
+      direction === "gainers"
+        ? (b.changePercent as number) - (a.changePercent as number)
+        : (a.changePercent as number) - (b.changePercent as number),
+    );
+
+  const total = rows.length;
+  const pages = Math.max(Math.ceil(total / pageSize), 1);
+  const page = Math.min(Math.max(query.page ?? 1, 1), pages);
+
+  return {
+    rows: await attachSectors(rows.slice((page - 1) * pageSize, page * pageSize)),
+    total,
+    page,
+    pageSize,
+    pages,
+    sessionDate: tape.sessionDate,
+  };
 }
 
 export type DirectoryQuery = {

@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
-import { MarketNews, relativeTime } from "../../app/components/market-news";
+import userEvent from "@testing-library/user-event";
+import { MarketNews, relativeTime, sentimentCounts } from "../../app/components/market-news";
 
 const NOW = new Date("2026-08-05T12:00:00.000Z").getTime();
 
@@ -57,7 +58,7 @@ describe("MarketNews", () => {
     global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
     const { container } = render(<MarketNews />);
     expect(screen.getByText("Loading…")).toBeInTheDocument();
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(4);
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(6);
   });
 
   // Every headline must carry its publisher, its age and a link back to the original — the feed
@@ -153,5 +154,71 @@ describe("MarketNews", () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
     render(<MarketNews />);
     expect(await screen.findByText(/Couldn't reach the news feed/)).toBeInTheDocument();
+  });
+});
+
+describe("sentimentCounts", () => {
+  it("tallies each mood, including the ones with nothing in them", () => {
+    expect(sentimentCounts(baseFeed.items as { sentiment: "Positive" | "Negative" | "Neutral" }[])).toEqual({
+      Positive: 1,
+      Negative: 1,
+      Neutral: 1,
+    });
+  });
+
+  it("returns zeroes for an empty feed rather than an empty object", () => {
+    expect(sentimentCounts([])).toEqual({ Positive: 0, Negative: 0, Neutral: 0 });
+  });
+});
+
+describe("MarketNews as a card grid", () => {
+  // Headlines used to be identical grey rows; the mood is now the card, not a chip on it.
+  it("washes each card in its own sentiment colour", async () => {
+    mockFeed(baseFeed);
+    render(<MarketNews />);
+
+    const positive = (await screen.findByText("Sensex rallies past 82,000")).closest("a")!;
+    const negative = screen.getByText("IT stocks slip").closest("a")!;
+    const neutral = screen.getByText("Rupee holds range").closest("a")!;
+
+    expect(positive.className).toContain("bg-emerald-50/60");
+    expect(negative.className).toContain("bg-rose-50/60");
+    expect(neutral.className).toContain("bg-slate-50");
+  });
+
+  it("summarises how the feed is leaning above the cards", async () => {
+    mockFeed(baseFeed);
+    render(<MarketNews />);
+
+    expect(await screen.findByText("1 positive")).toBeInTheDocument();
+    expect(screen.getByText("1 negative")).toBeInTheDocument();
+    expect(screen.getByText("1 neutral")).toBeInTheDocument();
+  });
+
+  // Six to a page, and the rest reachable rather than dropped.
+  it("pages the feed six at a time", async () => {
+    const user = userEvent.setup();
+    const items = Array.from({ length: 8 }, (_, i) =>
+      itemAt(i + 1, { id: `p${i}`, url: `https://news.example/p${i}`, title: `Headline ${i}` }),
+    );
+    mockFeed({ ...baseFeed, items });
+    render(<MarketNews />);
+
+    await screen.findByText("Headline 0");
+    expect(screen.getAllByRole("listitem")).toHaveLength(6);
+    expect(screen.queryByText("Headline 6")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Next/ }));
+
+    expect(screen.getByText("Headline 6")).toBeInTheDocument();
+    expect(screen.queryByText("Headline 0")).not.toBeInTheDocument();
+  });
+
+  it("shows no pager when everything fits on one page", async () => {
+    mockFeed(baseFeed);
+    render(<MarketNews />);
+
+    await screen.findByText("Sensex rallies past 82,000");
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
   });
 });

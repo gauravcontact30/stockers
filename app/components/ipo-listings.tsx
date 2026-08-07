@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AiBoardRead } from "./ai-board-read";
+import { CompanyLogo } from "./company-logo";
+import { Pager, usePaged } from "./market-section";
+import type { BoardBrief } from "../lib/board-read";
+
+const PAGE_SIZE = 9;
 
 export type IpoStatus = "open" | "upcoming" | "closed";
 
@@ -13,7 +19,6 @@ type PipelineIpo = {
   company: string;
   board: "Mainboard" | "SME";
   status: IpoStatus;
-  logo: string;
   openDate: string | null;
   closeDate: string | null;
   listingDate: string | null;
@@ -127,31 +132,6 @@ function SubscriptionMeter({ subscription }: { subscription: IpoSubscription }) 
   );
 }
 
-function IpoLogo({ src, name }: { src: string; name: string }) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-        {name.charAt(0)}
-      </span>
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- external favicon host, not part of the Next/Image domain allowlist
-    <img
-      src={src}
-      alt={`${name} logo`}
-      width={40}
-      height={40}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="h-10 w-10 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1.5 dark:border-slate-700"
-    />
-  );
-}
-
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -159,6 +139,32 @@ function Detail({ label, value }: { label: string; value: string }) {
       <dd className="mt-0.5 font-semibold tabular-nums text-slate-800 dark:text-slate-200">{value}</dd>
     </div>
   );
+}
+
+/** The issue pipeline as figures: what is open, how it is being bid, and what is queued behind it. */
+export function ipoBrief(ipos: PipelineIpo[], counts: Record<IpoStatus, number>): BoardBrief | null {
+  if (ipos.length === 0) return null;
+
+  const open = ipos.filter((ipo) => ipo.status === "open");
+  const subscribed = [...open].sort((a, b) => (b.subscription?.overall ?? 0) - (a.subscription?.overall ?? 0));
+  const mainboard = ipos.filter((ipo) => ipo.board === "Mainboard").length;
+
+  return {
+    subject: "NSE's IPO calendar — open, upcoming and recently closed issues",
+    question: "What is worth bidding on right now, and what does the demand so far say about it?",
+    facts: [
+      { label: "Open for bids", value: String(counts.open) },
+      { label: "Upcoming", value: String(counts.upcoming) },
+      { label: "Recently closed", value: String(counts.closed) },
+      { label: "Mainboard vs SME", value: `${mainboard} / ${ipos.length - mainboard}` },
+    ],
+    highlights: subscribed
+      .slice(0, 4)
+      .map(
+        (ipo) =>
+          `${ipo.company} (${ipo.board}): ${formatBand(ipo.priceBandMin, ipo.priceBandMax)} a share, ${formatIssueSize(ipo.issueSizeCr)} issue, subscribed ${formatTimes(ipo.subscription?.overall ?? null)}, closes ${formatDate(ipo.closeDate)}`,
+      ),
+  };
 }
 
 export function IpoListings() {
@@ -186,10 +192,13 @@ export function IpoListings() {
     load();
   }, [load]);
 
-  const ipos = state?.ipos ?? [];
+  const ipos = useMemo(() => state?.ipos ?? [], [state]);
   const anticipated = state?.anticipated ?? [];
-  const counts = state?.counts ?? { open: 0, upcoming: 0, closed: 0 };
+  const counts = useMemo(() => state?.counts ?? { open: 0, upcoming: 0, closed: 0 }, [state]);
   const visible = filter === "all" ? ipos : ipos.filter((ipo) => ipo.status === filter);
+  // Changing the filter is changing the list, so paging restarts at its first page.
+  const paged = usePaged(visible, PAGE_SIZE, filter);
+  const brief = useMemo(() => ipoBrief(ipos, counts), [ipos, counts]);
 
   return (
     <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900">
@@ -206,6 +215,8 @@ export function IpoListings() {
           As of {state?.today ?? "…"} IST
         </div>
       </div>
+
+      <AiBoardRead feature="ipos" brief={brief} />
 
       <div className="mt-5 flex flex-wrap gap-2">
         {FILTERS.map((option) => {
@@ -241,7 +252,7 @@ export function IpoListings() {
           ))}
 
         {!loading &&
-          visible.map((ipo) => {
+          paged.slice.map((ipo) => {
             const status = STATUS_META[ipo.status];
 
             return (
@@ -250,7 +261,7 @@ export function IpoListings() {
                 className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-200 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
               >
                 <div className="flex items-start gap-3">
-                  <IpoLogo src={ipo.logo} name={ipo.company} />
+                  <CompanyLogo symbol={ipo.symbol} size={40} />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold leading-tight text-slate-900 dark:text-white">{ipo.company}</p>
                     <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
@@ -280,12 +291,14 @@ export function IpoListings() {
             );
           })}
 
-        {!loading && visible.length === 0 && !error && (
+        {!loading && paged.total === 0 && !error && (
           <p className="col-span-full text-sm text-slate-500 dark:text-slate-400">
             No {filter === "all" ? "" : `${filter} `}IPOs on NSE&apos;s calendar right now.
           </p>
         )}
       </div>
+
+      <Pager paged={paged} unit="IPOs" />
 
       {!loading && anticipated.length > 0 && (
         <div className="mt-8">
@@ -298,7 +311,7 @@ export function IpoListings() {
                   className="rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
                 >
                   <div className="flex items-center gap-2.5">
-                    <IpoLogo src={ipo.logo} name={ipo.company} />
+                    <CompanyLogo symbol={ipo.company} src={ipo.logo} size={40} />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{ipo.company}</p>
                       <p className="truncate text-xs text-slate-500 dark:text-slate-400">{ipo.sector}</p>

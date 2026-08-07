@@ -31,13 +31,43 @@ describe("CharacterArt", () => {
     }
   });
 
-  it("gives every character a name, a shout, a noise and a tone", () => {
+  it("gives every character a name, a shout and a noise", () => {
     for (const character of CHARACTERS) {
       expect(character.name.length).toBeGreaterThan(0);
       expect(character.shout.length).toBeGreaterThan(0);
       expect(character.noise.length).toBeGreaterThan(0);
-      expect(character.tone).toBeGreaterThan(0);
     }
+  });
+
+  /**
+   * A bark and a mew have to be distinguishable by ear. They are not if every call is the same
+   * waveform with the same bend, which is what shipping a bare frequency per character gave.
+   */
+  it("gives every character a call nothing else in the cast sounds like", () => {
+    const shapes = CHARACTERS.map((c) => `${c.call.wave}-${c.call.bend.join(":")}-${c.call.pattern.length}`);
+    expect(new Set(shapes).size).toBe(CHARACTERS.length);
+  });
+
+  it("keeps every call inside audible, non-startling bounds", () => {
+    for (const character of CHARACTERS) {
+      expect(character.call.tone).toBeGreaterThan(0);
+      expect(character.call.pattern.length).toBeGreaterThan(0);
+      expect(character.call.length).toBeGreaterThan(0);
+      expect(character.call.volume).toBeGreaterThan(0);
+      // This fires without being asked for, so it is never allowed to be loud.
+      expect(character.call.volume).toBeLessThanOrEqual(0.25);
+    }
+  });
+
+  // The dog falls in pitch, the cat rises then falls: the shapes are the point.
+  it("shapes the dog's call as a fall and the cat's as a rise and fall", () => {
+    const dog = CHARACTERS.find((c) => c.key === "dog")!;
+    const cat = CHARACTERS.find((c) => c.key === "cat")!;
+
+    expect(dog.call.bend[0]).toBeLessThan(1);
+    expect(dog.call.pattern.length).toBe(2);
+    expect(cat.call.bend[0]).toBeGreaterThan(1);
+    expect(cat.call.bend[1]).toBeLessThan(1);
   });
 
   // Pitch and rate are what make a plain system voice read as a character, so every entry needs

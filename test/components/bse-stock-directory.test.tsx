@@ -1,6 +1,11 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BseStockDirectory, buildDirectoryUrl, type BseDirectoryResponse } from "../../app/components/bse-stock-directory";
+import {
+  BseStockDirectory,
+  buildDirectoryUrl,
+  directoryBrief,
+  type BseDirectoryResponse,
+} from "../../app/components/bse-stock-directory";
 
 type Row = BseDirectoryResponse["rows"][number];
 
@@ -187,5 +192,35 @@ describe("BseStockDirectory", () => {
     await waitFor(() => {
       expect(screen.getByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
     });
+  });
+});
+
+describe("directoryBrief", () => {
+  const rows = [row(), row({ code: "532540", ticker: "TCS", name: "Tata Consultancy", changePercent: -1.2 })];
+
+  it("describes the slice on screen, not the whole exchange", () => {
+    const brief = directoryBrief(rows, 4947, "all", "")!;
+
+    expect(brief.subject).toMatch(/largest first/);
+    expect(brief.facts).toContainEqual({ label: "Companies matched", value: "4,947" });
+    expect(brief.facts).toContainEqual({ label: "On this page", value: "2" });
+    expect(brief.highlights[0]).toMatch(/RELIANCE \(Reliance Industries Ltd/);
+  });
+
+  it("names the search term when the reader has one", () => {
+    expect(directoryBrief(rows, 2, "all", "reliance")!.subject).toBe('BSE-listed companies matching "reliance"');
+  });
+
+  it("names the cap tier when the reader has filtered to one", () => {
+    expect(directoryBrief(rows, 100, "Large", "")!.subject).toMatch(/large cap only/);
+  });
+
+  it("counts only priced rows as rising or falling", () => {
+    const brief = directoryBrief([row({ changePercent: null, price: null })], 1, "all", "")!;
+    expect(brief.facts).toContainEqual({ label: "Trading higher", value: "0 of 0" });
+  });
+
+  it("has nothing to read on an empty page", () => {
+    expect(directoryBrief([], 0, "all", "")).toBeNull();
   });
 });

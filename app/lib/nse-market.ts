@@ -2,7 +2,6 @@ import { cached, fetchNse, toNumber, toText } from "./nse-client";
 import { getIndustryMap, type IndustryMap } from "./nse-industry";
 
 const TTL_MS = 5 * 60_000;
-const LIST_LIMIT = 12;
 
 export type TradedStock = {
   symbol: string;
@@ -107,12 +106,13 @@ export const getMostTraded = cached(TTL_MS, async (): Promise<MostTradedBoard> =
 
   const mtf = Array.from(merged.values())
     .filter((row) => row.mtfEligible)
-    .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
-    .slice(0, LIST_LIMIT);
+    .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0));
 
+  // Every row NSE published, not a tidy dozen: the board is paged in the browser, so trimming
+  // here would quietly hide stocks the reader is told the list contains.
   return {
-    byVolume: byVolume.slice(0, LIST_LIMIT),
-    byValue: byValue.slice(0, LIST_LIMIT),
+    byVolume,
+    byValue,
     mtf,
     mtfUniverseSize: mtfUniverse.size,
     fetchedAt: new Date().toISOString(),
@@ -276,7 +276,7 @@ export const getEtfBoard = cached(TTL_MS, async (): Promise<EtfBoard> => {
     const etfs = (buckets.get(group.key) ?? []).sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0));
     return {
       ...group,
-      etfs: etfs.slice(0, LIST_LIMIT),
+      etfs,
       totalTurnover: etfs.reduce((sum, etf) => sum + (etf.turnover ?? 0), 0),
     };
   }).filter((group) => group.etfs.length > 0);

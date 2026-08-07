@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { StocksInNews, categoryTone, type StockNewsItem } from "../../app/components/stocks-in-news";
+import { StocksInNews, categoryTone, newsBrief, type StockNewsItem } from "../../app/components/stocks-in-news";
 
 function item(overrides: Partial<StockNewsItem> = {}): StockNewsItem {
   return {
@@ -12,7 +12,6 @@ function item(overrides: Partial<StockNewsItem> = {}): StockNewsItem {
     headline: "Bharat Electronics Limited has informed the Exchange regarding Notice of 72nd AGM.",
     documentUrl: "https://nsearchives.nseindia.com/corporate/BEL.pdf",
     publishedAt: new Date(Date.now() - 20 * 60_000).toISOString(),
-    logo: "https://logo.test/bel.png",
     ...overrides,
   };
 }
@@ -90,14 +89,18 @@ describe("StocksInNews", () => {
     expect(within(row).queryByText(/ago/)).not.toBeInTheDocument();
   });
 
-  // Most listed companies have no resolvable favicon, so initials are the expected result.
-  it("falls back to initials when the logo fails to load", async () => {
+  // The long tail of listed companies has no logo on file, so a lettered tile is the expected
+  // result rather than an error state.
+  it("falls back to a monogram when the logo fails to load", async () => {
     mockFeed(board);
     render(<StocksInNews />);
 
     const logo = await screen.findByAltText("BEL logo");
     fireEvent.error(logo);
-    expect(screen.getByText("BE")).toBeInTheDocument();
+
+    expect(screen.queryByAltText("BEL logo")).not.toBeInTheDocument();
+    // The ticker now appears twice: once as the heading, once inside the monogram tile.
+    expect(screen.getAllByText("BEL")).toHaveLength(2);
   });
 
   it("shows the empty state when there are no announcements", async () => {
@@ -111,5 +114,24 @@ describe("StocksInNews", () => {
     mockFeed({}, false);
     render(<StocksInNews />);
     expect(await screen.findByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
+  });
+});
+
+describe("newsBrief", () => {
+  it("counts the filings, names the busiest sector and the commonest categories", () => {
+    const brief = newsBrief(board.sectors, board.total)!;
+
+    expect(brief.facts).toContainEqual({ label: "Filings today", value: "3" });
+    expect(brief.facts).toContainEqual({ label: "Sectors filing", value: "2" });
+    expect(brief.facts).toContainEqual({ label: "Busiest sector", value: "Capital Goods (2)" });
+    expect(brief.facts).toContainEqual({ label: "Shareholders meeting", value: "1 filings" });
+  });
+
+  it("quotes one headline per sector so the read covers the whole board", () => {
+    expect(newsBrief(board.sectors, board.total)!.highlights).toHaveLength(2);
+  });
+
+  it("has nothing to read when nothing was filed", () => {
+    expect(newsBrief([], 0)).toBeNull();
   });
 });

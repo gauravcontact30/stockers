@@ -1,5 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
-import { SectorTrends, barWidth, breadthShare, formatLevel, type SectorTrend } from "../../app/components/sector-trends";
+import {
+  SectorTrends,
+  barWidth,
+  breadthShare,
+  formatLevel,
+  sectorBrief,
+  type SectorTrend,
+} from "../../app/components/sector-trends";
 
 function sector(overrides: Partial<SectorTrend> = {}): SectorTrend {
   return {
@@ -149,5 +156,30 @@ describe("SectorTrends", () => {
     mockFeed({}, false);
     render(<SectorTrends />);
     expect(await screen.findByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
+  });
+});
+
+describe("sectorBrief", () => {
+  const rows = [
+    sector({ symbol: "NIFTY IT", name: "NIFTY IT", changePercent: 2.4, changePercent30d: 5.1, changePercent365d: 12 }),
+    sector({ symbol: "NIFTY FMCG", name: "NIFTY FMCG", changePercent: 0.2 }),
+    sector({ symbol: "NIFTY PSU BANK", name: "NIFTY PSU BANK", changePercent: -1.6 }),
+  ];
+
+  it("counts how broad the rotation was and names both ends of it", () => {
+    const brief = sectorBrief(rows)!;
+
+    expect(brief.facts).toContainEqual({ label: "Sectors advancing", value: "2 of 3" });
+    expect(brief.facts).toContainEqual({ label: "Leading sector", value: "NIFTY IT +2.40%" });
+    expect(brief.facts).toContainEqual({ label: "Lagging sector", value: "NIFTY PSU BANK -1.60%" });
+    expect(brief.facts).toContainEqual({ label: "Spread, best to worst", value: "4.00 pts" });
+  });
+
+  it("carries each leading index with its month and year alongside", () => {
+    expect(sectorBrief(rows)!.highlights[0]).toBe("NIFTY IT: +2.40% today, +5.10% over a month, +12.00% over a year");
+  });
+
+  it("has nothing to read before NSE publishes", () => {
+    expect(sectorBrief([])).toBeNull();
   });
 });

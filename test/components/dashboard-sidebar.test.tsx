@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   DASHBOARD_SECTIONS,
   DashboardSectionTabs,
   DashboardSidebar,
+  isAiSection,
   isDashboardSectionId,
+  SECTION_BY_ID,
 } from "../../app/components/dashboard-sidebar";
 
 const STORAGE_KEY = "stockers-sidebar-collapsed";
@@ -120,5 +122,66 @@ describe("isDashboardSectionId", () => {
   it("accepts a known section id and rejects anything else", () => {
     expect(isDashboardSectionId("buy-tomorrow")).toBe(true);
     expect(isDashboardSectionId("pricing")).toBe(false);
+  });
+});
+
+describe("sidebar grouping", () => {
+  // Seventeen destinations in one flat column is a list nobody reads; grouped, the reader picks a
+  // kind of question first.
+  it("heads each family of sections while expanded", () => {
+    render(<DashboardSidebar active="overview" onSelect={jest.fn()} />);
+
+    const nav = within(screen.getByRole("navigation", { name: "Dashboard sections" }));
+    expect(nav.getByText("Workspace")).toBeInTheDocument();
+    expect(nav.getByText("AI screeners")).toBeInTheDocument();
+    expect(nav.getByText("Exchange boards")).toBeInTheDocument();
+    expect(nav.getByText("Help")).toBeInTheDocument();
+  });
+
+  it("carries every board and the help section as its own destination", () => {
+    render(<DashboardSidebar active="overview" onSelect={jest.fn()} />);
+
+    const nav = within(screen.getByRole("navigation", { name: "Dashboard sections" }));
+    for (const label of ["Company Directory", "Sector Trends", "Most Traded", "MTF Watch", "Stocks in News", "Dividends", "IPO Watch", "ETF Board", "Getting Started"]) {
+      expect(nav.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  // Collapsed there is no room for a heading, so a hairline keeps the grouping readable.
+  it("swaps the group headings for dividers on the icon rail", async () => {
+    const user = userEvent.setup();
+    render(<DashboardSidebar active="overview" onSelect={jest.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+
+    const nav = screen.getByRole("navigation", { name: "Dashboard sections" });
+    expect(within(nav).queryByText("Exchange boards")).not.toBeInTheDocument();
+    // One divider per group after the first.
+    expect(nav.querySelectorAll("div.border-t")).toHaveLength(3);
+  });
+
+  it("groups the compact phone strip the same way", () => {
+    render(<DashboardSectionTabs active="overview" onSelect={jest.fn()} />);
+
+    const nav = within(screen.getByRole("navigation", { name: "Dashboard sections (compact)" }));
+    expect(nav.getByText("Exchange boards")).toBeInTheDocument();
+    expect(nav.getByRole("button", { name: /Getting Started/ })).toBeInTheDocument();
+  });
+});
+
+describe("isAiSection", () => {
+  it("is true only for a section with an AI layer to gate", () => {
+    expect(isAiSection(SECTION_BY_ID["market-pulse"])).toBe(true);
+    expect(isAiSection(SECTION_BY_ID.dividends)).toBe(true);
+    expect(isAiSection(SECTION_BY_ID.overview)).toBe(false);
+    expect(isAiSection(SECTION_BY_ID.support)).toBe(false);
+  });
+
+  // The exchange boards were public before they moved in and stay public: only the AI layer locks.
+  it("leaves every moved-in board ungated", () => {
+    for (const id of ["directory", "sectors", "most-traded", "mtf", "stock-news", "dividends", "ipos", "etf-board"] as const) {
+      const section = SECTION_BY_ID[id];
+      expect(isAiSection(section) && section.gate).toBe(false);
+    }
   });
 });

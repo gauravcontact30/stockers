@@ -5,9 +5,12 @@ import {
   BseMarketBoard,
   MoverRow,
   advancePercent,
+  buildMoversUrl,
   type BseBoardResponse,
   type BseMoverRow,
 } from "../../app/components/bse-market-board";
+
+jest.setTimeout(30000);
 
 function row(overrides: Partial<BseMoverRow> = {}): BseMoverRow {
   return {
@@ -44,25 +47,54 @@ const board: BseBoardResponse = {
     },
     sessionDate: "2026-08-05",
   },
-  movers: {
-    all: {
-      gainers: [row({ code: "1", ticker: "CHLOGIST", name: "Chartered Logistics Ltd", capTier: "Small", sector: "Services", changePercent: 20 })],
-      losers: [row({ code: "2", ticker: "SCARNOSE", name: "Scarnose International Ltd", capTier: "Small", sector: "Consumer Discretionary", changePercent: -19.99 })],
-    },
-    large: {
-      gainers: [row({ code: "3", ticker: "HINDZINC", name: "Hindustan Zinc Ltd", sector: "Commodities", changePercent: 5.7 })],
-      losers: [row({ code: "4", ticker: "TCS", name: "Tata Consultancy Services Ltd", sector: "Information Technology", changePercent: -1.23 })],
-    },
-    mid: {
-      gainers: [row({ code: "5", ticker: "HINDCOPPER", capTier: "Mid", sector: "Commodities", changePercent: 8.36 })],
-      losers: [],
-    },
-    small: { gainers: [], losers: [] },
-  },
 };
 
+/** One page of movers, keyed the way the endpoint keys them. */
+function page(rows: BseMoverRow[], { total = rows.length, page = 1, pageSize = 5 } = {}) {
+  return { rows, total, page, pageSize, pages: Math.max(Math.ceil(total / pageSize), 1), sessionDate: "2026-08-05" };
+}
+
+// Every gainer and loser the fixture knows about, per tier, sharpest first — the endpoint slices
+// this, so the mock does too.
+const MOVERS: Record<string, BseMoverRow[]> = {
+  "all|gainers": [
+    row({ code: "1", ticker: "CHLOGIST", name: "Chartered Logistics Ltd", capTier: "Small", sector: "Services", changePercent: 20 }),
+    row({ code: "6", ticker: "SECOND", name: "Second Best Ltd", capTier: "Small", changePercent: 18 }),
+    row({ code: "7", ticker: "THIRD", name: "Third Best Ltd", capTier: "Small", changePercent: 16 }),
+    row({ code: "8", ticker: "FOURTH", name: "Fourth Best Ltd", capTier: "Small", changePercent: 14 }),
+    row({ code: "9", ticker: "FIFTH", name: "Fifth Best Ltd", capTier: "Small", changePercent: 12 }),
+    row({ code: "10", ticker: "SIXTH", name: "Sixth Best Ltd", capTier: "Small", changePercent: 10 }),
+  ],
+  "all|losers": [
+    row({ code: "2", ticker: "SCARNOSE", name: "Scarnose International Ltd", capTier: "Small", sector: "Consumer Discretionary", changePercent: -19.99 }),
+  ],
+  "large|gainers": [row({ code: "3", ticker: "HINDZINC", name: "Hindustan Zinc Ltd", sector: "Commodities", changePercent: 5.7 })],
+  "large|losers": [row({ code: "4", ticker: "TCS", name: "Tata Consultancy Services Ltd", sector: "Information Technology", changePercent: -1.23 })],
+  "mid|gainers": [row({ code: "5", ticker: "HINDCOPPER", capTier: "Mid", sector: "Commodities", changePercent: 8.36 })],
+  "mid|losers": [],
+  "small|gainers": [],
+  "small|losers": [],
+};
+
+/** Answers the summary endpoint and the two mover endpoints, slicing pages as the server would. */
 function mockFeed(payload: unknown = board, ok = true) {
-  global.fetch = jest.fn(() => Promise.resolve({ ok, json: () => Promise.resolve(payload) })) as unknown as typeof fetch;
+  global.fetch = jest.fn((url: string) => {
+    const text = String(url);
+    if (!text.startsWith("/api/market/bse/movers")) {
+      return Promise.resolve({ ok, json: () => Promise.resolve(payload) });
+    }
+
+    const params = new URLSearchParams(text.split("?")[1]);
+    const tier = params.get("tier") ?? "all";
+    const direction = params.get("direction") ?? "gainers";
+    const wanted = Number(params.get("page") ?? 1);
+    const all = MOVERS[`${tier}|${direction}`] ?? [];
+
+    return Promise.resolve({
+      ok,
+      json: () => Promise.resolve(page(all.slice((wanted - 1) * 5, wanted * 5), { total: all.length, page: wanted })),
+    });
+  }) as unknown as typeof fetch;
 }
 
 describe("advancePercent", () => {
@@ -131,9 +163,53 @@ describe("BseMarketBoard", () => {
     expect(screen.getByText("2,255 advancing")).toBeInTheDocument();
     expect(screen.getByText("1,947 declining")).toBeInTheDocument();
 
-    expect(screen.getByText("CHLOGIST")).toBeInTheDocument();
+    // The two mover lists resolve on their own calls, after the summary.
+    expect(await screen.findByText("CHLOGIST")).toBeInTheDocument();
     expect(screen.getByText("SCARNOSE")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith("/api/market/bse");
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", 1));
+  });
+
+  // Five a side, and the sharpest move of the day is always the first row of page one.
+  it("pages five movers at a time, biggest first, and says how many there are in all", async () => {
+    mockFeed();
+    render(<BseMarketBoard />);
+
+    await screen.findByText("CHLOGIST");
+    expect(screen.getByText("FIFTH")).toBeInTheDocument();
+    expect(screen.queryByText("SIXTH")).not.toBeInTheDocument();
+    expect(screen.getByText("6 in all")).toBeInTheDocument();
+  });
+
+  it("pages the gainers without disturbing the losers", async () => {
+    const user = userEvent.setup();
+    mockFeed();
+    render(<BseMarketBoard />);
+    await screen.findByText("CHLOGIST");
+
+    const gainers = screen.getByRole("navigation", { name: "Gainers pages" });
+    await user.click(within(gainers).getByRole("button", { name: "Next →" }));
+
+    expect(await screen.findByText("SIXTH")).toBeInTheDocument();
+    expect(screen.queryByText("CHLOGIST")).not.toBeInTheDocument();
+    // Rank six, not rank one: the numbering runs on across pages.
+    expect(screen.getByText("6")).toBeInTheDocument();
+    // The losers list is a separate question and stays exactly where it was.
+    expect(screen.getByText("SCARNOSE")).toBeInTheDocument();
+
+    await user.click(within(gainers).getByRole("button", { name: "← Prev" }));
+    expect(await screen.findByText("CHLOGIST")).toBeInTheDocument();
+  });
+
+  // One page of losers needs no pager at all.
+  it("shows a pager only for the side that has more than a page", async () => {
+    mockFeed();
+    render(<BseMarketBoard />);
+    await screen.findByText("CHLOGIST");
+
+    expect(screen.getByRole("navigation", { name: "Gainers pages" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Losers pages" })).not.toBeInTheDocument();
   });
 
   it("switches the movers, breadth and tier average when a cap tier is picked", async () => {
@@ -144,7 +220,7 @@ describe("BseMarketBoard", () => {
 
     await user.click(screen.getByRole("tab", { name: /Large cap/ }));
 
-    expect(screen.getByText("HINDZINC")).toBeInTheDocument();
+    expect(await screen.findByText("HINDZINC")).toBeInTheDocument();
     expect(screen.getByText("TCS")).toBeInTheDocument();
     expect(screen.queryByText("CHLOGIST")).not.toBeInTheDocument();
     // Breadth follows the tier, not the whole exchange.
@@ -160,11 +236,11 @@ describe("BseMarketBoard", () => {
 
     await user.click(screen.getByRole("tab", { name: /Mid cap/ }));
 
-    expect(screen.getByText("HINDCOPPER")).toBeInTheDocument();
+    expect(await screen.findByText("HINDCOPPER")).toBeInTheDocument();
     expect(screen.getByText("No stock in this tier closed lower this session.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /Small cap/ }));
-    expect(screen.getByText("No stock in this tier closed higher this session.")).toBeInTheDocument();
+    expect(await screen.findByText("No stock in this tier closed higher this session.")).toBeInTheDocument();
   });
 
   it("counts each tier on its own pill", async () => {

@@ -56,49 +56,66 @@ type LiveIndices = { indices: IndexQuote[]; asOf: string };
 function useLiveIndices(enabled: boolean) {
   const [live, setLive] = useState<LiveIndices | null>(null);
   const [history, setHistory] = useState<Record<string, number[]>>({});
+  const [refreshing, setRefreshing] = useState(false);
+
+  /**
+   * One fetch of the benchmark levels.
+   *
+   * Shared by the interval and by the manual Refresh button, so a hand-pulled level lands in the
+   * same state and the same tick history as an automatic one — the sparkline cannot end up with
+   * a gap the poll did not make.
+   */
+  const pull = useCallback(async (isLive: () => boolean) => {
+    try {
+      const response = await fetch("/api/market/live");
+      if (!response.ok) return;
+
+      const data: LiveIndices | null = await response.json();
+      // A 200 with an unusable body is treated as a dropped poll: the panel keeps the levels it
+      // already has rather than throwing inside an interval that would then stop running.
+      if (!isLive() || !Array.isArray(data?.indices)) return;
+
+      setLive(data);
+      setHistory((previous) => {
+        const next: Record<string, number[]> = { ...previous };
+        for (const index of data.indices) {
+          if (typeof index.price !== "number") continue;
+          const seen = next[index.symbol] ?? [];
+          // Only a changed level is a tick; repeating the same number would draw a flat line
+          // that says "nothing is happening" when it means "nothing has changed yet".
+          if (seen[seen.length - 1] === index.price) continue;
+          next[index.symbol] = [...seen, index.price].slice(-MAX_TICKS);
+        }
+        return next;
+      });
+    } catch {
+      // A dropped poll is not worth surfacing: the next one is 500ms away and the panel still
+      // shows the last good levels.
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    const isLive = () => !cancelled;
 
-    const poll = async () => {
-      try {
-        const response = await fetch("/api/market/live");
-        if (!response.ok) return;
-
-        const data: LiveIndices | null = await response.json();
-        // A 200 with an unusable body is treated as a dropped poll: the panel keeps the levels it
-        // already has rather than throwing inside an interval that would then stop running.
-        if (cancelled || !Array.isArray(data?.indices)) return;
-
-        setLive(data);
-        setHistory((previous) => {
-          const next: Record<string, number[]> = { ...previous };
-          for (const index of data.indices) {
-            if (typeof index.price !== "number") continue;
-            const seen = next[index.symbol] ?? [];
-            // Only a changed level is a tick; repeating the same number would draw a flat line
-            // that says "nothing is happening" when it means "nothing has changed yet".
-            if (seen[seen.length - 1] === index.price) continue;
-            next[index.symbol] = [...seen, index.price].slice(-MAX_TICKS);
-          }
-          return next;
-        });
-      } catch {
-        // A dropped poll is not worth surfacing: the next one is 500ms away and the panel still
-        // shows the last good levels.
-      }
-    };
-
-    poll();
-    const timer = setInterval(poll, LIVE_REFRESH_MS);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the first poll of the session; setState only ever runs after the async fetch resolves, not synchronously in this callback.
+    pull(isLive);
+    const timer = setInterval(() => pull(isLive), LIVE_REFRESH_MS);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [enabled]);
+  }, [enabled, pull]);
 
-  return { live, history };
+  /** Pull now, on request. Works whether or not the automatic poll is running. */
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await pull(() => true);
+    setRefreshing(false);
+  }, [pull]);
+
+  return { live, history, refresh, refreshing };
 }
 
 /** The steepest moves across every cap tier, merged and ranked. */
@@ -123,10 +140,19 @@ export function MarketPulse() {
   const [error, setError] = useState<string | null>(null);
   // Called before the early returns below so the hook order stays stable across render paths.
   const tick = useClockTick();
-  // Polling only makes sense while the exchange is open; overnight the levels are fixed and the
-  // panel would be asking a question with a known answer twice a second.
-  const sessionOpen = tick > 0 && marketSession(tick, state?.lastTradeAt ?? null).open;
-  const { live: liveFeed, history } = useLiveIndices(sessionOpen);
+  /**
+   * Polling only makes sense inside the session; overnight the levels are fixed and the panel
+   * would be asking a question with a known answer twice a second.
+   *
+   * The gate is the *clock* alone, deliberately. It used to also require `marketSession` to
+   * return "open", which additionally checks that the last trade we know about happened today —
+   * and that check is fed by the pulse payload, which is up to a minute stale. Early in a
+   * session it still carries yesterday's `lastTradeAt`, so the session read as a holiday, the
+   * poll never started, and the benchmark cards sat on a 60-second-old level all day. The poll
+   * itself is the cheaper, more current answer to "is the exchange printing".
+   */
+  const sessionOpen = tick > 0 && marketSession(tick, null).open;
+  const { live: liveFeed, history, refresh, refreshing } = useLiveIndices(sessionOpen);
 
   const load = useCallback(async () => {
     try {
@@ -197,6 +223,8 @@ export function MarketPulse() {
         indices={indices}
         live={live}
         history={history}
+        onRefresh={refresh}
+        refreshing={refreshing}
         className="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800"
       />
 

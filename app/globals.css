@@ -134,6 +134,170 @@ body {
   animation: shout 0.6s ease-in-out infinite;
 }
 
+/* --- Reminder themes: a different entrance and idle motion on every appearance --- */
+
+/* Swings in from the top edge as if hinged there. */
+@keyframes swing-in {
+  0% {
+    opacity: 0;
+    transform: perspective(900px) rotateX(-70deg);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(900px) rotateX(12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(900px) rotateX(0deg);
+  }
+}
+
+@utility animate-swing-in {
+  animation: swing-in 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  transform-origin: top center;
+}
+
+/* Rises from below with a short overshoot — the calmest of the entrances. */
+@keyframes slide-up-in {
+  0% {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-slide-up-in {
+  animation: slide-up-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Turns in on its vertical axis, like a card being flipped face-up. */
+@keyframes flip-in {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) rotateY(-58deg) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+}
+
+@utility animate-flip-in {
+  animation: flip-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Expands from a point under a spotlight. */
+@keyframes zoom-in-soft {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@utility animate-zoom-in-soft {
+  animation: zoom-in-soft 0.38s ease-out both;
+}
+
+/* --- Idle motion, one per theme so the character never moves the same way twice running --- */
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@utility animate-wobble {
+  animation: wobble 1.4s ease-in-out infinite;
+}
+
+@keyframes float-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@utility animate-float-idle {
+  animation: float-idle 2.4s ease-in-out infinite;
+}
+
+@keyframes jiggle {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  25% {
+    transform: translateX(-4px) scale(1.03);
+  }
+  75% {
+    transform: translateX(4px) scale(0.98);
+  }
+}
+
+@utility animate-jiggle {
+  animation: jiggle 0.7s ease-in-out infinite;
+}
+
+/* Slowly rotating rays behind a character standing in a spotlight. */
+@keyframes ray-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility animate-ray-spin {
+  animation: ray-spin 24s linear infinite;
+}
+
+/* --- Hero carousel --- */
+
+/* A slow drift across a scene so a still frame reads as a live terminal rather than a screenshot. */
+@keyframes hero-drift {
+  0%,
+  100% {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.06) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+
+@utility animate-hero-drift {
+  animation: hero-drift 18s ease-in-out infinite;
+}
+
+/* The green "LIVE" dot on the hero terminals. */
+@keyframes live-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@utility animate-live-blink {
+  animation: live-blink 1.6s ease-in-out infinite;
+}
+
 /* Everything above is decorative, so it all stops for anyone who has asked the OS to reduce
    motion — the reminder still appears and is fully usable, it just doesn't jump about. */
 @media (prefers-reduced-motion: reduce) {
@@ -142,7 +306,17 @@ body {
   .animate-shout,
   .animate-fade-in,
   .animate-pulse-bar,
-  .animate-marquee {
+  .animate-marquee,
+  .animate-swing-in,
+  .animate-slide-up-in,
+  .animate-flip-in,
+  .animate-zoom-in-soft,
+  .animate-wobble,
+  .animate-float-idle,
+  .animate-jiggle,
+  .animate-ray-spin,
+  .animate-hero-drift,
+  .animate-live-blink {
     animation: none !important;
   }
 }

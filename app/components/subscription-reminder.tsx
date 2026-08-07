@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CharacterArt, characterFor, speechScript } from "./reminder-characters";
 import { playCall } from "./reminder-sound";
+import { patternStyle, themeFor } from "./reminder-themes";
 import { speak, stopSpeaking } from "./reminder-voice";
 import { useSubscription, type SubscriptionStatus } from "./subscription-provider";
 
@@ -53,7 +54,10 @@ export function SubscriptionReminder() {
   const [muted, setMuted] = useState(false);
 
   const relevant = shouldRemind(status);
+  // Six characters against five themes: the pair only repeats every thirtieth appearance, so a
+  // returning reminder is a different character *and* a different-looking panel.
   const character = characterFor(round);
+  const theme = themeFor(round);
 
   useEffect(() => {
     if (!relevant) return;
@@ -81,14 +85,14 @@ export function SubscriptionReminder() {
   useEffect(() => {
     if (!visible || muted || !script) return;
 
-    playCall(character.tone);
+    playCall(character.call);
     const timer = window.setTimeout(() => speak(script, character.voice, round), VOICE_DELAY_MS);
 
     return () => {
       window.clearTimeout(timer);
       stopSpeaking();
     };
-  }, [visible, muted, script, character.tone, character.voice, round]);
+  }, [visible, muted, script, character.call, character.voice, round]);
 
   const close = useCallback(() => {
     stopSpeaking();
@@ -120,17 +124,22 @@ export function SubscriptionReminder() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="renewal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-fade-in"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in ${theme.backdrop}`}
     >
-      <div className="relative w-full max-w-lg animate-pop-in overflow-hidden rounded-[28px] border-4 border-slate-900 bg-white shadow-[0_24px_70px_-20px_rgba(15,23,42,0.6)] dark:border-slate-100 dark:bg-slate-900">
-        {/* Comic-strip halftone burst behind the character */}
+      <div
+        data-theme={theme.key}
+        data-character={character.key}
+        className={`relative w-full max-w-lg overflow-hidden ${theme.shell} ${theme.entrance} ${theme.body}`}
+      >
+        {/* The character's banner: their own gradient, this theme's pattern over the top. */}
         <div className={`relative bg-gradient-to-br ${character.accent} px-6 pb-6 pt-8`}>
+          {theme.wash && <div className={`pointer-events-none absolute inset-0 ${theme.wash}`} aria-hidden="true" />}
           <div
-            className="pointer-events-none absolute inset-0 opacity-25"
-            style={{
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.6px)",
-              backgroundSize: "12px 12px",
-            }}
+            className={`pointer-events-none absolute inset-0 opacity-25 ${
+              // Radiating wedges only read as a spotlight if they turn.
+              theme.pattern === "starburst" ? "animate-ray-spin" : ""
+            }`}
+            style={patternStyle(theme.pattern)}
             aria-hidden="true"
           />
 
@@ -138,41 +147,41 @@ export function SubscriptionReminder() {
             type="button"
             onClick={close}
             aria-label="Dismiss reminder"
-            className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-900 bg-white text-sm font-black text-slate-900 transition hover:rotate-90 hover:bg-amber-300"
+            className={`absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-black transition hover:rotate-90 ${theme.control}`}
           >
             ✕
           </button>
 
           <div className="relative flex items-end gap-3">
-            <div className="animate-character-bounce">
+            <div className={theme.motion}>
               <CharacterArt character={character} />
             </div>
 
-            {/* Comic speech bubble with a tail pointing back at the character */}
-            <div className="relative mb-6 flex-1 rounded-2xl border-[3px] border-slate-900 bg-white px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{character.name}</p>
-              <p className="mt-0.5 text-sm font-extrabold leading-snug text-slate-900">{character.shout}</p>
+            {/* Speech bubble with a tail pointing back at the character */}
+            <div className={`relative mb-6 flex-1 px-4 py-3 ${theme.bubble}`}>
+              <p className="text-[10px] font-black uppercase tracking-wide opacity-60">{character.name}</p>
+              <p className="mt-0.5 text-sm font-extrabold leading-snug">{character.shout}</p>
               <span
-                className="absolute -left-2 bottom-4 h-4 w-4 rotate-45 border-b-[3px] border-l-[3px] border-slate-900 bg-white"
+                className={`absolute -left-2 bottom-4 h-4 w-4 rotate-45 ${theme.tail}`}
                 aria-hidden="true"
               />
             </div>
           </div>
 
           <div className="relative mt-2 flex flex-wrap items-center gap-2">
-            <span className="animate-shout inline-block rounded-full border-[3px] border-slate-900 bg-amber-300 px-3 py-1 text-xs font-black uppercase tracking-wide text-slate-900">
+            <span className={`animate-shout inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${theme.chip}`}>
               {character.noise}
             </span>
             <button
               type="button"
               onClick={() => {
                 setMuted(false);
-                playCall(character.tone);
+                playCall(character.call);
                 // Clicking is a user gesture, so this is the path that always works even when
                 // the browser refused the automatic attempt on page load.
                 window.setTimeout(() => speak(script, character.voice, round), VOICE_DELAY_MS);
               }}
-              className="inline-flex items-center gap-1 rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-bold text-slate-900 transition hover:bg-amber-200"
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold transition ${theme.control}`}
             >
               🔊 Hear it
             </button>
@@ -183,7 +192,7 @@ export function SubscriptionReminder() {
                 stopSpeaking();
               }}
               aria-pressed={muted}
-              className="inline-flex items-center gap-1 rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-bold text-slate-900 transition hover:bg-amber-200"
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold transition ${theme.control}`}
             >
               {muted ? "🔇 Muted" : "🔔 Voice on"}
             </button>
@@ -191,23 +200,25 @@ export function SubscriptionReminder() {
         </div>
 
         <div className="px-6 py-5">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
+          <p className={`text-xs font-black uppercase tracking-[0.3em] ${theme.eyebrow}`}>
             {expired ? "Subscription reminder" : "Trial ending"}
           </p>
           {/* Headline and body come from reminderCopy, which is also what gets read aloud — so
               the voiceover can never say something different from what is on screen. */}
-          <h2 id="renewal-title" className="mt-1.5 text-2xl font-extrabold text-slate-900 dark:text-white">
+          <h2 id="renewal-title" className={`mt-1.5 text-2xl font-extrabold ${theme.heading}`}>
             {headline}
           </h2>
 
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{body}</p>
+          <p className={`mt-2 text-sm ${theme.text}`}>{body}</p>
 
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+          <p className={`mt-2 text-xs ${theme.muted}`}>
             Nothing is locked right now — this is a reminder, not a wall. It reappears every 15 minutes.
           </p>
 
+          {/* Fixed light amber rather than a per-theme colour: an error has to stay legible, and a
+              pale box reads on every panel above. */}
           {error && (
-            <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
+            <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               {error}
             </p>
           )}
@@ -218,29 +229,19 @@ export function SubscriptionReminder() {
                 type="button"
                 onClick={handleRenew}
                 disabled={busy}
-                className="rounded-full border-2 border-slate-900 bg-emerald-500 px-5 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_rgb(15,23,42)] transition hover:-translate-y-0.5 hover:bg-emerald-400 disabled:opacity-60 dark:border-slate-100 dark:shadow-[3px_3px_0_0_rgb(241,245,249)]"
+                className={`rounded-full px-5 py-2 text-sm font-black transition hover:-translate-y-0.5 disabled:opacity-60 ${theme.primary}`}
               >
                 {busy ? "Renewing…" : "Renew for 30 days"}
               </button>
             ) : (
-              <Link
-                href="/signup"
-                className="rounded-full border-2 border-slate-900 bg-emerald-500 px-5 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_rgb(15,23,42)] transition hover:-translate-y-0.5 hover:bg-emerald-400 dark:border-slate-100 dark:shadow-[3px_3px_0_0_rgb(241,245,249)]"
-              >
+              <Link href="/signup" className={`rounded-full px-5 py-2 text-sm font-black transition hover:-translate-y-0.5 ${theme.primary}`}>
                 Create an account
               </Link>
             )}
-            <Link
-              href="/#pricing"
-              className="rounded-full border-2 border-slate-300 px-5 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
+            <Link href="/#pricing" className={`rounded-full px-5 py-2 text-sm font-bold transition ${theme.secondary}`}>
               See plans
             </Link>
-            <button
-              type="button"
-              onClick={close}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-            >
+            <button type="button" onClick={close} className={`rounded-full px-4 py-2 text-sm font-medium transition ${theme.dismiss}`}>
               Maybe later
             </button>
           </div>

@@ -1,11 +1,13 @@
 import { cached, fetchNse, toNumber, toText, todayIST } from "./nse-client";
 import { getIndustryMap, UNCLASSIFIED } from "./nse-industry";
 
-// Declared dividends straight from NSE's corporate-actions feed. The window runs slightly into
-// the past so a dividend that went ex- earlier this week is still visible, and well forward so
-// the upcoming calendar is useful.
-const LOOKBACK_DAYS = 14;
-const LOOKAHEAD_DAYS = 90;
+// Declared dividends straight from NSE's corporate-actions feed. The window runs a full quarter
+// into the past and two quarters forward: back far enough that a sector still has a body of
+// recent payouts to judge a company's record by, and forward far enough to cover everything
+// already declared. The board pages and filters what comes back, so a wide window costs the
+// reader nothing and a narrow one silently hides declared dividends.
+const LOOKBACK_DAYS = 90;
+const LOOKAHEAD_DAYS = 180;
 const TTL_MS = 60 * 60_000;
 
 export type Dividend = {

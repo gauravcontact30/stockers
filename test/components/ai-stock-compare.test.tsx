@@ -184,14 +184,49 @@ describe("AiStockCompare", () => {
     expect(screen.getByText(/Heuristic demo \(no AI key configured\)/)).toBeInTheDocument();
   });
 
-  it("shows 'No points returned.' when a pros/cons list is empty", async () => {
+  it("says nothing stood out when a pros or cons list comes back empty", async () => {
     mockFetchOnce(true, { ...baseResult, stockAPros: [], stockACons: [], stockBPros: [], stockBCons: [] });
     const user = userEvent.setup();
     render(<AiStockCompare />);
 
     await user.click(screen.getByRole("button", { name: "Compare with AI" }));
 
-    await waitFor(() => expect(screen.getAllByText("No points returned.")).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByText("No clear advantage stood out.")).toHaveLength(2));
+    expect(screen.getAllByText("No material concern stood out.")).toHaveLength(2);
+  });
+
+  // Two identical grey columns are exactly what stops a reader telling the stocks apart, so the
+  // stronger side is tinted and badged.
+  it("marks the stronger side and keeps the other plain", async () => {
+    mockFetchOnce(true, baseResult);
+    const user = userEvent.setup();
+    render(<AiStockCompare />);
+
+    await user.click(screen.getByRole("button", { name: "Compare with AI" }));
+
+    await waitFor(() => expect(screen.getByText("Key points, side by side")).toBeInTheDocument());
+    expect(screen.getAllByText("Stronger pick")).toHaveLength(1);
+
+    const winner = screen.getByText("Stronger pick").closest<HTMLElement>("div.rounded-3xl")!;
+    expect(within(winner).getByText("TCS")).toBeInTheDocument();
+    expect(winner.className).toContain("violet");
+  });
+
+  // The model will return a long tail of lukewarm observations; only the key ones are shown.
+  it("shows at most three points a side", async () => {
+    mockFetchOnce(true, {
+      ...baseResult,
+      stockAPros: ["one", "two", "three", "four", "five"],
+      stockACons: ["con one", "con two", "con three", "con four"],
+    });
+    const user = userEvent.setup();
+    render(<AiStockCompare />);
+
+    await user.click(screen.getByRole("button", { name: "Compare with AI" }));
+
+    await waitFor(() => expect(screen.getByText("one")).toBeInTheDocument());
+    expect(screen.queryByText("four")).not.toBeInTheDocument();
+    expect(screen.queryByText("con four")).not.toBeInTheDocument();
   });
 
   it("shows an error message when the response is not ok", async () => {

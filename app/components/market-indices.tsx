@@ -264,12 +264,21 @@ export function MarketIndices({
   live,
   history = {},
   className = "",
+  onRefresh,
+  refreshing = false,
 }: {
   indices: IndexQuote[] | undefined;
   live: boolean;
   /** Levels observed since the page opened, keyed by index symbol. */
   history?: Record<string, number[]>;
   className?: string;
+  /**
+   * Pull the levels again now. Offered because the automatic poll only runs inside the session:
+   * outside it — and any time a reader simply does not trust what is on screen — there was no
+   * way to ask for a fresh number short of reloading the page.
+   */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   // A payload without indices (an older cached response, or a feed that failed) drops the block
   // rather than rendering three empty cards.
@@ -277,9 +286,24 @@ export function MarketIndices({
 
   return (
     <div className={className}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-900 dark:text-white">Benchmark indices</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Today&apos;s move in points and percent</p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Today&apos;s move in points and percent</p>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-emerald-500/50"
+            >
+              <span aria-hidden="true" className={refreshing ? "inline-block animate-spin" : undefined}>
+                ↻
+              </span>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,4 +1,3 @@
-import { companyLogoUrl } from "./indian-stocks";
 import { cached, fetchNse, toText } from "./nse-client";
 import { getIndustryMap, UNCLASSIFIED } from "./nse-industry";
 
@@ -6,7 +5,6 @@ import { getIndustryMap, UNCLASSIFIED } from "./nse-industry";
 // obliged to make, which is why this is the primary source rather than a press aggregator —
 // every item is first-hand and carries the company's own signed document.
 const TTL_MS = 10 * 60_000;
-const PER_SECTOR_LIMIT = 8;
 
 export type StockNewsItem = {
   id: string;
@@ -19,7 +17,6 @@ export type StockNewsItem = {
   /** Link to the company's own signed filing — never a paraphrase of it. */
   documentUrl: string | null;
   publishedAt: string | null;
-  logo: string;
 };
 
 export type StockNewsSector = { sector: string; items: StockNewsItem[]; total: number };
@@ -88,7 +85,6 @@ export const getStockNews = cached(TTL_MS, async (): Promise<StockNewsBoard> => 
       headline: toHeadline(toText(row.attchmntText), category),
       documentUrl: toText(row.attchmntFile) || null,
       publishedAt: parseAnnouncementTime(row.an_dt),
-      logo: companyLogoUrl(`${symbol.toLowerCase()}.com`),
     };
 
     const bucket = bySector.get(item.sector) ?? [];
@@ -100,7 +96,9 @@ export const getStockNews = cached(TTL_MS, async (): Promise<StockNewsBoard> => 
   const sectors: StockNewsSector[] = Array.from(bySector.entries())
     .map(([sector, items]) => {
       items.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-      return { sector, items: items.slice(0, PER_SECTOR_LIMIT), total: items.length };
+      // Every filing in the sector, not the first eight: the card beside the tab quotes this
+      // total, and a list that shows fewer than it claims is simply wrong.
+      return { sector, items, total: items.length };
     })
     // The unclassified bucket sorts last so it never heads a list of real industries.
     .sort((a, b) => {

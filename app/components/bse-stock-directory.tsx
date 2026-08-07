@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AiBoardRead } from "./ai-board-read";
 import type { BseCapTier, BseMoverRow } from "./bse-market-board";
+import { CompanyLogo } from "./company-logo";
 import { chipFor, formatCrore, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
 import { MarketSection, PillTabs, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
+import type { BoardBrief } from "../lib/board-read";
 
 type DirectoryRow = BseMoverRow & { isin: string; previousClose: number | null };
 
@@ -43,6 +46,32 @@ export function buildDirectoryUrl(term: string, tier: TierFilter, sort: SortKey,
   return `/api/market/bse/stocks?${params.toString()}`;
 }
 
+/** The slice of the universe currently on screen, as figures. */
+export function directoryBrief(rows: DirectoryRow[], total: number, tier: TierFilter, term: string): BoardBrief | null {
+  if (rows.length === 0) return null;
+
+  const priced = rows.filter((row): row is DirectoryRow & { changePercent: number } => row.changePercent !== null);
+  const rising = priced.filter((row) => row.changePercent > 0).length;
+
+  return {
+    subject: term
+      ? `BSE-listed companies matching "${term}"`
+      : `BSE-listed companies${tier === "all" ? "" : `, ${tier.toLowerCase()} cap only`}, largest first`,
+    question: "What kind of companies are these, and how are they trading?",
+    facts: [
+      { label: "Companies matched", value: total.toLocaleString("en-IN") },
+      { label: "On this page", value: String(rows.length) },
+      { label: "Trading higher", value: `${rising} of ${priced.length}` },
+    ],
+    highlights: rows
+      .slice(0, 4)
+      .map(
+        (row) =>
+          `${row.ticker} (${row.name}, ${row.sector ?? "unclassified"}, ${row.capTier ?? "untiered"} cap): ${formatRupee(row.price)}, ${formatSignedPercent(row.changePercent)} on the day`,
+      ),
+  };
+}
+
 /**
  * A directory of every company listed on BSE, searchable by name, ticker, scrip code or ISIN.
  *
@@ -77,8 +106,9 @@ export function BseStockDirectory() {
   const url = useMemo(() => buildDirectoryUrl(term, tier, sort, direction, page), [term, tier, sort, direction, page]);
   const { data, loading, error } = useMarketFeed<BseDirectoryResponse>(url);
 
-  const rows = data?.rows ?? [];
+  const rows = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
+  const brief = useMemo(() => directoryBrief(rows, total, tier, term), [rows, total, tier, term]);
 
   const changeSort = (key: SortKey) => {
     // Re-picking the active column flips it; a new column starts in the direction that reads
@@ -137,6 +167,8 @@ export function BseStockDirectory() {
         ))}
       </div>
 
+      <AiBoardRead feature="directory" brief={brief} />
+
       {error && <SectionError message={error} />}
       {loading && <SectionSkeleton rows={3} height="h-12" />}
 
@@ -157,10 +189,15 @@ export function BseStockDirectory() {
               {rows.map((row) => (
                 <tr key={row.code} className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-800/70 dark:hover:bg-slate-950/50">
                   <td className="py-2.5 pr-3">
-                    <p className="font-semibold text-slate-900 dark:text-white">{row.ticker}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {row.name} · {row.code}
-                    </p>
+                    <div className="flex items-center gap-2.5">
+                      <CompanyLogo symbol={row.ticker} size={32} />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-white">{row.ticker}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {row.name} · {row.code}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-2.5 pr-3">
                     {row.sector ? (

@@ -49,6 +49,15 @@ jest.mock("../../app/components/dip-winners", () => ({ DipWinners: mockPanel("pa
 jest.mock("../../app/components/landing-research", () => ({ LandingResearch: mockPanel("panel-research") }));
 jest.mock("../../app/components/ai-stock-compare", () => ({ AiStockCompare: mockPanel("panel-compare") }));
 jest.mock("../../app/components/etf-research", () => ({ EtfResearch: mockPanel("panel-etf-research") }));
+// The exchange boards that moved in from the landing page, each covered by its own test file.
+jest.mock("../../app/components/bse-stock-directory", () => ({ BseStockDirectory: mockPanel("panel-directory") }));
+jest.mock("../../app/components/sector-trends", () => ({ SectorTrends: mockPanel("panel-sectors") }));
+jest.mock("../../app/components/most-traded", () => ({ MostTraded: mockPanel("panel-most-traded") }));
+jest.mock("../../app/components/mtf-traded", () => ({ MtfTraded: mockPanel("panel-mtf") }));
+jest.mock("../../app/components/stocks-in-news", () => ({ StocksInNews: mockPanel("panel-stock-news") }));
+jest.mock("../../app/components/dividend-board", () => ({ DividendBoard: mockPanel("panel-dividends") }));
+jest.mock("../../app/components/ipo-listings", () => ({ IpoListings: mockPanel("panel-ipos") }));
+jest.mock("../../app/components/etf-board", () => ({ EtfBoard: mockPanel("panel-etf-board") }));
 
 function setStoredUser(user: unknown) {
   window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok", user }));
@@ -141,21 +150,32 @@ describe("DashboardClient", () => {
   describe("initial render", () => {
     it("shows the default no-analysis state and a closed report modal", async () => {
       await renderDashboard();
-      expect(
-        screen.getByText("Select a stock to unlock the AI buy/avoid recommendation and full research report.")
-      ).toBeInTheDocument();
       expect(screen.queryByText("View full AI report")).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Open report" })).not.toBeInTheDocument();
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
       expect(screen.getByText("RELIANCE outlook")).toBeInTheDocument();
     });
 
-    it("updates the stock field when a suggestion is picked from StockSearch", async () => {
+    // Both said the same thing the research card and the boards already say, so they were cut.
+    it("no longer carries the Suggested focus or Analytics cards", async () => {
+      await renderDashboard();
+      expect(screen.queryByText("Suggested focus")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Open report" })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Portfolio analytics/i)).not.toBeInTheDocument();
+    });
+
+    // The explorer searches the whole catalogue and runs the analysis on selection, so there is
+    // no second click on "Research stock" to make.
+    it("researches a stock picked from the category explorer", async () => {
       const user = userEvent.setup();
+      installFetchMock({ stock: "TCS", summary: "TCS summary." });
       await renderDashboard();
 
-      await user.click(screen.getByRole("button", { name: /^TCS/ }));
+      await user.type(screen.getByRole("combobox", { name: "Search any listed stock" }), "TCS");
+      await user.click(screen.getByRole("option", { name: /Tata Consultancy Services/ }));
+
+      expect(await screen.findByText("Analysis ready for TCS.")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toHaveValue("TCS");
+      expect(screen.getByText("TCS outlook")).toBeInTheDocument();
     });
   });
 
@@ -217,21 +237,6 @@ describe("DashboardClient", () => {
       );
     });
 
-    it("falls back to the 'Buy' recommendation label when the response omits one", async () => {
-      const user = userEvent.setup();
-      installFetchMock({ stock: "RELIANCE", summary: "Summary text." });
-      await renderDashboard();
-
-      await user.click(screen.getByRole("button", { name: "Research stock" }));
-      await screen.findByText("Analysis ready for RELIANCE.");
-
-      expect(
-        screen.getByText(
-          "Buy — open the full research report for key insights, market trends, company actions, positive news, and reasons."
-        )
-      ).toBeInTheDocument();
-    });
-
     it("leaves logoUrl and companyName undefined when the analyzed symbol isn't in the known stock list", async () => {
       const user = userEvent.setup();
       installFetchMock({ stock: "UNKNOWNSYM", summary: "Summary text.", recommendation: "Hold" });
@@ -262,20 +267,6 @@ describe("DashboardClient", () => {
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true");
     });
 
-    it("reopens the modal from the aside's 'Open report' button", async () => {
-      const user = userEvent.setup();
-      installFetchMock({ stock: "RELIANCE", summary: "Summary text.", recommendation: "Buy" });
-      await renderDashboard();
-
-      await user.click(screen.getByRole("button", { name: "Research stock" }));
-      await screen.findByText("Analysis ready for RELIANCE.");
-
-      await user.click(screen.getByRole("button", { name: "close-modal" }));
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
-
-      await user.click(screen.getByRole("button", { name: "Open report" }));
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true");
-    });
   });
 
   describe("AI section navigation", () => {
@@ -373,5 +364,58 @@ describe("DashboardClient", () => {
     expect(screen.getByText("What Stockers.AI watches")).toBeInTheDocument();
     expect(screen.getByText(/Earnings momentum and guidance changes/)).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith("/api/news");
+  });
+
+  describe("exchange boards and the guided tour", () => {
+    afterEach(() => {
+      window.location.hash = "";
+    });
+
+    // Each board is its own destination now, and mounting is still one section at a time.
+    it.each([
+      ["Company Directory", "panel-directory"],
+      ["Sector Trends", "panel-sectors"],
+      ["Most Traded", "panel-most-traded"],
+      ["MTF Watch", "panel-mtf"],
+      ["Stocks in News", "panel-stock-news"],
+      ["Dividends", "panel-dividends"],
+      ["IPO Watch", "panel-ipos"],
+      ["ETF Board", "panel-etf-board"],
+    ])("opens %s from the sidebar", async (label, testId) => {
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      await user.click(
+        within(screen.getByRole("navigation", { name: "Dashboard sections" })).getByRole("button", { name: label }),
+      );
+
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    });
+
+    // Getting Started has no AI layer, so it is the one section that is never wrapped in a gate.
+    it("opens the guided tour without a paywall around it", async () => {
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      await user.click(
+        within(screen.getByRole("navigation", { name: "Dashboard sections" })).getByRole("button", {
+          name: "Getting Started",
+        }),
+      );
+
+      expect(screen.getByRole("heading", { name: /here is the order to read them in/ })).toBeInTheDocument();
+      expect(window.location.hash).toBe("#support");
+    });
+
+    it("jumps from the tour straight into the board it points at", async () => {
+      const user = userEvent.setup();
+      window.location.hash = "#support";
+      await renderDashboard();
+
+      await user.click(screen.getByRole("button", { name: "Open Market Pulse →" }));
+
+      expect(screen.getByTestId("panel-market-pulse")).toBeInTheDocument();
+      expect(window.location.hash).toBe("#market-pulse");
+    });
   });
 });

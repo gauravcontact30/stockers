@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { AiBoardRead } from "./ai-board-read";
+import { CompanyLogo } from "./company-logo";
 import {
   chipFor,
   formatCrore,
@@ -10,7 +12,17 @@ import {
   sectorTone,
   toneFor,
 } from "./market-format";
-import { MarketSection, PillTabs, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
+import {
+  MarketSection,
+  Pager,
+  PillTabs,
+  SectionError,
+  SectionFootnote,
+  SectionSkeleton,
+  useMarketFeed,
+  usePaged,
+} from "./market-section";
+import type { BoardBrief } from "../lib/board-read";
 
 export type TradedStock = {
   symbol: string;
@@ -60,6 +72,7 @@ export function TradedRow({ stock, rank }: { stock: TradedStock; rank: number })
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-bold tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {rank}
           </span>
+          <CompanyLogo symbol={stock.symbol} size={36} />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
             <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</p>
@@ -134,6 +147,33 @@ const RANK_OPTIONS: { key: RankKey; label: string }[] = [
   { key: "byVolume", label: "By volume (shares)" },
 ];
 
+// Two columns of six — a full screen of cards without the section running away down the page.
+const PAGE_SIZE = 12;
+
+/** What the turnover board says, in the figures already on screen. */
+export function tradedBrief(stocks: TradedStock[], rank: RankKey): BoardBrief | null {
+  if (stocks.length === 0) return null;
+
+  const turnover = stocks.reduce((sum, stock) => sum + (stock.turnover ?? 0), 0);
+  const advancing = stocks.filter((stock) => (stock.changePercent ?? 0) > 0).length;
+
+  return {
+    subject: `NSE's most actively traded stocks, ranked ${rank === "byValue" ? "by rupee turnover" : "by shares traded"}`,
+    question: "Where did the day's money actually go, and was it buying or selling?",
+    facts: [
+      { label: "Stocks on the board", value: String(stocks.length) },
+      { label: "Combined turnover", value: formatCrore(turnover) },
+      { label: "Rising on heavy volume", value: `${advancing} of ${stocks.length}` },
+    ],
+    highlights: stocks
+      .slice(0, 4)
+      .map(
+        (stock) =>
+          `${stock.symbol} (${stock.sector ?? "unclassified"}): ${formatCrore(stock.turnover)} traded, ${formatSignedPercent(stock.changePercent)} on the day`,
+      ),
+  };
+}
+
 /**
  * The exchange-wide most-traded board.
  *
@@ -145,7 +185,10 @@ export function MostTraded() {
   const { data, loading, error } = useMarketFeed<MostTradedBoard>("/api/market/most-traded");
   const [rank, setRank] = useState<RankKey>("byValue");
 
-  const stocks = data?.[rank] ?? [];
+  const stocks = useMemo(() => data?.[rank] ?? [], [data, rank]);
+  // Ranks carry on across pages: row one of page two is the 13th most traded, not the first.
+  const paged = usePaged(stocks, PAGE_SIZE, rank);
+  const brief = useMemo(() => tradedBrief(stocks, rank), [stocks, rank]);
 
   return (
     <MarketSection
@@ -163,15 +206,20 @@ export function MostTraded() {
         <PillTabs options={RANK_OPTIONS} value={rank} onChange={setRank} label="Ranking method" />
       </div>
 
+      <AiBoardRead feature="most-traded" brief={brief} />
+
       {error && <SectionError message={error} />}
       {loading && <SectionSkeleton rows={4} height="h-32" />}
 
       {!loading && stocks.length > 0 && (
-        <ul className="mt-5 grid gap-3 lg:grid-cols-2">
-          {stocks.map((stock, index) => (
-            <TradedRow key={stock.symbol} stock={stock} rank={index + 1} />
-          ))}
-        </ul>
+        <>
+          <ul className="mt-5 grid gap-3 lg:grid-cols-2">
+            {paged.slice.map((stock, index) => (
+              <TradedRow key={stock.symbol} stock={stock} rank={paged.from + index} />
+            ))}
+          </ul>
+          <Pager paged={paged} unit="stocks" />
+        </>
       )}
 
       {!loading && stocks.length === 0 && !error && (

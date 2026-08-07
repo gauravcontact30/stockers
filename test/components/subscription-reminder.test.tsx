@@ -144,6 +144,51 @@ describe("SubscriptionReminder", () => {
     expect(screen.getByRole("dialog").textContent).not.toBe(firstShout);
   });
 
+  /**
+   * The brief asked for a modal that looks different every time it opens, so the chrome, the
+   * pattern and the animations rotate on their own cycle alongside the cast.
+   */
+  it("opens in a different look each time, not just with a different character", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    mockStatus();
+    renderWithProvider(<SubscriptionReminder />);
+    await advanceToFirstShow();
+
+    const panel = () => screen.getByRole("dialog").firstElementChild as HTMLElement;
+    const looks: string[] = [];
+
+    for (let round = 0; round < 6; round++) {
+      looks.push(`${panel().dataset.theme}/${panel().dataset.character}`);
+      await user.click(screen.getByText("Maybe later"));
+      await act(async () => {
+        jest.advanceTimersByTime(REMIND_EVERY_MS);
+      });
+    }
+
+    expect(new Set(looks).size).toBe(6);
+  });
+
+  it("carries the theme's entrance animation and idle motion onto the panel", async () => {
+    mockStatus();
+    const { container } = renderWithProvider(<SubscriptionReminder />);
+    await advanceToFirstShow();
+
+    const panel = screen.getByRole("dialog").firstElementChild as HTMLElement;
+    expect(panel.className).toContain("animate-pop-in");
+    expect(container.querySelector(".animate-character-bounce")).toBeInTheDocument();
+  });
+
+  // Each character's call is its own sound, not a shared beep at a different pitch.
+  it("plays the character's own call rather than a bare frequency", async () => {
+    mockStatus();
+    renderWithProvider(<SubscriptionReminder />);
+    await advanceToFirstShow();
+
+    expect(playCall).toHaveBeenCalledWith(
+      expect.objectContaining({ wave: expect.any(String), bend: expect.any(Array), pattern: expect.any(Array) }),
+    );
+  });
+
   it("asks an expired user to subscribe without claiming anything is blocked", async () => {
     mockStatus({ state: "expired", marketDaysLeft: 0 });
     renderWithProvider(<SubscriptionReminder />);

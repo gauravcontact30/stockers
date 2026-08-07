@@ -1,8 +1,37 @@
 "use client";
 
+import { useMemo } from "react";
+import { AiBoardRead } from "./ai-board-read";
+import { CompanyLogo } from "./company-logo";
 import { chipFor, formatCrore, formatQuantity, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
-import { MarketSection, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
+import { MarketSection, Pager, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed, usePaged } from "./market-section";
 import type { MostTradedBoard, TradedStock } from "./most-traded";
+import type { BoardBrief } from "../lib/board-read";
+
+const PAGE_SIZE = 12;
+
+/** The leveraged-universe board, as figures. */
+export function mtfBrief(stocks: TradedStock[], universeSize: number): BoardBrief | null {
+  if (stocks.length === 0) return null;
+
+  const rising = stocks.filter((stock) => (stock.changePercent ?? 0) > 0).length;
+
+  return {
+    subject: "NSE's most-traded stocks that qualify for margin trading",
+    question: "Which of these is the trend actually behind, given leverage magnifies whichever way it goes?",
+    facts: [
+      { label: "Eligible universe", value: `${universeSize} stocks` },
+      { label: "On today's board", value: String(stocks.length) },
+      { label: "Trading higher", value: `${rising} of ${stocks.length}` },
+    ],
+    highlights: stocks
+      .slice(0, 4)
+      .map(
+        (stock) =>
+          `${stock.symbol} (${stock.sector ?? "unclassified"}): ${formatSignedPercent(stock.changePercent)} today on ${formatCrore(stock.turnover)} traded`,
+      ),
+  };
+}
 
 function MtfRow({ stock, rank }: { stock: TradedStock; rank: number }) {
   return (
@@ -10,6 +39,8 @@ function MtfRow({ stock, rank }: { stock: TradedStock; rank: number }) {
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold tabular-nums text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
         {rank}
       </span>
+
+      <CompanyLogo symbol={stock.symbol} size={34} />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
@@ -47,7 +78,9 @@ function MtfRow({ stock, rank }: { stock: TradedStock; rank: number }) {
  */
 export function MtfTraded() {
   const { data, loading, error } = useMarketFeed<MostTradedBoard>("/api/market/most-traded");
-  const stocks = data?.mtf ?? [];
+  const stocks = useMemo(() => data?.mtf ?? [], [data]);
+  const paged = usePaged(stocks, PAGE_SIZE, "mtf");
+  const brief = useMemo(() => mtfBrief(stocks, data?.mtfUniverseSize ?? 0), [stocks, data?.mtfUniverseSize]);
 
   return (
     <MarketSection
@@ -62,15 +95,20 @@ export function MtfTraded() {
         </div>
       }
     >
+      <AiBoardRead feature="mtf" brief={brief} />
+
       {error && <SectionError message={error} />}
       {loading && <SectionSkeleton rows={5} height="h-20" />}
 
       {!loading && stocks.length > 0 && (
-        <ul className="mt-5 grid gap-2.5 lg:grid-cols-2">
-          {stocks.map((stock, index) => (
-            <MtfRow key={stock.symbol} stock={stock} rank={index + 1} />
-          ))}
-        </ul>
+        <>
+          <ul className="mt-5 grid gap-2.5 lg:grid-cols-2">
+            {paged.slice.map((stock, index) => (
+              <MtfRow key={stock.symbol} stock={stock} rank={paged.from + index} />
+            ))}
+          </ul>
+          <Pager paged={paged} unit="eligible stocks" />
+        </>
       )}
 
       {!loading && stocks.length === 0 && !error && (

@@ -1,4 +1,5 @@
 import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
   MarketIndices,
   Sparkline,
@@ -263,5 +264,49 @@ describe("MarketIndices ticking", () => {
   it("leaves the sparkline out until a second tick arrives", () => {
     render(<MarketIndices live indices={[indexQuote()]} history={{ NIFTY50: [24624.65] }} />);
     expect(screen.queryByText("Ticks seen since this page opened")).not.toBeInTheDocument();
+  });
+});
+
+describe("MarketIndices refresh", () => {
+  const indices = [
+    {
+      symbol: "SENSEX",
+      yahooSymbol: "^BSESN",
+      name: "SENSEX",
+      exchange: "BSE" as const,
+      description: "30 blue chips on the BSE",
+      price: 81204.36,
+      previousClose: 81000,
+      change: 204.36,
+      changePercent: 0.25,
+      dayHigh: 81400,
+      dayLow: 80900,
+      live: true,
+      asOf: "2026-08-05T10:00:00.000Z",
+    },
+  ];
+
+  // The automatic poll only runs inside the session, so outside it — and any time the reader
+  // simply does not trust the number — there has to be a way to ask again.
+  it("offers a manual refresh and reports it", async () => {
+    const user = userEvent.setup();
+    const onRefresh = jest.fn();
+    render(<MarketIndices indices={indices} live onRefresh={onRefresh} />);
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so while a refresh is in flight, and refuses a second one", () => {
+    render(<MarketIndices indices={indices} live onRefresh={jest.fn()} refreshing />);
+
+    const button = screen.getByRole("button", { name: /Refreshing/ });
+    expect(button).toBeDisabled();
+  });
+
+  // A panel with no refresh handler must not draw a button that does nothing.
+  it("draws no button when refreshing is not offered", () => {
+    render(<MarketIndices indices={indices} live />);
+    expect(screen.queryByRole("button", { name: /Refresh/ })).not.toBeInTheDocument();
   });
 });

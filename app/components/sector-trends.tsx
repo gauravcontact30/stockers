@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
+import { AiBoardRead } from "./ai-board-read";
 import { chipFor, formatSignedPercent, toneFor } from "./market-format";
 import { MarketSection, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
+import type { BoardBrief } from "../lib/board-read";
 
 export type SectorTrend = {
   symbol: string;
@@ -35,6 +38,35 @@ export function formatLevel(value: number | null): string {
 export function barWidth(value: number | null, largest: number): number {
   if (typeof value !== "number" || !Number.isFinite(value) || largest <= 0) return 0;
   return Math.min(100, (Math.abs(value) / largest) * 100);
+}
+
+/**
+ * The board as figures the AI desk can read: how wide the rotation was, and which indices sat at
+ * each end of it. Only what is already on screen goes in.
+ */
+export function sectorBrief(sectors: SectorTrend[]): BoardBrief | null {
+  if (sectors.length === 0) return null;
+
+  const advancing = sectors.filter((sector) => (sector.changePercent ?? 0) > 0).length;
+  const leader = sectors[0];
+  const laggard = sectors[sectors.length - 1];
+
+  return {
+    subject: "Every NSE sectoral index, ranked by today's move",
+    question: "Which way did money rotate today, and how broad was the move?",
+    facts: [
+      { label: "Sectors advancing", value: `${advancing} of ${sectors.length}` },
+      { label: "Leading sector", value: `${leader.name} ${formatSignedPercent(leader.changePercent)}` },
+      { label: "Lagging sector", value: `${laggard.name} ${formatSignedPercent(laggard.changePercent)}` },
+      { label: "Spread, best to worst", value: `${((leader.changePercent ?? 0) - (laggard.changePercent ?? 0)).toFixed(2)} pts` },
+    ],
+    highlights: sectors
+      .slice(0, 4)
+      .map(
+        (sector) =>
+          `${sector.name}: ${formatSignedPercent(sector.changePercent)} today, ${formatSignedPercent(sector.changePercent30d)} over a month, ${formatSignedPercent(sector.changePercent365d)} over a year`,
+      ),
+  };
 }
 
 export function breadthShare(advances: number | null, declines: number | null): number | null {
@@ -117,11 +149,12 @@ function SectorRow({ sector, largest }: { sector: SectorTrend; largest: number }
  */
 export function SectorTrends() {
   const { data, loading, error } = useMarketFeed<SectorBoard>("/api/market/sectors");
-  const sectors = data?.sectors ?? [];
+  const sectors = useMemo(() => data?.sectors ?? [], [data]);
 
   const largest = sectors.reduce((max, sector) => Math.max(max, Math.abs(sector.changePercent ?? 0)), 0);
   const leader = sectors[0];
   const laggard = sectors[sectors.length - 1];
+  const brief = useMemo(() => sectorBrief(sectors), [sectors]);
 
   return (
     <MarketSection
@@ -157,6 +190,8 @@ export function SectorTrends() {
           </div>
         </div>
       )}
+
+      <AiBoardRead feature="sectors" brief={brief} />
 
       {!loading && sectors.length > 0 && (
         <ul className="mt-4 grid gap-3 lg:grid-cols-2">

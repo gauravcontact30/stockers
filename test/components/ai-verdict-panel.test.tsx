@@ -68,7 +68,52 @@ describe("VERDICT_SOURCES symbol extraction", () => {
     expect(VERDICT_SOURCES["etf-research"].symbols({ etfs: [{ symbol: "NIFTYBEES" }] })).toEqual(["NIFTYBEES"]);
   });
 
+  // Each exchange board reads its own feed, so the calls are about the names on that board.
+  it("reads the largest companies off the directory by ticker", () => {
+    expect(VERDICT_SOURCES.directory.symbols({ rows: [{ ticker: "RELIANCE" }, { ticker: "TCS" }] })).toEqual([
+      "RELIANCE",
+      "TCS",
+    ]);
+  });
+
+  it("reads the turnover board and the MTF board off the same feed, separately", () => {
+    const feed = { byValue: [{ symbol: "HDFCBANK" }], mtf: [{ symbol: "SBIN" }] };
+    expect(VERDICT_SOURCES["most-traded"].symbols(feed)).toEqual(["HDFCBANK"]);
+    expect(VERDICT_SOURCES.mtf.symbols(feed)).toEqual(["SBIN"]);
+  });
+
+  it("flattens the sector-grouped filings and dividend feeds", () => {
+    expect(
+      VERDICT_SOURCES["stock-news"].symbols({
+        sectors: [{ items: [{ symbol: "BEL" }] }, { items: [{ symbol: "ABB" }] }],
+      }),
+    ).toEqual(["BEL", "ABB"]);
+
+    expect(
+      VERDICT_SOURCES.dividends.symbols({
+        sectors: [{ dividends: [{ symbol: "HYUNDAI" }] }, { dividends: [{ symbol: "ITC" }] }],
+      }),
+    ).toEqual(["HYUNDAI", "ITC"]);
+  });
+
+  it("flattens the ETF board across its asset classes", () => {
+    expect(
+      VERDICT_SOURCES["etf-board"].symbols({ groups: [{ etfs: [{ symbol: "GOLDBEES" }] }, { etfs: [{ symbol: "NIFTYBEES" }] }] }),
+    ).toEqual(["GOLDBEES", "NIFTYBEES"]);
+  });
+
+  // Sector rotation and the IPO pipeline are not lists of listed stocks, so both fall back to the
+  // heavyweights a reader would price anything else against.
+  it("uses the heavyweights for boards that are not a stock list", () => {
+    expect(VERDICT_SOURCES.sectors.symbols(null)).toContain("HDFCBANK");
+    expect(VERDICT_SOURCES.ipos.symbols(null)).toContain("INFY");
+  });
+
   it("survives a feed that is empty or the wrong shape", () => {
+    expect(VERDICT_SOURCES.directory.symbols({ rows: [{ ticker: 7 }, { ticker: "TCS" }] })).toEqual(["TCS"]);
+    expect(VERDICT_SOURCES.dividends.symbols({ sectors: [{ dividends: [{ symbol: 7 }] }] })).toEqual([]);
+    expect(VERDICT_SOURCES["stock-news"].symbols({})).toEqual([]);
+    expect(VERDICT_SOURCES["etf-board"].symbols({})).toEqual([]);
     expect(VERDICT_SOURCES["top-picks"].symbols(null)).toEqual([]);
     expect(VERDICT_SOURCES["market-pulse"].symbols({})).toEqual([]);
     expect(VERDICT_SOURCES["dip-winners"].symbols({ stocks: "nope" })).toEqual([]);

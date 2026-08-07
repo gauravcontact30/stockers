@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CompanyLogo } from "./company-logo";
 import {
   chipFor,
   formatDayDate,
@@ -44,7 +45,6 @@ export type BseBoardResponse = {
     byTier: Record<BseCapTier, { count: number; breadth: Breadth; averageChangePercent: number | null }>;
     sessionDate: string | null;
   };
-  movers: Record<TierKey, { gainers: BseMoverRow[]; losers: BseMoverRow[] }>;
 };
 
 type TierKey = "all" | "large" | "mid" | "small";
@@ -101,6 +101,8 @@ export function MoverRow({ row, rank }: { row: BseMoverRow; rank: number }) {
         {rank}
       </span>
 
+      <CompanyLogo symbol={row.ticker} size={34} />
+
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{row.ticker}</p>
@@ -129,17 +131,99 @@ export function MoverRow({ row, rank }: { row: BseMoverRow; rank: number }) {
   );
 }
 
-function MoverList({ title, tone, rows, emptyNote }: { title: string; tone: string; rows: BseMoverRow[]; emptyNote: string }) {
+export type BseMoverPage = {
+  rows: BseMoverRow[];
+  total: number;
+  page: number;
+  pages: number;
+  pageSize: number;
+};
+
+export function buildMoversUrl(tier: TierKey, direction: "gainers" | "losers", page: number) {
+  return `/api/market/bse/movers?tier=${tier}&direction=${direction}&page=${page}`;
+}
+
+/**
+ * One direction of the day's movers, paged on its own.
+ *
+ * Gainers and losers page independently because they are two separate questions — a reader deep
+ * into the losers has no reason to lose their place among the gainers. Paging is server-side:
+ * the full list runs to thousands of names and each row's sector costs an upstream call, so only
+ * the five on screen are ever resolved.
+ */
+function MoverList({
+  title,
+  tone,
+  tier,
+  direction,
+  emptyNote,
+}: {
+  title: string;
+  tone: string;
+  tier: TierKey;
+  direction: "gainers" | "losers";
+  emptyNote: string;
+}) {
+  // The tier is carried alongside the page so that switching cap tier starts this list again at
+  // its sharpest mover, derived rather than reset in an effect — page four of the large caps is
+  // not a sensible place to land in the small caps.
+  const [cursor, setCursor] = useState({ tier, page: 1 });
+  const page = cursor.tier === tier ? cursor.page : 1;
+  const setPage = (next: number) => setCursor({ tier, page: next });
+
+  const { data, loading, error } = useMarketFeed<BseMoverPage>(buildMoversUrl(tier, direction, page));
+  const rows = data?.rows ?? [];
+
   return (
     <div>
-      <h4 className={`text-sm font-bold uppercase tracking-wide ${tone}`}>{title}</h4>
-      {rows.length > 0 ? (
-        <ul className="mt-3 space-y-2">
-          {rows.map((row, index) => (
-            <MoverRow key={row.code} row={row} rank={index + 1} />
-          ))}
-        </ul>
-      ) : (
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h4 className={`text-sm font-bold uppercase tracking-wide ${tone}`}>{title}</h4>
+        {data && (
+          <p className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+            {data.total.toLocaleString("en-IN")} in all
+          </p>
+        )}
+      </div>
+
+      {error && <SectionError message={error} />}
+      {loading && <SectionSkeleton rows={3} height="h-20" />}
+
+      {!loading && rows.length > 0 && (
+        <>
+          <ul className="mt-3 space-y-2">
+            {rows.map((row, index) => (
+              // Ranks run on across pages: the first row of page two is the sixth biggest move.
+              <MoverRow key={row.code} row={row} rank={(data!.page - 1) * data!.pageSize + index + 1} />
+            ))}
+          </ul>
+
+          {data!.pages > 1 && (
+            <nav aria-label={`${title} pages`} className="mt-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(data!.page - 1)}
+                disabled={data!.page <= 1}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+              >
+                ← Prev
+              </button>
+              <p className="text-[11px] font-medium tabular-nums text-slate-500 dark:text-slate-400">
+                Page {data!.page.toLocaleString("en-IN")} of {data!.pages.toLocaleString("en-IN")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPage(data!.page + 1)}
+                disabled={data!.page >= data!.pages}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+              >
+                Next →
+              </button>
+            </nav>
+          )}
+        </>
+      )}
+
+      {!loading && rows.length === 0 && !error && (
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{emptyNote}</p>
       )}
     </div>
@@ -159,7 +243,6 @@ export function BseMarketBoard() {
   const [tier, setTier] = useState<TierKey>("all");
 
   const summary = data?.summary;
-  const movers = data?.movers[tier];
   const tierStats = tier === "all" ? null : summary?.byTier[TIER_FOR_KEY[tier]];
   const breadth = tierStats?.breadth ?? summary?.breadth;
 
@@ -168,7 +251,7 @@ export function BseMarketBoard() {
       id="bse-board"
       eyebrow="BSE market research"
       title="Every listed BSE company, ranked by the day's move"
-      blurb="Top ten gainers and losers across the entire exchange and within each cap tier, with the sector each company trades in. Built from BSE's own scrip master and end-of-session Bhavcopy, so nothing is sampled or estimated."
+      blurb="Every gainer and every loser on the exchange, five at a time and sharpest first, for the market as a whole and within each cap tier — with the sector each company trades in. Built from BSE's own scrip master and end-of-session Bhavcopy, so nothing is sampled or estimated."
       aside={
         <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-400">
           {summary ? `${summary.listed.toLocaleString("en-IN")} listed companies` : "Loading BSE…"}
@@ -219,22 +302,22 @@ export function BseMarketBoard() {
             )}
           </div>
 
-          {movers && (
-            <div className="mt-5 grid gap-6 lg:grid-cols-2">
-              <MoverList
-                title="Top 10 gainers"
-                tone="text-emerald-600 dark:text-emerald-400"
-                rows={movers.gainers}
-                emptyNote="No stock in this tier closed higher this session."
-              />
-              <MoverList
-                title="Top 10 losers"
-                tone="text-rose-600 dark:text-rose-400"
-                rows={movers.losers}
-                emptyNote="No stock in this tier closed lower this session."
-              />
-            </div>
-          )}
+          <div className="mt-5 grid gap-6 lg:grid-cols-2">
+            <MoverList
+              title="Gainers"
+              tone="text-emerald-600 dark:text-emerald-400"
+              tier={tier}
+              direction="gainers"
+              emptyNote="No stock in this tier closed higher this session."
+            />
+            <MoverList
+              title="Losers"
+              tone="text-rose-600 dark:text-rose-400"
+              tier={tier}
+              direction="losers"
+              emptyNote="No stock in this tier closed lower this session."
+            />
+          </div>
         </>
       )}
 

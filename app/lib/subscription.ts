@@ -200,6 +200,16 @@ export const AI_FEATURES = [
   { key: "compare", label: "AI stock compare" },
   { key: "news", label: "AI market news" },
   { key: "etf-research", label: "AI ETF research" },
+  // The exchange boards that moved out of the landing page. The data underneath each is public
+  // and stays visible; what these keys gate is the AI layer now sitting on top of it.
+  { key: "directory", label: "AI company directory" },
+  { key: "sectors", label: "AI sector rotation" },
+  { key: "most-traded", label: "AI most-traded read" },
+  { key: "mtf", label: "AI MTF watch" },
+  { key: "stock-news", label: "AI filings digest" },
+  { key: "dividends", label: "AI dividend planner" },
+  { key: "ipos", label: "AI IPO watch" },
+  { key: "etf-board", label: "AI ETF board" },
 ] as const;
 
 export type FeatureKey = (typeof AI_FEATURES)[number]["key"];

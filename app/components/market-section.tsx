@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 /**
  * One fetch-on-mount hook shared by every NSE-backed section, so they all handle loading, HTTP
@@ -127,4 +127,107 @@ export function PillTabs<T extends string>({
 /** Small caption used under every section to name the source and the "not advice" disclaimer. */
 export function SectionFootnote({ children }: { children: ReactNode }) {
   return <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">{children}</p>;
+}
+
+export type Paged<T> = {
+  page: number;
+  pages: number;
+  /** The rows for the current page. */
+  slice: T[];
+  setPage: (page: number) => void;
+  /** 1-based position of the first and last row on this page, for "showing 21-40 of 286". */
+  from: number;
+  to: number;
+  total: number;
+};
+
+/**
+ * Paging for a list already held in memory.
+ *
+ * `resetKey` names what the list *is* — the selected sector, the active filter. When it changes
+ * the reader is looking at a different list, so they land on its first page rather than on page
+ * four of something that may only have two. It is derived rather than reset in an effect, so the
+ * new list never renders once at the stale page first.
+ */
+export function usePaged<T>(rows: T[], pageSize: number, resetKey: string): Paged<T> {
+  const [cursor, setCursor] = useState({ key: resetKey, page: 1 });
+  const setPage = useCallback((page: number) => setCursor({ key: resetKey, page }), [resetKey]);
+
+  return useMemo(() => {
+    const pages = Math.max(Math.ceil(rows.length / pageSize), 1);
+    // Clamped rather than stored: a list that shrinks under a reader who is on its last page
+    // should show them the new last page, not an empty one.
+    const page = Math.min(cursor.key === resetKey ? cursor.page : 1, pages);
+    const from = (page - 1) * pageSize;
+    const slice = rows.slice(from, from + pageSize);
+
+    return { page, pages, slice, setPage, from: slice.length ? from + 1 : 0, to: from + slice.length, total: rows.length };
+  }, [rows, pageSize, resetKey, cursor, setPage]);
+}
+
+/** Up to `span` consecutive page numbers around the current one, clamped to the real range. */
+export function pageWindow(page: number, pages: number, span = 5): number[] {
+  const start = Math.max(1, Math.min(page - Math.floor(span / 2), pages - span + 1));
+  const end = Math.min(pages, start + span - 1);
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
+const PAGE_BUTTON = "rounded-full border px-3 py-1.5 text-xs font-semibold tabular-nums transition disabled:opacity-40";
+
+/**
+ * The pager shown under any list long enough to need one.
+ *
+ * Lists on this page are the whole truth — every announcement, every declared dividend — so they
+ * are paged rather than trimmed to a tidy dozen. The count line says how much there is so the
+ * reader knows what they are paging through.
+ */
+export function Pager({ paged, unit }: { paged: Paged<unknown>; unit: string }) {
+  const { page, pages, from, to, total, setPage } = paged;
+  if (pages <= 1) return null;
+
+  return (
+    <nav aria-label={`${unit} pages`} className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+      <p className="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+        Showing <span className="font-semibold text-slate-900 dark:text-white">{from}–{to}</span> of{" "}
+        <span className="font-semibold text-slate-900 dark:text-white">{total.toLocaleString("en-IN")}</span> {unit}
+      </p>
+
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setPage(page - 1)}
+          disabled={page <= 1}
+          className={`${PAGE_BUTTON} border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300`}
+        >
+          ← Prev
+        </button>
+
+        {pageWindow(page, pages).map((number) => (
+          <button
+            key={number}
+            type="button"
+            onClick={() => setPage(number)}
+            aria-current={number === page ? "page" : undefined}
+            aria-label={`Page ${number}`}
+            className={`${PAGE_BUTTON} ${
+              number === page
+                ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                : "border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300"
+            }`}
+          >
+            {number}
+          </button>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setPage(page + 1)}
+          disabled={page >= pages}
+          className={`${PAGE_BUTTON} border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300`}
+        >
+          Next →
+        </button>
+      </div>
+    </nav>
+  );
 }

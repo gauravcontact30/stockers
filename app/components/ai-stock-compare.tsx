@@ -21,17 +21,104 @@ type ComparisonResult = {
   source: "ai" | "demo";
 };
 
-function PointList({ items, icon }: { items: string[]; icon: string }) {
-  if (items.length === 0) return <p className="text-xs text-slate-400">No points returned.</p>;
+// Three a side. The model will happily return eight lukewarm observations per stock, and a wall
+// of them is exactly what stops a reader telling the two apart — which is the whole job here.
+const KEY_POINTS = 3;
+
+/**
+ * One side's key points, pros over cons.
+ *
+ * Pros and cons are colour-separated rather than icon-separated: at a glance the reader should be
+ * able to see which stock has the taller green block, without reading a word.
+ */
+function KeyPoints({ pros, cons }: { pros: string[]; cons: string[] }) {
+  const groups = [
+    {
+      key: "pros",
+      label: "Pros",
+      items: pros.slice(0, KEY_POINTS),
+      chrome:
+        "border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100",
+      heading: "text-emerald-700 dark:text-emerald-400",
+      dot: "bg-emerald-500",
+      empty: "No clear advantage stood out.",
+    },
+    {
+      key: "cons",
+      label: "Cons",
+      items: cons.slice(0, KEY_POINTS),
+      chrome: "border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
+      heading: "text-rose-700 dark:text-rose-400",
+      dot: "bg-rose-500",
+      empty: "No material concern stood out.",
+    },
+  ];
+
   return (
-    <ul className="space-y-2 text-sm">
-      {items.map((item) => (
-        <li key={item} className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-          <span aria-hidden className="mt-0.5 shrink-0">{icon}</span>
-          <span>{item}</span>
-        </li>
+    <div className="mt-4 space-y-3">
+      {groups.map((group) => (
+        <div key={group.key} className={`rounded-2xl border p-3.5 ${group.chrome}`}>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className={`text-[11px] font-bold uppercase tracking-[0.2em] ${group.heading}`}>{group.label}</p>
+            <span className={`text-[11px] font-semibold tabular-nums ${group.heading}`}>{group.items.length}</span>
+          </div>
+
+          {group.items.length === 0 ? (
+            <p className="mt-1.5 text-xs opacity-70">{group.empty}</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {group.items.map((item) => (
+                <li key={item} className="flex gap-2 text-[13px] leading-relaxed">
+                  <span aria-hidden="true" className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${group.dot}`} />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ))}
-    </ul>
+    </div>
+  );
+}
+
+/** One stock's column of the head-to-head. The winner is tinted so the two never read alike. */
+function SidePanel({
+  symbol,
+  score,
+  pros,
+  cons,
+  won,
+}: {
+  symbol: string;
+  score: number;
+  pros: string[];
+  cons: string[];
+  won: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-3xl border p-5 transition-colors ${
+        won
+          ? "border-violet-300 bg-violet-50/60 shadow-[0_18px_40px_-30px_rgba(124,58,237,0.8)] dark:border-violet-500/40 dark:bg-violet-500/10"
+          : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60"
+      }`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{symbol}</h4>
+          {won && (
+            <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              Stronger pick
+            </span>
+          )}
+        </div>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold tabular-nums text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          Score {score}/100
+        </span>
+      </div>
+
+      <KeyPoints pros={pros} cons={cons} />
+    </div>
   );
 }
 
@@ -163,31 +250,25 @@ export function AiStockCompare() {
             <VerdictCards stocks={performance.stocks} leader={performance.leader} laggard={performance.laggard} />
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition-colors dark:border-slate-800 dark:bg-slate-950/60">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{result.stockA}</h4>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  Score {result.stockAScore}/100
-                </span>
-              </div>
-              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Pros</p>
-              <div className="mt-2"><PointList items={result.stockAPros} icon="✅" /></div>
-              <p className="mt-4 text-xs font-medium uppercase tracking-wide text-rose-600 dark:text-rose-400">Cons</p>
-              <div className="mt-2"><PointList items={result.stockACons} icon="⚠️" /></div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition-colors dark:border-slate-800 dark:bg-slate-950/60">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{result.stockB}</h4>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  Score {result.stockBScore}/100
-                </span>
-              </div>
-              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Pros</p>
-              <div className="mt-2"><PointList items={result.stockBPros} icon="✅" /></div>
-              <p className="mt-4 text-xs font-medium uppercase tracking-wide text-rose-600 dark:text-rose-400">Cons</p>
-              <div className="mt-2"><PointList items={result.stockBCons} icon="⚠️" /></div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">
+              Key points, side by side
+            </p>
+            <div className="mt-3 grid gap-4 lg:grid-cols-2">
+              <SidePanel
+                symbol={result.stockA}
+                score={result.stockAScore}
+                pros={result.stockAPros}
+                cons={result.stockACons}
+                won={result.winner === "A"}
+              />
+              <SidePanel
+                symbol={result.stockB}
+                score={result.stockBScore}
+                pros={result.stockBPros}
+                cons={result.stockBCons}
+                won={result.winner === "B"}
+              />
             </div>
           </div>
 

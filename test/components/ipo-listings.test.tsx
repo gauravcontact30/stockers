@@ -6,6 +6,7 @@ import {
   formatDate,
   formatIssueSize,
   formatTimes,
+  ipoBrief,
   subscriptionWidth,
 } from "../../app/components/ipo-listings";
 
@@ -20,7 +21,6 @@ const ipos = [
     company: "Ardee Industries Limited",
     board: "Mainboard" as const,
     status: "open" as const,
-    logo: "https://logo.test/ardee.png",
     openDate: "2026-08-05",
     closeDate: "2026-08-07",
     listingDate: "2026-08-12",
@@ -43,7 +43,6 @@ const ipos = [
     company: "Leap India Limited",
     board: "SME" as const,
     status: "upcoming" as const,
-    logo: "https://logo.test/leap.png",
     openDate: "2026-08-07",
     closeDate: "2026-08-11",
     listingDate: null,
@@ -60,7 +59,6 @@ const ipos = [
     company: "Juniper Green Energy Limited",
     board: "Mainboard" as const,
     status: "closed" as const,
-    logo: "https://logo.test/jnpr.png",
     openDate: "2026-07-30",
     closeDate: "2026-08-03",
     listingDate: null,
@@ -236,12 +234,26 @@ describe("IpoListings", () => {
     expect(await screen.findByText(/Couldn't reach the IPO data feed/)).toBeInTheDocument();
   });
 
-  it("falls back to initials when the logo image fails to load", async () => {
+  // An issue lists under the ticker it has already been allotted, so that is what the logo is
+  // looked up by — and a company with no logo on file gets a lettered tile, not a broken image.
+  it("falls back to a monogram when the logo image fails to load", async () => {
     mockListFetch({ ...feed, ipos: [ipos[0]] });
     render(<IpoListings />);
-    const img = await screen.findByAltText("Ardee Industries Limited logo");
+
+    const img = await screen.findByAltText("ARDEE logo");
     fireEvent.error(img);
-    expect(screen.getByText("A")).toBeInTheDocument();
+
+    expect(screen.queryByAltText("ARDEE logo")).not.toBeInTheDocument();
+    expect(screen.getByText("ARD")).toBeInTheDocument();
+  });
+
+  // An unlisted candidate has no ticker to look up, so it always draws the monogram — but its
+  // website is hand-checked rather than guessed, so a curated logo is still honoured.
+  it("uses the curated logo for a company that has not listed yet", async () => {
+    mockListFetch({ ...feed, ipos: [], anticipated });
+    render(<IpoListings />);
+
+    expect(await screen.findByAltText("Delta Logistics logo")).toHaveAttribute("src", "https://logo.test/delta.png");
   });
 
   it("renders IPO cards as static entries, with no AI research call", async () => {
@@ -254,8 +266,58 @@ describe("IpoListings", () => {
     expect(card!.tagName).toBe("ARTICLE");
     expect(screen.getByText("Delta Logistics").closest("article")).toBeInTheDocument();
 
-    // The AI research endpoint belongs to the dashboard; the landing board only reads the calendar.
+    // Per-stock AI research belongs to the research section; this board only reads the calendar
+    // and asks the desk to read the board as a whole.
     const calls = (global.fetch as jest.Mock).mock.calls.map((call) => String(call[0]));
-    expect(calls).toEqual(["/api/market/ipos"]);
+    expect(calls).toEqual(["/api/market/ipos", "/api/ai/board-read"]);
+  });
+});
+
+describe("ipoBrief", () => {
+  const counts = { open: 1, upcoming: 1, closed: 1 };
+
+  // A second open issue, so the "most subscribed first" ordering is actually exercised.
+  const quieter = {
+    ...ipos[0],
+    id: "QUIET",
+    symbol: "QUIET",
+    company: "Quiet Issue Limited",
+    subscription: { overall: 0.4, categories: [] },
+  };
+
+  it("counts the pipeline and leads on the most-subscribed open issue", () => {
+    const brief = ipoBrief([quieter, ...ipos], { ...counts, open: 2 })!;
+
+    expect(brief.highlights[0]).toMatch(/Ardee Industries Limited/);
+    expect(brief.highlights[1]).toMatch(/Quiet Issue Limited/);
+  });
+
+  it("counts the pipeline by status and board", () => {
+    const brief = ipoBrief(ipos, counts)!;
+
+    expect(brief.facts).toContainEqual({ label: "Open for bids", value: "1" });
+    expect(brief.facts).toContainEqual({ label: "Upcoming", value: "1" });
+    expect(brief.facts).toContainEqual({ label: "Recently closed", value: "1" });
+    expect(brief.facts).toContainEqual({ label: "Mainboard vs SME", value: "2 / 1" });
+    expect(brief.highlights[0]).toMatch(/Ardee Industries Limited \(Mainboard\).*subscribed 2.51x/);
+  });
+
+  it("reads an issue with no subscription figures yet as unsubscribed rather than as a blank", () => {
+    const brief = ipoBrief([{ ...ipos[0], subscription: null }], counts)!;
+    expect(brief.highlights[0]).toMatch(/subscribed \u2014/);
+  });
+
+  // Two open issues that NSE has not published demand for yet must not make the sort throw or
+  // silently reorder on undefined \u2014 they both count as zero and keep their listed order.
+  it("orders two issues that have no subscription figures at all", () => {
+    const alsoQuiet = { ...ipos[0], id: "HUSH", symbol: "HUSH", company: "Hush Issue Limited", subscription: null };
+    const brief = ipoBrief([{ ...ipos[0], subscription: null }, alsoQuiet], { ...counts, open: 2 })!;
+
+    expect(brief.highlights[0]).toMatch(/Ardee Industries Limited/);
+    expect(brief.highlights[1]).toMatch(/Hush Issue Limited/);
+  });
+
+  it("has nothing to read when the calendar is empty", () => {
+    expect(ipoBrief([], counts)).toBeNull();
   });
 });

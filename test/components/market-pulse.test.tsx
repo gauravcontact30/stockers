@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MarketPulse, topMovers } from "../../app/components/market-pulse";
 
 function mockFetch(response: unknown, ok = true) {
@@ -221,6 +222,82 @@ describe("MarketPulse", () => {
       expect.stringContaining("SMLUP"),
       expect.stringContaining("BIGUP"),
     ]);
+  });
+});
+
+// The live index poll keeps running on a 500ms interval while the exchange is open, so a
+// response that lands after the panel has left must be dropped rather than pushed into an
+// unmounted component.
+describe("live index polling", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("ignores a poll that returns after the panel has been unmounted", async () => {
+    jest.useFakeTimers();
+    // 11:30 IST on the same trading day the fixture last printed a trade, so the session reads
+    // as open and the poll actually starts.
+    jest.setSystemTime(new Date("2026-08-04T06:00:00Z"));
+
+    let resolveLive: ((value: unknown) => void) | null = null;
+    global.fetch = jest.fn((url: string) => {
+      if (url === "/api/market/live") {
+        return new Promise((resolve) => {
+          resolveLive = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => baseState } as Response);
+    }) as unknown as typeof fetch;
+
+    const { unmount } = render(<MarketPulse />);
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    const resolve = resolveLive as unknown as (value: unknown) => void;
+    expect(resolve).toEqual(expect.any(Function));
+
+    const failed = jest.spyOn(console, "error").mockImplementation(() => {});
+    unmount();
+    resolve({ ok: true, json: async () => ({ indices: baseState.indices, asOf: "2026-08-04T06:00:00.000Z" }) });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // A setState on an unmounted component is what this guards against.
+    expect(failed).not.toHaveBeenCalled();
+    failed.mockRestore();
+  });
+});
+
+// Outside the session the automatic poll is off by design, so the button is the only way to ask
+// for a fresh level — and it has to work whether the poll is running or not.
+describe("manual index refresh", () => {
+  it("pulls the levels again on request and shows the new one", async () => {
+    const user = userEvent.setup();
+    let level = 78581;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url === "/api/market/live") {
+        level += 100;
+        return {
+          ok: true,
+          json: async () => ({
+            indices: [{ ...baseState.indices[1], price: level }],
+            asOf: "2026-08-05T10:00:00.000Z",
+          }),
+        } as unknown as Response;
+      }
+      return { ok: true, json: async () => baseState } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    render(<MarketPulse />);
+    await screen.findByText("SENSEX");
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    // The button asks the live endpoint directly, whether or not the interval is running.
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/market/live"));
   });
 });
 

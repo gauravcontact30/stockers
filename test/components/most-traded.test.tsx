@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MostTraded, TradedRow, yearBandPosition, type TradedStock } from "../../app/components/most-traded";
+import { MostTraded, TradedRow, tradedBrief, yearBandPosition, type TradedStock } from "../../app/components/most-traded";
 
 function stock(overrides: Partial<TradedStock> = {}): TradedStock {
   return {
@@ -135,5 +135,40 @@ describe("MostTraded", () => {
     mockFeed(board);
     render(<MostTraded />);
     expect(await screen.findByText(/Groww does not publish its own most-traded list/)).toBeInTheDocument();
+  });
+});
+
+describe("tradedBrief", () => {
+  const rows = [
+    stock({ symbol: "RELIANCE", sector: "Energy", turnover: 5e9, changePercent: 1.2 }),
+    stock({ symbol: "HDFCBANK", turnover: 3e9, changePercent: -0.9 }),
+  ];
+
+  it("names the ranking, the money and how much of it was buying", () => {
+    const brief = tradedBrief(rows, "byValue")!;
+
+    expect(brief.subject).toMatch(/by rupee turnover/);
+    expect(brief.facts).toContainEqual({ label: "Stocks on the board", value: "2" });
+    expect(brief.facts).toContainEqual({ label: "Rising on heavy volume", value: "1 of 2" });
+    expect(brief.highlights[0]).toMatch(/RELIANCE \(Energy\)/);
+  });
+
+  it("says when the board is ranked by shares rather than rupees", () => {
+    expect(tradedBrief(rows, "byVolume")!.subject).toMatch(/by shares traded/);
+  });
+
+  it("labels a stock NSE has not classified", () => {
+    expect(tradedBrief([stock({ sector: null })], "byValue")!.highlights[0]).toMatch(/\(unclassified\)/);
+  });
+
+  it("treats an untraded stock as neither turnover nor a gain", () => {
+    const brief = tradedBrief([stock({ turnover: null, changePercent: null })], "byValue")!;
+
+    expect(brief.facts).toContainEqual({ label: "Combined turnover", value: "\u20b90 L" });
+    expect(brief.facts).toContainEqual({ label: "Rising on heavy volume", value: "0 of 1" });
+  });
+
+  it("has nothing to read before the feed fills in", () => {
+    expect(tradedBrief([], "byValue")).toBeNull();
   });
 });

@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { AiBoardRead } from "./ai-board-read";
+import { CompanyLogo } from "./company-logo";
 import { relativeAge, sectorTone } from "./market-format";
-import { MarketSection, PillTabs, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
+import {
+  MarketSection,
+  Pager,
+  PillTabs,
+  SectionError,
+  SectionFootnote,
+  SectionSkeleton,
+  useMarketFeed,
+  usePaged,
+} from "./market-section";
+import type { BoardBrief } from "../lib/board-read";
 
 export type StockNewsItem = {
   id: string;
@@ -13,8 +25,35 @@ export type StockNewsItem = {
   headline: string;
   documentUrl: string | null;
   publishedAt: string | null;
-  logo: string;
 };
+
+const PAGE_SIZE = 10;
+
+/** Today's filings as figures: how many, from which sectors, and of what kind. */
+export function newsBrief(sectors: StockNewsSector[], total: number): BoardBrief | null {
+  if (sectors.length === 0) return null;
+
+  const categories = new Map<string, number>();
+  for (const sector of sectors) {
+    for (const item of sector.items) categories.set(item.category, (categories.get(item.category) ?? 0) + 1);
+  }
+  const commonest = [...categories.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  return {
+    subject: "Corporate filings made to NSE today, grouped by sector",
+    question: "Of everything filed today, which items would actually change a holding decision?",
+    facts: [
+      { label: "Filings today", value: String(total) },
+      { label: "Sectors filing", value: String(sectors.length) },
+      { label: "Busiest sector", value: `${sectors[0].sector} (${sectors[0].total})` },
+      ...commonest.map(([category, count]) => ({ label: category, value: `${count} filings` })),
+    ],
+    highlights: sectors
+      .flatMap((sector) => sector.items.slice(0, 1))
+      .slice(0, 5)
+      .map((item) => `${item.symbol} \u2014 ${item.category}: ${item.headline}`),
+  };
+}
 
 export type StockNewsSector = { sector: string; items: StockNewsItem[]; total: number };
 export type StockNewsBoard = { sectors: StockNewsSector[]; total: number; live: boolean };
@@ -37,43 +76,13 @@ export function categoryTone(category: string): string {
   return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
-/**
- * Company logos come from a favicon service keyed on a guessed domain, which misses often. The
- * fallback initial is not an error state — it is the expected result for most smaller listed
- * companies, so it is styled to look deliberate rather than broken.
- */
-function StockLogo({ src, symbol }: { src: string; symbol: string }) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[11px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-        {symbol.slice(0, 2)}
-      </span>
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- external favicon host, not part of the Next/Image domain allowlist
-    <img
-      src={src}
-      alt={`${symbol} logo`}
-      width={36}
-      height={36}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="h-9 w-9 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-700"
-    />
-  );
-}
-
 function NewsRow({ item }: { item: StockNewsItem }) {
   const age = relativeAge(item.publishedAt);
 
   const content = (
     <>
       <div className="flex items-start gap-3">
-        <StockLogo src={item.logo} symbol={item.symbol} />
+        <CompanyLogo symbol={item.symbol} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-bold text-slate-900 dark:text-white">{item.symbol}</p>
@@ -122,8 +131,12 @@ export function StocksInNews() {
   const { data, loading, error } = useMarketFeed<StockNewsBoard>("/api/market/stock-news");
   const [active, setActive] = useState<string | null>(null);
 
-  const sectors = data?.sectors ?? [];
+  const sectors = useMemo(() => data?.sectors ?? [], [data]);
   const selected = sectors.find((sector) => sector.sector === active) ?? sectors[0];
+  // Switching sector is switching lists, so the pager starts again at page one.
+  const paged = usePaged(selected?.items ?? [], PAGE_SIZE, selected?.sector ?? "");
+
+  const brief = useMemo(() => newsBrief(sectors, data?.total ?? 0), [sectors, data?.total]);
 
   return (
     <MarketSection
@@ -138,6 +151,8 @@ export function StocksInNews() {
         </div>
       }
     >
+      <AiBoardRead feature="stock-news" brief={brief} />
+
       {error && <SectionError message={error} />}
       {loading && <SectionSkeleton rows={4} height="h-28" />}
 
@@ -160,10 +175,11 @@ export function StocksInNews() {
           </div>
 
           <ul className="mt-3 grid gap-3 lg:grid-cols-2">
-            {selected.items.map((item) => (
+            {paged.slice.map((item) => (
               <NewsRow key={item.id} item={item} />
             ))}
           </ul>
+          <Pager paged={paged} unit="filings" />
         </>
       )}
 
