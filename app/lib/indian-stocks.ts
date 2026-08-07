@@ -5,7 +5,15 @@ export type StockMeta = {
   yahooSymbol: string;
   name: string;
   sector: string;
-  domain: string;
+  /**
+   * The company's own website, where we have checked it.
+   *
+   * Optional, and deliberately blank on most entries. It exists only to feed a favicon lookup,
+   * and a guessed domain returns another business's logo more often than the right one — see the
+   * note in company-logos.ts. Everything drawn on screen goes through <CompanyLogo>, which is
+   * keyed by the listed ticker and falls back to a monogram, so leaving this off costs nothing.
+   */
+  domain?: string;
   capTier: CapTier;
 };
 
@@ -41,6 +49,19 @@ export const sectors: SectorMeta[] = [
   { key: "capgoods", name: "Capital Goods & Industrials", description: "Industrial equipment, electricals, and defence manufacturers." },
   { key: "datacenters", name: "Data Centers", description: "Digital-infrastructure providers building the colocation, cloud, and connectivity backbone behind India's data boom." },
   { key: "toys", name: "Toys & Games", description: "A small but growing listed segment making toys and outdoor play equipment for Indian and export markets." },
+
+  // The buckets below mirror BSE's own industry classification. Every one of the ~4,950 listed
+  // companies in bse-catalogue.ts is filed under one of them, so a sector filter reaches the whole
+  // exchange and not just the hand-classified names above. Where BSE's bucket is broader than one
+  // of ours — its "Healthcare" holds both drugmakers and hospitals — the hand-classified entry
+  // keeps the finer sector and only the generated rows land here.
+  { key: "financials", name: "Financial Services", description: "Every listed lender, insurer, asset manager, broker and exchange, as BSE classifies them." },
+  { key: "consumerservices", name: "Consumer Services", description: "Retail, hospitality, travel, education, and the internet platforms selling to Indian households." },
+  { key: "services", name: "Services", description: "Logistics, ports, airports, staffing, and the business-services companies that keep trade moving." },
+  { key: "textiles", name: "Textiles", description: "Yarn, fabric, garment and apparel manufacturers, one of India's largest listed employers." },
+  { key: "forest", name: "Forest Materials", description: "Paper, packaging board, and timber-derived products." },
+  { key: "diversified", name: "Diversified", description: "Holding companies and conglomerates whose earnings span several unrelated industries." },
+  { key: "unclassified", name: "Unclassified", description: "Listed scrips the exchange has not filed under an industry — mostly dormant or newly listed shells." },
 ];
 
 const sectorName = (key: string) => sectors.find((s) => s.key === key)!.name;
@@ -55,7 +76,7 @@ const raw: RawStock[] = [
   ["WIPRO", "Wipro", "it", "wipro.com", "Large"],
   ["HCLTECH", "HCL Technologies", "it", "hcltech.com", "Large"],
   ["TECHM", "Tech Mahindra", "it", "techmahindra.com", "Large"],
-  ["LTIM", "LTIMindtree", "it", "ltimindtree.com", "Mid"],
+  ["LTM", "LTM Limited (formerly LTIMindtree)", "it", "ltimindtree.com", "Large", "LTM.BO"],
   ["MPHASIS", "Mphasis", "it", "mphasis.com", "Mid"],
   ["PERSISTENT", "Persistent Systems", "it", "persistent.com", "Mid"],
   ["COFORGE", "Coforge", "it", "coforge.com", "Mid"],
@@ -110,7 +131,7 @@ const raw: RawStock[] = [
   ["CREDITACC", "CreditAccess Grameen", "nbfc", "creditaccessgrameen.in", "Small"],
   ["FIVESTAR", "Five-Star Business Finance", "nbfc", "fivestargroup.in", "Small"],
   ["AAVAS", "Aavas Financiers", "nbfc", "aavas.in", "Small"],
-  ["TATACAPITAL", "Tata Capital", "nbfc", "tatacapital.com", "Large", "TATACAP.NS"],
+  ["TATACAP", "Tata Capital", "nbfc", "tatacapital.com", "Large"],
 
   // Insurance
   ["HDFCLIFE", "HDFC Life Insurance", "insurance", "hdfclife.com", "Large"],
@@ -136,9 +157,7 @@ const raw: RawStock[] = [
   ["MRPL", "Mangalore Refinery and Petrochemicals", "energy", "mrpl.co.in", "Small"],
   ["IGL", "Indraprastha Gas", "energy", "iglonline.net", "Mid"],
   ["MGL", "Mahanagar Gas", "energy", "mahanagargas.com", "Small"],
-  ["GUJGASLTD", "Gujarat Gas", "energy", "gujaratgas.com", "Mid"],
   ["ATGL", "Adani Total Gas", "energy", "adanigas.com", "Mid"],
-  ["GSPL", "Gujarat State Petronet", "energy", "gujaratstatepetronet.com", "Small"],
 
   // FMCG
   ["HINDUNILVR", "Hindustan Unilever", "fmcg", "hul.co.in", "Large"],
@@ -161,7 +180,8 @@ const raw: RawStock[] = [
 
   // Automobile
   ["MARUTI", "Maruti Suzuki", "auto", "marutisuzuki.com", "Large"],
-  ["TATAMOTORS", "Tata Motors", "auto", "tatamotors.com", "Large", "TMPV.NS"],
+  ["TMPV", "Tata Motors Passenger Vehicles", "auto", "tatamotors.com", "Large"],
+  ["TMCV", "Tata Motors (Commercial Vehicles)", "auto", "tatamotors.com", "Large"],
   ["M&M", "Mahindra & Mahindra", "auto", "mahindra.com", "Large"],
   ["BAJAJ-AUTO", "Bajaj Auto", "auto", "bajajauto.com", "Mid"],
   ["EICHERMOT", "Eicher Motors", "auto", "eichermotors.com", "Large"],
@@ -174,7 +194,7 @@ const raw: RawStock[] = [
   ["APOLLOTYRE", "Apollo Tyres", "auto", "apollotyres.com", "Mid"],
   ["BALKRISIND", "Balkrishna Industries", "auto", "bkt-tires.com", "Mid"],
   ["EXIDEIND", "Exide Industries", "auto", "exideindustries.com", "Mid"],
-  ["AMARAJABAT", "Amara Raja Energy & Mobility", "auto", "amararajaenergy.com", "Mid", "ARE&M.NS"],
+  ["ARE&M", "Amara Raja Energy & Mobility", "auto", "amararajaenergy.com", "Mid"],
   ["SONACOMS", "Sona BLW Precision Forgings", "auto", "sonagroup.com", "Mid"],
   ["UNOMINDA", "UNO Minda", "auto", "unominda.com", "Mid"],
   ["TIINDIA", "Tube Investments of India", "auto", "tii.murugappa.com", "Mid"],
@@ -208,7 +228,7 @@ const raw: RawStock[] = [
   ["NMDC", "NMDC Limited", "metals", "nmdc.co.in", "Mid"],
   ["JINDALSTEL", "Jindal Steel & Power", "metals", "jindalsteelpower.com", "Mid"],
   ["COALINDIA", "Coal India", "metals", "coalindia.in", "Large"],
-  ["NALCO", "National Aluminium Company", "metals", "nalcoindia.com", "Mid", "NATIONALUM.NS"],
+  ["NATIONALUM", "National Aluminium Company", "metals", "nalcoindia.com", "Mid"],
   ["HINDZINC", "Hindustan Zinc", "metals", "hzlindia.com", "Large"],
   ["APLAPOLLO", "APL Apollo Tubes", "metals", "aplapollo.com", "Mid"],
   ["JSL", "Jindal Stainless", "metals", "jindalstainless.com", "Mid"],
@@ -229,7 +249,7 @@ const raw: RawStock[] = [
 
   // Infrastructure & Construction
   ["LT", "Larsen & Toubro", "infra", "larsentoubro.com", "Large"],
-  ["GMRINFRA", "GMR Airports Infrastructure", "infra", "gmrgroup.in", "Small", "GMRAIRPORT.NS"],
+  ["GMRAIRPORT", "GMR Airports", "infra", "gmrgroup.in", "Large"],
   ["IRB", "IRB Infrastructure", "infra", "irb.co.in", "Small"],
   ["NBCC", "NBCC (India)", "infra", "nbccindia.in", "Small"],
   ["RVNL", "Rail Vikas Nigam", "infra", "rvnl.org", "Small"],
@@ -344,7 +364,7 @@ const raw: RawStock[] = [
   ["LALPATHLAB", "Dr. Lal PathLabs", "healthcare", "lalpathlabs.com", "Mid"],
   ["KIMS", "Krishna Institute of Medical Sciences", "healthcare", "kimshospitals.com", "Mid"],
   ["RAINBOW", "Rainbow Children's Medicare", "healthcare", "rainbowhospitals.in", "Small"],
-  ["GLOBALHEALTH", "Global Health (Medanta)", "healthcare", "medanta.org", "Mid", "MEDANTA.NS"],
+  ["MEDANTA", "Global Health (Medanta)", "healthcare", "medanta.org", "Mid"],
 
   // Capital Goods & Industrials
   ["SIEMENS", "Siemens India", "capgoods", "siemens.co.in", "Large"],
@@ -368,8 +388,186 @@ const raw: RawStock[] = [
   ["ANANTRAJ", "Anant Raj Limited", "datacenters", "anantrajlimited.com", "Mid"],
 
   // Toys & Games
-  ["OKPLAY", "Ok Play India", "toys", "okplayindia.com", "Small", "OKPLA.BO"],
+  ["OKPLA", "OK Play India", "toys", "okplayindia.com", "Small", "OKPLA.BO"],
   ["KVTOYS", "K.V. Toys India", "toys", "kvtoysindia.com", "Small", "KVTOYS.BO"],
+
+  // ---------------------------------------------------------------------------
+  // The rest of the liquid board
+  // ---------------------------------------------------------------------------
+  // Everything above was classified by hand, one company at a time. These are the largest listed
+  // companies that were still missing from it, taken from BSE's own scrip master and ranked by
+  // market capitalisation, so the browsable catalogue is no longer a decade-old snapshot: Eternal,
+  // Hyundai, Jio Financial, Swiggy, Groww, Lenskart and the rest of the recent listings are here.
+  //
+  // The whole exchange — all ~4,950 scrips — is searchable through bse-catalogue.ts; this list is
+  // the subset worth putting in front of someone browsing by sector.
+
+  // Information Technology
+  ["TATATECH", "Tata Technologies", "it", "", "Small"],
+  ["HEXT", "Hexaware Technologies", "it", "", "Small"],
+  ["IKS", "Inventurus Knowledge Solutions", "it", "", "Small"],
+
+  // Banking
+  ["IDBI", "IDBI Bank", "banking", "", "Mid"],
+  ["IOB", "Indian Overseas Bank", "banking", "", "Mid"],
+  ["UCOBANK", "UCO Bank", "banking", "", "Small"],
+  ["CENTRALBK", "Central Bank of India", "banking", "", "Small"],
+
+  // NBFC & Financial Services
+  ["JIOFIN", "Jio Financial Services", "nbfc", "", "Large"],
+  ["ICICIAMC", "ICICI Prudential Asset Management Company", "nbfc", "", "Large"],
+  ["BAJAJHLDNG", "Bajaj Holdings & Investment", "nbfc", "", "Large"],
+  ["GROWW", "Groww (Billionbrains Garage Ventures)", "nbfc", "", "Large"],
+  ["SBIFUNDS", "SBI Funds Management", "nbfc", "", "Large"],
+  ["IRFC", "Indian Railway Finance Corporation", "nbfc", "", "Large"],
+  ["ABCAPITAL", "Aditya Birla Capital", "nbfc", "", "Large"],
+  ["HDFCAMC", "HDFC Asset Management Company", "nbfc", "", "Mid"],
+  ["PAYTM", "Paytm (One 97 Communications)", "nbfc", "", "Mid"],
+  ["LTF", "L&T Finance", "nbfc", "", "Mid"],
+  ["NAM-INDIA", "Nippon Life India Asset Management", "nbfc", "", "Mid"],
+  ["POLICYBZR", "PB Fintech (Policybazaar)", "nbfc", "", "Mid"],
+  ["BAJAJHFL", "Bajaj Housing Finance", "nbfc", "", "Mid"],
+  ["MCX", "Multi Commodity Exchange of India", "nbfc", "", "Mid"],
+  ["HDBFS", "HDB Financial Services", "nbfc", "", "Mid"],
+  ["MOTILALOFS", "Motilal Oswal Financial Services", "nbfc", "", "Mid"],
+  ["SUNDARMFIN", "Sundaram Finance", "nbfc", "", "Mid"],
+  ["AIIL", "Authum Investment & Infrastructure", "nbfc", "", "Mid"],
+  ["PIRAMALFIN", "Piramal Finance", "nbfc", "", "Mid"],
+  ["360ONE", "360 ONE WAM", "nbfc", "", "Mid"],
+  ["HUDCO", "Housing & Urban Development Corporation", "nbfc", "", "Mid"],
+  ["TATAINVEST", "Tata Investment Corporation", "nbfc", "", "Small"],
+  ["ANANDRATHI", "Anand Rathi Wealth", "nbfc", "", "Small"],
+  ["CRISIL", "Crisil", "nbfc", "", "Small"],
+  ["CHOLAHLDNG", "Cholamandalam Financial Holdings", "nbfc", "", "Small"],
+  ["TVSHLTD", "TVS Holdings", "nbfc", "", "Small"],
+  ["NUVAMA", "Nuvama Wealth Management", "nbfc", "", "Small"],
+  ["PNBHOUSING", "PNB Housing Finance", "nbfc", "", "Small"],
+  ["ABSLAMC", "Aditya Birla Sun Life AMC", "nbfc", "", "Small"],
+  ["ANGELONE", "Angel One", "nbfc", "", "Small"],
+
+  // Energy & Petrochemicals
+  ["AEGISLOG", "Aegis Logistics", "energy", "", "Mid"],
+  ["AEGISVOPAK", "Aegis Vopak Terminals", "energy", "", "Small"],
+
+  // FMCG
+  ["GODFRYPHLP", "Godfrey Phillips India", "fmcg", "", "Small"],
+  ["PGHH", "Procter & Gamble Hygiene and Health Care", "fmcg", "", "Small"],
+  ["AWL", "AWL Agri Business (Adani Wilmar)", "fmcg", "", "Small"],
+
+  // Automobile
+  ["HYUNDAI", "Hyundai Motor India", "auto", "", "Large"],
+  ["BHARATFORG", "Bharat Forge", "auto", "", "Mid"],
+  ["SCHAEFFLER", "Schaeffler India", "auto", "", "Mid"],
+  ["ATHERENERG", "Ather Energy", "auto", "", "Mid"],
+  ["ENDURANCE", "Endurance Technologies", "auto", "", "Mid"],
+  ["ZFCVINDIA", "ZF Commercial Vehicle Control Systems India", "auto", "", "Small"],
+  ["CRAFTSMAN", "Craftsman Automation", "auto", "", "Small"],
+  ["MSUMI", "Motherson Sumi Wiring India", "auto", "", "Small"],
+
+  // Pharmaceuticals
+  ["ANTHEM", "Anthem Biosciences", "pharma", "", "Mid"],
+  ["GLAXO", "GlaxoSmithKline Pharmaceuticals", "pharma", "", "Mid"],
+  ["EMCURE", "Emcure Pharmaceuticals", "pharma", "", "Small"],
+  ["WOCKPHARMA", "Wockhardt", "pharma", "", "Small"],
+  ["NEULANDLAB", "Neuland Laboratories", "pharma", "", "Small"],
+  ["SAILIFE", "Sai Life Sciences", "pharma", "", "Small"],
+  ["PPLPHARMA", "Piramal Pharma", "pharma", "", "Small"],
+  ["RUBICON", "Rubicon Research", "pharma", "", "Small"],
+
+  // Metals & Mining
+  ["VAML", "Vedanta Aluminium & Metal", "metals", "", "Large"],
+  ["LLOYDSME", "Lloyds Metals and Energy", "metals", "", "Large"],
+  ["HINDCOPPER", "Hindustan Copper", "metals", "", "Mid"],
+  ["SHYAMMETL", "Shyam Metalics and Energy", "metals", "", "Small"],
+
+  // Cement
+  ["GRASIM", "Grasim Industries", "cement", "", "Large"],
+
+  // Power & Utilities
+  ["ADANIGREEN", "Adani Green Energy", "power", "", "Large"],
+  ["NTPCGREEN", "NTPC Green Energy", "power", "", "Mid"],
+  ["NLCINDIA", "NLC India", "power", "", "Mid"],
+  ["ACMESOLAR", "ACME Solar Holdings", "power", "", "Small"],
+
+  // Telecom
+  ["BHARTIHEXA", "Bharti Hexacom", "telecom", "", "Mid"],
+  ["ITI", "ITI", "telecom", "", "Small"],
+
+  // Consumer Durables
+  ["LGEINDIA", "LG Electronics India", "durables", "", "Mid"],
+  ["CPPLUS", "Aditya Infotech (CP Plus)", "durables", "", "Mid"],
+  ["AMBER", "Amber Enterprises India", "durables", "", "Small"],
+
+  // Retail
+  ["ETERNAL", "Eternal (Zomato)", "retail", "", "Large"],
+  ["LENSKART", "Lenskart Solutions", "retail", "", "Mid"],
+  ["NYKAA", "Nykaa (FSN E-Commerce Ventures)", "retail", "", "Mid"],
+  ["MEESHO", "Meesho", "retail", "", "Mid"],
+  ["SWIGGY", "Swiggy", "retail", "", "Mid"],
+  ["KALYANKJIL", "Kalyan Jewellers India", "retail", "", "Mid"],
+  ["VMM", "Vishal Mega Mart", "retail", "", "Mid"],
+
+  // Chemicals
+  ["SOLARINDS", "Solar Industries India", "chemicals", "", "Large"],
+  ["COROMANDEL", "Coromandel International", "chemicals", "", "Mid"],
+  ["LINDEINDIA", "Linde India", "chemicals", "", "Mid"],
+  ["FACT", "Fertilizers and Chemicals Travancore", "chemicals", "", "Mid"],
+  ["PIIND", "PI Industries", "chemicals", "", "Mid"],
+  ["HSCL", "Himadri Speciality Chemical", "chemicals", "", "Small"],
+  ["ACUTAAS", "Acutaas Chemicals", "chemicals", "", "Small"],
+  ["SUMICHEM", "Sumitomo Chemical India", "chemicals", "", "Small"],
+
+  // Ports & Logistics
+  ["JSWINFRA", "JSW Infrastructure", "ports", "", "Mid"],
+
+  // Healthcare Services
+  ["MANIPALHOS", "Manipal Health Enterprises", "healthcare", "", "Mid"],
+  ["ASTERDM", "Aster DM Quality Care", "healthcare", "", "Mid"],
+
+  // Capital Goods & Industrials
+  ["POWERINDIA", "Hitachi Energy India", "capgoods", "", "Large"],
+  ["ENRIN", "Siemens Energy India", "capgoods", "", "Large"],
+  ["GVT&D", "GE Vernova T&D India", "capgoods", "", "Mid"],
+  ["WAAREEENER", "Waaree Energies", "capgoods", "", "Mid"],
+  ["APARINDS", "Apar Industries", "capgoods", "", "Mid"],
+  ["SUZLON", "Suzlon Energy", "capgoods", "", "Mid"],
+  ["KEI", "KEI Industries", "capgoods", "", "Mid"],
+  ["PREMIERENE", "Premier Energies", "capgoods", "", "Mid"],
+  ["BDL", "Bharat Dynamics", "capgoods", "", "Mid"],
+  ["SUPREMEIND", "Supreme Industries", "capgoods", "", "Mid"],
+  ["INDOMIM", "INDO-MIM", "capgoods", "", "Mid"],
+  ["ASTRAL", "Astral", "capgoods", "", "Mid"],
+  ["ESCORTS", "Escorts Kubota", "capgoods", "", "Small"],
+  ["HONAUT", "Honeywell Automation India", "capgoods", "", "Small"],
+  ["SCHNEIDER", "Schneider Electric Infrastructure", "capgoods", "", "Small"],
+  ["KIRLOSENG", "Kirloskar Oil Engines", "capgoods", "", "Small"],
+  ["RRKABEL", "R R Kabel", "capgoods", "", "Small"],
+  ["GRSE", "Garden Reach Shipbuilders & Engineers", "capgoods", "", "Small"],
+  ["PTCIL", "PTC Industries", "capgoods", "", "Small"],
+  ["SYRMA", "Syrma SGS Technology", "capgoods", "", "Small"],
+  ["KAYNES", "Kaynes Technology India", "capgoods", "", "Small"],
+  ["TIMKEN", "Timken India", "capgoods", "", "Small"],
+
+  // Data Centers
+  ["E2E", "E2E Networks", "datacenters", "", "Small"],
+
+  // Consumer Services
+  ["INDHOTEL", "Indian Hotels Company", "consumerservices", "", "Mid"],
+  ["NAUKRI", "Info Edge (Naukri)", "consumerservices", "", "Mid"],
+  ["IRCTC", "Indian Railway Catering and Tourism Corporation", "consumerservices", "", "Mid"],
+  ["PWL", "PhysicsWallah", "consumerservices", "", "Mid"],
+  ["ITCHOTELS", "ITC Hotels", "consumerservices", "", "Small"],
+
+  // Services
+  ["REDINGTON", "Redington", "services", "", "Small"],
+
+  // Textiles
+  ["PAGEIND", "Page Industries", "textiles", "", "Mid"],
+  ["KPRMILL", "K.P.R. Mill", "textiles", "", "Small"],
+
+  // Diversified
+  ["GODREJIND", "Godrej Industries", "diversified", "", "Mid"],
+  ["3MINDIA", "3M India", "diversified", "", "Mid"],
 ];
 
 export const indianStocks: StockMeta[] = raw.map(([symbol, name, sectorKey, domain, capTier, yahooOverride]) => ({
@@ -377,10 +575,20 @@ export const indianStocks: StockMeta[] = raw.map(([symbol, name, sectorKey, doma
   yahooSymbol: yahooOverride ?? `${symbol}.NS`,
   name,
   sector: sectorName(sectorKey),
-  domain,
+  // Empty means "we have not checked this company's website", which is the honest answer for most
+  // of the catalogue; it is not the same as a domain of "".
+  domain: domain || undefined,
   capTier,
 }));
 
-export function companyLogoUrl(domain: string, size = 64) {
+/**
+ * A favicon for a company whose website we have actually checked, or null.
+ *
+ * Null is the common case and a supported one: <CompanyLogo> falls back to the ticker-keyed logo
+ * store and then to a monogram. Guessing a domain from the ticker is what this used to do, and it
+ * put the wrong company's mark on screen often enough to be worth never doing again.
+ */
+export function companyLogoUrl(domain: string | undefined, size = 64): string | null {
+  if (!domain) return null;
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${size}`;
 }

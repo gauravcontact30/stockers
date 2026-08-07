@@ -4,7 +4,8 @@ import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { IndianStocksMarket } from "./indian-stocks-market";
-import { companyLogoUrl, indianStocks } from "../lib/indian-stocks";
+import { indianStocks } from "../lib/indian-stocks";
+import { stockIcon } from "../lib/company-logos";
 
 export function LandingResearch() {
   const [stock, setStock] = useState("RELIANCE");
@@ -83,7 +84,7 @@ export function LandingResearch() {
         onClose={() => setModalOpen(false)}
         loading={loading}
         analysis={analysis}
-        logoUrl={analysisMeta ? companyLogoUrl(analysisMeta.domain) : undefined}
+        logoUrl={analysisMeta ? stockIcon(analysisMeta.symbol, analysisMeta.domain) : undefined}
         companyName={analysisMeta?.name}
       />
     </section>

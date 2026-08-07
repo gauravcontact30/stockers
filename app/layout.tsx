@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./lib/theme-provider";
@@ -18,6 +18,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Stockers.AI | AI Indian Stock Market Researcher",
   description: "An AI-powered stock research assistant for Indian investors with market news, trend analysis, and positive/negative sentiment insights.",
+};
+
+/**
+ * Stated rather than left to the framework default, for the last clause.
+ *
+ * `viewportFit: cover` lets the page paint into the notch/rounded-corner area on a modern phone,
+ * which is what the `env(safe-area-inset-*)` padding in the sticky header and bottom bars is for.
+ * `maximumScale` is deliberately absent: capping zoom locks out anyone who needs to enlarge text.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Applied before hydration so the correct theme paints on first frame (no flash of the wrong theme).

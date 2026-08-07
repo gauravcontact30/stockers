@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { IndianEtfsMarket } from "./indian-etfs-market";
-import { companyLogoUrl } from "../lib/indian-stocks";
+import { stockIcon } from "../lib/company-logos";
 import { indianETFs } from "../lib/indian-etfs";
 
 export function EtfResearch() {
@@ -84,7 +84,7 @@ export function EtfResearch() {
         onClose={() => setModalOpen(false)}
         loading={loading}
         analysis={analysis}
-        logoUrl={analysisMeta ? companyLogoUrl(analysisMeta.domain) : undefined}
+        logoUrl={analysisMeta ? stockIcon(analysisMeta.symbol, analysisMeta.domain) : undefined}
         companyName={analysisMeta?.name}
       />
     </section>

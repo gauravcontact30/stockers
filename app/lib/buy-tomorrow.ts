@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { companyLogoUrl, indianStocks, type CapTier } from "./indian-stocks";
+import { indianStocks, type CapTier } from "./indian-stocks";
+import { stockIcon } from "./company-logos";
 import type { PredictionsCache } from "./daily-predictions";
 import type { PeriodReturnsCache } from "./historical-returns";
 
@@ -11,7 +12,7 @@ export type BuyTomorrowPick = {
   name: string;
   sector: string;
   businessType: string;
-  logo: string;
+  logo: string | null;
   capTier: CapTier;
   price: number | null;
   changePercent: number | null;
@@ -132,7 +133,7 @@ export async function getBuyTomorrowPicks(
       name: item.stock.name,
       sector: item.stock.sector,
       businessType: item.stock.sector,
-      logo: companyLogoUrl(item.stock.domain),
+      logo: stockIcon(item.stock.symbol, item.stock.domain),
       capTier: item.stock.capTier,
       price: item.quote?.price ?? null,
       changePercent: item.quote?.changePercent ?? null,

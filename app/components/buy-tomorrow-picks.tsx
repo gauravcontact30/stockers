@@ -12,7 +12,7 @@ type Pick = {
   name: string;
   sector: string;
   businessType: string;
-  logo: string;
+  logo: string | null;
   capTier: CapTier;
   price: number | null;
   changePercent: number | null;
@@ -32,10 +32,10 @@ type BuyTomorrowState = {
   picks: Pick[];
 };
 
-function PickLogo({ src, name }: { src: string; name: string }) {
+function PickLogo({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
 
-  if (failed) {
+  if (failed || !src) {
     return (
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         {name.charAt(0)}

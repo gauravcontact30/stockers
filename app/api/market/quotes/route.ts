@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { companyLogoUrl, indianStocks, sectors } from "../../../lib/indian-stocks";
+import { indianStocks, sectors } from "../../../lib/indian-stocks";
+import { stockIcon } from "../../../lib/company-logos";
 import { getAllQuotes } from "../../../lib/market-data";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET() {
       name: stock.name,
       sector: stock.sector,
       capTier: stock.capTier,
-      logo: companyLogoUrl(stock.domain),
+      logo: stockIcon(stock.symbol, stock.domain),
       price: quote?.price ?? null,
       previousClose: quote?.previousClose ?? null,
       change: quote?.change ?? null,

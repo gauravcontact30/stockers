@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CapTierPill } from "./market-badges";
+import { CompanyLogo } from "./company-logo";
 import type { CapTier } from "../lib/indian-stocks";
 
 export type Mover = {
@@ -52,6 +53,9 @@ function MoverRow({ mover, rank, direction }: { mover: Mover; rank: number; dire
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold tabular-nums text-slate-500 dark:bg-slate-800 dark:text-slate-400">
         {rank}
       </span>
+
+      {/* The company's own mark, so a row is recognisable before its ticker is read. */}
+      <CompanyLogo symbol={mover.symbol} size={26} />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{mover.symbol}</p>

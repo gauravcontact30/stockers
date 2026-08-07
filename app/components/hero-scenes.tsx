@@ -207,7 +207,7 @@ function LiveBadge({ palette, label }: { palette: ScenePalette; label: string })
 }
 
 /** The shared inner-card chrome. Same structure on every slide, recoloured by palette. */
-function Panel({ palette, className = "", children }: { palette: ScenePalette; className?: string; children: React.ReactNode }) {
+function Panel({ palette, className, children }: { palette: ScenePalette; className: string; children: React.ReactNode }) {
   return (
     <div className={`rounded-2xl border shadow-[0_10px_30px_-18px_rgba(15,23,42,0.4)] ${palette.panel} ${className}`}>{children}</div>
   );
@@ -239,7 +239,7 @@ function SceneCard({
    * The gap between the card and the edge of the slide. Every slide shares one frame height, so
    * this is how an airier scene gets a shorter card and a denser one gets a taller card.
    */
-  inset = "p-5 sm:p-7 lg:p-10",
+  inset = "p-3 sm:p-7 lg:p-10",
   children,
 }: {
   palette: ScenePalette;
@@ -393,7 +393,7 @@ export function TopGainersScene() {
       eyebrow="Today's top performers"
       title="Three themes the BSE board is bidding up"
       badge="RANKED TODAY"
-      inset="p-7 sm:p-10 lg:p-14"
+      inset="p-3 sm:p-10 lg:p-14"
       footnote="Companies and BSE scrip codes are real; the figures illustrate the layout. The live ranking is on the BSE board."
     >
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -564,6 +564,11 @@ function ContenderCard({ side, leading }: { side: CompareSide; leading: boolean 
  * Each rung is one measured row with the figure on each side and an arrow pointing at whichever
  * one it favours — so the reader can see the contest being decided rather than be handed a total.
  */
+/** Which of the two contenders took more of the five measures. */
+export function leaderSymbol(tally: ReturnType<typeof tallyCompare>): string {
+  return tally.leader === "left" ? LEFT.symbol : RIGHT.symbol;
+}
+
 function MeasureLadder({ tally }: { tally: ReturnType<typeof tallyCompare> }) {
   return (
     <Panel palette={SKY} className="overflow-hidden">
@@ -573,7 +578,7 @@ function MeasureLadder({ tally }: { tally: ReturnType<typeof tallyCompare> }) {
           {tally.left} – {tally.right}
         </p>
         <p className="text-[9px] text-slate-500">
-          {tally.leader === "left" ? "HDFCBANK" : "ICICIBANK"} wins more of them
+          {leaderSymbol(tally)} wins more of them
         </p>
       </div>
 
@@ -772,7 +777,7 @@ export function TripleReportScene() {
       eyebrow="AI comparison report"
       title="Three stocks. Buy, hold or sell."
       badge="SCORED TODAY"
-      inset="p-7 sm:p-10 lg:p-14"
+      inset="p-3 sm:p-10 lg:p-14"
       footnote="The stance comes from the measured returns, never from the model · illustration · not investment advice"
     >
       {/* `items-start` so a card is as tall as its own copy — stretching all three to the row
@@ -947,7 +952,7 @@ export function DipBuysScene() {
       eyebrow="How the analysis works"
       title="A strong year, on offer at today's price"
       badge="RESCORED DAILY"
-      inset="p-4 sm:p-6 lg:p-8"
+      inset="p-3 sm:p-6 lg:p-8"
       footnote="A pullback is not a discount on its own — these are measurements, illustrated · not investment advice"
     >
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[0.8fr_1.4fr]">

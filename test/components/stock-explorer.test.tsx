@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   ALL_SECTORS,
@@ -7,7 +7,7 @@ import {
   countMatches,
   groupBySector,
 } from "../../app/components/stock-explorer";
-import { indianStocks } from "../../app/lib/indian-stocks";
+import { indianStocks, sectors } from "../../app/lib/indian-stocks";
 
 describe("groupBySector", () => {
   it("buckets matches under the sector each company belongs to", () => {
@@ -51,7 +51,7 @@ describe("groupBySector", () => {
   });
 
   it("caps how many sectors it draws at once", () => {
-    expect(groupBySector("", ALL_SECTORS).length).toBeLessThanOrEqual(6);
+    expect(groupBySector("", ALL_SECTORS).length).toBeLessThanOrEqual(8);
   });
 });
 
@@ -65,11 +65,23 @@ describe("countMatches", () => {
 });
 
 describe("SECTOR_NAMES", () => {
-  // The category dropdown must not offer a sector with nothing behind it.
-  it("lists only categories that have a listed company in them", () => {
+  /**
+   * Every category, not just the hand-classified ones.
+   *
+   * The filter used to hide sectors with no company in the local catalogue. Now that the search
+   * reaches all ~4,950 listed companies, that rule would hide categories with hundreds of real
+   * listings behind them — BSE files something under every one of these.
+   */
+  it("offers every category the app defines", () => {
+    expect(SECTOR_NAMES).toEqual(sectors.map((sector) => sector.name));
     expect(SECTOR_NAMES.length).toBeGreaterThan(10);
-    for (const name of SECTOR_NAMES) {
-      expect(indianStocks.some((stock) => stock.sector === name)).toBe(true);
+    expect(SECTOR_NAMES).toContain("Banking");
+    expect(SECTOR_NAMES).toContain("Textiles");
+  });
+
+  it("still covers the sectors the local catalogue uses", () => {
+    for (const stock of indianStocks) {
+      expect(SECTOR_NAMES).toContain(stock.sector);
     }
   });
 });
@@ -252,4 +264,94 @@ describe("StockExplorer", () => {
     expect(within(list).getByRole("group", { name: "Banking" })).toBeInTheDocument();
   });
 
+});
+
+/**
+ * The exchange tier.
+ *
+ * The browser holds a few hundred hand-classified companies; the other ~4,560 listed scrips live
+ * behind /api/stocks/search. Local results paint first and are replaced when the exchange answers,
+ * so these check both that the swap happens and that a failed swap leaves the local list alone.
+ */
+describe("StockExplorer over the whole exchange", () => {
+  function mockSearch(payload: unknown, ok = true) {
+    const fetchMock = jest.fn(async () => ({ ok, json: async () => payload }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+    return fetchMock;
+  }
+
+  afterEach(() => {
+    // @ts-expect-error -- put the environment back the way the other suites expect it.
+    delete global.fetch;
+  });
+
+  it("replaces the local matches with the exchange's answer", async () => {
+    const user = userEvent.setup();
+    mockSearch({
+      groups: [
+        {
+          sector: "Textiles",
+          total: 42,
+          stocks: [{ symbol: "SOMESMALLCO", name: "Some Small Mills", sector: "Textiles", capTier: "Small" }],
+        },
+      ],
+      total: 42,
+    });
+
+    render(<StockExplorer onSelect={jest.fn()} />);
+    await user.type(screen.getByRole("combobox", { name: "Search any listed stock" }), "mills");
+
+    // Nothing in the local catalogue matches, so this row can only have come from the exchange.
+    expect(await screen.findByRole("option", { name: /Some Small Mills/ })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Textiles" })).toBeInTheDocument();
+    // The group's true size is reported even though one row is drawn.
+    expect(screen.getByText(/42 in all/)).toBeInTheDocument();
+  });
+
+  it("can pick a company that only the exchange knows about", async () => {
+    const user = userEvent.setup();
+    const onSelect = jest.fn();
+    mockSearch({
+      groups: [
+        {
+          sector: "Textiles",
+          total: 1,
+          stocks: [{ symbol: "SOMESMALLCO", name: "Some Small Mills", sector: "Textiles", capTier: "Small" }],
+        },
+      ],
+      total: 1,
+    });
+
+    render(<StockExplorer onSelect={onSelect} />);
+    const input = screen.getByRole("combobox", { name: "Search any listed stock" });
+    await user.type(input, "mills");
+
+    await user.click(await screen.findByRole("option", { name: /Some Small Mills/ }));
+
+    expect(onSelect).toHaveBeenCalledWith("SOMESMALLCO");
+    expect(input).toHaveValue("SOMESMALLCO");
+  });
+
+  // A search that 404s or times out must not empty the dropdown under the reader.
+  it.each([
+    ["a failed response", () => mockSearch({}, false)],
+    ["a network error", () => {
+      const fetchMock = jest.fn(async () => {
+        throw new Error("offline");
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+      return fetchMock;
+    }],
+  ])("keeps the local matches on screen after %s", async (_label, install) => {
+    const user = userEvent.setup();
+    const fetchMock = install();
+
+    render(<StockExplorer onSelect={jest.fn()} />);
+    await user.type(screen.getByRole("combobox", { name: "Search any listed stock" }), "infy");
+
+    // The request has to have actually gone out and come back badly — asserting only that the
+    // local row is still there would pass even if the search were never attempted.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(await screen.findByRole("option", { name: /Infosys/ })).toBeInTheDocument();
+  });
 });

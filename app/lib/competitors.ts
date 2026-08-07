@@ -1,11 +1,12 @@
-import { companyLogoUrl, indianStocks, type CapTier } from "./indian-stocks";
+import { indianStocks, type CapTier } from "./indian-stocks";
+import { stockIcon } from "./company-logos";
 import { indianETFs } from "./indian-etfs";
 import { getQuotesFor, type QuoteSubject } from "./market-data";
 
 export type CompetitorQuote = {
   symbol: string;
   name: string;
-  logo: string;
+  logo: string | null;
   price: number | null;
   changePercent: number | null;
   isSelf: boolean;
@@ -21,7 +22,7 @@ export type CompetitorsSummary = {
 const MAX_PEERS = 5;
 const CAP_TIER_RANK: Record<CapTier, number> = { Large: 0, Mid: 1, Small: 2 };
 
-type Entry = QuoteSubject & { name: string; logo: string; positionRank: number };
+type Entry = QuoteSubject & { name: string; logo: string | null; positionRank: number };
 
 // Ranks the current stock/ETF against same-sector (or same-category, for ETFs) peers by
 // market position — cap tier for stocks (Large > Mid > Small), popularity for ETFs — not by
@@ -37,7 +38,7 @@ export async function getCompetitors(symbolInput: string): Promise<CompetitorsSu
       symbol: s.symbol,
       yahooSymbol: s.yahooSymbol,
       name: s.name,
-      logo: companyLogoUrl(s.domain),
+      logo: stockIcon(s.symbol, s.domain),
       positionRank: CAP_TIER_RANK[s.capTier],
     }));
     return buildSummary(symbol, stock.sector, "sector", entries);
@@ -50,7 +51,7 @@ export async function getCompetitors(symbolInput: string): Promise<CompetitorsSu
       symbol: e.symbol,
       yahooSymbol: e.yahooSymbol,
       name: e.name,
-      logo: companyLogoUrl(e.domain),
+      logo: stockIcon(e.symbol, e.domain),
       positionRank: e.popular ? 0 : 1,
     }));
     return buildSummary(symbol, etf.category, "category", entries);

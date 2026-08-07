@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
-import { companyLogoUrl, indianStocks, sectors, type CapTier } from "../../../lib/indian-stocks";
+import { indianStocks, sectors, type CapTier } from "../../../lib/indian-stocks";
+import { stockIcon } from "../../../lib/company-logos";
 import { getReturnsForPeriod, type ReturnPeriod } from "../../../lib/historical-returns";
 import { getAllQuotes } from "../../../lib/market-data";
 
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     name: string;
     sector: string;
     capTier: CapTier;
-    logo: string;
+    logo: string | null;
     price: number | null;
     changePercent: number;
     periodReturn: number;
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
       name: stock.name,
       sector: stock.sector,
       capTier: stock.capTier,
-      logo: companyLogoUrl(stock.domain),
+      logo: stockIcon(stock.symbol, stock.domain),
       price: quote.price,
       changePercent: quote.changePercent,
       periodReturn,

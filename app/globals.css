@@ -6,6 +6,31 @@ html {
   scroll-behavior: smooth;
 }
 
+/*
+ * Nothing may scroll the page sideways.
+ *
+ * A single over-wide card — a table, a tape, a negatively-margined hero — used to widen the whole
+ * document, and on a phone that shows up as every section being narrower than the screen with a
+ * strip of background down one side. `clip` rather than `hidden` on purpose: `overflow-x: hidden`
+ * on an ancestor silently kills `position: sticky` inside it, and the site header is sticky.
+ *
+ * This is a backstop, not the fix. Anything genuinely wider than a phone still needs its own
+ * `overflow-x-auto` wrapper so it can be scrolled rather than cropped.
+ */
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+/* Media should shrink to its column rather than set the column's width. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;

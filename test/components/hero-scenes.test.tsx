@@ -16,6 +16,7 @@ import {
   bandPosition,
   signed,
   strongestMove,
+  leaderSymbol,
   tallyCompare,
   themeAverage,
   verdictStyle,
@@ -328,5 +329,13 @@ describe("every scene", () => {
       expect(within(card).getByText("BSE BANKEX")).toBeInTheDocument();
       unmount();
     }
+  });
+});
+
+describe("leaderSymbol", () => {
+  // Both answers matter: whichever way the five measures fall, the card has to name the right one.
+  it("names whichever contender took more of the measures", () => {
+    expect(leaderSymbol({ left: 3, right: 2, leader: "left" })).toBe("HDFCBANK");
+    expect(leaderSymbol({ left: 2, right: 3, leader: "right" })).toBe("ICICIBANK");
   });
 });

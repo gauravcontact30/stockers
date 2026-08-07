@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import {
   MAX_WATCHED,
@@ -70,9 +71,19 @@ describe("parseWatchlist", () => {
     expect(parseWatchlist(JSON.stringify({ RELIANCE: true }))).toEqual([]);
   });
 
-  // A ticker that has since left the catalogue would render a row with no name and no returns.
-  it("drops entries the catalogue no longer knows, and anything that is not a string", () => {
-    expect(parseWatchlist(JSON.stringify(["RELIANCE", "NOTALISTEDCO", 42, null]))).toEqual(["RELIANCE"]);
+  /**
+   * Any ticker-shaped symbol is allowed through.
+   *
+   * The explorer reaches all ~4,950 listed companies but the browser only holds the few hundred
+   * hand-classified ones, so requiring catalogue membership here silently deleted anything from
+   * the long tail on reload. What is rejected is what could not be a ticker at all.
+   */
+  it("keeps any ticker-shaped symbol and drops what could never be one", () => {
+    expect(parseWatchlist(JSON.stringify(["RELIANCE", "E2E", "ARE&M", 42, null, "not a ticker", ""]))).toEqual([
+      "RELIANCE",
+      "E2E",
+      "ARE&M",
+    ]);
   });
 
   it("de-duplicates and caps the list", () => {
@@ -247,5 +258,60 @@ describe("WatchlistCard", () => {
     await user.click(within(screen.getByTestId("first")).getByRole("button", { name: "Remove ITC from watchlist" }));
 
     expect(within(screen.getByTestId("second")).queryByText("ITC")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The long tail.
+ *
+ * The explorer reaches every listed company, but only a few hundred are hand-classified in the
+ * browser. A row for one of the others has to name itself from the feed rather than reading
+ * "Unlisted", and say what it can about the company rather than nothing.
+ */
+describe("WatchRow for a company the local catalogue does not carry", () => {
+  it("takes the name and cap tier from the feed", async () => {
+    mockPerformance({ name: "Some Small Mills", capTier: "Small" });
+    render(
+      <ul>
+        <WatchRow symbol="SOMESMALLCO" onRemove={jest.fn()} />
+      </ul>,
+    );
+
+    expect(await screen.findByText("Some Small Mills")).toBeInTheDocument();
+    expect(screen.getByText("Small cap")).toBeInTheDocument();
+  });
+
+  it("says the ticker is not trading when the feed cannot name it either", async () => {
+    mockPerformance({ name: null, capTier: null });
+    render(
+      <ul>
+        <WatchRow symbol="NOSUCHCO" onRemove={jest.fn()} />
+      </ul>,
+    );
+
+    expect(await screen.findByText("Not trading")).toBeInTheDocument();
+    // With no sector and no tier there is nothing truthful to put in the footnote.
+    expect(screen.queryByText(/cap$/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Server rendering.
+ *
+ * There is no localStorage on the server, so `getServerSnapshot` answers null and the card has to
+ * render an empty, non-committal shell — reading storage during render, or guessing at the
+ * starter list, would make the first client paint disagree with the server and hydration would
+ * throw the whole tree away.
+ */
+describe("WatchlistCard on the server", () => {
+  it("renders without a list and without touching storage", () => {
+    const html = renderToString(<WatchlistCard />);
+
+    expect(html).toContain("Your list, your stocks");
+    // React separates adjacent text nodes with comment markers when it renders to a string.
+    expect(html.replace(/<!-- -->/g, "")).toContain(`0 / ${MAX_WATCHED}`);
+    // Neither the starter tickers nor the empty-state copy: the server does not yet know which.
+    expect(html).not.toContain("RELIANCE");
+    expect(html).not.toContain("Nothing on the list yet");
   });
 });

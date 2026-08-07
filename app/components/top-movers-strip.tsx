@@ -2,6 +2,7 @@
 
 import { formatRupee, sectorTone } from "./market-format";
 import { CapTierPill } from "./market-badges";
+import { CompanyLogo } from "./company-logo";
 import type { Mover } from "./market-movers";
 
 /** One labelled detail, value under label — the unit each row is built from. */
@@ -41,6 +42,8 @@ function MoverRow({ mover, rank, direction }: { mover: Mover; rank: number; dire
           >
             {rank}
           </span>
+          <CompanyLogo symbol={mover.symbol} size={28} />
+
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{mover.symbol}</p>
             <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">{mover.name}</p>

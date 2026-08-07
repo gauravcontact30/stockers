@@ -59,3 +59,18 @@ export function stockLogoUrl(symbol: string | null | undefined): string | null {
 
   return `${LOGO_HOST}/${encodeURIComponent(ticker)}.png`;
 }
+
+/**
+ * The best real logo we have for a listed company: its own website's mark, or the store's.
+ *
+ * A hand-checked domain wins when there is one, because someone verified it points at that
+ * company. Everything else — which is most of the exchange — falls back to the ticker store,
+ * which is keyed by the symbol the exchange itself publishes and so cannot return a different
+ * business's logo. Both are real sources; neither is a guess made from the ticker's letters.
+ *
+ * Null means we have neither, and the caller should draw a monogram.
+ */
+export function stockIcon(symbol: string | null | undefined, domain?: string | null): string | null {
+  if (domain) return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+  return stockLogoUrl(symbol);
+}

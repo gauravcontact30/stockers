@@ -39,7 +39,8 @@ import { StocksInNews } from "./stocks-in-news";
 import { TopPicksToday } from "./top-picks-today";
 import { TripleCompare } from "./triple-compare";
 import { WatchlistCard } from "./watchlist-card";
-import { companyLogoUrl, indianStocks } from "../lib/indian-stocks";
+import { indianStocks } from "../lib/indian-stocks";
+import { stockIcon } from "../lib/company-logos";
 
 type UserData = {
   id: string;
@@ -334,7 +335,7 @@ export function DashboardClient() {
         onClose={() => setModalOpen(false)}
         loading={loading}
         analysis={analysis}
-        logoUrl={analysisMeta ? companyLogoUrl(analysisMeta.domain) : undefined}
+        logoUrl={analysisMeta ? stockIcon(analysisMeta.symbol, analysisMeta.domain) : undefined}
         companyName={analysisMeta?.name}
       />
     </div>

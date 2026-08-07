@@ -27,7 +27,7 @@ function capTierBadgeClass(tier: string) {
 // Every logo URL in this app is built from a Google favicon URL (`?domain=<company domain>`).
 // Clearbit's public logo API usually returns a cleaner, higher-res brand mark for the same
 // domain, so it's tried first — the favicon URL we already have is the guaranteed-real fallback.
-function clearbitUrlFrom(googleFaviconSrc?: string): string | null {
+function clearbitUrlFrom(googleFaviconSrc?: string | null): string | null {
   if (!googleFaviconSrc) return null;
   try {
     const domain = new URL(googleFaviconSrc).searchParams.get("domain");
@@ -60,7 +60,7 @@ function recommendationBadge(recommendation?: string) {
   return { label: "Buy", className: "bg-emerald-600 text-white" };
 }
 
-function ModalLogo({ src, name }: { src?: string; name: string }) {
+function ModalLogo({ src, name }: { src?: string | null; name: string }) {
   const clearbitSrc = clearbitUrlFrom(src);
   const [stage, setStage] = useState<"clearbit" | "google" | "failed">(clearbitSrc ? "clearbit" : "google");
   const currentSrc = stage === "clearbit" ? clearbitSrc : src;
@@ -129,7 +129,7 @@ export function AiReportModal({
   onClose: () => void;
   loading: boolean;
   analysis: AnalysisResponse | null;
-  logoUrl?: string;
+  logoUrl?: string | null;
   companyName?: string;
 }) {
   const symbol = analysis?.stock ?? null;

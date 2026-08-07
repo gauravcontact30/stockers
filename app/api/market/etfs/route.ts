@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { companyLogoUrl } from "../../../lib/indian-stocks";
+import { stockIcon } from "../../../lib/company-logos";
 import { etfCategories, indianETFs } from "../../../lib/indian-etfs";
 import { getQuotesFor } from "../../../lib/market-data";
 
@@ -17,7 +17,7 @@ export async function GET() {
       category: etf.category,
       amc: etf.amc,
       popular: etf.popular,
-      logo: companyLogoUrl(etf.domain),
+      logo: stockIcon(etf.symbol, etf.domain),
       price: quote?.price ?? null,
       previousClose: quote?.previousClose ?? null,
       change: quote?.change ?? null,

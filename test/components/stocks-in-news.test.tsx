@@ -95,8 +95,15 @@ describe("StocksInNews", () => {
     mockFeed(board);
     render(<StocksInNews />);
 
-    const logo = await screen.findByAltText("BEL logo");
-    fireEvent.error(logo);
+    await screen.findByAltText("BEL logo");
+
+    // There is more than one real source for a mark now — the ticker store, then the company's
+    // own favicon — so the tile only appears once every source has been tried and failed.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const logo = screen.queryByAltText("BEL logo");
+      if (!logo) break;
+      fireEvent.error(logo);
+    }
 
     expect(screen.queryByAltText("BEL logo")).not.toBeInTheDocument();
     // The ticker now appears twice: once as the heading, once inside the monogram tile.

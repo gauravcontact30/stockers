@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { companyLogoUrl, indianStocks, type CapTier } from "./indian-stocks";
+import { indianStocks, type CapTier } from "./indian-stocks";
+import { stockIcon } from "./company-logos";
 import { mapWithConcurrency } from "./market-data";
 import { generateAnalysis, type AnalysisResult } from "./stock-analysis";
 import type { PredictionsCache } from "./daily-predictions";
@@ -10,7 +11,7 @@ export type TopPick = {
   name: string;
   sector: string;
   capTier: CapTier;
-  logo: string;
+  logo: string | null;
   price: number | null;
   changePercent: number | null;
   outlook: string;
@@ -81,7 +82,7 @@ export async function getTopPicksToday(
     name: item.stock.name,
     sector: item.stock.sector,
     capTier: item.stock.capTier,
-    logo: companyLogoUrl(item.stock.domain),
+    logo: stockIcon(item.stock.symbol, item.stock.domain),
     price: item.quote?.price ?? null,
     changePercent: item.quote?.changePercent ?? null,
     outlook: item.prediction?.outlook ?? "Neutral",

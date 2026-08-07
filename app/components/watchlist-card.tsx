@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { CompanyLogo } from "./company-logo";
 import { StockExplorer } from "./stock-explorer";
 import { useStockPerformance } from "./use-stock-performance";
@@ -19,17 +19,29 @@ const STORAGE_KEY = "stockers-watchlist";
 /** Enough to be useful without turning the sidebar into a second board. */
 export const MAX_WATCHED = 12;
 
-/** The list as stored, filtered to symbols the catalogue still knows and capped. */
+/**
+ * What a listed ticker can look like: letters, digits, and the `&`/`-` that names like ARE&M and
+ * BAJAJ-AUTO carry. This is the same shape the logo store checks for.
+ */
+const TICKER_SHAPE = /^[A-Z0-9&-]{1,20}$/;
+
+/**
+ * The list as stored: ticker-shaped entries, de-duplicated and capped.
+ *
+ * It used to require membership of the hand-classified catalogue, which quietly dropped anything
+ * outside those few hundred names — so a reader could pick a stock from the explorer and watch it
+ * vanish on reload. The explorer now reaches all ~4,950 listed companies, so the check is on the
+ * shape of the symbol rather than on a list this component has no business being the judge of.
+ * A ticker that turns out not to trade shows dashes in its row, which is the honest outcome.
+ */
 export function parseWatchlist(raw: string | null): string[] {
   if (!raw) return [];
   try {
     const value: unknown = JSON.parse(raw);
     if (!Array.isArray(value)) return [];
-    const known = new Set(indianStocks.map((stock) => stock.symbol));
-    return [...new Set(value.filter((entry): entry is string => typeof entry === "string" && known.has(entry)))].slice(
-      0,
-      MAX_WATCHED,
-    );
+    return [
+      ...new Set(value.filter((entry): entry is string => typeof entry === "string" && TICKER_SHAPE.test(entry))),
+    ].slice(0, MAX_WATCHED);
   } catch {
     // A hand-edited or half-written entry is not worth surfacing; an empty list is recoverable.
     return [];
@@ -99,6 +111,11 @@ export function WatchRow({ symbol, onRemove }: { symbol: string; onRemove: (symb
   const meta = indianStocks.find((stock) => stock.symbol === symbol);
   const { performance, loading } = useStockPerformance(symbol);
 
+  // Most of the exchange is not hand-classified, and the feed already names every symbol it
+  // prices — so a stock picked from the long tail reads as itself rather than as "Unlisted".
+  const name = meta?.name ?? performance?.name ?? (loading ? "" : "Not trading");
+  const footnote = meta ? `${meta.sector} · ${meta.capTier} cap` : performance?.capTier ? `${performance.capTier} cap` : null;
+
   return (
     <li className="rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-emerald-300 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-emerald-500/40">
       <div className="flex items-start gap-2.5">
@@ -112,7 +129,7 @@ export function WatchRow({ symbol, onRemove }: { symbol: string; onRemove: (symb
             </span>
           </div>
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">{meta?.name ?? "Unlisted"}</span>
+            <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">{name}</span>
             <span className={`shrink-0 font-mono text-[11px] font-bold tabular-nums ${toneFor(performance?.oneDay ?? null)}`}>
               {loading ? "" : formatPercent(performance?.oneDay ?? null)}
             </span>
@@ -147,11 +164,7 @@ export function WatchRow({ symbol, onRemove }: { symbol: string; onRemove: (symb
         ))}
       </dl>
 
-      {meta && (
-        <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
-          {meta.sector} · {meta.capTier} cap
-        </p>
-      )}
+      {footnote && <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">{footnote}</p>}
     </li>
   );
 }
@@ -180,12 +193,12 @@ export function WatchlistCard() {
     [save],
   );
 
-  const remove = useCallback(
-    (symbol: string) => save((watched ?? []).filter((entry) => entry !== symbol)),
-    [save, watched],
-  );
+  // The list is settled once, above `remove`, rather than each defending against null on its own:
+  // a row can only be removed if a row was rendered, and rows are only rendered from this list.
+  // Memoised so `remove` keeps its identity between renders instead of being rebuilt every time.
+  const list = useMemo(() => watched ?? [], [watched]);
 
-  const list = watched ?? [];
+  const remove = useCallback((symbol: string) => save(list.filter((entry) => entry !== symbol)), [save, list]);
   const full = list.length >= MAX_WATCHED;
 
   return (

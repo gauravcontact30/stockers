@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { normaliseTicker, stockLogoUrl } from "../lib/company-logos";
+import { indianStocks } from "../lib/indian-stocks";
 
 // A monogram is drawn whenever no real logo exists, so it has to look like a designed tile rather
 // than a broken image. Giving each ticker a stable colour does that, and keeps a company looking
@@ -30,10 +31,41 @@ export function monogramText(symbol: string): string {
 }
 
 /**
+ * Every real source of a company's mark, best first.
+ *
+ * The ticker store leads because it is keyed by the symbol the exchange publishes, so a hit is
+ * unambiguously the right company. Behind it sits the favicon of the company's own website, for
+ * the entries where someone has checked what that website is — a second real source, tried only
+ * when the first 404s. Neither is guessed from the ticker's letters, which is the mistake this
+ * component's predecessor made.
+ */
+// Built once. This is read on every render of every logo on the page, and a linear scan of the
+// catalogue per row adds up fast on a board showing fifty of them.
+let domainsBySymbol: Map<string, string | undefined> | null = null;
+
+function checkedDomain(ticker: string): string | undefined {
+  domainsBySymbol ??= new Map(indianStocks.map((stock) => [stock.symbol, stock.domain]));
+  return domainsBySymbol.get(ticker);
+}
+
+function logoSources(symbol: string, override?: string | null): string[] {
+  if (override) return [override];
+
+  const ticker = normaliseTicker(symbol);
+  const domain = checkedDomain(ticker);
+
+  return [
+    stockLogoUrl(ticker),
+    domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null,
+  ].filter((source): source is string => source !== null);
+}
+
+/**
  * The company's own logo beside its ticker, with a monogram tile when there isn't one.
  *
- * The store is keyed by the listed symbol, so a hit is genuinely that company's mark. A miss is
- * common for small caps and is not an error state — hence the fallback is styled, not apologetic.
+ * Sources are tried in turn rather than one being tried and given up on, so a small cap the ticker
+ * store has never heard of can still show its own favicon. A miss on all of them is common in the
+ * long tail and is not an error state — hence the fallback is styled, not apologetic.
  */
 export function CompanyLogo({
   symbol,
@@ -50,14 +82,17 @@ export function CompanyLogo({
   size?: number;
   className?: string;
 }) {
-  // Keyed by symbol rather than a bare boolean: a row that swaps one company for another (paging
-  // through a list reuses these nodes) must try the new logo instead of inheriting the old miss.
-  const [brokenFor, setBrokenFor] = useState<string | null>(null);
+  // Keyed by symbol rather than a bare index: a row that swaps one company for another (paging
+  // through a list reuses these nodes) must start again at the best source for the new company
+  // instead of inheriting how far the old one got.
+  const [attempt, setAttempt] = useState<{ symbol: string; index: number }>({ symbol, index: 0 });
 
-  const src = override ?? stockLogoUrl(symbol);
+  const sources = logoSources(symbol, override);
+  const index = attempt.symbol === symbol ? attempt.index : 0;
+  const src = sources[index] ?? null;
   const box = { width: size, height: size };
 
-  if (src === null || brokenFor === symbol) {
+  if (src === null) {
     return (
       <span
         style={{ ...box, fontSize: Math.round(size * 0.3) }}
@@ -71,6 +106,9 @@ export function CompanyLogo({
   return (
     // eslint-disable-next-line @next/next/no-img-element -- third-party logo store, not part of the Next/Image domain allowlist
     <img
+      // Keyed by the URL so React swaps the element when a source fails, rather than reusing the
+      // one already in its error state and never firing load for the next candidate.
+      key={src}
       src={src}
       alt={`${symbol} logo`}
       style={box}
@@ -78,7 +116,7 @@ export function CompanyLogo({
       height={size}
       loading="lazy"
       referrerPolicy="no-referrer"
-      onError={() => setBrokenFor(symbol)}
+      onError={() => setAttempt({ symbol, index: index + 1 })}
       className={`shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-700 dark:bg-white ${className}`}
     />
   );

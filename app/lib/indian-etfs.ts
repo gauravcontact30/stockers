@@ -1,10 +1,16 @@
+import { etfCatalogue } from "./etf-catalogue";
+
 export type EtfMeta = {
   symbol: string;
   yahooSymbol: string;
   name: string;
   category: string;
+  /** The fund house, where we have checked it. Blank on the generated long tail — see below. */
   amc: string;
-  domain: string;
+  /** The AMC's website, for a favicon. Optional, and only ever a checked one. */
+  domain?: string;
+  /** The index or commodity the fund tracks, where the exchange publishes it. */
+  tracks?: string;
   popular: boolean;
 };
 
@@ -48,7 +54,7 @@ const raw: RawEtf[] = [
   ["MON100", "Motilal Oswal Nasdaq 100 ETF", "international", "Motilal Oswal AMC", "motilaloswalamc.com", true],
 ];
 
-export const indianETFs: EtfMeta[] = raw.map(([symbol, name, categoryKey, amc, domain, popular, yahooOverride]) => ({
+const curated: EtfMeta[] = raw.map(([symbol, name, categoryKey, amc, domain, popular, yahooOverride]) => ({
   symbol,
   yahooSymbol: yahooOverride ?? `${symbol}.NS`,
   name,
@@ -57,3 +63,30 @@ export const indianETFs: EtfMeta[] = raw.map(([symbol, name, categoryKey, amc, d
   domain,
   popular,
 }));
+
+/**
+ * Every ETF listed on the exchange, with the sixteen hand-checked ones first.
+ *
+ * The curated rows above are the funds most people actually buy, and they carry a fund house, a
+ * website and a `popular` flag that nothing upstream publishes. The other ~326 come from NSE's own
+ * ETF master: no AMC, but the index each one tracks, which is what distinguishes fourteen funds
+ * all called "Nifty 50 ETF". A curated entry always wins over the generated row for its symbol.
+ */
+export const indianETFs: EtfMeta[] = (() => {
+  const bySymbol = new Map(curated.map((etf) => [etf.symbol, etf]));
+
+  for (const entry of etfCatalogue()) {
+    if (bySymbol.has(entry.symbol)) continue;
+    bySymbol.set(entry.symbol, {
+      symbol: entry.symbol,
+      yahooSymbol: `${entry.symbol}.NS`,
+      name: entry.name,
+      category: categoryName(entry.category),
+      amc: "",
+      tracks: entry.tracks,
+      popular: false,
+    });
+  }
+
+  return [...bySymbol.values()];
+})();

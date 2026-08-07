@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CompanyLogo } from "./company-logo";
 import { MarketClock, marketSession, useClockTick } from "./market-clock";
 import { MarketIndices, type IndexQuote } from "./market-indices";
 import { MarketMovers, type CapMovers, type Mover } from "./market-movers";
@@ -257,7 +258,10 @@ export function MarketPulse() {
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Top gainer</p>
           {breadth.topGainer ? (
             <>
-              <p className="mt-2 truncate text-lg font-semibold text-slate-900 dark:text-white">{breadth.topGainer.symbol}</p>
+              <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                <CompanyLogo symbol={breadth.topGainer.symbol} size={26} />
+                <span className="truncate">{breadth.topGainer.symbol}</span>
+              </p>
               <p className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                 ▲ {breadth.topGainer.changePercent.toFixed(2)}%
               </p>
@@ -272,7 +276,10 @@ export function MarketPulse() {
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Top loser</p>
           {breadth.topLoser ? (
             <>
-              <p className="mt-2 truncate text-lg font-semibold text-slate-900 dark:text-white">{breadth.topLoser.symbol}</p>
+              <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                <CompanyLogo symbol={breadth.topLoser.symbol} size={26} />
+                <span className="truncate">{breadth.topLoser.symbol}</span>
+              </p>
               <p className="text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">
                 ▼ {Math.abs(breadth.topLoser.changePercent).toFixed(2)}%
               </p>

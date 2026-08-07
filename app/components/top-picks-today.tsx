@@ -12,7 +12,7 @@ type Pick = {
   name: string;
   sector: string;
   capTier: CapTier;
-  logo: string;
+  logo: string | null;
   price: number | null;
   changePercent: number | null;
   outlook: "Bullish" | "Bearish" | "Neutral";
@@ -27,10 +27,10 @@ type TopPicksState = {
   picks: Pick[];
 };
 
-function PickLogo({ src, name }: { src: string; name: string }) {
+function PickLogo({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
 
-  if (failed) {
+  if (failed || !src) {
     return (
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         {name.charAt(0)}

@@ -122,7 +122,7 @@ const ReturnsStrip = memo(function ReturnsStrip({ performance, loading }: { perf
 // Every logo URL in this app is built from a Google favicon URL (`?domain=<company domain>`).
 // Clearbit's public logo API usually returns a cleaner, higher-res brand mark for the same
 // domain, so it's tried first — the favicon URL we already have is the guaranteed-real fallback.
-export function clearbitUrlFrom(googleFaviconSrc?: string): string | null {
+export function clearbitUrlFrom(googleFaviconSrc?: string | null): string | null {
   if (!googleFaviconSrc) return null;
   try {
     const domain = new URL(googleFaviconSrc).searchParams.get("domain");
@@ -246,7 +246,7 @@ export function AiAnalysisReport({
   competitorsLoading,
 }: {
   analysis: AnalysisResponse;
-  logoUrl?: string;
+  logoUrl?: string | null;
   companyName?: string;
   performance: Performance | null;
   perfLoading: boolean;

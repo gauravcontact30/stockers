@@ -137,7 +137,9 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+      {/* No top padding: the carousel is meant to sit flush under the navbar, and `py-6` was
+          leaving a band of page background between the two. The bottom padding stays. */}
+      <div className="px-4 pb-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
           <HeroCarousel />
