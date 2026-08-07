@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 export type IndexQuote = {
   symbol: string;
   name: string;
@@ -53,9 +55,86 @@ export function rangePosition(price: number | null, low: number | null, high: nu
   return Math.min(100, Math.max(0, position));
 }
 
-function IndexCard({ index, live }: { index: IndexQuote; live: boolean }) {
+/** Points between today's high and low — how much ground the index has covered. */
+export function rangeWidth(index: Pick<IndexQuote, "dayHigh" | "dayLow">): number | null {
+  if (typeof index.dayHigh !== "number" || typeof index.dayLow !== "number") return null;
+  return index.dayHigh - index.dayLow;
+}
+
+/** Negative: how far the level has slipped from the day's high. */
+export function distanceFromHigh(index: Pick<IndexQuote, "price" | "dayHigh">): number | null {
+  if (typeof index.price !== "number" || typeof index.dayHigh !== "number") return null;
+  return index.price - index.dayHigh;
+}
+
+/** Positive: how far the level has recovered off the day's low. */
+export function distanceFromLow(index: Pick<IndexQuote, "price" | "dayLow">): number | null {
+  if (typeof index.price !== "number" || typeof index.dayLow !== "number") return null;
+  return index.price - index.dayLow;
+}
+
+/** How long a level stays highlighted after it moves. */
+const FLASH_MS = 700;
+
+/**
+ * Reports which way a number just moved, for as long as the highlight should last.
+ *
+ * With the board polling twice a second, most repaints change nothing; flashing only the values
+ * that actually moved is what makes a real tick visible instead of drowning it in animation.
+ */
+export function useTickDirection(value: number | null): "up" | "down" | null {
+  const [direction, setDirection] = useState<"up" | "down" | null>(null);
+  const previous = useRef(value);
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = value;
+
+    if (typeof value !== "number" || typeof before !== "number" || value === before) return;
+
+    setDirection(value > before ? "up" : "down");
+    const timer = setTimeout(() => setDirection(null), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  return direction;
+}
+
+/**
+ * The levels this page has actually seen, drawn as a sparkline.
+ *
+ * It is explicitly the session since the panel opened rather than an intraday history the feed
+ * does not give us, so it is labelled that way and only drawn once there is a line to draw.
+ */
+export function Sparkline({ points, up }: { points: number[]; up: boolean | null }) {
+  if (points.length < 2) return null;
+
+  const low = Math.min(...points);
+  const high = Math.max(...points);
+  const span = high - low || 1;
+  const step = 100 / (points.length - 1);
+
+  const path = points
+    .map((point, position) => `${position === 0 ? "M" : "L"} ${(position * step).toFixed(2)} ${(24 - ((point - low) / span) * 22).toFixed(2)}`)
+    .join(" ");
+
+  return (
+    <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-6 w-full" role="img" aria-label="Levels seen since this page opened">
+      <path
+        d={path}
+        fill="none"
+        strokeWidth="1.75"
+        vectorEffect="non-scaling-stroke"
+        className={up === false ? "stroke-rose-500" : "stroke-emerald-500"}
+      />
+    </svg>
+  );
+}
+
+function IndexCard({ index, live, history = [] }: { index: IndexQuote; live: boolean; history?: number[] }) {
   const change = index.change;
   const up = typeof change === "number" ? change >= 0 : null;
+  const tick = useTickDirection(index.price);
 
   const tone =
     up === null
@@ -89,7 +168,23 @@ function IndexCard({ index, live }: { index: IndexQuote; live: boolean }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <p className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{formatLevel(index.price)}</p>
+        <p
+          data-tick={tick ?? "flat"}
+          className={`rounded-lg px-1 text-2xl font-semibold tabular-nums transition-colors duration-300 ${
+            tick === "up"
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+              : tick === "down"
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+                : "text-slate-900 dark:text-white"
+          }`}
+        >
+          {formatLevel(index.price)}
+        </p>
+        {tick && (
+          <span aria-hidden="true" className={`text-sm font-bold ${tick === "up" ? "text-emerald-500" : "text-rose-500"}`}>
+            {tick === "up" ? "▲" : "▼"}
+          </span>
+        )}
         {live && (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-bar" />
@@ -121,7 +216,26 @@ function IndexCard({ index, live }: { index: IndexQuote; live: boolean }) {
           <dt className="text-slate-500 dark:text-slate-400">Day high</dt>
           <dd className="mt-0.5 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatLevel(index.dayHigh)}</dd>
         </div>
+        <div>
+          <dt className="text-slate-500 dark:text-slate-400">Day range</dt>
+          <dd className="mt-0.5 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatPoints(rangeWidth(index))}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500 dark:text-slate-400">From high</dt>
+          <dd className="mt-0.5 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatPoints(distanceFromHigh(index))}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500 dark:text-slate-400">From low</dt>
+          <dd className="mt-0.5 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatPoints(distanceFromLow(index))}</dd>
+        </div>
       </dl>
+
+      {history.length > 1 && (
+        <div className="mt-3 border-t border-slate-200 pt-2 dark:border-slate-800">
+          <Sparkline points={history} up={up} />
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">Ticks seen since this page opened</p>
+        </div>
+      )}
 
       {position !== null && (
         <div className="mt-3">
@@ -148,10 +262,13 @@ function IndexCard({ index, live }: { index: IndexQuote; live: boolean }) {
 export function MarketIndices({
   indices,
   live,
+  history = {},
   className = "",
 }: {
   indices: IndexQuote[] | undefined;
   live: boolean;
+  /** Levels observed since the page opened, keyed by index symbol. */
+  history?: Record<string, number[]>;
   className?: string;
 }) {
   // A payload without indices (an older cached response, or a feed that failed) drops the block
@@ -167,7 +284,7 @@ export function MarketIndices({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {indices.map((index) => (
-          <IndexCard key={index.symbol} index={index} live={live} />
+          <IndexCard key={index.symbol} index={index} live={live} history={history[index.symbol]} />
         ))}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within, act } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   IpoListings,
@@ -8,31 +8,6 @@ import {
   formatTimes,
   subscriptionWidth,
 } from "../../app/components/ipo-listings";
-
-jest.mock("../../app/components/ai-report-modal", () => ({
-  AiReportModal: (props: any) => (
-    <div
-      data-testid="ai-report-modal"
-      data-open={String(props.open)}
-      data-symbol={props.analysis?.stock ?? ""}
-      data-logo={props.logoUrl ?? ""}
-      data-company={props.companyName ?? ""}
-      data-loading={String(props.loading)}
-    >
-      <button data-testid="modal-close" onClick={props.onClose}>
-        close
-      </button>
-    </div>
-  ),
-}));
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve };
-}
 
 function mockListFetch(response: unknown, ok = true) {
   global.fetch = jest.fn().mockResolvedValue({ ok, json: async () => response } as Response);
@@ -170,7 +145,7 @@ describe("IpoListings", () => {
     expect(screen.getByText("UPCOMING")).toBeInTheDocument();
     expect(screen.getByText("CLOSED")).toBeInTheDocument();
 
-    const ardee = screen.getByText("Ardee Industries Limited").closest("button")!;
+    const ardee = screen.getByText("Ardee Industries Limited").closest("article")!;
     expect(within(ardee).getByText("ARDEE · Mainboard")).toBeInTheDocument();
     expect(within(ardee).getByText("₹50 – ₹53")).toBeInTheDocument();
     expect(within(ardee).getByText("280")).toBeInTheDocument();
@@ -186,7 +161,7 @@ describe("IpoListings", () => {
     expect(within(ardee).getByText("Retail Individual Investors(RIIs)")).toBeInTheDocument();
 
     // Unknown fields render as an em dash, never as zero.
-    const leap = screen.getByText("Leap India Limited").closest("button")!;
+    const leap = screen.getByText("Leap India Limited").closest("article")!;
     expect(within(leap).getByText("LEAP · SME")).toBeInTheDocument();
     expect(within(leap).getAllByText("—")).toHaveLength(3);
     expect(within(leap).queryByText("Subscribed")).not.toBeInTheDocument();
@@ -269,55 +244,18 @@ describe("IpoListings", () => {
     expect(screen.getByText("A")).toBeInTheDocument();
   });
 
-  it("selects an IPO, shows loading then the analysis in the modal, and closes it", async () => {
-    const user = userEvent.setup();
-    const research = deferred<Response>();
-    global.fetch = jest.fn((url: any) => {
-      if (String(url).includes("/api/research")) return research.promise;
-      return Promise.resolve({ ok: true, json: async () => feed } as Response);
-    }) as unknown as typeof fetch;
-
+  it("renders IPO cards as static entries, with no AI research call", async () => {
+    mockListFetch({ ...feed, anticipated });
     render(<IpoListings />);
+
     await screen.findByText("Ardee Industries Limited");
+    const card = screen.getByText("Ardee Industries Limited").closest("article");
+    expect(card).toBeInTheDocument();
+    expect(card!.tagName).toBe("ARTICLE");
+    expect(screen.getByText("Delta Logistics").closest("article")).toBeInTheDocument();
 
-    const card = screen.getByText("Ardee Industries Limited").closest("button")!;
-    await user.click(card);
-
-    let modal = screen.getByTestId("ai-report-modal");
-    expect(modal).toHaveAttribute("data-open", "true");
-    expect(modal).toHaveAttribute("data-loading", "true");
-    expect(modal).toHaveAttribute("data-logo", "https://logo.test/ardee.png");
-    expect(modal).toHaveAttribute("data-company", "Ardee Industries Limited");
-    expect(card).toHaveClass("border-indigo-400");
-
-    await act(async () => {
-      research.resolve({ ok: true, json: async () => ({ stock: "Ardee Industries Limited", score: 70 }) } as Response);
-      await research.promise;
-    });
-
-    modal = screen.getByTestId("ai-report-modal");
-    expect(modal).toHaveAttribute("data-loading", "false");
-    expect(modal).toHaveAttribute("data-symbol", "Ardee Industries Limited");
-
-    await user.click(screen.getByTestId("modal-close"));
-    expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
-  });
-
-  it("selects an anticipated IPO and requests analysis for it too", async () => {
-    const user = userEvent.setup();
-    global.fetch = jest.fn((url: any) => {
-      if (String(url).includes("/api/research")) {
-        return Promise.resolve({ ok: true, json: async () => ({ stock: "Delta Logistics", score: 55 }) } as Response);
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ ...feed, ipos: [], anticipated }) } as Response);
-    }) as unknown as typeof fetch;
-
-    render(<IpoListings />);
-    const deltaCard = await screen.findByText("Delta Logistics").then((el) => el.closest("button")!);
-    await user.click(deltaCard);
-
-    const modal = await screen.findByText((_, node) => node?.getAttribute?.("data-symbol") === "Delta Logistics");
-    expect(modal).toHaveAttribute("data-company", "Delta Logistics");
-    expect(modal).toHaveAttribute("data-logo", "https://logo.test/delta.png");
+    // The AI research endpoint belongs to the dashboard; the landing board only reads the calendar.
+    const calls = (global.fetch as jest.Mock).mock.calls.map((call) => String(call[0]));
+    expect(calls).toEqual(["/api/market/ipos"]);
   });
 });

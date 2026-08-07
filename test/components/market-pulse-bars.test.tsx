@@ -1,64 +1,98 @@
 import { render, screen } from "@testing-library/react";
-import { MarketPulseBars } from "../../app/components/market-pulse-bars";
+import {
+  MarketPulseBars,
+  advanceDeclineRatio,
+  advanceShare,
+  breadthLabel,
+  formatRatio,
+} from "../../app/components/market-pulse-bars";
 
-function barFills(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>("[style*='height']"));
-}
+describe("advanceShare", () => {
+  it("is the advancing share of the decisive moves, ignoring flat stocks", () => {
+    expect(advanceShare({ advancing: 60, declining: 40 })).toBe(60);
+    // The 900 flat names must not drag the reading toward 50%.
+    expect(advanceShare({ advancing: 3, declining: 1 })).toBe(75);
+  });
+
+  it("is zero before anything has traded", () => {
+    expect(advanceShare({ advancing: 0, declining: 0 })).toBe(0);
+  });
+});
+
+describe("advanceDeclineRatio", () => {
+  it("divides advances by declines", () => {
+    expect(advanceDeclineRatio({ advancing: 150, declining: 100 })).toBe(1.5);
+  });
+
+  it("has no ratio on an untraded tape, and an unbounded one when nothing fell", () => {
+    expect(advanceDeclineRatio({ advancing: 0, declining: 0 })).toBeNull();
+    expect(advanceDeclineRatio({ advancing: 12, declining: 0 })).toBe(Infinity);
+  });
+});
+
+describe("formatRatio", () => {
+  it.each([
+    [1.5, "1.50 : 1"],
+    [null, "—"],
+    [Infinity, "All up"],
+  ])("formats %s", (ratio, expected) => {
+    expect(formatRatio(ratio)).toBe(expected);
+  });
+});
+
+describe("breadthLabel", () => {
+  it.each([
+    [85, "Broad rally"],
+    [60, "Buyers ahead"],
+    [50, "Evenly split"],
+    [35, "Sellers ahead"],
+    [10, "Broad selling"],
+  ])("reads %i%% advancing as %s", (share, label) => {
+    expect(breadthLabel(share).label).toBe(label);
+  });
+});
 
 describe("MarketPulseBars", () => {
-  it("sizes each bar to the real advance/decline share", () => {
-    const { container } = render(<MarketPulseBars advancing={75} declining={25} unchanged={4} live />);
+  it("states the split, the reading behind it and the ratio", () => {
+    render(<MarketPulseBars advancing={150} declining={100} unchanged={20} live />);
 
-    const [up, down] = barFills(container);
-    expect(up.style.height).toBe("75%");
-    expect(down.style.height).toBe("25%");
-
-    expect(screen.getByText("75")).toBeInTheDocument();
-    expect(screen.getByText("25")).toBeInTheDocument();
-    expect(screen.getByText("4 flat")).toBeInTheDocument();
+    expect(screen.getByText("60.0%")).toBeInTheDocument();
+    expect(screen.getByText("Buyers ahead")).toBeInTheDocument();
+    expect(screen.getByText("150")).toBeInTheDocument();
+    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.getByText("20")).toBeInTheDocument();
+    expect(screen.getByText("1.50 : 1")).toBeInTheDocument();
+    expect(screen.getByText(/270 tracked/)).toBeInTheDocument();
+    expect(screen.getByLabelText("150 stocks advancing, 100 declining, 20 unchanged")).toBeInTheDocument();
   });
 
-  it("labels the pair for screen readers", () => {
-    render(<MarketPulseBars advancing={12} declining={8} unchanged={0} live />);
-    expect(screen.getByLabelText("12 stocks advancing, 8 declining")).toBeInTheDocument();
+  it("sizes the three segments by their share of the whole tape", () => {
+    const { container } = render(<MarketPulseBars advancing={50} declining={30} unchanged={20} live />);
+
+    const segments = [...container.querySelectorAll("span[style]")];
+    expect(segments.map((segment) => (segment as HTMLElement).style.width)).toEqual(["50%", "20%", "30%"]);
   });
 
-  // While the market is shut the bars must read as inert, not as a live feed showing calm.
-  it("greys out and stops animating when the market is closed", () => {
-    const { container } = render(<MarketPulseBars advancing={75} declining={25} unchanged={0} live={false} />);
+  it("omits a segment that has no stocks in it", () => {
+    const { container } = render(<MarketPulseBars advancing={80} declining={20} unchanged={0} live />);
+
+    const segments = [...container.querySelectorAll("span[style]")];
+    expect(segments).toHaveLength(2);
+  });
+
+  it("goes grey and still once the market shuts", () => {
+    const { container } = render(<MarketPulseBars advancing={150} declining={100} unchanged={20} live={false} />);
 
     expect(screen.getByText("Off")).toBeInTheDocument();
-    expect(container.querySelectorAll(".animate-pulse-bar")).toHaveLength(0);
-    expect(container.querySelectorAll(".bg-emerald-500")).toHaveLength(0);
-    expect(container.querySelectorAll(".bg-rose-500")).toHaveLength(0);
-    expect(container.querySelectorAll(".bg-slate-300").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("span[style]")).toHaveLength(0);
+    expect(container.querySelector(".animate-pulse-bar")).toBeNull();
   });
 
-  it("animates both bars in their own colours while live", () => {
-    const { container } = render(<MarketPulseBars advancing={5} declining={5} unchanged={0} live />);
+  it("survives a tape where nothing has traded at all", () => {
+    render(<MarketPulseBars advancing={0} declining={0} unchanged={0} live />);
 
-    expect(screen.getByText("Live")).toBeInTheDocument();
-    expect(container.querySelectorAll(".animate-pulse-bar")).toHaveLength(2);
-    expect(container.querySelectorAll(".bg-emerald-500")).toHaveLength(1);
-    expect(container.querySelectorAll(".bg-rose-500")).toHaveLength(1);
-  });
-
-  // A genuinely empty bar still gets a sliver of height so it reads as "none advancing" rather
-  // than disappearing, which would look like missing data.
-  it("keeps a zero bar visible at a minimum height", () => {
-    const { container } = render(<MarketPulseBars advancing={0} declining={40} unchanged={0} live />);
-    const [up, down] = barFills(container);
-    expect(up.style.height).toBe("2%");
-    expect(down.style.height).toBe("100%");
-  });
-
-  it("draws both bars at the floor when nothing has traded yet", () => {
-    const { container } = render(<MarketPulseBars advancing={0} declining={0} unchanged={0} live />);
-    for (const fill of barFills(container)) expect(fill.style.height).toBe("2%");
-  });
-
-  it("applies the caller's classes", () => {
-    const { container } = render(<MarketPulseBars advancing={1} declining={1} unchanged={0} live className="test-bars" />);
-    expect(container.querySelector(".test-bars")).toBeInTheDocument();
+    expect(screen.getByText("0.0%")).toBeInTheDocument();
+    expect(screen.getByText("Broad selling")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 });

@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal";
 
 export type IpoStatus = "open" | "upcoming" | "closed";
 
@@ -169,11 +167,6 @@ export function IpoListings() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<IpoStatus | "all">("all");
 
-  const [selected, setSelected] = useState<string | null>(null);
-  const [selectedLogo, setSelectedLogo] = useState<string | undefined>(undefined);
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/market/ipos");
@@ -193,22 +186,6 @@ export function IpoListings() {
     load();
   }, [load]);
 
-  const handleSelect = async (company: string, logo: string) => {
-    setSelected(company);
-    setSelectedLogo(logo);
-    setAnalysisLoading(true);
-    setAnalysis(null);
-
-    const response = await fetch("/api/research", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock: company }),
-    });
-    const data = await response.json();
-    setAnalysisLoading(false);
-    setAnalysis(data);
-  };
-
   const ipos = state?.ipos ?? [];
   const anticipated = state?.anticipated ?? [];
   const counts = state?.counts ?? { open: 0, upcoming: 0, closed: 0 };
@@ -222,7 +199,7 @@ export function IpoListings() {
           <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Open, upcoming and closed IPOs</h3>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             Every mainboard and SME issue on NSE&apos;s calendar, with its status worked out against today&apos;s date and live
-            category-wise subscription figures for anything open. Click a company for a full AI report.
+            category-wise subscription figures for anything open.
           </p>
         </div>
         <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-400">
@@ -265,19 +242,12 @@ export function IpoListings() {
 
         {!loading &&
           visible.map((ipo) => {
-            const isActive = selected === ipo.company;
             const status = STATUS_META[ipo.status];
 
             return (
-              <button
+              <article
                 key={ipo.id}
-                type="button"
-                onClick={() => handleSelect(ipo.company, ipo.logo)}
-                className={`flex flex-col rounded-2xl border p-4 text-left transition ${
-                  isActive
-                    ? "border-indigo-400 bg-indigo-50/60 ring-2 ring-indigo-400 dark:border-indigo-500/50 dark:bg-indigo-500/10"
-                    : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
-                }`}
+                className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-200 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
               >
                 <div className="flex items-start gap-3">
                   <IpoLogo src={ipo.logo} name={ipo.company} />
@@ -306,7 +276,7 @@ export function IpoListings() {
                 </dl>
 
                 {ipo.subscription && <SubscriptionMeter subscription={ipo.subscription} />}
-              </button>
+              </article>
             );
           })}
 
@@ -322,17 +292,10 @@ export function IpoListings() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">On the radar · no filing window yet</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {anticipated.map((ipo) => {
-              const isActive = selected === ipo.company;
               return (
-                <button
+                <article
                   key={ipo.company}
-                  type="button"
-                  onClick={() => handleSelect(ipo.company, ipo.logo)}
-                  className={`rounded-2xl border p-3 text-left transition ${
-                    isActive
-                      ? "border-indigo-400 bg-indigo-50/60 ring-2 ring-indigo-400 dark:border-indigo-500/50 dark:bg-indigo-500/10"
-                      : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
-                  }`}
+                  className="rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-indigo-500/30"
                 >
                   <div className="flex items-center gap-2.5">
                     <IpoLogo src={ipo.logo} name={ipo.company} />
@@ -342,7 +305,7 @@ export function IpoListings() {
                     </div>
                   </div>
                   <p className="mt-2 line-clamp-2 text-xs text-slate-600 dark:text-slate-400">{ipo.note}</p>
-                </button>
+                </article>
               );
             })}
           </div>
@@ -352,15 +315,6 @@ export function IpoListings() {
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
         {state?.source ?? "Loading the NSE IPO calendar…"} · Not investment advice.
       </p>
-
-      <AiReportModal
-        open={selected !== null}
-        onClose={() => setSelected(null)}
-        loading={analysisLoading}
-        analysis={analysis}
-        logoUrl={selectedLogo}
-        companyName={selected ?? undefined}
-      />
     </section>
   );
 }

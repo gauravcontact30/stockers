@@ -1,10 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import {
   MarketIndices,
+  Sparkline,
+  distanceFromHigh,
+  distanceFromLow,
   formatChangePercent,
   formatLevel,
   formatPoints,
   rangePosition,
+  rangeWidth,
+  useTickDirection,
   type IndexQuote,
 } from "../../app/components/market-indices";
 
@@ -145,8 +150,9 @@ describe("MarketIndices", () => {
     );
 
     expect(screen.getByLabelText("NIFTY 50, —, —")).toBeInTheDocument();
-    // Level, points move, percentage move, prev close, day low and day high.
-    expect(screen.getAllByText("—")).toHaveLength(6);
+    // Level, points move, percentage move, prev close, day low, day high, day range, and the
+    // distances from each end of that range.
+    expect(screen.getAllByText("—")).toHaveLength(9);
     expect(screen.queryByText("Position in today's range")).not.toBeInTheDocument();
   });
 
@@ -156,5 +162,106 @@ describe("MarketIndices", () => {
 
     const { container: empty } = render(<MarketIndices indices={[]} live />);
     expect(empty).toBeEmptyDOMElement();
+  });
+});
+
+describe("range metrics", () => {
+  const quote = indexQuote({ price: 24600, dayHigh: 24700, dayLow: 24500 });
+
+  it("measures the day's range and where the level sits inside it", () => {
+    expect(rangeWidth(quote)).toBe(200);
+    expect(distanceFromHigh(quote)).toBe(-100);
+    expect(distanceFromLow(quote)).toBe(100);
+  });
+
+  it("has no reading when a leg of the range is missing", () => {
+    expect(rangeWidth(indexQuote({ dayHigh: null }))).toBeNull();
+    expect(rangeWidth(indexQuote({ dayLow: null }))).toBeNull();
+    expect(distanceFromHigh(indexQuote({ price: null }))).toBeNull();
+    expect(distanceFromHigh(indexQuote({ dayHigh: null }))).toBeNull();
+    expect(distanceFromLow(indexQuote({ price: null }))).toBeNull();
+    expect(distanceFromLow(indexQuote({ dayLow: null }))).toBeNull();
+  });
+});
+
+describe("Sparkline", () => {
+  it("draws the observed levels, rising green and falling red", () => {
+    const { container, rerender } = render(<Sparkline points={[100, 110, 105]} up />);
+    const path = container.querySelector("path")!;
+    expect(path).toHaveClass("stroke-emerald-500");
+    expect(path.getAttribute("d")).toMatch(/^M 0\.00 /);
+
+    rerender(<Sparkline points={[100, 110, 105]} up={false} />);
+    expect(container.querySelector("path")).toHaveClass("stroke-rose-500");
+  });
+
+  it("draws nothing until there are two levels to join", () => {
+    const { container } = render(<Sparkline points={[100]} up />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("survives a run of identical levels without dividing by zero", () => {
+    const { container } = render(<Sparkline points={[100, 100]} up />);
+    expect(container.querySelector("path")!.getAttribute("d")).not.toContain("NaN");
+  });
+});
+
+describe("useTickDirection", () => {
+  function Probe({ value }: { value: number | null }) {
+    return <span data-testid="tick">{useTickDirection(value) ?? "flat"}</span>;
+  }
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it("flags the direction of a change, then clears it", () => {
+    const { rerender } = render(<Probe value={100} />);
+    expect(screen.getByTestId("tick")).toHaveTextContent("flat");
+
+    rerender(<Probe value={101} />);
+    expect(screen.getByTestId("tick")).toHaveTextContent("up");
+
+    act(() => {
+      jest.advanceTimersByTime(700);
+    });
+    expect(screen.getByTestId("tick")).toHaveTextContent("flat");
+
+    rerender(<Probe value={99} />);
+    expect(screen.getByTestId("tick")).toHaveTextContent("down");
+  });
+
+  it("stays quiet when the value repeats or is missing", () => {
+    const { rerender } = render(<Probe value={100} />);
+    rerender(<Probe value={100} />);
+    expect(screen.getByTestId("tick")).toHaveTextContent("flat");
+
+    rerender(<Probe value={null} />);
+    expect(screen.getByTestId("tick")).toHaveTextContent("flat");
+  });
+});
+
+describe("MarketIndices ticking", () => {
+  it("highlights a level that just moved and draws its sparkline", () => {
+    const { rerender } = render(
+      <MarketIndices live indices={[indexQuote()]} history={{ NIFTY50: [24600, 24610, 24624.65] }} />,
+    );
+
+    expect(screen.getByText("Ticks seen since this page opened")).toBeInTheDocument();
+    expect(screen.getByText("24,624.65")).toHaveAttribute("data-tick", "flat");
+
+    rerender(<MarketIndices live indices={[indexQuote({ price: 24700 })]} history={{ NIFTY50: [24600, 24700] }} />);
+    expect(screen.getByText("24,700.00")).toHaveAttribute("data-tick", "up");
+    expect(screen.getByText("▲")).toBeInTheDocument();
+
+    rerender(
+      <MarketIndices live indices={[indexQuote({ price: 24550, change: -64.9 })]} history={{ NIFTY50: [24600, 24550] }} />,
+    );
+    expect(screen.getByText("24,550.00")).toHaveAttribute("data-tick", "down");
+    expect(screen.getByText("▼")).toBeInTheDocument();
+  });
+
+  it("leaves the sparkline out until a second tick arrives", () => {
+    render(<MarketIndices live indices={[indexQuote()]} history={{ NIFTY50: [24624.65] }} />);
+    expect(screen.queryByText("Ticks seen since this page opened")).not.toBeInTheDocument();
   });
 });

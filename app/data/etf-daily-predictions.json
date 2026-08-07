@@ -1,103 +1,103 @@
 {
-  "date": "2026-08-05",
-  "generatedAt": "2026-08-05T02:51:06.345Z",
+  "date": "2026-08-06",
+  "generatedAt": "2026-08-06T02:10:16.119Z",
   "source": "ai",
   "predictions": {
     "NIFTYBEES": {
       "symbol": "NIFTYBEES",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Broad market ETF showing negative momentum, short-term caution advised."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Moderate positive change suggests steady broad market gains."
     },
     "JUNIORBEES": {
       "symbol": "JUNIORBEES",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight negative change, but close to flat; watch for further signals."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Higher positive change indicates strong mid-cap market momentum."
     },
     "SETFNIF50": {
       "symbol": "SETFNIF50",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Nifty 50 ETF down moderately, indicating cautious market sentiment."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Slight positive change, but limited momentum in large-cap stocks."
     },
     "NIFTYIETF": {
       "symbol": "NIFTYIETF",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "ICICI Nifty ETF showing moderate decline; short-term bearish bias."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive broad market movement supports a bullish outlook."
     },
     "BANKBEES": {
       "symbol": "BANKBEES",
-      "outlook": "Bearish",
-      "confidence": 72,
-      "note": "Bank sector ETF down, suggesting sector weakness for the day."
+      "outlook": "Neutral",
+      "confidence": 65,
+      "note": "Small positive change in banking sector suggests cautious optimism."
     },
     "PSUBNKBEES": {
       "symbol": "PSUBNKBEES",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "PSU Bank ETF slightly down, but near neutral; mixed signals."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Strong gains in PSU banks indicate bullish sector sentiment."
     },
     "PSUBANK": {
       "symbol": "PSUBANK",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Kotak PSU Bank ETF showing decline, indicating sector pressure."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Highest PSU bank ETF gains imply robust sector performance."
     },
     "ITBEES": {
       "symbol": "ITBEES",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Nifty IT ETF with notable drop, signaling tech sector weakness."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Minimal gains in IT sector suggest sideways movement."
     },
     "GOLDBEES": {
       "symbol": "GOLDBEES",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Gold ETF slightly down, generally stable; watch for safe haven demand."
+      "outlook": "Bullish",
+      "confidence": 90,
+      "note": "Significant gold price rise boosts gold ETF outlook."
     },
     "HDFCGOLD": {
       "symbol": "HDFCGOLD",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "HDFC Gold ETF minor decline, no strong directional signal."
+      "outlook": "Bullish",
+      "confidence": 90,
+      "note": "Strong gold ETF gains driven by rising gold prices."
     },
     "GOLD1": {
       "symbol": "GOLD1",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Kotak Gold ETF slightly down, stable outlook for gold."
+      "outlook": "Bullish",
+      "confidence": 90,
+      "note": "Consistent gold ETF performance signals bullish trend."
     },
     "SILVERIETF": {
       "symbol": "SILVERIETF",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Silver ETF showing positive change, potential short-term strength."
+      "confidence": 95,
+      "note": "Sharp silver gains indicate very strong bullish momentum."
     },
     "LIQUIDBEES": {
       "symbol": "LIQUIDBEES",
       "outlook": "Neutral",
-      "confidence": 80,
-      "note": "Liquid ETF unchanged, stable safe-haven instrument."
+      "confidence": 50,
+      "note": "Negligible change consistent with liquid fund stability."
     },
     "CPSEETF": {
       "symbol": "CPSEETF",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "CPSE ETF down, indicating pressure on PSU thematic segment."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Modest gains in PSU thematic ETF suggest moderate optimism."
     },
     "ICICIB22": {
       "symbol": "ICICIB22",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Bharat 22 ETF up, showing positive sentiment in thematic PSU space."
+      "outlook": "Neutral",
+      "confidence": 65,
+      "note": "Slight positive movement in Bharat 22 ETF, cautious outlook."
     },
     "MON100": {
       "symbol": "MON100",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Motilal Oswal Nasdaq 100 ETF up, reflecting positive international tech trends."
+      "confidence": 85,
+      "note": "Strong international tech gains support bullish Nasdaq ETF outlook."
     }
   }
 }

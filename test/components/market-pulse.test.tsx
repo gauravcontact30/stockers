@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { MarketPulse } from "../../app/components/market-pulse";
+import { render, screen, within } from "@testing-library/react";
+import { MarketPulse, topMovers } from "../../app/components/market-pulse";
 
 function mockFetch(response: unknown, ok = true) {
   global.fetch = jest.fn().mockResolvedValue({
@@ -100,10 +100,13 @@ describe("MarketPulse", () => {
     expect(screen.getByText(/breadth across 200 stocks/)).toBeInTheDocument();
 
     // Advance/decline now reads off the live pulse bars.
-    expect(screen.getByLabelText("120 stocks advancing, 70 declining")).toBeInTheDocument();
+    expect(screen.getByLabelText("120 stocks advancing, 70 declining, 10 unchanged")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("70")).toBeInTheDocument();
-    expect(screen.getByText("10 flat")).toBeInTheDocument();
+    // The breadth panel now names the split, the reading behind it and the ratio.
+    expect(screen.getByText("63.2%")).toBeInTheDocument();
+    expect(screen.getByText("Buyers ahead")).toBeInTheDocument();
+    expect(screen.getByText("1.71 : 1")).toBeInTheDocument();
 
     expect(screen.getByText("+1.25%")).toBeInTheDocument();
 
@@ -115,8 +118,11 @@ describe("MarketPulse", () => {
     // Per-cap movers, defaulting to the Large cap tier.
     expect(screen.getByText("Top 5 gainers")).toBeInTheDocument();
     expect(screen.getByText("Top 5 losers")).toBeInTheDocument();
-    expect(screen.getByText("LGAIN")).toBeInTheDocument();
-    expect(screen.getByText("LLOSE")).toBeInTheDocument();
+    // Each mover now appears twice: once in the Top 3 strip and once in its cap-tier list.
+    expect(screen.getAllByText("LGAIN")).toHaveLength(2);
+    expect(screen.getAllByText("LLOSE")).toHaveLength(2);
+    expect(screen.getByText("Top 3 gainers")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 losers")).toBeInTheDocument();
     expect(screen.getByText("Ranked within Large Cap · 60 stocks tracked")).toBeInTheDocument();
 
     // The three benchmarks, with their live level and today's move.
@@ -152,8 +158,9 @@ describe("MarketPulse", () => {
     expect(await screen.findByText("Neutral")).toBeInTheDocument();
     expect(screen.getByText(/Heuristic \(no AI key configured\)/)).toBeInTheDocument();
     expect(screen.getByText("-0.40%")).toBeInTheDocument();
-    // topGainer/topLoser null -> em dash fallback (two occurrences)
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    // topGainer/topLoser null -> em dash fallback, plus the A/D ratio, which has no reading on a
+    // tape where nothing advanced or declined.
+    expect(screen.getAllByText("—")).toHaveLength(3);
   });
 
   it("renders the Risk-Off mood", async () => {
@@ -178,5 +185,48 @@ describe("MarketPulse", () => {
     mockFetch(null);
     render(<MarketPulse />);
     expect(await screen.findByText("Market pulse unavailable right now.")).toBeInTheDocument();
+  });
+
+  it("ranks the sharpest moves across every cap tier, not just the largest", async () => {
+    mockFetch({
+      ...baseState,
+      breadth: {
+        ...baseState.breadth,
+        movers: {
+          Large: {
+            tracked: 60,
+            gainers: [{ symbol: "BIGUP", name: "Big Up Ltd", sector: "Banking", capTier: "Large", price: 500, changePercent: 3.1 }],
+            losers: [],
+          },
+          Mid: {
+            tracked: 90,
+            gainers: [{ symbol: "MIDUP", name: "Mid Up Ltd", sector: "Pharma", capTier: "Mid", price: 200, changePercent: 9.4 }],
+            losers: [],
+          },
+          Small: {
+            tracked: 50,
+            gainers: [{ symbol: "SMLUP", name: "Small Up Ltd", sector: "Realty", capTier: "Small", price: 40, changePercent: 6.2 }],
+            losers: [],
+          },
+        },
+      },
+    });
+    render(<MarketPulse />);
+
+    await screen.findByText("Top 3 gainers");
+    const strip = screen.getByText("Top 3 gainers").parentElement!;
+    // The mid cap moved most, so it leads the merged ranking.
+    expect(within(strip).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+      expect.stringContaining("MIDUP"),
+      expect.stringContaining("SMLUP"),
+      expect.stringContaining("BIGUP"),
+    ]);
+  });
+});
+
+describe("topMovers", () => {
+  // The breadth payload can arrive before the movers are computed; ranking nothing must not throw.
+  it("has nothing to rank without a movers payload", () => {
+    expect(topMovers(undefined, "gainers", 3)).toEqual([]);
   });
 });

@@ -56,8 +56,8 @@ export type IndexQuote = BenchmarkIndex & {
  * rest of the app uses — so an index and its constituents can never be quoted as of different
  * moments on the same screen.
  */
-export async function getBenchmarkIndices(): Promise<IndexQuote[]> {
-  const quotes = await getQuotesFor(benchmarkIndices);
+export async function getBenchmarkIndices(maxAgeMs?: number): Promise<IndexQuote[]> {
+  const quotes = await getQuotesFor(benchmarkIndices, maxAgeMs);
 
   return benchmarkIndices.map((index, position) => {
     const quote = quotes[position];

@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DashboardClient } from "../../app/components/dashboard-client";
 import { companyLogoUrl, indianStocks } from "../../app/lib/indian-stocks";
@@ -34,6 +34,21 @@ jest.mock("../../app/components/ai-report-modal", () => ({
     </div>
   ),
 }));
+
+// Each AI panel fetches its own live market data and is covered by its own test file; here they
+// stand in as markers so a test can tell which section the dashboard mounted.
+function mockPanel(testId: string) {
+  const Stub = () => <div data-testid={testId} />;
+  return Stub;
+}
+
+jest.mock("../../app/components/market-pulse", () => ({ MarketPulse: mockPanel("panel-market-pulse") }));
+jest.mock("../../app/components/top-picks-today", () => ({ TopPicksToday: mockPanel("panel-top-picks") }));
+jest.mock("../../app/components/buy-tomorrow-picks", () => ({ BuyTomorrowPicks: mockPanel("panel-buy-tomorrow") }));
+jest.mock("../../app/components/dip-winners", () => ({ DipWinners: mockPanel("panel-dip-winners") }));
+jest.mock("../../app/components/landing-research", () => ({ LandingResearch: mockPanel("panel-research") }));
+jest.mock("../../app/components/ai-stock-compare", () => ({ AiStockCompare: mockPanel("panel-compare") }));
+jest.mock("../../app/components/etf-research", () => ({ EtfResearch: mockPanel("panel-etf-research") }));
 
 function setStoredUser(user: unknown) {
   window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok", user }));
@@ -260,6 +275,96 @@ describe("DashboardClient", () => {
 
       await user.click(screen.getByRole("button", { name: "Open report" }));
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true");
+    });
+  });
+
+  describe("AI section navigation", () => {
+    const sidebar = () => within(screen.getByRole("navigation", { name: "Dashboard sections" }));
+
+    afterEach(() => {
+      window.location.hash = "";
+    });
+
+    it("opens an AI section from the sidebar, mounting only that panel and bookmarking it in the URL", async () => {
+      const user = userEvent.setup();
+      await renderDashboard();
+      expect(screen.queryByTestId("panel-market-pulse")).not.toBeInTheDocument();
+
+      await user.click(sidebar().getByRole("button", { name: "Market Pulse" }));
+
+      expect(screen.getByTestId("panel-market-pulse")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Market Pulse" })).toBeInTheDocument();
+      expect(screen.getByText("Live breadth, indices and movers with an AI read on the day's mood.")).toBeInTheDocument();
+      // The overview is unmounted with its own fetches, so only one section is ever live.
+      expect(screen.queryByPlaceholderText("e.g. HDFC BANK")).not.toBeInTheDocument();
+      expect(window.location.hash).toBe("#market-pulse");
+      expect(window.scrollTo).toHaveBeenCalled();
+    });
+
+    it.each([
+      ["Top Picks", "panel-top-picks"],
+      ["Buy Tomorrow", "panel-buy-tomorrow"],
+      ["Dip Winners", "panel-dip-winners"],
+      ["Stock Research", "panel-research"],
+      ["Compare", "panel-compare"],
+      ["ETF Research", "panel-etf-research"],
+    ])("mounts the %s panel when its sidebar entry is picked", async (label, testId) => {
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      await user.click(sidebar().getByRole("button", { name: label }));
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    });
+
+    it("opens the section named by the URL hash on first render", async () => {
+      window.location.hash = "#compare";
+      await renderDashboard();
+
+      expect(screen.getByTestId("panel-compare")).toBeInTheDocument();
+      // A deep link must not be rewritten on arrival.
+      expect(window.location.hash).toBe("#compare");
+    });
+
+    it("falls back to the overview when the hash names no section", async () => {
+      window.location.hash = "#pricing";
+      await renderDashboard();
+
+      expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
+    });
+
+    it("drops the hash again on the way back to the overview", async () => {
+      const user = userEvent.setup();
+      window.location.hash = "#dip-winners";
+      await renderDashboard();
+
+      await user.click(sidebar().getByRole("button", { name: "Overview" }));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
+      expect(window.location.hash).toBe("");
+    });
+
+    // The open section is read from the URL, so a hash change from outside React — the back
+    // button, or an in-page link — has to move the dashboard with it.
+    it("follows a hash change it did not make itself", async () => {
+      await renderDashboard();
+      expect(screen.queryByTestId("panel-etf-research")).not.toBeInTheDocument();
+
+      window.location.hash = "#etf-research";
+
+      expect(await screen.findByTestId("panel-etf-research")).toBeInTheDocument();
+    });
+
+    it("switches sections from the compact phone strip", async () => {
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      const tabs = within(screen.getByRole("navigation", { name: "Dashboard sections (compact)" }));
+      await user.click(tabs.getByRole("button", { name: "Top Picks" }));
+
+      expect(screen.getByTestId("panel-top-picks")).toBeInTheDocument();
     });
   });
 

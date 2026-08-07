@@ -1,17 +1,12 @@
 import Link from "next/link";
-import { GatedSection } from "./components/ai-gate";
-import { AiStockCompare } from "./components/ai-stock-compare";
 import { BackToTop } from "./components/back-to-top";
-import { BuyTomorrowPicks } from "./components/buy-tomorrow-picks";
-import { DipWinners } from "./components/dip-winners";
+import { BseMarketBoard } from "./components/bse-market-board";
+import { BseStockDirectory } from "./components/bse-stock-directory";
 import { DividendBoard } from "./components/dividend-board";
 import { EtfBoard } from "./components/etf-board";
-import { EtfResearch } from "./components/etf-research";
 import { HeroCarousel } from "./components/hero-carousel";
 import { IpoListings } from "./components/ipo-listings";
-import { LandingResearch } from "./components/landing-research";
 import { Logo } from "./components/logo";
-import { MarketPulse } from "./components/market-pulse";
 import { MobileNav } from "./components/mobile-nav";
 import { MostTraded } from "./components/most-traded";
 import { MtfTraded } from "./components/mtf-traded";
@@ -21,7 +16,6 @@ import { StocksInNews } from "./components/stocks-in-news";
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { SupportSection } from "./components/support-section";
 import { ThemeToggle } from "./components/theme-toggle";
-import { TopPicksToday } from "./components/top-picks-today";
 
 const pricing = [
   {
@@ -46,21 +40,58 @@ const pricing = [
 ];
 
 const navLinks = [
-  { href: "#market-pulse", label: "Market Pulse" },
+  { href: "#bse-board", label: "BSE Board" },
+  { href: "#bse-directory", label: "Companies" },
   { href: "#sectors", label: "Sectors" },
   { href: "#most-traded", label: "Most Traded" },
   { href: "#mtf", label: "MTF" },
   { href: "/news", label: "News" },
   { href: "#stocks-in-news", label: "Stock News" },
   { href: "#dividends", label: "Dividends" },
-  { href: "#top-picks", label: "Top Picks" },
-  { href: "#buy-tomorrow", label: "Buy Tomorrow" },
   { href: "#ipos", label: "IPOs" },
   { href: "#most-bought-etfs", label: "ETFs" },
-  { href: "#research", label: "Research" },
   { href: "#pricing", label: "Pricing" },
-  { href: "#support", label: "Support" },
+  { href: "/dashboard", label: "AI Dashboard" },
 ];
+
+// Coverage claims worth stating up front: each one is what the sections below actually deliver.
+const coverage = [
+  { figure: "4,900+", label: "BSE-listed companies", note: "Every active equity on the exchange" },
+  { figure: "Top 10", label: "Gainers & losers", note: "Whole market and per cap tier" },
+  { figure: "SEBI", label: "Cap classification", note: "Top 100 large · next 150 mid · rest small" },
+  { figure: "Official", label: "Exchange sources", note: "BSE scrip master, Bhavcopy and NSE feeds" },
+];
+
+// The AI surfaces now live in the signed-in dashboard; the landing page points at them by name so
+// a visitor can still see what they get, and land directly on the one they came for.
+const aiFeatures = [
+  { href: "/dashboard#market-pulse", label: "AI market pulse", blurb: "Live breadth and indices with an AI read on the day's mood." },
+  { href: "/dashboard#top-picks", label: "Today's AI picks", blurb: "The stocks our agent rates highest right now." },
+  { href: "/dashboard#buy-tomorrow", label: "Buy tomorrow", blurb: "Names set up for tomorrow's session, scored overnight." },
+  { href: "/dashboard#dip-winners", label: "Dip winners", blurb: "Quality stocks trading below their recent range." },
+  { href: "/dashboard#research", label: "AI stock research", blurb: "A deep dive with predictions and news sentiment." },
+  { href: "/dashboard#compare", label: "AI stock compare", blurb: "Two stocks head to head, with an AI verdict." },
+  { href: "/dashboard#etf-research", label: "AI ETF research", blurb: "Every major Indian ETF, decoded by AI." },
+];
+
+/**
+ * The divider between groups of sections.
+ *
+ * The page is a long stack of data cards; without a break between them a visitor has no sense of
+ * where one subject ends and the next begins.
+ */
+function BandHeading({ eyebrow, title, blurb }: { eyebrow: string; title: string; blurb: string }) {
+  return (
+    <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-8 lg:flex-row lg:items-end lg:justify-between dark:border-slate-800">
+      <div className="max-w-2xl">
+        <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-sky-600 dark:text-sky-400">{eyebrow}</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl dark:text-white">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{blurb}</p>
+      </div>
+      <span aria-hidden="true" className="hidden h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent lg:mb-3 lg:ml-8 lg:block dark:from-slate-800" />
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -109,11 +140,34 @@ export default function Home() {
           <HeroCarousel />
         </div>
 
-        {/* The pulse is not fully gated: its breadth, index levels and movers are exchange data
-            and stay visible. Only the AI narrative inside it is withheld, server-side. */}
-        <GatedSection id="market-pulse" feature="market-pulse" label="AI market pulse" gate={false}>
-          <MarketPulse />
-        </GatedSection>
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {coverage.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-slate-200 bg-white/70 p-4 backdrop-blur transition hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-sky-500/40"
+            >
+              <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{item.figure}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{item.note}</p>
+            </div>
+          ))}
+        </section>
+
+        <BandHeading
+          eyebrow="01 · The exchange, end to end"
+          title="BSE market research"
+          blurb="The full listed universe, the session's biggest moves in both directions, and a company lookup — sourced from the exchange's own files."
+        />
+
+        <BseMarketBoard />
+
+        <BseStockDirectory />
+
+        <BandHeading
+          eyebrow="02 · Around the market"
+          title="Sectors, flows, news and issues"
+          blurb="Where money rotated, what traded heaviest, which companies made news, and what is coming to market."
+        />
 
         <div className="scroll-mt-28">
           <SectorTrends />
@@ -127,18 +181,6 @@ export default function Home() {
           <MtfTraded />
         </div>
 
-        <GatedSection id="top-picks" feature="top-picks" label="Today's AI picks">
-          <TopPicksToday />
-        </GatedSection>
-
-        <GatedSection id="buy-tomorrow" feature="buy-tomorrow" label="Buy tomorrow screener">
-          <BuyTomorrowPicks />
-        </GatedSection>
-
-        <GatedSection id="dip-winners" feature="dip-winners" label="Today's dip screener">
-          <DipWinners />
-        </GatedSection>
-
         <div className="scroll-mt-28">
           <StocksInNews />
         </div>
@@ -151,21 +193,49 @@ export default function Home() {
           <IpoListings />
         </div>
 
-        <GatedSection id="research" feature="research" label="AI stock research">
-          <LandingResearch />
-        </GatedSection>
-
-        <GatedSection id="compare" feature="compare" label="AI stock compare">
-          <AiStockCompare />
-        </GatedSection>
-
         <div className="scroll-mt-28">
           <EtfBoard />
         </div>
 
-        <GatedSection id="etfs" feature="etf-research" label="AI ETF research">
-          <EtfResearch />
-        </GatedSection>
+        <BandHeading
+          eyebrow="03 · Where the AI lives"
+          title="Your signed-in workspace"
+          blurb="Everything above is exchange data, free and open. The AI screeners, research and comparisons run in the dashboard."
+        />
+
+        <section id="ai" className="scroll-mt-28 overflow-hidden rounded-[32px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-[0_20px_60px_-30px_rgba(5,150,105,0.45)] transition-colors sm:p-8 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-slate-900 dark:to-slate-900">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI workspace</p>
+              <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Seven AI tools, one dashboard</h3>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+                Picks, screeners, research and head-to-head comparisons sit side by side in a signed-in workspace, each on its
+                own tab.
+              </p>
+            </div>
+            <Link
+              href="/dashboard"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-14px_rgba(5,150,105,0.9)] transition hover:from-emerald-500 hover:to-teal-500"
+            >
+              Open AI dashboard →
+            </Link>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {aiFeatures.map((feature) => (
+              <Link
+                key={feature.href}
+                href={feature.href}
+                className="group rounded-2xl border border-slate-200 bg-white/80 p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.6)] dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-emerald-500/40"
+              >
+                <p className="text-sm font-semibold text-slate-900 transition group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
+                  {feature.label}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{feature.blurb}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <section id="pricing" className="scroll-mt-28 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

@@ -20,8 +20,9 @@ const RETRY_TTL_MS = 10_000;
 const CONCURRENCY = 12;
 
 // Keyed by yahooSymbol (globally unique, unlike display symbol) so stocks and ETFs can
-// safely share one cache without risk of collision.
-const cache = new Map<string, { data: LiveQuote; expiresAt: number }>();
+// safely share one cache without risk of collision. The fetch time is kept rather than an expiry
+// so one caller can ask for a fresher copy than the shared default without disturbing the rest.
+const cache = new Map<string, { data: LiveQuote; fetchedAt: number }>();
 
 function emptyQuote(symbol: string): LiveQuote {
   return {
@@ -75,12 +76,16 @@ async function fetchYahooQuote(subject: QuoteSubject): Promise<LiveQuote> {
   }
 }
 
-async function getQuoteCached(subject: QuoteSubject): Promise<LiveQuote> {
+async function getQuoteCached(subject: QuoteSubject, maxAgeMs: number): Promise<LiveQuote> {
   const cached = cache.get(subject.yahooSymbol);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (cached) {
+    // A failed quote is retried sooner than a good one, but never later than the caller asked for.
+    const ttl = cached.data.live ? maxAgeMs : Math.min(maxAgeMs, RETRY_TTL_MS);
+    if (Date.now() - cached.fetchedAt < ttl) return cached.data;
+  }
 
   const data = await fetchYahooQuote(subject);
-  cache.set(subject.yahooSymbol, { data, expiresAt: Date.now() + (data.live ? LIVE_TTL_MS : RETRY_TTL_MS) });
+  cache.set(subject.yahooSymbol, { data, fetchedAt: Date.now() });
   return data;
 }
 
@@ -99,8 +104,13 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (i
   return results;
 }
 
-export async function getQuotesFor(subjects: QuoteSubject[]): Promise<LiveQuote[]> {
-  return mapWithConcurrency(subjects, CONCURRENCY, getQuoteCached);
+/**
+ * @param maxAgeMs how stale a cached quote may be. The default suits the 270-name universe, where
+ * a minute-old price is fine; the live index ticker passes a couple of seconds instead, which is
+ * affordable because it asks for three symbols rather than three hundred.
+ */
+export async function getQuotesFor(subjects: QuoteSubject[], maxAgeMs = LIVE_TTL_MS): Promise<LiveQuote[]> {
+  return mapWithConcurrency(subjects, CONCURRENCY, (subject) => getQuoteCached(subject, maxAgeMs));
 }
 
 export async function getAllQuotes(): Promise<LiveQuote[]> {

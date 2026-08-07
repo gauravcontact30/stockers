@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { indianStocks } from "../lib/indian-stocks";
+import { StockPicker } from "./stock-picker";
+import type { CustomComparison } from "./triple-compare";
+import { VerdictCards } from "./verdict-view";
 
 type Winner = "A" | "B" | "Tie";
 
@@ -34,27 +36,46 @@ function PointList({ items, icon }: { items: string[]; icon: string }) {
 }
 
 export function AiStockCompare() {
-  const [stockA, setStockA] = useState("TCS");
-  const [stockB, setStockB] = useState("INFY");
+  const [stockA, setStockA] = useState<string | null>("TCS");
+  const [stockB, setStockB] = useState<string | null>("INFY");
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  // The measured side of the same pairing, rendered in the identical cards the three-stock
+  // comparison uses — so a reader moving between the two sections reads one layout, not two.
+  const [performance, setPerformance] = useState<CustomComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const reset = () => {
+    setStockA(null);
+    setStockB(null);
+    setResult(null);
+    setPerformance(null);
+    setError(null);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!stockA.trim() || !stockB.trim()) return;
+    if (!stockA || !stockB) return;
 
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stockA, stockB }),
-      });
-      if (!response.ok) throw new Error("Comparison failed");
-      const data = await response.json();
-      setResult(data);
+      // The AI head-to-head and the performance cards are independent calls; running them
+      // together means one wait rather than two.
+      const [verdictResponse, performanceResponse] = await Promise.all([
+        fetch("/api/compare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stockA, stockB }),
+        }),
+        fetch(`/api/compare/custom?symbols=${encodeURIComponent(`${stockA},${stockB}`)}`),
+      ]);
+      if (!verdictResponse.ok) throw new Error("Comparison failed");
+
+      setResult(await verdictResponse.json());
+      // The cards are a bonus on top of the verdict: if only they fail, the head-to-head still
+      // renders rather than the whole section erroring out.
+      setPerformance(performanceResponse.ok ? await performanceResponse.json() : null);
     } catch {
       setError("Couldn't run the comparison right now. Please try again shortly.");
     } finally {
@@ -81,36 +102,45 @@ export function AiStockCompare() {
         </div>
       </div>
 
-      <datalist id="compare-symbols">
-        {indianStocks.map((stock) => (
-          <option key={stock.symbol} value={stock.symbol}>
-            {stock.name}
-          </option>
-        ))}
-      </datalist>
+      <form onSubmit={handleSubmit} className="mt-6">
+        <div className="grid items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
+          <StockPicker
+            label="Stock A"
+            value={stockA}
+            onChange={setStockA}
+            exclude={stockB ? [stockB] : []}
+            placeholder="Pick the first stock"
+          />
+          <span className="hidden pt-8 text-sm font-bold uppercase tracking-wide text-slate-400 md:block">vs</span>
+          <StockPicker
+            label="Stock B"
+            value={stockB}
+            onChange={setStockB}
+            exclude={stockA ? [stockA] : []}
+            placeholder="Pick the second stock"
+          />
+        </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          value={stockA}
-          onChange={(event) => setStockA(event.target.value)}
-          list="compare-symbols"
-          className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-          placeholder="Stock A, e.g. TCS"
-        />
-        <span className="text-sm font-semibold text-slate-400">vs</span>
-        <input
-          value={stockB}
-          onChange={(event) => setStockB(event.target.value)}
-          list="compare-symbols"
-          className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-          placeholder="Stock B, e.g. INFY"
-        />
-        <button
-          type="submit"
-          className="rounded-full bg-violet-600 px-5 py-3 font-semibold text-white transition hover:bg-violet-500"
-        >
-          {loading ? "Comparing..." : "Compare with AI"}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            disabled={!stockA || !stockB || loading}
+            className="rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading ? "Comparing..." : "Compare with AI"}
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            disabled={!stockA && !stockB && !result}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+          >
+            Reset
+          </button>
+          {(!stockA || !stockB) && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">Pick both sides to run the head-to-head.</p>
+          )}
+        </div>
       </form>
 
       {error && (
@@ -128,6 +158,10 @@ export function AiStockCompare() {
             </div>
             <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{result.verdict}</p>
           </div>
+
+          {performance && performance.stocks.length > 0 && (
+            <VerdictCards stocks={performance.stocks} leader={performance.leader} laggard={performance.laggard} />
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition-colors dark:border-slate-800 dark:bg-slate-950/60">
