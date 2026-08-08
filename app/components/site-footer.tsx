@@ -34,7 +34,7 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
 export function SiteFooter() {
   return (
     <footer className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <div className="grid gap-10 p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
+      <div className="grid grid-cols-1 gap-10 p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div>
           <Link href="/" className="inline-flex items-center gap-3">
             <Logo size={36} wordmarkClassName="text-lg" gradientId="footer-logo" />

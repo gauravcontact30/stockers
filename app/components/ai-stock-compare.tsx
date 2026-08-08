@@ -190,7 +190,7 @@ export function AiStockCompare() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6">
-        <div className="grid items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
+        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
           <StockPicker
             label="Stock A"
             value={stockA}
@@ -254,7 +254,7 @@ export function AiStockCompare() {
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">
               Key points, side by side
             </p>
-            <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
               <SidePanel
                 symbol={result.stockA}
                 score={result.stockAScore}

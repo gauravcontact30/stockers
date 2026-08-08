@@ -66,18 +66,27 @@ export function HeroCarousel() {
           ))}
         </div>
 
-        {/* The slide picker belongs to the carousel, so it stays inside this panel. */}
-        <div className="flex justify-center gap-2 py-3">
+        {/* The slide picker belongs to the carousel, so it stays inside this panel.
+            The dot is drawn by the inner span; the button around it is a 44px-tall touch target
+            with the dot centred in it, because a 10px dot is not something a thumb can hit. The
+            padding also spaces the dots, so the row itself needs no gap. */}
+        <div className="flex justify-center py-1">
           {slides.map((slide, index) => (
             <button
               key={slide.caption}
+              type="button"
               aria-label={`Go to slide ${index + 1}: ${slide.caption}`}
               aria-current={index === activeSlide}
-              className={`h-2.5 rounded-full transition-all ${
-                index === activeSlide ? "w-8 bg-emerald-500" : "w-2.5 bg-slate-400/50 dark:bg-white/40"
-              }`}
+              className="flex h-11 items-center justify-center px-2 touch-manipulation"
               onClick={() => setActiveSlide(index)}
-            />
+            >
+              <span
+                aria-hidden="true"
+                className={`block h-2.5 rounded-full transition-all ${
+                  index === activeSlide ? "w-8 bg-emerald-500" : "w-2.5 bg-slate-400/50 dark:bg-white/40"
+                }`}
+              />
+            </button>
           ))}
         </div>
       </section>

@@ -11,6 +11,8 @@ function tick() {
 
 const dots = () => screen.getAllByRole("button", { name: /Go to slide/ });
 const activeDot = () => dots().findIndex((dot) => dot.getAttribute("aria-current") === "true");
+// The button is the 44px touch target; the dot drawn inside it is what carries the active styling.
+const dotMark = (index: number) => dots()[index].querySelector("span")!;
 
 describe("HeroCarousel", () => {
   beforeEach(() => {
@@ -25,8 +27,8 @@ describe("HeroCarousel", () => {
     render(<HeroCarousel />);
     expect(dots()).toHaveLength(4);
     expect(activeDot()).toBe(0);
-    expect(dots()[0].className).toContain("w-8 bg-emerald-500");
-    expect(dots()[1].className).toContain("w-2.5 bg-slate-400/50");
+    expect(dotMark(0).className).toContain("w-8 bg-emerald-500");
+    expect(dotMark(1).className).toContain("w-2.5 bg-slate-400/50");
   });
 
   // Nothing is laid over the scenes, and the marketing copy that used to sit under them is gone

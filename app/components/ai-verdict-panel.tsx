@@ -223,7 +223,7 @@ export function AiVerdictPanel({ section }: { section: string }) {
       </div>
 
       {loading && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-24 animate-pulse rounded-2xl border border-emerald-100 bg-white/60 dark:border-slate-800 dark:bg-slate-950/40" />
           ))}

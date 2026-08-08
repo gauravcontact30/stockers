@@ -236,7 +236,7 @@ export function MarketPulse() {
         />
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MarketPulseBars
           className="sm:col-span-2"
           advancing={breadth.advancing}

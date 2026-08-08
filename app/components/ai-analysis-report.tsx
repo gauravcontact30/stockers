@@ -298,7 +298,7 @@ export function AiAnalysisReport({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 transition-colors dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700 dark:text-emerald-400">🔑 Highlights</p>
           <div className="mt-3">

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AiBoardRead } from "./ai-board-read";
-import type { BseCapTier, BseMoverRow } from "./bse-market-board";
+import type { BseCapTier, BseMoverRow } from "./bse-movers-board";
 import { CompanyLogo } from "./company-logo";
 import { chipFor, formatCrore, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
 import { MarketSection, PillTabs, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";

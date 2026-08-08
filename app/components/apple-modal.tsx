@@ -60,7 +60,10 @@ export function AppleModal({
   if (!mounted) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:items-center sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+      role="presentation"
+    >
       <div
         aria-hidden
         onClick={onClose}
@@ -73,7 +76,10 @@ export function AppleModal({
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
-        className={`relative mt-10 flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-white/60 bg-white/85 shadow-[0_40px_120px_-24px_rgba(0,0,0,0.45)] backdrop-blur-2xl outline-none transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:mt-0 dark:border-white/10 dark:bg-slate-900/85 ${
+        // 85dvh, not 85vh: on a phone `vh` is measured against the viewport with the browser's
+        // address bar collapsed, so 85vh is taller than what is actually on screen and the foot of
+        // the sheet — where its buttons are — sits below the fold. `dvh` tracks the real viewport.
+        className={`relative mt-10 flex max-h-[85dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-white/60 bg-white/85 shadow-[0_40px_120px_-24px_rgba(0,0,0,0.45)] backdrop-blur-2xl outline-none transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:mt-0 dark:border-white/10 dark:bg-slate-900/85 ${
           visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-95 opacity-0"
         }`}
       >

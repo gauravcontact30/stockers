@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { SubscribeButton, type PlanKey } from "./razorpay-checkout";
 
 /**
  * Pricing, benchmarked against what Indian retail research actually costs.
@@ -19,6 +19,8 @@ export type Billing = "monthly" | "yearly";
 const YEARLY_MONTHS = 10;
 
 export type Plan = {
+  /** The key the payment server prices this plan by — the two must never drift apart. */
+  key: PlanKey;
   name: string;
   /** Rupees per month when billed monthly. */
   monthly: number;
@@ -32,6 +34,7 @@ export type Plan = {
 
 export const PLANS: Plan[] = [
   {
+    key: "starter",
     name: "Starter",
     monthly: 299,
     blurb: "For someone tracking a handful of holdings.",
@@ -46,6 +49,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
+    key: "pro",
     name: "Pro",
     monthly: 799,
     blurb: "For an active investor running their own screens.",
@@ -62,6 +66,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
+    key: "elite",
     name: "Elite",
     monthly: 1999,
     blurb: "For anyone managing money across many positions.",
@@ -138,7 +143,7 @@ export function PricingPlans() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-5 md:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
         {PLANS.map((plan) => {
           const yearly = yearlyPrice(plan.monthly);
           // Both cycles are quoted per month. A yearly plan billed at ten months' cost still
@@ -192,18 +197,24 @@ export function PricingPlans() {
                 ))}
               </ul>
 
-              <Link
-                href="/signup"
-                className={`mt-6 inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white transition ${plan.button}`}
-              >
-                Choose {plan.name}
-              </Link>
+              {/* Signed in, this opens Razorpay for the cycle currently on screen; signed out it is
+                  still the sign-up link it always was, because a subscription needs an account to
+                  attach itself to. */}
+              <div className="mt-6">
+                <SubscribeButton
+                  plan={plan.key}
+                  cycle={billing}
+                  label={`Choose ${plan.name}`}
+                  className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white transition ${plan.button}`}
+                />
+              </div>
             </div>
           );
         })}
       </div>
 
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
+        Payments are taken by Razorpay — cards, UPI and netbanking — and settle to Stockers.AI&apos;s own bank account.
         Prices in Indian rupees, inclusive of GST. Exchange data is the same on every plan — what a plan buys is the AI
         layer on top of it. Cancel any time; annual plans are refunded pro rata.
       </p>

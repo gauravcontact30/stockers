@@ -245,7 +245,7 @@ export function IpoListings() {
         </p>
       )}
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading &&
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40" />
@@ -303,7 +303,7 @@ export function IpoListings() {
       {!loading && anticipated.length > 0 && (
         <div className="mt-8">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">On the radar · no filing window yet</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {anticipated.map((ipo) => {
               return (
                 <article

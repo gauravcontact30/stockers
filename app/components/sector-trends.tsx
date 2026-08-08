@@ -173,7 +173,7 @@ export function SectorTrends() {
       {loading && <SectionSkeleton rows={4} height="h-32" />}
 
       {!loading && leader && laggard && (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/5">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Leading sector</p>
             <p className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white">{leader.name}</p>
@@ -194,7 +194,7 @@ export function SectorTrends() {
       <AiBoardRead feature="sectors" brief={brief} />
 
       {!loading && sectors.length > 0 && (
-        <ul className="mt-4 grid gap-3 lg:grid-cols-2">
+        <ul className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {sectors.map((sector) => (
             <SectorRow key={sector.symbol} sector={sector} largest={largest} />
           ))}

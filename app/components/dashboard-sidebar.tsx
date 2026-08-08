@@ -7,11 +7,12 @@ type IconProps = { className?: string };
 /**
  * Every AI surface the dashboard hosts.
  *
- * The first seven are the screeners the workspace was built around. The eight after them are the
+ * The first eight are the screeners the workspace was built around. The eight after them are the
  * exchange boards that used to sit on the landing page: the market data under each is still public
  * and still renders, but each now carries an AI layer, and that layer is what the feature gates.
  */
 export type AiSectionId =
+  | "intel"
   | "market-pulse"
   | "top-picks"
   | "buy-tomorrow"
@@ -66,6 +67,16 @@ function OverviewIcon({ className }: IconProps) {
       <rect x="14" y="3" width="7" height="5" rx="1.5" />
       <rect x="14" y="12" width="7" height="9" rx="1.5" />
       <rect x="3" y="16" width="7" height="5" rx="1.5" />
+    </svg>
+  );
+}
+
+function IntelIcon({ className }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+      <path d="m10.5 6.8 1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1Z" />
     </svg>
   );
 }
@@ -242,6 +253,14 @@ const SUPPORT_SECTION: PlainSection = {
 
 /** Keyed by id so the dashboard can look one up without a runtime "not found" fallback. */
 export const AI_SECTIONS: Record<AiSectionId, AiSection> = {
+  intel: {
+    id: "intel",
+    label: "Intelligence Search",
+    description: "Ask anything about a BSE-listed company and get the answer in points, with its sources.",
+    icon: IntelIcon,
+    feature: "intel",
+    featureLabel: "AI intelligence search",
+  },
   "market-pulse": {
     id: "market-pulse",
     label: "Market Pulse",
@@ -378,7 +397,7 @@ export type SectionGroup = { key: string; label: string; sections: DashboardSect
 /**
  * The sidebar in groups.
  *
- * Seventeen destinations in one flat column is a list nobody reads. Grouped, the reader picks a
+ * Eighteen destinations in one flat column is a list nobody reads. Grouped, the reader picks a
  * kind of question first — am I screening, or am I looking something up — and the list under it
  * is short enough to scan.
  */
@@ -388,6 +407,7 @@ export const DASHBOARD_GROUPS: SectionGroup[] = [
     key: "screeners",
     label: "AI screeners",
     sections: [
+      AI_SECTIONS.intel,
       AI_SECTIONS["market-pulse"],
       AI_SECTIONS["top-picks"],
       AI_SECTIONS["buy-tomorrow"],
@@ -557,8 +577,17 @@ export function DashboardSidebar({ active, onSelect }: NavProps) {
   return (
     <aside
       data-collapsed={String(collapsed)}
-      className={`sticky top-0 z-30 hidden h-[100dvh] shrink-0 flex-col border-r border-slate-200 bg-white/95 backdrop-blur-xl transition-[width] duration-300 ease-out sm:flex dark:border-slate-800 dark:bg-slate-900/95 ${
-        collapsed ? "w-[76px]" : "w-[268px]"
+      /*
+       * The rail only appears at `lg` (1024px), not `sm` (640px).
+       *
+       * A 268px rail against a 640-1024px viewport left 324-500px for the boards themselves — a
+       * content column narrower than the phone layout's, on a wider screen. Every tablet now gets
+       * the same full-width column a phone gets, with the pill switcher above it; the rail waits
+       * until there is room for both. Expanded it is a little narrower until `xl`, where the
+       * content column can afford the extra 36px.
+       */
+      className={`sticky top-0 z-30 hidden h-[100dvh] shrink-0 flex-col border-r border-slate-200 bg-white/95 backdrop-blur-xl transition-[width] duration-300 ease-out lg:flex dark:border-slate-800 dark:bg-slate-900/95 ${
+        collapsed ? "w-[76px]" : "w-[232px] xl:w-[268px]"
       }`}
     >
       <div className="h-[3px] w-full shrink-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500" />
@@ -621,16 +650,20 @@ export function DashboardSidebar({ active, onSelect }: NavProps) {
   );
 }
 
-/** The same switcher for phones, where a rail would eat too much of the screen. */
+/** The same switcher for phones and tablets, where a rail would eat too much of the screen. */
 export function DashboardSectionTabs({ active, onSelect }: NavProps) {
   return (
     <nav
       aria-label="Dashboard sections (compact)"
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:hidden [scrollbar-width:none]"
+      // Runs to `lg` to meet the rail: see the note on DashboardSidebar for why 640-1024px keeps
+      // the compact switcher rather than the rail.
+      // bleed-gutter/gutter rather than `-mx-4 px-4`: the pills scroll edge to edge, and that only
+      // lines up with the page's padding if it cancels the same value the page actually used.
+      className="bleed-gutter gutter flex gap-2 overflow-x-auto pb-1 lg:hidden [scrollbar-width:none]"
     >
       {DASHBOARD_GROUPS.flatMap((group, index) => [
         // The same grouping as the rail, flattened into the scroller so a reader swiping through
-        // seventeen pills still knows which family they are in.
+        // eighteen pills still knows which family they are in.
         <span
           key={group.key}
           className={`shrink-0 self-center whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ${

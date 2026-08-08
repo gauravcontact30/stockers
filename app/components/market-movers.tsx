@@ -146,7 +146,7 @@ export function MarketMovers({ movers, className = "" }: { movers: Record<CapTie
         <span className="text-[11px] text-slate-400 dark:text-slate-500">Colours group stocks by sector</span>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <MoverList title="Top 5 gainers" movers={active.gainers} direction="up" />
         <MoverList title="Top 5 losers" movers={active.losers} direction="down" />
       </div>

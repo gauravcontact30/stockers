@@ -11,7 +11,7 @@ export function PredictionPanel({ symbol }: { symbol: string }) {
           Technical structure and macro sentiment suggest upside potential over the next trading window if support holds.
         </p>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "Support", value: "₹2,350" },
           { label: "Resistance", value: "₹2,540" },

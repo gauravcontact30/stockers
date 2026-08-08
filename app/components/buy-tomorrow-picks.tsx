@@ -136,7 +136,7 @@ export function BuyTomorrowPicks() {
         </p>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {loading &&
           Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40" />

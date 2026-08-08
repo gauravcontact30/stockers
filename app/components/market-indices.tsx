@@ -306,7 +306,7 @@ export function MarketIndices({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {indices.map((index) => (
           <IndexCard key={index.symbol} index={index} live={live} history={history[index.symbol]} />
         ))}

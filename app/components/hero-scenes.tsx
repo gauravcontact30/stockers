@@ -922,7 +922,10 @@ function DipLadder({ pick }: { pick: DipPick }) {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-baseline gap-3">
+        {/* Wraps rather than `shrink-0`: the pair is ~256px of unbreakable labels, which on the
+            narrowest phone was 17px wider than the card and got cropped. Allowed to wrap, the two
+            readings stack instead. */}
+        <div className="flex flex-wrap items-baseline gap-x-3">
           <span className={`font-mono text-[11px] font-black ${UP_TEXT}`}>{signed(pick.year, 1)} over a year</span>
           <span className="font-mono text-[11px] font-black text-amber-700">{signed(-pick.offHigh, 1)} off its high</span>
         </div>

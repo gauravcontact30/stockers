@@ -68,11 +68,19 @@ describe("PricingPlans", () => {
     expect(screen.getAllByText("/month")).toHaveLength(PLANS.length);
   });
 
-  it("marks the most popular plan and links each plan to signup", () => {
+  it("marks the most popular plan and offers every plan a way to subscribe", () => {
     render(<PricingPlans />);
 
     expect(screen.getByText("Most popular").closest("div.rounded-3xl")).toHaveTextContent("Pro");
-    expect(screen.getByRole("link", { name: "Choose Elite" })).toHaveAttribute("href", "/signup");
+    // Rendered outside the subscription provider the status is unknown, so the button is the
+    // optimistic one — the checkout it opens is what 401s a signed-out visitor, not the markup.
+    expect(screen.getByRole("button", { name: "Choose Elite" })).toBeInTheDocument();
+  });
+
+  // The payment server prices a plan by its key, so a plan whose key drifted would charge for
+  // something else entirely.
+  it("gives every plan the key the payment server prices it by", () => {
+    expect(PLANS.map((plan) => plan.key)).toEqual(["starter", "pro", "elite"]);
   });
 
   it("says the exchange data is the same on every plan", () => {

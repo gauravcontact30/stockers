@@ -11,10 +11,29 @@
 // its answer is kept for a day since a company's sector does not move.
 
 import { fetchBse, fetchBseText } from "./bse-client";
-import { mapWithConcurrency } from "./market-data";
+// Sector classification lives on its own because it is the one thing this feed will not answer in
+// bulk: see ./bse-sectors for why the whole exchange is mapped in the background.
+import {
+  HISTORY_PERIODS,
+  getBaseline,
+  overallReturn,
+  periodReturn,
+  type Baseline,
+  type ReturnPeriod,
+} from "./bse-history";
+import {
+  HOUSE_CATEGORY,
+  attachSectors,
+  categoryOf,
+  classifyUniverse,
+  inHouseCategory,
+  type ClassificationProgress,
+} from "./bse-sectors";
 // Generic helpers, not NSE-specific: the same TTL memo and the same lenient number parsing that
 // India's exchange feeds require (values arrive as padded, comma-separated strings).
 import { cached, toNumber, toText } from "./nse-client";
+
+export { attachSectors };
 
 export type BseCapTier = "Large" | "Mid" | "Small";
 
@@ -74,8 +93,6 @@ const MID_CAP_RANKS = 250;
 
 const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
 const TAPE_TTL_MS = 15 * 60 * 1000;
-const SECTOR_TTL_MS = 24 * 60 * 60 * 1000;
-const SECTOR_CONCURRENCY = 8;
 
 type RawScrip = {
   SCRIP_CD?: unknown;
@@ -256,32 +273,6 @@ export const getBseTape = cached<BseTape>(TAPE_TTL_MS, async () => {
   return { rows: new Map(), sessionDate: null };
 });
 
-type RawHeader = { Sector?: unknown; IndustryNew?: unknown; Industry?: unknown };
-type SectorInfo = { sector: string | null; industry: string | null };
-
-const sectorCache = new Map<string, { value: SectorInfo; expiresAt: number }>();
-
-/** One scrip's sector classification, remembered for a day. */
-async function loadSector(code: string): Promise<SectorInfo> {
-  const hit = sectorCache.get(code);
-  if (hit && hit.expiresAt > Date.now()) return hit.value;
-
-  const raw = await fetchBse<RawHeader>(`/ComHeader/w?quotetype=EQ&scripcode=${encodeURIComponent(code)}&seriesid=`);
-  const value: SectorInfo = {
-    sector: toText(raw?.Sector) || null,
-    industry: toText(raw?.IndustryNew) || toText(raw?.Industry) || null,
-  };
-
-  // A failed lookup is cached briefly too, so one unhappy scrip can't be retried on every render.
-  sectorCache.set(code, { value, expiresAt: Date.now() + (value.sector ? SECTOR_TTL_MS : 60_000) });
-  return value;
-}
-
-export async function attachSectors(rows: (BseStock & BseQuote)[]): Promise<BseRow[]> {
-  const sectors = await mapWithConcurrency(rows, SECTOR_CONCURRENCY, (row) => loadSector(row.code));
-  return rows.map((row, index) => ({ ...row, ...sectors[index] }));
-}
-
 function emptyQuote(): BseQuote {
   return {
     price: null,
@@ -364,15 +355,146 @@ export async function getBseBoard(): Promise<BseBoard> {
   };
 }
 
+type RawIndustry = { Industry_name?: unknown };
+
+/**
+ * Every category the exchange classifies companies into, as BSE's own industry list gives them.
+ *
+ * Taken from the exchange rather than from whatever the classification walk happens to have seen,
+ * so the board can show all of them from the first render — including the categories nothing has
+ * been mapped into yet.
+ */
+export const getBseIndustries = cached<string[]>(UNIVERSE_TTL_MS, async () => {
+  const raw = await fetchBse<RawIndustry[]>("/ddlIndustry/w");
+  if (!Array.isArray(raw)) return [];
+
+  const names = raw.map((entry) => toText(entry.Industry_name)).filter((name) => name.length > 0);
+  return [...new Set(names)];
+});
+
+/**
+ * What counts as a standout move, up or down.
+ *
+ * On a session where the average scrip moves under a percent, five is the line between drifting
+ * with the market and doing something worth a second look — and it is symmetric, so the star and
+ * the red count mean the same thing in opposite directions.
+ */
+export const STANDOUT_PERCENT = 5;
+
+export type BseSectorSummary = {
+  sector: string;
+  /** Classified companies in this category that traded and have a price to compare. */
+  stocks: number;
+  gainers: number;
+  losers: number;
+  /** The category's strongest performers — up by STANDOUT_PERCENT or more. */
+  star: number;
+  /** Its laggards — down by STANDOUT_PERCENT or more. */
+  red: number;
+  /** True for a grouping we keep ourselves rather than one the exchange publishes. */
+  house: boolean;
+};
+
+export type BseSectorBoard = {
+  sectors: BseSectorSummary[];
+  /** Companies the walk has not reached yet, or that BSE files under no sector at all. */
+  unclassified: number;
+  classification: ClassificationProgress;
+  sessionDate: string | null;
+};
+
+/**
+ * The session broken down by the exchange's own sector categories.
+ *
+ * Every traded company is counted into its sector, so a block can say how many of its names rose
+ * and which moved most — and the movers inside a block are then paged through getBseMovers with
+ * the same sector, which is what lets a reader work through all of a category rather than its
+ * top few.
+ *
+ * While the background classification is still running the counts describe the companies mapped
+ * so far; `classification` says exactly how far that is, so the UI can state it rather than
+ * present a partial picture as the whole one.
+ */
+/** Whether a company belongs in the named category — the exchange's, or the one we keep ourselves. */
+function matchesCategory(code: string, category: string): boolean {
+  return category === HOUSE_CATEGORY ? inHouseCategory(code) : categoryOf(code) === category;
+}
+
+export async function getBseSectorBoard(): Promise<BseSectorBoard> {
+  const [universe, tape, industries] = await Promise.all([getBseUniverse(), getBseTape(), getBseIndustries()]);
+  const classification = classifyUniverse(universe.stocks.map((stock) => stock.code));
+
+  const priced = universe.stocks
+    .map((stock) => join(stock, tape))
+    .filter((row): row is BseStock & BseQuote => row !== null && row.changePercent !== null);
+
+  // Every category the exchange publishes starts with an empty bucket, so the board lists all of
+  // them from the first render rather than growing a category at a time as the walk finds one. The
+  // house category joins them and needs no classification at all — its members are named outright.
+  const grouped = new Map<string, (BseStock & BseQuote)[]>([...industries, HOUSE_CATEGORY].map((name) => [name, []]));
+  let unclassified = 0;
+
+  for (const row of priced) {
+    // A data-centre company is counted here as well as in whatever the exchange files it under, so
+    // the official categories still add up to the exchange.
+    if (inHouseCategory(row.code)) grouped.get(HOUSE_CATEGORY)?.push(row);
+
+    const category = categoryOf(row.code);
+    if (!category) {
+      unclassified++;
+      continue;
+    }
+
+    // A category the industry list did not mention still gets a bucket: the classification comes
+    // from the same exchange, and dropping a company because two of its endpoints disagree would
+    // lose it from the board entirely.
+    const bucket = grouped.get(category);
+    if (bucket) bucket.push(row);
+    else grouped.set(category, [row]);
+  }
+
+  const sectors: BseSectorSummary[] = [...grouped.entries()].map(([sector, rows]) => {
+    const changes = rows.map((row) => row.changePercent as number);
+
+    return {
+      sector,
+      stocks: rows.length,
+      gainers: changes.filter((change) => change > 0).length,
+      losers: changes.filter((change) => change < 0).length,
+      star: changes.filter((change) => change >= STANDOUT_PERCENT).length,
+      red: changes.filter((change) => change <= -STANDOUT_PERCENT).length,
+      house: sector === HOUSE_CATEGORY,
+    };
+  });
+
+  // Alphabetical: a reader looking for one category should find it where its name puts it, not
+  // wherever the day's stock counts happen to place it.
+  sectors.sort((a, b) => a.sector.localeCompare(b.sector));
+
+  return { sectors, unclassified, classification, sessionDate: tape.sessionDate };
+}
+
 export type MoverQuery = {
   tier?: "all" | Lowercase<BseCapTier>;
   direction?: "gainers" | "losers";
+  /** Which return the board is ranked by. Defaults to the session's own move. */
+  period?: ReturnPeriod;
+  /** Name, ticker, scrip code or ISIN — the same four ways the directory is searched. */
+  q?: string;
+  /** One of the exchange's categories, exactly as BSE's industry list names it. */
+  category?: string;
+  /** Only moves of at least this size, as a positive percentage in either direction. */
+  minPercent?: number;
   page?: number;
   pageSize?: number;
 };
 
 export type BseMoverPage = {
-  rows: BseRow[];
+  rows: (BseRow & { returnPercent: number | null })[];
+  /** The return the rows are ranked by, and the session it is measured from. */
+  period: ReturnPeriod;
+  periodFrom: string | null;
+  /** Every stock that moved this way on the exchange — the list is not trimmed to a top N. */
   total: number;
   page: number;
   pageSize: number;
@@ -381,38 +503,80 @@ export type BseMoverPage = {
 };
 
 const MOVER_PAGE_SIZE = 5;
-const MAX_MOVER_PAGE_SIZE = 25;
+// A page is also a batch of sector lookups, so the ceiling bounds what one request can cost
+// upstream as much as it bounds the response.
+const MAX_MOVER_PAGE_SIZE = 50;
 
 const TIER_FOR_KEY: Record<Lowercase<BseCapTier>, BseCapTier> = { large: "Large", mid: "Mid", small: "Small" };
 
 /**
  * One page of the day's movers, over the whole list rather than a top ten.
  *
- * The board used to ship a fixed ten each way. Paging happens here rather than in the browser for
- * the same reason the directory does it: every mover in both directions across four cap tiers is
- * thousands of rows, and — more to the point — each row's sector costs an upstream call, so only
- * the five actually being looked at are ever resolved.
+ * The board used to ship a fixed ten each way. Searching, filtering and paging all happen here
+ * rather than in the browser for the same reason the directory does it: every mover in both
+ * directions across four cap tiers is thousands of rows, and — more to the point — each row's
+ * sector costs an upstream call, so only the rows actually being looked at are ever resolved.
+ *
+ * A search is the one thing that is not confined to the direction being viewed. Roughly half the
+ * exchange falls on any given day, so searching "Neuland" from the gainers board and being told it
+ * does not exist is simply wrong — a reader looking a company up wants that company, whichever way
+ * it went, and it is the sort order that belongs to the tab, not the universe being searched.
+ *
+ * The period decides what "gainer" means. Over one session it is the day's move; over five years it
+ * is the return against that session's close five years ago, which is a different list of companies
+ * entirely — and the one that answers "what has actually compounded".
  */
 export async function getBseMovers(query: MoverQuery): Promise<BseMoverPage> {
-  const [universe, tape] = await Promise.all([getBseUniverse(), getBseTape()]);
+  const period = query.period ?? "1d";
+  const [universe, tape, history] = await Promise.all([getBseUniverse(), getBseTape(), loadHistory(period)]);
 
   const tier = query.tier ?? "all";
   const direction = query.direction ?? "gainers";
+  const term = (query.q ?? "").trim().toLowerCase();
+  const minPercent = query.minPercent && query.minPercent > 0 ? query.minPercent : 0;
   const pageSize = Math.min(Math.max(query.pageSize ?? MOVER_PAGE_SIZE, 1), MAX_MOVER_PAGE_SIZE);
+  const searching = term.length > 0;
 
-  const priced = universe.stocks
+  // Asking for a category is what keeps the background classification moving: the walk is started
+  // here rather than by a separate warm-up, so the first board that needs it begins the map.
+  if (query.category) classifyUniverse(universe.stocks.map((stock) => stock.code));
+
+  const listed = universe.stocks
     .map((stock) => join(stock, tape))
-    .filter((row): row is BseStock & BseQuote => row !== null && row.changePercent !== null)
-    .filter((row) => tier === "all" || row.capTier === TIER_FOR_KEY[tier]);
+    .filter((row): row is BseStock & BseQuote => row !== null)
+    // A search reaches every listed company, including one that did not trade at all this session;
+    // browsing a direction only ever means companies with a price to rank.
+    .filter((row) => searching || row.changePercent !== null)
+    .filter((row) => tier === "all" || row.capTier === TIER_FOR_KEY[tier])
+    .filter((row) => !query.category || matchesCategory(row.code, query.category))
+    // The figure everything below ranks, filters and reports on. Over one session that is the move
+    // the Bhavcopy already states; over anything longer it is measured against the reference close.
+    .map((row) => ({ ...row, returnPercent: returnFor(row, period, history) }));
 
-  const rows = priced
-    .filter((row) => (direction === "gainers" ? (row.changePercent as number) > 0 : (row.changePercent as number) < 0))
-    // Biggest move of the day first in both directions, so page one is always the sharpest.
-    .sort((a, b) =>
-      direction === "gainers"
-        ? (b.changePercent as number) - (a.changePercent as number)
-        : (a.changePercent as number) - (b.changePercent as number),
-    );
+  const rows = listed
+    .filter(
+      (row) => searching || (direction === "gainers" ? (row.returnPercent ?? 0) > 0 : (row.returnPercent ?? 0) < 0),
+    )
+    // The size of a move, not its sign: a filter of 5% means the same thing on both boards.
+    .filter((row) => minPercent === 0 || Math.abs(row.returnPercent ?? 0) >= minPercent)
+    .filter(
+      (row) =>
+        !searching ||
+        row.name.toLowerCase().includes(term) ||
+        row.ticker.toLowerCase().includes(term) ||
+        row.code.includes(term) ||
+        row.isin.toLowerCase() === term,
+    )
+    // Biggest return first in both directions, so page one is always the sharpest and every page
+    // after it descends from there. A company with no return over this period — it did not trade,
+    // or was not listed that far back — has no ranking among those that do, so it sorts to the
+    // bottom either way rather than leading the list.
+    .sort((a, b) => {
+      const left = a.returnPercent;
+      const right = b.returnPercent;
+      if (left === null || right === null) return left === right ? 0 : left === null ? 1 : -1;
+      return direction === "gainers" ? right - left : left - right;
+    });
 
   const total = rows.length;
   const pages = Math.max(Math.ceil(total / pageSize), 1);
@@ -420,12 +584,39 @@ export async function getBseMovers(query: MoverQuery): Promise<BseMoverPage> {
 
   return {
     rows: await attachSectors(rows.slice((page - 1) * pageSize, page * pageSize)),
+    period,
+    // Where the return is measured from: the session itself for 1d, otherwise the reference close.
+    periodFrom: period === "1d" ? tape.sessionDate : (history[history.length - 1]?.date ?? null),
     total,
     page,
     pageSize,
     pages,
     sessionDate: tape.sessionDate,
   };
+}
+
+/**
+ * The reference sessions a period needs.
+ *
+ * One file for a fixed period, and for "overall" every file there is — the earliest one a company
+ * appears in is the furthest back it can honestly be measured from, and finding that means holding
+ * them all. They are memoised for half a day, so this is one download per period per process.
+ */
+async function loadHistory(period: ReturnPeriod): Promise<Baseline[]> {
+  if (period === "1d") return [];
+  if (period !== "overall") return [await getBaseline(period)];
+
+  return Promise.all(HISTORY_PERIODS.map((each) => getBaseline(each)));
+}
+
+/** One company's return over the period, in percent. */
+function returnFor(row: BseStock & BseQuote, period: ReturnPeriod, history: Baseline[]): number | null {
+  if (period === "1d") return row.changePercent;
+  if (row.price === null) return null;
+
+  return period === "overall"
+    ? overallReturn(row.code, row.price, history)
+    : periodReturn(row.code, row.price, history[0]);
 }
 
 export type DirectoryQuery = {

@@ -147,7 +147,9 @@ export function SubscriptionReminder() {
             type="button"
             onClick={close}
             aria-label="Dismiss reminder"
-            className={`absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-black transition hover:rotate-90 ${theme.control}`}
+            // h-10 w-10: this is the only way out of a modal that covers the screen, so it needs to
+            // be comfortably tappable rather than the 8x8 square it was.
+            className={`absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-sm font-black transition hover:rotate-90 ${theme.control}`}
           >
             ✕
           </button>

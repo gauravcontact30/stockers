@@ -69,7 +69,7 @@ export function TripleCompare() {
         </div>
       }
     >
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         {SLOTS.map((slot) => (
           <StockPicker
             key={slot}

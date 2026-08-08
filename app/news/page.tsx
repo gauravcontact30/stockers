@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function NewsPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 px-4 py-6 text-slate-700 transition-colors sm:px-6 lg:px-8 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+    <main className="gutter min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 py-6 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <AuthHeader />
 

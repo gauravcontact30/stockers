@@ -128,10 +128,10 @@ export function classifySentiment(text: string): Sentiment {
   return "Neutral";
 }
 
-function parseFeed(xml: string): NewsItem[] {
+function parseFeed(xml: string, limit = ITEM_LIMIT, order: FeedOrder = "date"): NewsItem[] {
   const blocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((match) => match[1]);
 
-  return blocks
+  const items = blocks
     .map((block) => {
       const source = readTag(block, "source");
       const title = stripPublisherSuffix(readTag(block, "title"), source);
@@ -151,9 +151,13 @@ function parseFeed(xml: string): NewsItem[] {
         company: null,
       };
     })
-    .filter((item) => item.title && item.url)
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, ITEM_LIMIT);
+    .filter((item) => item.title && item.url);
+
+  // "feed" keeps Google's own ordering, which is its relevance ranking for the query. The news
+  // board always wants the newest first; the intelligence search offers the reader both.
+  if (order === "date") items.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+
+  return items.slice(0, limit);
 }
 
 // Sentiment is the one judgement the model is asked for, and only over headlines it was handed —
@@ -386,19 +390,33 @@ async function briefWithAi(title: string, related: NewsItem[]): Promise<string[]
   }
 }
 
-/** One search's worth of headlines, or nothing if that search fails. */
-async function fetchFeed(query: string): Promise<NewsItem[]> {
+/** Whether a feed comes back newest-first or in the order the publisher's search ranked it. */
+export type FeedOrder = "date" | "feed";
+
+/**
+ * One search's worth of headlines, or nothing if that search fails.
+ *
+ * Exported because the intelligence search runs its own queries against the same public feed —
+ * one retrieval path for everything on the site that reads the web, rather than two that could
+ * disagree about what a headline is.
+ */
+export async function fetchNewsQuery(
+  query: string,
+  options: { limit?: number; order?: FeedOrder } = {},
+): Promise<NewsItem[]> {
   try {
     const response = await fetch(feedUrl(query), {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; stockers-app/1.0)" },
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });
-    return response.ok ? parseFeed(await response.text()) : [];
+    return response.ok ? parseFeed(await response.text(), options.limit, options.order) : [];
   } catch {
     return [];
   }
 }
+
+const fetchFeed = (query: string) => fetchNewsQuery(query);
 
 export async function getMarketNews(symbolInput?: string | null): Promise<NewsFeed> {
   const symbol = symbolInput ? symbolInput.trim().toUpperCase() : null;

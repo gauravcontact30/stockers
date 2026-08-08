@@ -28,7 +28,11 @@ export function MobileNav({ links }: { links: NavLink[] }) {
         onClick={() => setOpen(false)}
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
       />
-      <div className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-5 shadow-2xl dark:bg-slate-900">
+      {/* The panel runs the full height of the screen and is flush to the right edge, so on a
+          notched phone its top row, its bottom buttons and its right edge all need the hardware's
+          insets added to the base 1.25rem. Stated per side rather than via a `p-safe` utility,
+          because a utility setting `padding` would replace this padding instead of adding to it. */}
+      <div className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Menu</p>
           <button

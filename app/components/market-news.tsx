@@ -430,7 +430,7 @@ function NewsHalf({
         </p>
       ) : (
         <>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {paged.slice.map((item) => (
               <NewsCard key={item.id} item={item} onOpen={onOpen} />
             ))}
@@ -532,7 +532,7 @@ export function MarketNews({ symbol, compact = false }: { symbol?: string; compa
       )}
 
       {loading && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}

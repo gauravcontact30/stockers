@@ -31,6 +31,82 @@ canvas {
   max-width: 100%;
 }
 
+/*
+ * Safe-area insets, for the notch and the home indicator.
+ *
+ * The layout asks for `viewportFit: cover`, which lets the page paint edge to edge on a modern
+ * iPhone. That is only correct if something then keeps content out of the parts of the screen the
+ * hardware owns — the notch and rounded corners (left/right in landscape) and the home indicator
+ * (bottom). Without these, a full-bleed sticky header loses its first characters behind the corner
+ * and a fixed bottom-right button sits under the home indicator.
+ *
+ * `env()` resolves to 0px on every device that has no inset, so these are inert on a laptop.
+ */
+
+/* Horizontal padding for a full-bleed bar: keeps its contents clear of the rounded corners. */
+@utility px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* For a fixed element pinned to the bottom, above the home indicator. */
+@utility mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* For a fixed element pinned to the right edge, clear of the corner. */
+@utility mr-safe {
+  margin-right: env(safe-area-inset-right);
+}
+
+/*
+ * A box that already carries padding on the side it needs an inset for cannot use a utility here —
+ * a second `padding-left` rule would replace the first rather than add to it. Those spell the sum
+ * out per side instead, e.g. `pb-[calc(1.25rem+env(safe-area-inset-bottom))]` on the nav drawer.
+ */
+
+/*
+ * The standard page gutter.
+ *
+ * This is exactly the `px-4 sm:px-6 lg:px-8` every page was already using, with the notch inset
+ * folded into each step. It replaces those three classes rather than joining them, because the sum
+ * has to happen inside one `padding-inline` declaration — two competing rules would not add up.
+ *
+ * In portrait the `env()` terms are 0px, so this is the old spacing to the pixel; in landscape on a
+ * notched phone the first character of a line stops hiding behind the rounded corner.
+ */
+@utility gutter {
+  padding-inline: calc(1rem + env(safe-area-inset-left)) calc(1rem + env(safe-area-inset-right));
+
+  @media (width >= 40rem) {
+    padding-inline: calc(1.5rem + env(safe-area-inset-left)) calc(1.5rem + env(safe-area-inset-right));
+  }
+
+  @media (width >= 64rem) {
+    padding-inline: calc(2rem + env(safe-area-inset-left)) calc(2rem + env(safe-area-inset-right));
+  }
+}
+
+/*
+ * The exact inverse of `gutter`, for a child that has to bleed back out to the screen edge — the
+ * hero carousel sits inside the gutter but is meant to touch both sides.
+ *
+ * It has to be kept in step with `gutter` above: this pair used to be `px-4 sm:px-6 lg:px-8` and
+ * `-mx-4 sm:-mx-6 lg:-mx-8`, and the cancellation only stays exact if the inset term appears on
+ * both sides of it.
+ */
+@utility bleed-gutter {
+  margin-inline: calc(-1rem - env(safe-area-inset-left)) calc(-1rem - env(safe-area-inset-right));
+
+  @media (width >= 40rem) {
+    margin-inline: calc(-1.5rem - env(safe-area-inset-left)) calc(-1.5rem - env(safe-area-inset-right));
+  }
+
+  @media (width >= 64rem) {
+    margin-inline: calc(-2rem - env(safe-area-inset-left)) calc(-2rem - env(safe-area-inset-right));
+  }
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;

@@ -213,7 +213,7 @@ export function MostTraded() {
 
       {!loading && stocks.length > 0 && (
         <>
-          <ul className="mt-5 grid gap-3 lg:grid-cols-2">
+          <ul className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {paged.slice.map((stock, index) => (
               <TradedRow key={stock.symbol} stock={stock} rank={paged.from + index} />
             ))}

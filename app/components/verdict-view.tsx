@@ -172,7 +172,7 @@ export function VerdictCards({ stocks, leader, laggard }: { stocks: StockVerdict
 /** The compact form, for the per-section panel where there is no room for a table. */
 export function VerdictStrip({ stocks }: { stocks: StockVerdict[] }) {
   return (
-    <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {stocks.map((stock) => (
         <li
           key={stock.symbol}

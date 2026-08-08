@@ -29,6 +29,12 @@ const STEPS: Step[] = [
     ],
   },
   {
+    title: "Ask your own question",
+    detail:
+      "Intelligence Search is the one board where the question is yours rather than ours. Name a company and it reads what Indian publishers have written about it, then answers in points — each one carrying the report it came from, so you can check any line at its source.",
+    routes: [{ id: "intel", label: "Open Intelligence Search" }],
+  },
+  {
     title: "Find something to look at",
     detail:
       "Three different ways in, depending on what you know. Search a company by name, ticker, scrip code or ISIN; follow the money into the heaviest-traded names; or read what companies filed with the exchange today.",
@@ -159,7 +165,7 @@ export function GettingStarted({ onOpen }: { onOpen: (id: DashboardSectionId) =>
           Getting started
         </p>
         <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-          Sixteen boards, one workspace — here is the order to read them in
+          Seventeen boards, one workspace — here is the order to read them in
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
           Everything the exchanges publish and everything the AI desk scores now lives behind the sidebar on the left. This
@@ -172,7 +178,7 @@ export function GettingStarted({ onOpen }: { onOpen: (id: DashboardSectionId) =>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Each step opens where it points — nothing here is a dead end.
         </p>
-        <ol className="mt-5 grid gap-3 lg:grid-cols-2">
+        <ol className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {STEPS.map((step, index) => (
             <StepCard key={step.title} step={step} index={index} onOpen={onOpen} />
           ))}
@@ -189,7 +195,7 @@ export function GettingStarted({ onOpen }: { onOpen: (id: DashboardSectionId) =>
       </section>
 
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Still stuck?</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">

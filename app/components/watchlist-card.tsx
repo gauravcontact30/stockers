@@ -140,7 +140,10 @@ export function WatchRow({ symbol, onRemove }: { symbol: string; onRemove: (symb
           type="button"
           onClick={() => onRemove(symbol)}
           aria-label={`Remove ${symbol} from watchlist`}
-          className="shrink-0 rounded-full border border-slate-200 px-2 py-0.5 text-xs font-bold text-slate-400 transition hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:text-slate-500"
+          // Sized rather than padded to a 36px square: at px-2 py-0.5 this was a 28x22 target, which
+          // is under the threshold for a reliable thumb tap — and it deletes a row, so a near-miss
+          // is worse here than most.
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-xs font-bold text-slate-400 transition hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:text-slate-500"
         >
           ✕
         </button>

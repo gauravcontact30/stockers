@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
-import { BseMarketBoard } from "./components/bse-market-board";
+import { BseMoversBoard } from "./components/bse-movers-board";
+import { BseSectorMovers } from "./components/bse-sector-movers";
 import { HeroCarousel } from "./components/hero-carousel";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
@@ -10,20 +11,13 @@ import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
 
 const navLinks = [
-  { href: "#bse-board", label: "BSE Board" },
+  { href: "#bse-movers", label: "Gainers & Losers" },
+  { href: "#bse-sectors", label: "By Category" },
   { href: "#workspace", label: "Workspace" },
   { href: "/news", label: "News" },
   { href: "#pricing", label: "Pricing" },
   { href: "/dashboard#support", label: "Getting Started" },
   { href: "/dashboard", label: "AI Dashboard" },
-];
-
-// Coverage claims worth stating up front: each one is what the sections below actually deliver.
-const coverage = [
-  { figure: "4,900+", label: "BSE-listed companies", note: "Every active equity on the exchange" },
-  { figure: "Top 10", label: "Gainers & losers", note: "Whole market and per cap tier" },
-  { figure: "SEBI", label: "Cap classification", note: "Top 100 large · next 150 mid · rest small" },
-  { figure: "Official", label: "Exchange sources", note: "BSE scrip master, Bhavcopy and NSE feeds" },
 ];
 
 // Every board now lives in the signed-in workspace, each with an AI layer on top of it. The
@@ -52,6 +46,7 @@ const workspace = [
     group: "AI screeners",
     tint: "text-emerald-600 dark:text-emerald-400",
     items: [
+      { href: "/dashboard#intel", label: "Intelligence Search", blurb: "Ask anything about a BSE stock; get the answer in points, with sources.", tint: CARD_TINTS.lime },
       { href: "/dashboard#market-pulse", label: "Market Pulse", blurb: "Live indices and breadth with an AI read on the day's mood.", tint: CARD_TINTS.emerald },
       { href: "/dashboard#top-picks", label: "Top Picks", blurb: "The stocks our agent rates highest right now.", tint: CARD_TINTS.amber },
       { href: "/dashboard#buy-tomorrow", label: "Buy Tomorrow", blurb: "Names set up for tomorrow's session, scored overnight.", tint: CARD_TINTS.indigo },
@@ -99,7 +94,10 @@ function BandHeading({ eyebrow, title, blurb }: { eyebrow: string; title: string
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl transition-colors dark:border-slate-800 dark:bg-slate-900/80">
+      {/* px-safe sits on the bar rather than on the row inside it, so it adds to that row's
+          padding instead of replacing it. The background still bleeds to the screen edge; only the
+          controls move in, clear of a notched phone's rounded corners in landscape. */}
+      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/90 px-safe shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl transition-colors dark:border-slate-800 dark:bg-slate-900/80">
         <div className="h-[3px] w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500" />
         <div className="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 xl:px-6">
           <Link href="/" className="group flex shrink-0 items-center gap-3">
@@ -139,36 +137,25 @@ export default function Home() {
 
       {/* No top padding: the carousel is meant to sit flush under the navbar, and `py-6` was
           leaving a band of page background between the two. The bottom padding stays. */}
-      <div className="px-4 pb-6 sm:px-6 lg:px-8">
+      <div className="gutter pb-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="bleed-gutter">
           <HeroCarousel />
         </div>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {coverage.map((item) => (
-            <div
-              key={item.label}
-              className="rounded-2xl border border-slate-200 bg-white/70 p-4 backdrop-blur transition hover:border-sky-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-sky-500/40"
-            >
-              <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{item.figure}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{item.note}</p>
-            </div>
-          ))}
-        </section>
-
         <BandHeading
-          eyebrow="01 · The exchange, end to end"
-          title="BSE market research"
-          blurb="The full listed universe, the session's biggest moves in both directions, and a company lookup — sourced from the exchange's own files."
+          eyebrow="01 · The session, both ways"
+          title="Every gainer and every loser on the BSE"
+          blurb="Two tabs over the whole exchange: everything that closed higher, and everything that closed lower. Each is paged on its own, in descending order of the move, and filters down to a single cap tier."
         />
 
-        <BseMarketBoard />
+        <BseMoversBoard />
+
+        <BseSectorMovers />
 
         <BandHeading
           eyebrow="02 · Everything else, in one workspace"
-          title="Sixteen boards behind one sidebar"
+          title="Seventeen boards behind one sidebar"
           blurb="The board above is the free sample. Company lookup, sector rotation, turnover, filings, dividends, IPOs and ETFs each live in the signed-in dashboard now — every one of them with an AI layer reading it for you."
         />
 
@@ -193,7 +180,7 @@ export default function Home() {
           {workspace.map((band) => (
             <div key={band.group} className="mt-6">
               <p className={`text-[11px] font-bold uppercase tracking-[0.28em] ${band.tint}`}>{band.group}</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {band.items.map((feature) => (
                   <Link
                     key={feature.href}

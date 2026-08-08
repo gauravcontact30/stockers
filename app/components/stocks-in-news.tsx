@@ -174,7 +174,7 @@ export function StocksInNews() {
             <span className="text-[11px] text-slate-400 dark:text-slate-500">newest first</span>
           </div>
 
-          <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+          <ul className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {paged.slice.map((item) => (
               <NewsRow key={item.id} item={item} />
             ))}

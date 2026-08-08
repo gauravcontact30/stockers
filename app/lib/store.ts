@@ -17,6 +17,13 @@ export type AppUser = {
   trialStartedAt?: string;
   /** Last IST date (YYYY-MM-DD) a paid subscription covers; null or absent when unsubscribed. */
   subscribedUntil?: string | null;
+  /**
+   * The Razorpay payment id last credited to this account.
+   *
+   * Kept so a payment can only ever buy one period: the verify route and the webhook both fire for
+   * the same successful payment, and whichever arrives second sees its own id here and stops.
+   */
+  lastPaymentId?: string | null;
 };
 
 const filePath = path.join(process.cwd(), "app", "data", "users.json");

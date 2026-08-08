@@ -178,11 +178,17 @@ export async function getAccessStatus(user: AppUser | null): Promise<AccessStatu
   return accessStatusFor(user, todayIST(), holidays);
 }
 
-/** Adds SUBSCRIPTION_DAYS to whichever is later: today, or an existing unexpired subscription. */
-export function renewedUntil(current: string | null | undefined, today: string): string {
+/**
+ * Adds a period to whichever is later: today, or an existing unexpired subscription.
+ *
+ * `days` defaults to the standard month so every existing caller is unchanged; a paid annual cycle
+ * passes 365. Extending from the current expiry rather than from today is what stops a subscriber
+ * losing the days they have already paid for by renewing early.
+ */
+export function renewedUntil(current: string | null | undefined, today: string, days = SUBSCRIPTION_DAYS): string {
   const from = current && current > today ? current : today;
   const date = new Date(`${from}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + SUBSCRIPTION_DAYS);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
@@ -192,6 +198,7 @@ export function renewedUntil(current: string | null | undefined, today: string):
 
 /** Every AI-backed surface an admin can lock independently. */
 export const AI_FEATURES = [
+  { key: "intel", label: "AI intelligence search" },
   { key: "market-pulse", label: "AI market pulse" },
   { key: "top-picks", label: "Today's AI picks" },
   { key: "buy-tomorrow", label: "Buy tomorrow screener" },

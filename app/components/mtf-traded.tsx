@@ -102,7 +102,7 @@ export function MtfTraded() {
 
       {!loading && stocks.length > 0 && (
         <>
-          <ul className="mt-5 grid gap-2.5 lg:grid-cols-2">
+          <ul className="mt-5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {paged.slice.map((stock, index) => (
               <MtfRow key={stock.symbol} stock={stock} rank={paged.from + index} />
             ))}

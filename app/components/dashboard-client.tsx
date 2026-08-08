@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactElement } from "re
 import { useRouter } from "next/navigation";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { GatedSection } from "./ai-gate";
+import { AiIntelSearch } from "./ai-intel-search";
 import { AiReportModal } from "./ai-report-modal";
 import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
@@ -181,8 +182,12 @@ export function DashboardClient() {
   const overview = (
     <div className="flex flex-col gap-6">
       <OverviewHeader name={user?.name || "investor"} />
+      {/* The one place a reader can ask their own question rather than pick one of ours, so it
+          sits above the standing panels rather than under them. The same panel has a section of
+          its own in the rail for anyone who came here to do nothing else. */}
+      <AiIntelSearch />
       <AiVerdictPanel section="overview" />
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI research</p>
@@ -258,6 +263,7 @@ export function DashboardClient() {
   // Only the open section is mounted: each AI panel fetches its own live data, so rendering all
   // of them at once would fire every market endpoint on page load.
   const aiPanels: Record<AiSectionId, ReactElement> = {
+    intel: <AiIntelSearch />,
     "market-pulse": <MarketPulse />,
     "top-picks": <TopPicksToday />,
     "buy-tomorrow": <BuyTomorrowPicks />,
@@ -286,7 +292,7 @@ export function DashboardClient() {
       <div className="flex">
         <DashboardSidebar active={section} onSelect={openSection} />
 
-        <div className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="gutter min-w-0 flex-1 py-8">
           <div className="mx-auto flex max-w-7xl flex-col gap-6">
             <header className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] transition-colors md:flex-row md:items-center md:justify-between dark:border-slate-800 dark:bg-slate-900">
               <div>

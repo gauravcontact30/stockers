@@ -289,7 +289,7 @@ export function DividendBoard() {
               Advanced search
             </p>
 
-            <div className="mt-3 grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
+            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
               <label className="block">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Company or ticker</span>
                 <input
@@ -377,7 +377,7 @@ export function DividendBoard() {
 
           {rows.length > 0 ? (
             <>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+              <ul className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {paged.slice.map((dividend) => (
                   <DividendRow key={`${dividend.symbol}-${dividend.exDate}-${dividend.subject}`} dividend={dividend} />
                 ))}
