@@ -31,9 +31,9 @@ function verdict(overrides: Partial<StockVerdict> = {}): StockVerdict {
 
 describe("StanceBadge", () => {
   it.each([
-    ["Buy", "BUY"],
+    ["Buy", "OUTPERFORM"],
     ["Hold", "HOLD"],
-    ["Sell", "SELL"],
+    ["Sell", "UNDERPERFORM"],
   ] as const)("shouts the %s call", (stance, label) => {
     render(<StanceBadge stance={stance} />);
     expect(screen.getByText(label)).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("StanceBadge", () => {
 
   it("has a compact form for tight rows", () => {
     render(<StanceBadge stance="Buy" size="sm" />);
-    expect(screen.getByText("BUY")).toHaveClass("text-[10px]");
+    expect(screen.getByText("OUTPERFORM")).toHaveClass("text-[10px]");
   });
 });
 
@@ -77,7 +77,7 @@ describe("VerdictStrip", () => {
     render(<VerdictStrip stocks={[verdict({ stance: "Buy", score: 71 })]} />);
 
     const card = screen.getByText("TCS").closest("li")!;
-    expect(within(card).getByText("BUY")).toBeInTheDocument();
+    expect(within(card).getByText("OUTPERFORM")).toBeInTheDocument();
     expect(within(card).getByText("1M +17.02%")).toBeInTheDocument();
     expect(within(card).getByText("71")).toBeInTheDocument();
   });

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 
 // jsdom doesn't implement matchMedia — several components/hooks probe it defensively.
-if (!window.matchMedia) {
+if (typeof window !== "undefined" && !window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: jest.fn().mockImplementation((query: string) => ({
@@ -19,7 +19,9 @@ if (!window.matchMedia) {
 
 // jsdom implements window.scrollTo as a stub that logs "not implemented" — replace with a
 // silent jest.fn() so back-to-top's click handler doesn't spam test output.
-window.scrollTo = jest.fn() as unknown as typeof window.scrollTo;
+if (typeof window !== "undefined") {
+  window.scrollTo = jest.fn() as unknown as typeof window.scrollTo;
+}
 
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | Document | null = null;

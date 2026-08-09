@@ -16,6 +16,8 @@ const baseStatus = {
   state: "trial",
   allowed: true,
   isAdmin: false,
+  tier: "pro",
+  planName: "Pro",
   marketDaysUsed: 1,
   marketDaysLeft: 4,
   trialStartedAt: "2026-08-01T04:00:00.000Z",
@@ -48,8 +50,8 @@ describe("AiGate", () => {
     expect(await screen.findByText("the feature")).toBeInTheDocument();
   });
 
-  it("replaces the feature with a subscribe prompt once the trial has ended", async () => {
-    mockStatus({ state: "expired", allowed: false, marketDaysLeft: 0 });
+  it("blurs the feature with a plan prompt once the current plan does not include it", async () => {
+    mockStatus({ state: "expired", allowed: false, tier: null, planName: null, marketDaysLeft: 0 });
     renderGated(
       <AiGate feature="research" label="AI stock research">
         <p>the feature</p>
@@ -57,13 +59,15 @@ describe("AiGate", () => {
     );
 
     expect(await screen.findByText("AI stock research is locked")).toBeInTheDocument();
-    expect(screen.getByText(/free trial of five open market days has ended/)).toBeInTheDocument();
+    expect(screen.getByText(/Pro is required for AI stock research/)).toBeInTheDocument();
+    expect(screen.getAllByText("Pro").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("2 star Rank 2")).toBeInTheDocument();
     expect(screen.getByText("See plans")).toHaveAttribute("href", "/#pricing");
-    expect(screen.queryByText("the feature")).not.toBeInTheDocument();
+    expect(screen.getByText("the feature")).toBeInTheDocument();
   });
 
   it("offers sign-up and sign-in to a visitor who has no account", async () => {
-    mockStatus({ state: "expired", allowed: false, signedIn: false });
+    mockStatus({ state: "expired", allowed: false, tier: null, planName: null, signedIn: false });
     renderGated(
       <AiGate feature="research" label="AI stock research">
         <p>the feature</p>
@@ -113,9 +117,9 @@ describe("FeatureLockToggle", () => {
     const fetchMock = mockStatus({ isAdmin: true, state: "admin" });
     renderGated(<FeatureLockToggle feature="research" label="AI stock research" />);
 
-    const toggle = await screen.findByRole("button", { name: "Lock AI stock research" });
+    const toggle = await screen.findByRole("button", { name: "Disable AI stock research" });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
-    expect(toggle).toHaveTextContent("Unlocked");
+    expect(toggle).not.toHaveTextContent(/^Lock$/);
 
     await user.click(toggle);
     await waitFor(() =>
@@ -130,9 +134,9 @@ describe("FeatureLockToggle", () => {
     mockStatus({ isAdmin: true, state: "admin", locks: { research: true } });
     renderGated(<FeatureLockToggle feature="research" label="AI stock research" />);
 
-    const toggle = await screen.findByRole("button", { name: "Unlock AI stock research" });
+    const toggle = await screen.findByRole("button", { name: "Enable AI stock research" });
     expect(toggle).toHaveAttribute("aria-pressed", "true");
-    expect(toggle).toHaveTextContent("Locked");
+    expect(toggle).not.toHaveTextContent("Locked");
   });
 });
 
@@ -158,7 +162,7 @@ describe("GatedSection", () => {
       </GatedSection>,
     );
 
-    expect(await screen.findByRole("button", { name: "Lock AI stock research" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Disable AI stock research" })).toBeInTheDocument();
     expect(screen.getByText("the feature")).toBeInTheDocument();
   });
 

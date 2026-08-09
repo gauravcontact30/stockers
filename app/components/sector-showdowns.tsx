@@ -45,7 +45,7 @@ export function SectorShowdowns() {
       eyebrow="Sector showdowns"
       eyebrowClass="text-violet-600 dark:text-violet-400"
       title="Five same-sector match-ups, called stock by stock"
-      blurb="Peers from one sector at a time, ranked on measured performance across five windows. Each name carries its cap tier and a buy, hold or sell call with the reasoning behind it."
+      blurb="Peers from one sector at a time, ranked on measured performance across five windows. Each name carries its cap tier and an outperform, hold or underperform call with the reasoning behind it."
       aside={
         <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400">
           {showdowns.length || 5} sector boards

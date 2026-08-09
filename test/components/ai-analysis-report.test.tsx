@@ -13,7 +13,7 @@ const baseAnalysis: AnalysisResponse = {
   nextSteps: ["Watch Q2 results"],
   prediction: "Bullish momentum expected",
   outlook: "Steady growth expected across segments.",
-  recommendation: "Buy",
+  recommendation: "Outperform",
   recommendationReasons: ["Strong deal pipeline", "Margin expansion", "Buyback support", "Extra reason dropped"],
   keyInsights: ["Cloud demand accelerating", "Attrition down"],
   positiveNews: ["Won a large deal", "Cloud demand accelerating"],
@@ -144,9 +144,9 @@ describe("AiAnalysisReport", () => {
   });
 
   describe("recommendation styling", () => {
-    it("renders Buy styling by default / when recommendation is unrecognized", () => {
+    it("renders Outperform styling by default / when recommendation is unrecognized", () => {
       renderReport({ analysis: { ...baseAnalysis, recommendation: "Something else entirely" } });
-      expect(screen.getByText("Buy")).toBeInTheDocument();
+      expect(screen.getByText("Outperform")).toBeInTheDocument();
     });
 
     it("renders Hold styling", () => {
@@ -156,22 +156,22 @@ describe("AiAnalysisReport", () => {
 
     it("renders Avoid styling for 'avoid'", () => {
       renderReport({ analysis: { ...baseAnalysis, recommendation: "Avoid this stock" } });
-      expect(screen.getByText("Avoid — do not buy")).toBeInTheDocument();
+      expect(screen.getByText("Avoid")).toBeInTheDocument();
     });
 
     it("renders Avoid styling for 'sell'", () => {
       renderReport({ analysis: { ...baseAnalysis, recommendation: "Sell immediately" } });
-      expect(screen.getByText("Avoid — do not buy")).toBeInTheDocument();
+      expect(screen.getByText("Avoid")).toBeInTheDocument();
     });
 
     it("renders Avoid styling for 'not buy'", () => {
       renderReport({ analysis: { ...baseAnalysis, recommendation: "Do not buy right now" } });
-      expect(screen.getByText("Avoid — do not buy")).toBeInTheDocument();
+      expect(screen.getByText("Avoid")).toBeInTheDocument();
     });
 
-    it("renders Buy styling when recommendation is undefined", () => {
+    it("renders Outperform styling when recommendation is undefined", () => {
       renderReport({ analysis: { ...baseAnalysis, recommendation: undefined } });
-      expect(screen.getByText("Buy")).toBeInTheDocument();
+      expect(screen.getByText("Outperform")).toBeInTheDocument();
     });
   });
 

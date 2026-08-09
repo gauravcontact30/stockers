@@ -229,6 +229,16 @@ export async function updateUser(id: string, patch: Partial<AppUser>): Promise<A
   return users[index];
 }
 
+/** Deletes one user by id. Returns false when the account is not present. */
+export async function deleteUser(id: string): Promise<boolean> {
+  const users = await readUsers();
+  const next = users.filter((user) => user.id !== id);
+  if (next.length === users.length) return false;
+
+  await writeUsers(next);
+  return true;
+}
+
 export async function findUserByEmail(email: string) {
   const users = await readUsers();
   const normalizedEmail = email.trim().toLowerCase();

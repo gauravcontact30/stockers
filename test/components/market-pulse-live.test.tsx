@@ -48,7 +48,7 @@ const pulse = {
   },
   indices: [index(24600)],
   mood: "Risk-On",
-  summary: "Buyers in control.",
+  summary: "Advancers in control.",
   themes: [],
   sectorsToWatch: [],
   generatedAt: "2026-08-06T04:00:00.000Z",

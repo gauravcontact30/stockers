@@ -18,5 +18,6 @@ export async function GET(request: Request) {
     features: AI_FEATURES,
     signedIn: user !== null,
     name: user?.name ?? null,
+    email: user?.email ?? null,
   });
 }

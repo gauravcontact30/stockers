@@ -91,7 +91,7 @@ export function MtfTraded() {
       eyebrow="MTF watch"
       eyebrowClass="text-amber-600 dark:text-amber-400"
       title="Most traded among MTF-eligible stocks"
-      blurb="Margin Trading Facility lets you buy now and pay part later, with the broker funding the rest against the shares as collateral. These are today's most heavily traded names that qualify for it."
+      blurb="Margin Trading Facility lets you enter now and pay part later, with the broker funding the rest against the shares as collateral. These are today's most heavily traded names that qualify for it."
       aside={
         <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
           {data?.mtfUniverseSize ?? 0} eligible stocks

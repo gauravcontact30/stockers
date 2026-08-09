@@ -244,7 +244,7 @@ function overallBasis(stance: Stance, returns: TrailingReturns, news: NewsTilt):
  * The whole read: one standing call, and one call per holding period.
  *
  * The headline stance is the one-year horizon's, not an average of the four. A single blended
- * number would call a stock a Hold when it is a clear Buy for five years and a clear Sell for six
+ * number would call a stock a Hold when it is a clear Buy for five years and a clear Underperform for six
  * months, which is the one answer that helps nobody.
  */
 export function buildOutlook(returns: TrailingReturns, headlines: string[]): StockOutlook {

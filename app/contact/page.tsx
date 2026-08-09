@@ -97,7 +97,7 @@ export default function ContactPage() {
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-500/10">
           <h2 className="text-base font-semibold text-amber-900 dark:text-amber-200">Before you write about a stock</h2>
           <p className="mt-2 text-sm leading-relaxed text-amber-900/90 dark:text-amber-200/90">
-            We cannot tell you what to buy or sell, or whether a security suits you. {COMPANY.brand} is not a
+            We cannot tell you what to outperform or underperform, or whether a security suits you. {COMPANY.brand} is not a
             SEBI-registered investment adviser, and answering that question would be exactly what registration exists to
             govern. We can happily explain how a figure was calculated or where it came from — see the{" "}
             <Link href="/disclaimer" className="font-semibold underline underline-offset-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { featureTier, tierAtLeast } from "../lib/plan-tiers";
 
 export type AccessState = "admin" | "trial" | "active" | "expired";
 
@@ -8,6 +9,8 @@ export type SubscriptionStatus = {
   state: AccessState;
   allowed: boolean;
   isAdmin: boolean;
+  tier: "starter" | "pro" | "elite" | null;
+  planName: "Starter" | "Pro" | "Elite" | null;
   marketDaysUsed: number;
   marketDaysLeft: number;
   trialStartedAt: string | null;
@@ -17,6 +20,7 @@ export type SubscriptionStatus = {
   features: { key: string; label: string }[];
   signedIn: boolean;
   name: string | null;
+  email?: string | null;
 };
 
 type SubscriptionValue = {
@@ -139,6 +143,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         if (!status) return true;
         if (status.isAdmin) return true;
         if (isLocked(feature)) return false;
+        const requiredTier = featureTier(feature);
+        if (requiredTier && !tierAtLeast(status.tier, requiredTier)) return false;
         return status.allowed;
       },
       refresh,

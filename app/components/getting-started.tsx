@@ -50,14 +50,14 @@ const STEPS: Step[] = [
       "Each screener asks one question and answers it with a scored list: what looks strongest today, what is set up for tomorrow, and which pullbacks still have an intact longer trend behind them.",
     routes: [
       { id: "top-picks", label: "Top Picks" },
-      { id: "buy-tomorrow", label: "Buy Tomorrow" },
+      { id: "buy-tomorrow", label: "Outperform Tomorrow" },
       { id: "dip-winners", label: "Dip Winners" },
     ],
   },
   {
     title: "Test the idea before you act",
     detail:
-      "Research gives you one company in depth. Compare puts two or three side by side — same sector for a like-for-like contest, or across sectors to see which is actually carrying its weight — and states a buy, hold or sell for each.",
+      "Research gives you one company in depth. Compare puts two or three side by side — same sector for a like-for-like contest, or across sectors to see which is actually carrying its weight — and states an outperform, hold or underperform for each.",
     routes: [
       { id: "research", label: "Stock Research" },
       { id: "compare", label: "Compare stocks" },
@@ -85,7 +85,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "What exactly is the AI doing?",
     answer:
-      "It writes, it does not decide. Every buy/hold/sell call is computed from measured returns over a week, a month, six months and a year; the model is handed that call and asked to explain it in a sentence. It is told never to contradict it. Where there is no key configured, the same explanation is composed from the numbers directly and the panel says so.",
+      "It writes, it does not decide. Every outperform/hold/underperform call is computed from measured returns over a week, a month, six months and a year; the model is handed that call and asked to explain it in a sentence. It is told never to contradict it. Where there is no key configured, the same explanation is composed from the numbers directly and the panel says so.",
   },
   {
     question: "Why does a section sometimes show data but no AI panel?",
@@ -100,7 +100,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Is any of this investment advice?",
     answer:
-      "No. Every section says so in its own footnote, and it is meant literally — these are measurements and an explanation of them, not a recommendation to buy or sell anything.",
+      "No. Every section says so in its own footnote, and it is meant literally — these are measurements and an explanation of them, not a recommendation to outperform or underperform anything.",
   },
 ];
 

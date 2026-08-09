@@ -15,7 +15,7 @@
 //   * the model is given those headlines and asked to compress them into categorised points. It
 //     is told, in as many words, to add nothing — and every point carries the index of the article
 //     it came from, so a reader can check any line against its source;
-//   * the buy/hold/sell call and every holding-period outlook are arithmetic over measured
+//   * the outperform/hold/underperform call and every holding-period outlook are arithmetic over measured
 //     returns and the tone of the fetched coverage (see ./stock-outlook). The model is shown the
 //     call and forbidden from contradicting it; it never decides one;
 //   * with no model configured the answer is the headlines themselves, categorised by keyword,
@@ -110,8 +110,8 @@ export const TOPIC_SPECS: Record<IntelTopic, TopicSpec> = {
   ownership: {
     label: "Promoters & holdings",
     terms: '(promoter OR stake OR "block deal" OR "bulk deal" OR shareholding OR pledge OR FII OR DII)',
-    question: "Who is buying or selling this company, and what has changed in its shareholding?",
-    follow: "Who is buying or selling %s?",
+    question: "Who is adding or selling this company, and what has changed in its shareholding?",
+    follow: "Who is adding or selling %s?",
   },
 };
 
@@ -583,7 +583,7 @@ export function followUpsFor(intel: IntelQuery, subject: string): IntelFollowUp[
 
 const SYSTEM_PROMPT = [
   "You are stockers, an AI market analyst answering an Indian investor's question about one BSE-listed company.",
-  "You are given the question, the company's measured returns, the buy/hold/sell call already computed from them,",
+  "You are given the question, the company's measured returns, the outperform/hold/underperform call already computed from them,",
   "and a numbered list of real headlines from Indian publishers.",
   "Answer only from that material. Never invent a figure, a date, a target price, a deal or a company.",
   "Never contradict the computed call or restate a measured return as anything other than the number given.",
@@ -618,7 +618,7 @@ async function answerWithAi(
     .join("\n");
 
   const measured = outlook
-    ? `Computed call: ${outlook.stance} (conviction ${outlook.conviction}/100). Measured returns: ${measuredLine(outlook.measured)}.`
+    ? `Computed call: ${outlook.stance === "Buy" ? "Outperform" : outlook.stance} (conviction ${outlook.conviction}/100). Measured returns: ${measuredLine(outlook.measured)}.`
     : "No measured returns are available for this company.";
 
   try {

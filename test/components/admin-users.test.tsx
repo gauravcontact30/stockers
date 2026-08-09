@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+﻿import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   AdminUsers,
@@ -11,7 +11,7 @@ import {
 
 const TODAY = "2026-08-08";
 
-let mockStatus: { isAdmin: boolean } | null = { isAdmin: true };
+let mockStatus: { isAdmin: boolean; email?: string | null } | null = { isAdmin: true };
 let mockLoading = false;
 
 jest.mock("../../app/components/subscription-provider", () => ({
@@ -40,7 +40,7 @@ const ROSTER: AdminUser[] = [
   user({ id: "u3", name: "Root Admin", email: "root@example.com", role: "admin", emailVerified: true }),
 ];
 
-const SUMMARY = { total: 3, verified: 2, subscribed: 1, admins: 1, pro: 1 };
+const SUMMARY = { total: 3, verified: 2, subscribed: 1, admins: 1, pro: 1, elite: 0 };
 
 function mockList(users: AdminUser[] = ROSTER) {
   global.fetch = jest.fn(() =>
@@ -78,7 +78,7 @@ describe("selectUsers", () => {
     expect(ids("unverified")).toEqual(["u2"]);
     expect(ids("subscribed")).toEqual(["u2"]);
     expect(ids("admins")).toEqual(["u3"]);
-    // "On trial" is everyone without a live paid period, admins excluded — they never pay.
+    // "On trial" is everyone without a live paid period, admins excluded â€” they never pay.
     expect(ids("trial")).toEqual(["u1"]);
   });
 
@@ -99,9 +99,9 @@ describe("isSubscribed", () => {
 describe("formatDay", () => {
   it("prints a readable date, and a dash for anything absent or unparseable", () => {
     expect(formatDay("2026-08-08T00:00:00.000Z")).toMatch(/2026/);
-    expect(formatDay(null)).toBe("—");
-    expect(formatDay(undefined)).toBe("—");
-    expect(formatDay("not-a-date")).toBe("—");
+    expect(formatDay(null)).toBe("-");
+    expect(formatDay(undefined)).toBe("-");
+    expect(formatDay("not-a-date")).toBe("-");
   });
 });
 
@@ -109,13 +109,14 @@ describe("AdminUsers", () => {
   beforeEach(() => {
     mockStatus = { isAdmin: true };
     mockLoading = false;
+    jest.restoreAllMocks();
   });
 
   it("says it is loading until the status and the list have both arrived", () => {
     mockLoading = true;
     mockList();
     render(<AdminUsers />);
-    expect(screen.getByText("Loading accounts…")).toBeInTheDocument();
+    expect(screen.getByText("Loading accounts...")).toBeInTheDocument();
   });
 
   it("turns a non-admin away rather than rendering the roster", async () => {
@@ -195,18 +196,17 @@ describe("AdminUsers", () => {
     await screen.findByRole("table");
 
     const row = screen.getByText("Aarav Sharma").closest("tr")!;
-    await person.click(within(row).getByRole("button", { name: "→ Pro" }));
+    await person.selectOptions(within(row).getByLabelText("Plan for Aarav Sharma"), "Pro");
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const [url, init] = fetchMock.mock.calls[1];
     expect(url).toBe("/api/admin/users");
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body)).toEqual({ id: "u1", plan: "Pro" });
-    // The button now offers the opposite move, proving the table re-rendered from the response.
-    await waitFor(() => expect(within(row).getByRole("button", { name: "→ Starter" })).toBeInTheDocument());
+    await waitFor(() => expect(within(row).getByLabelText("Plan for Aarav Sharma")).toHaveValue("Pro"));
   });
 
-  it("moves a Pro account back down to Starter", async () => {
+  it("moves a Pro account up to Elite", async () => {
     const person = userEvent.setup();
     const fetchMock = jest
       .fn()
@@ -217,9 +217,8 @@ describe("AdminUsers", () => {
     render(<AdminUsers />);
     await screen.findByRole("table");
 
-    // Priya is the Pro account, so her button offers the downgrade.
-    await person.click(within(screen.getByText("Priya Nair").closest("tr")!).getByRole("button", { name: "→ Starter" }));
-    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", plan: "Starter" }));
+    await person.selectOptions(within(screen.getByText("Priya Nair").closest("tr")!).getByLabelText("Plan for Priya Nair"), "Elite");
+    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", plan: "Elite" }));
   });
 
   it("empties the table rather than crashing if a change comes back without a roster", async () => {
@@ -292,6 +291,76 @@ describe("AdminUsers", () => {
 
     await person.click(within(screen.getByText("Root Admin").closest("tr")!).getByRole("button", { name: "Remove admin" }));
     await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ id: "u3", role: "user" }));
+  });
+
+  it("does not show delete controls to a regular admin", async () => {
+    mockStatus = { isAdmin: true, email: "root@example.com" };
+    mockList();
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+
+  it("lets the super admin delete another user", async () => {
+    mockStatus = { isAdmin: true, email: "garvcontact30@gmail.com" };
+    const person = userEvent.setup();
+
+    const updated = ROSTER.filter((u) => u.id !== "u1");
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, users: updated, summary: { ...SUMMARY, total: 2 } }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    await person.click(within(screen.getByText("Aarav Sharma").closest("tr")!).getByRole("button", { name: "Delete" }));
+    expect(screen.getByRole("dialog", { name: "Delete this user account?" })).toBeInTheDocument();
+    expect(screen.getByText("Confirm delete")).toBeInTheDocument();
+    await person.click(screen.getByRole("button", { name: "Delete user" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe("/api/admin/users");
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(init.body)).toEqual({ id: "u1" });
+    await waitFor(() => expect(screen.queryByText("Aarav Sharma")).not.toBeInTheDocument());
+  });
+
+  it("does not offer to delete the super admin account", async () => {
+    mockStatus = { isAdmin: true, email: "garvcontact30@gmail.com" };
+    const withSuperAdmin = [
+      ...ROSTER,
+      user({ id: "u4", name: "Garv Tuts", email: "garvcontact30@gmail.com", role: "admin", emailVerified: true }),
+    ];
+    mockList(withSuperAdmin);
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    expect(within(screen.getByText("Aarav Sharma").closest("tr")!).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(within(screen.getByText("Garv Tuts").closest("tr")!).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+
+  it("surfaces the server's reason when a delete is refused", async () => {
+    mockStatus = { isAdmin: true, email: "garvcontact30@gmail.com" };
+    const person = userEvent.setup();
+
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValueOnce({ ok: false, status: 403, json: () => Promise.resolve({ error: "Only the super admin can delete users." }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    await person.click(within(screen.getByText("Aarav Sharma").closest("tr")!).getByRole("button", { name: "Delete" }));
+    await person.click(screen.getByRole("button", { name: "Delete user" }));
+    expect(await screen.findByText("Only the super admin can delete users.")).toBeInTheDocument();
   });
 
   it("surfaces the server's reason when a change is refused", async () => {

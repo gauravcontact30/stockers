@@ -121,7 +121,7 @@ export const AI_FEATURES = [
   },
   {
     key: "buy-tomorrow",
-    label: "Buy tomorrow screener",
+    label: "Outperform tomorrow screener",
     tier: "pro",
     blurb: "Names set up for tomorrow's session, scored overnight.",
   },
@@ -173,7 +173,7 @@ export const AI_FEATURES = [
     key: "mtf",
     label: "AI MTF watch",
     tier: "elite",
-    blurb: "Most-traded names you can buy on margin, and the cost.",
+    blurb: "Most-traded names you can outperform on margin, and the cost.",
   },
   {
     key: "stock-news",

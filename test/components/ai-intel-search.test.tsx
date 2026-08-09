@@ -332,7 +332,7 @@ describe("VerdictBanner", () => {
   it("states the call, its conviction and what it was read off", () => {
     render(<VerdictBanner outlook={OUTLOOK} />);
 
-    expect(screen.getByText("Buy")).toBeInTheDocument();
+    expect(screen.getByText("Outperform")).toBeInTheDocument();
     expect(screen.getByText("Conviction 71/100")).toBeInTheDocument();
     expect(screen.getByText("Trend 68/100")).toBeInTheDocument();
     expect(screen.getByText("4 positive")).toBeInTheDocument();
@@ -353,8 +353,8 @@ describe("HorizonCards", () => {
     expect(screen.getByText("measured · +40.20% a year")).toBeInTheDocument();
     // A window the archive cannot reach prints a dash rather than a fabricated zero.
     expect(screen.getByText("measured · —")).toBeInTheDocument();
-    expect(screen.getAllByText("Buy")).toHaveLength(2);
-    expect(screen.getByText("Sell")).toBeInTheDocument();
+    expect(screen.getAllByText("Outperform")).toHaveLength(2);
+    expect(screen.getByText("Underperform")).toBeInTheDocument();
   });
 });
 
@@ -464,7 +464,7 @@ describe("PeerBoard", () => {
 
   const board = () => (
     <PeerBoard
-      title="Top 20 to buy"
+      title="Top 20 to outperform"
       ribbon="★ Leaders"
       blurb="Strongest one-year record in Automobile"
       rows={many}
@@ -512,7 +512,7 @@ describe("PeerBoards", () => {
 
     expect(screen.getByTestId("peer-ribbon-leaders")).toBeInTheDocument();
     expect(screen.getByTestId("peer-ribbon-laggards")).toBeInTheDocument();
-    expect(screen.getByText("Top 20 to buy")).toBeInTheDocument();
+    expect(screen.getByText("Top 20 to outperform")).toBeInTheDocument();
     expect(screen.getByText("Top 20 losers to avoid")).toBeInTheDocument();
   });
 });
@@ -753,7 +753,7 @@ describe("AiIntelSearch", () => {
     expect(results().getByText("Measured from the close of 7 Aug 2025")).toBeInTheDocument();
 
     // Both ends of the company's own category, ranked over the same year.
-    expect(results().getByText("Top 20 to buy")).toBeInTheDocument();
+    expect(results().getByText("Top 20 to outperform")).toBeInTheDocument();
     expect(results().getByText("Top 20 losers to avoid")).toBeInTheDocument();
     expect(results().getByText("OLAELEC")).toBeInTheDocument();
 

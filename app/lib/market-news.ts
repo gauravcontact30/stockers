@@ -365,7 +365,7 @@ async function briefWithAi(title: string, related: NewsItem[]): Promise<string[]
               'Reply with JSON only: {"brief":["sentence", "sentence", "sentence"]} — two or three short sentences. ' +
               "Say what the story is about and why it matters to a shareholder. " +
               "Do not invent facts, figures, prices, price targets or dates that are not in the headlines. " +
-              "Do not give buy or sell advice. If the headlines are too thin to explain, say so plainly.",
+              "Do not give outperform or underperform advice. If the headlines are too thin to explain, say so plainly.",
           },
           { role: "user", content: `Headline: ${title}\n\nOther coverage:\n${context || "(none found)"}` },
         ],

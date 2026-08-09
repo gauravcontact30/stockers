@@ -85,9 +85,9 @@ describe("SectorShowdowns", () => {
     render(<SectorShowdowns />);
     await screen.findByText("The IT majors");
 
-    // This board is one Sell and one Hold — no Buy tally should be drawn.
+    // This board is one Underperform and one Hold, so no Buy tally should be drawn.
     const summary = screen.getByText(/HCLTECH leads the peer set/).closest("div")!;
-    expect(within(summary).getByText("SELL")).toBeInTheDocument();
+    expect(within(summary).getByText("UNDERPERFORM")).toBeInTheDocument();
     expect(within(summary).getByText("HOLD")).toBeInTheDocument();
     expect(within(summary).queryByText("BUY")).not.toBeInTheDocument();
   });

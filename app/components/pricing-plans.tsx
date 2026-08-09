@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { featuresForTier, PLAN_TIERS, starsFor, TIER_LABEL, type PlanTier } from "../lib/plan-tiers";
 import { SubscribeButton, type PlanKey } from "./razorpay-checkout";
 
 /**
@@ -100,6 +101,104 @@ const BILLING_OPTIONS: { key: Billing; label: string }[] = [
   { key: "monthly", label: "Monthly" },
   { key: "yearly", label: "Yearly" },
 ];
+
+const FEATURE_CARD_TONE: Record<PlanTier, { card: string; pill: string; line: string }> = {
+  starter: {
+    card: "border-sky-200 bg-sky-50/85 dark:border-sky-500/30 dark:bg-sky-500/10",
+    pill: "border-sky-200 bg-white text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300",
+    line: "border-sky-200/80 dark:border-sky-500/20",
+  },
+  pro: {
+    card: "border-emerald-200 bg-emerald-50/85 dark:border-emerald-500/30 dark:bg-emerald-500/10",
+    pill: "border-emerald-200 bg-white text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+    line: "border-emerald-200/80 dark:border-emerald-500/20",
+  },
+  elite: {
+    card: "border-violet-200 bg-violet-50/85 dark:border-violet-500/30 dark:bg-violet-500/10",
+    pill: "border-violet-200 bg-white text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300",
+    line: "border-violet-200/80 dark:border-violet-500/20",
+  },
+};
+
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="m10 1.6 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8L10 1.6Z" />
+    </svg>
+  );
+}
+
+function StarRankBadge({ stars }: { stars: number }) {
+  if (stars === 0) return null;
+  return (
+    <span
+      aria-label={`${stars} star Rank ${4 - stars}`}
+      className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+    >
+      <span className="flex items-center gap-0.5" aria-hidden="true">
+        {Array.from({ length: stars }, (_, index) => (
+          <StarIcon key={index} className="h-3 w-3" />
+        ))}
+      </span>
+      <span>Rank {4 - stars}</span>
+    </span>
+  );
+}
+
+export function PlanFeatureCards({ compact = false }: { compact?: boolean }) {
+  return (
+    <section
+      aria-labelledby="plan-ai-features"
+      className={`${compact ? "rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900" : "mt-8"}`}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Plan access</p>
+          <h3 id="plan-ai-features" className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
+            AI features by plan
+          </h3>
+        </div>
+        <p className="max-w-xl text-sm text-slate-600 dark:text-slate-400">
+          Each card shows the AI tools included in that plan. The starred ribbons mark the top three AI features on the landing page.
+        </p>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {PLAN_TIERS.map((tier) => {
+          const tone = FEATURE_CARD_TONE[tier];
+          const features = featuresForTier(tier);
+          return (
+            <article key={tier} className={`rounded-3xl border p-5 ${tone.card}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${tone.pill}`}>
+                  {TIER_LABEL[tier]}
+                </span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{features.length} AI features</span>
+              </div>
+              <ul className="mt-4 divide-y text-sm text-slate-700 dark:text-slate-300">
+                {features.map((feature) => {
+                  const stars = starsFor(tier, feature.key);
+                  return (
+                    <li key={feature.key} className={`flex gap-3 py-3 first:pt-0 last:pb-0 ${tone.line}`}>
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-slate-900 dark:text-white">{feature.label}</span>
+                          <StarRankBadge stars={stars} />
+                        </span>
+                        <span className="mt-1 block text-xs leading-relaxed text-slate-600 dark:text-slate-400">{feature.blurb}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 export function PricingPlans() {
   const [billing, setBilling] = useState<Billing>("yearly");
@@ -212,6 +311,8 @@ export function PricingPlans() {
           );
         })}
       </div>
+
+      <PlanFeatureCards />
 
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
         Payments are taken by Razorpay — cards, UPI and netbanking — and settle to Stockers.AI&apos;s own bank account.

@@ -12,6 +12,8 @@ const trialStatus = {
   state: "trial",
   allowed: true,
   isAdmin: false,
+  tier: "pro",
+  planName: "Pro",
   marketDaysUsed: 2,
   marketDaysLeft: 3,
   trialStartedAt: "2026-08-01T04:00:00.000Z",
@@ -101,7 +103,7 @@ describe("SubscriptionProvider", () => {
   });
 
   it("locks every AI feature once the trial has expired", async () => {
-    mockStatus({ ...trialStatus, state: "expired", allowed: false, marketDaysLeft: 0, locks: {} });
+    mockStatus({ ...trialStatus, state: "expired", allowed: false, tier: null, planName: null, marketDaysLeft: 0, locks: {} });
     render(
       <SubscriptionProvider>
         <Probe />
@@ -109,6 +111,18 @@ describe("SubscriptionProvider", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("expired"));
+    expect(screen.getByTestId("can-research")).toHaveTextContent("false");
+  });
+
+  it("locks features above the active plan tier", async () => {
+    mockStatus({ ...trialStatus, state: "active", allowed: true, tier: "starter", planName: "Starter", locks: {} });
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("active"));
     expect(screen.getByTestId("can-research")).toHaveTextContent("false");
   });
 

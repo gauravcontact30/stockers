@@ -280,11 +280,11 @@ export const AI_SECTIONS: Record<AiSectionId, AiSection> = {
   },
   "buy-tomorrow": {
     id: "buy-tomorrow",
-    label: "Buy Tomorrow",
+    label: "Outperform Tomorrow",
     description: "Names set up for tomorrow's session, scored overnight.",
     icon: CalendarIcon,
     feature: "buy-tomorrow",
-    featureLabel: "Buy tomorrow screener",
+    featureLabel: "Outperform tomorrow screener",
   },
   "dip-winners": {
     id: "dip-winners",
@@ -348,7 +348,7 @@ export const AI_SECTIONS: Record<AiSectionId, AiSection> = {
   mtf: {
     id: "mtf",
     label: "MTF Watch",
-    description: "Most-traded names you can buy on margin, and what the leverage really costs.",
+    description: "Most-traded names you can outperform on margin, and what the leverage really costs.",
     icon: MarginIcon,
     feature: "mtf",
     featureLabel: "AI MTF watch",

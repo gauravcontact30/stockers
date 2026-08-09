@@ -64,7 +64,7 @@ const basePicks = [
     confidence: 80,
     analysis: {
       stock: "AAA",
-      recommendation: "Strong Buy",
+      recommendation: "Strong Outperform",
       recommendationReasons: ["reason1"],
       keyInsights: ["insight-a"],
     },
@@ -170,10 +170,10 @@ describe("TopPicksToday", () => {
     expect(screen.getByText("Bearish · 60%")).toBeInTheDocument();
     expect(screen.getAllByText("Neutral · 50%").length).toBeGreaterThan(0);
 
-    // Recommendation badges (AAA and DDD both default to Buy; DDD has no recommendation field)
-    expect(within(aaaCard).getByText("Buy")).toBeInTheDocument();
+    // Recommendation badges (AAA and DDD both default to Outperform; DDD has no recommendation field)
+    expect(within(aaaCard).getByText("Outperform")).toBeInTheDocument();
     const dddCard = screen.getByText("DDD").closest("button")!;
-    expect(within(dddCard).getByText("Buy")).toBeInTheDocument();
+    expect(within(dddCard).getByText("Outperform")).toBeInTheDocument();
     expect(within(bbbCard).getByText("Avoid")).toBeInTheDocument();
     expect(within(cccCard).getByText("Hold")).toBeInTheDocument();
 

@@ -29,7 +29,7 @@ export function formatRatio(ratio: number | null): string {
 /** A plain-language reading of how lopsided the tape is. */
 export function breadthLabel(share: number): { label: string; tone: string } {
   if (share >= 70) return { label: "Broad rally", tone: "text-emerald-600 dark:text-emerald-400" };
-  if (share >= 55) return { label: "Buyers ahead", tone: "text-emerald-600 dark:text-emerald-400" };
+  if (share >= 55) return { label: "Advancers ahead", tone: "text-emerald-600 dark:text-emerald-400" };
   if (share > 45) return { label: "Evenly split", tone: "text-amber-600 dark:text-amber-400" };
   if (share > 30) return { label: "Sellers ahead", tone: "text-rose-600 dark:text-rose-400" };
   return { label: "Broad selling", tone: "text-rose-600 dark:text-rose-400" };

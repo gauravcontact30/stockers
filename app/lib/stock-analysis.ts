@@ -79,7 +79,7 @@ export function buildDemoAnalysis(stock: string) {
     newsFocus: ["Liquidity", "Earnings", "Policy"],
     outlook: "A constructive trend is likely if the stock holds key support and macro conditions remain stable.",
     source: "demo",
-    recommendation: "Buy",
+    recommendation: "Outperform",
     recommendationReasons: [
       `${core} combines healthy fundamentals with a favorable sector setup, supporting a constructive risk-reward for new positions.`,
       "Institutional and domestic flows remain net supportive, reducing near-term downside risk.",
@@ -163,12 +163,12 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
             role: "system",
             content:
               "You are stockers, an AI research assistant for Indian equities and ETFs. Return compact JSON only, with these keys: stock, marketPulse, summary, positiveSignals, negativeSignals, score, risk, nextSteps, prediction, newsFocus, outlook, recommendation, recommendationReasons, keyInsights, marketTrends, companyActions, positiveNews. " +
-              "recommendation must be exactly one of \"Buy\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
+              "recommendation must be exactly one of \"Outperform\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
               "Accuracy rule: the user message supplies verified live market data. Every price or performance number you write must be copied from it verbatim. Never invent or estimate prices, returns, price targets, market caps, valuation multiples, or percentages.",
           },
           {
             role: "user",
-            content: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Buy, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
+            content: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Outperform, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
           },
         ],
         temperature: 0.7,

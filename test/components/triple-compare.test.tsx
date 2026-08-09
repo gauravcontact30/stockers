@@ -84,7 +84,7 @@ describe("TripleCompare", () => {
     await waitFor(() => expect(screen.getByText("Across sectors")).toBeInTheDocument());
     expect(urls).toContain("/api/compare/custom?symbols=TCS%2CHDFCBANK");
     expect(screen.getByText(/TCS has the strongest momentum/)).toBeInTheDocument();
-    expect(screen.getAllByText("SELL").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("UNDERPERFORM").length).toBeGreaterThan(0);
     expect(screen.getByText(/Rationale written by AI agent/)).toBeInTheDocument();
   });
 

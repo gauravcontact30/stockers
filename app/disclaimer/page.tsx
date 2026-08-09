@@ -19,15 +19,15 @@ export default function DisclaimerPage() {
     >
       <PolicyCallout tone="rose">
         <strong>{COMPANY.brand} is not a SEBI-registered investment adviser or research analyst.</strong> Nothing on this
-        platform is investment advice, a recommendation, or an offer to buy or sell any security. It is research material
+        platform is investment advice, a recommendation, or an offer to outperform or underperform any security. It is research material
         for your own decision-making, and you remain solely responsible for what you do with it.
       </PolicyCallout>
 
       <PolicySection title="What this service is">
         <p>
           {COMPANY.brand} reads publicly published exchange data, measures it, and describes what it measured. A board
-          ranking the year&apos;s gainers is arithmetic over BSE&apos;s own published closes. A stance of &ldquo;buy&rdquo;
-          or &ldquo;sell&rdquo; is a label attached to a score computed from those returns.
+          ranking the year&apos;s gainers is arithmetic over BSE&apos;s own published closes. A stance of &ldquo;outperform&rdquo;
+          or &ldquo;underperform&rdquo; is a label attached to a score computed from those returns.
         </p>
         <p>
           It is a tool for looking at the market quickly. It is not a person who knows your circumstances, and it has no

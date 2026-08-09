@@ -22,7 +22,7 @@ const baseAnalysis: AnalysisResponse = {
   score: 81,
   risk: "Currency exposure",
   nextSteps: ["Watch Q2 results"],
-  recommendation: "Buy",
+  recommendation: "Outperform",
   source: "ai",
 };
 
@@ -153,7 +153,7 @@ describe("AiReportModal", () => {
         )
       ).toBeInTheDocument();
       // No recommendation badge without analysis.
-      expect(screen.queryByText("Buy")).not.toBeInTheDocument();
+      expect(screen.queryByText("Outperform")).not.toBeInTheDocument();
     });
   });
 
@@ -251,11 +251,11 @@ describe("AiReportModal", () => {
       ["Please sell now", "Avoid"],
       ["Definitely not buy", "Avoid"],
       ["Hold steady", "Hold"],
-      ["Strong buy signal", "Buy"],
-      [undefined, "Buy"],
+      ["Strong outperform signal", "Outperform"],
+      [undefined, "Outperform"],
     ])("maps recommendation %p to badge %p", (recommendation, label) => {
       // The real (unmocked) AiAnalysisReport body computes its own, separately-styled
-      // recommendation badge from the same field, so "Buy"/"Hold" can legitimately appear
+      // recommendation badge from the same field, so "Outperform"/"Hold" can legitimately appear
       // twice (header + body) — assert presence via getAllByText rather than a single match.
       render(
         <AiReportModal

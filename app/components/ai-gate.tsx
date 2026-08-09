@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { FEATURE_BY_KEY, featureTier, starsFor, TIER_LABEL, type FeatureKey, type PlanTier } from "../lib/plan-tiers";
+import { LockIcon, PlanPill, PlanRibbon } from "./plan-pill";
 import { useSubscription } from "./subscription-provider";
 
 /**
- * The admin's per-feature switch. Rendered only for admins — and backed by a server-side admin
+ * The admin's per-feature switch. Rendered only for admins â€” and backed by a server-side admin
  * check, so hiding it is a convenience, not the security boundary.
  */
 export function FeatureLockToggle({ feature, label }: { feature: string; label: string }) {
@@ -15,6 +17,7 @@ export function FeatureLockToggle({ feature, label }: { feature: string; label: 
   if (!status?.isAdmin) return null;
 
   const locked = isLocked(feature);
+  const actionLabel = locked ? `Enable ${label}` : `Disable ${label}`;
 
   const toggle = async () => {
     setBusy(true);
@@ -28,16 +31,37 @@ export function FeatureLockToggle({ feature, label }: { feature: string; label: 
       onClick={toggle}
       disabled={busy}
       aria-pressed={locked}
-      aria-label={`${locked ? "Unlock" : "Lock"} ${label}`}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
+      aria-label={actionLabel}
+      title={actionLabel}
+      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-60 ${
         locked
           ? "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-400"
           : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-400"
       }`}
     >
-      <span aria-hidden="true">{locked ? "🔒" : "🔓"}</span>
-      {busy ? "Saving…" : locked ? "Locked" : "Unlocked"}
+      <LockIcon className="h-3.5 w-3.5" />
+      <span className="sr-only">{busy ? "Saving..." : actionLabel}</span>
     </button>
+  );
+}
+
+function StarRibbon({ tier, feature }: { tier: PlanTier; feature: string }) {
+  const stars = starsFor(tier, feature);
+  if (stars === 0) return null;
+  return (
+    <span
+      aria-label={`${stars} star Rank ${4 - stars}`}
+      className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+    >
+      <span className="flex items-center gap-0.5" aria-hidden="true">
+        {Array.from({ length: stars }, (_, index) => (
+          <svg key={index} viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+            <path d="m10 1.6 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8L10 1.6Z" />
+          </svg>
+        ))}
+      </span>
+      <span>Rank {4 - stars}</span>
+    </span>
   );
 }
 
@@ -45,13 +69,22 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
   const { status, isLocked } = useSubscription();
   const lockedByAdmin = isLocked(feature);
   const signedIn = status?.signedIn ?? false;
+  const requiredTier = featureTier(feature);
+  const featureMeta = requiredTier && feature in FEATURE_BY_KEY ? FEATURE_BY_KEY[feature as FeatureKey] : null;
+  const heldPlan = status?.planName ?? null;
 
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-950/60">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white/95 p-6 text-center shadow-[0_20px_50px_-30px_rgba(15,23,42,0.6)] backdrop-blur dark:border-slate-700 dark:bg-slate-950/95">
       <p className="text-2xl" aria-hidden="true">
-        🔒
+        Locked
       </p>
       <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{label} is locked</p>
+      {requiredTier && (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <PlanPill tier={requiredTier} />
+          <StarRibbon tier={requiredTier} feature={feature} />
+        </div>
+      )}
 
       {lockedByAdmin ? (
         <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-600 dark:text-slate-400">
@@ -59,8 +92,9 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
         </p>
       ) : (
         <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-600 dark:text-slate-400">
-          Your free trial of five open market days has ended. Subscribe to keep using the AI features — live market data
-          stays free.
+          {requiredTier
+            ? `${TIER_LABEL[requiredTier]} is required for ${featureMeta?.label ?? label}.${heldPlan ? ` You are on ${heldPlan}.` : ""}`
+            : "Subscribe to keep using the AI features."}
         </p>
       )}
 
@@ -71,7 +105,7 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
               href="/#pricing"
               className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
             >
-              See plans
+              {heldPlan ? "Upgrade plan" : "See plans"}
             </Link>
           ) : (
             <>
@@ -105,14 +139,23 @@ export function AiGate({ feature, label, children }: { feature: string; label: s
   const { canUse } = useSubscription();
 
   if (canUse(feature)) return <>{children}</>;
-  return <LockPanel feature={feature} label={label} />;
+  return (
+    <div className="relative overflow-hidden rounded-[32px]">
+      <div aria-hidden="true" className="pointer-events-none select-none opacity-35 blur-[2px]">
+        {children}
+      </div>
+      <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 p-4 dark:bg-slate-950/55">
+        <LockPanel feature={feature} label={label} />
+      </div>
+    </div>
+  );
 }
 
 /**
  * One AI section on the landing page: the admin's lock switch above it (admins only) and, by
  * default, the subscription gate around it.
  *
- * @param gate set false for a section that is only partly AI — the market pulse keeps its
+ * @param gate set false for a section that is only partly AI â€” the market pulse keeps its
  * exchange data visible and has the server withhold just the AI narrative, so replacing the whole
  * card with a lock panel would hide real data the user is entitled to.
  */
@@ -130,6 +173,7 @@ export function GatedSection({
   children: ReactNode;
 }) {
   const { status } = useSubscription();
+  const requiredTier = featureTier(feature);
 
   return (
     <div id={id} className="scroll-mt-28">
@@ -139,13 +183,17 @@ export function GatedSection({
           <FeatureLockToggle feature={feature} label={label} />
         </div>
       )}
-      {gate ? (
-        <AiGate feature={feature} label={label}>
-          {children}
-        </AiGate>
-      ) : (
-        children
-      )}
+      <div className="relative overflow-hidden rounded-[32px]">
+        {requiredTier && <PlanRibbon tier={requiredTier} />}
+        {gate ? (
+          <AiGate feature={feature} label={label}>
+            {children}
+          </AiGate>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }
+

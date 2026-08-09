@@ -19,7 +19,7 @@ const PRINCIPLES: { title: string; body: string }[] = [
   },
   {
     title: "The arithmetic decides, the AI explains",
-    body: "A stance — buy, hold, sell — is computed from measured returns before any model is called. The model is handed that score and asked to explain it, and is not permitted to contradict it. It writes prose over figures; it does not choose them.",
+    body: "A stance — outperform, hold, underperform — is computed from measured returns before any model is called. The model is handed that score and asked to explain it, and is not permitted to contradict it. It writes prose over figures; it does not choose them.",
   },
   {
     title: "The whole list, not a tidy top ten",

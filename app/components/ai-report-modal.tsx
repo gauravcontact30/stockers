@@ -57,7 +57,7 @@ function recommendationBadge(recommendation?: string) {
   if (value.includes("hold")) {
     return { label: "Hold", className: "bg-amber-500 text-white" };
   }
-  return { label: "Buy", className: "bg-emerald-600 text-white" };
+  return { label: "Outperform", className: "bg-emerald-600 text-white" };
 }
 
 function ModalLogo({ src, name }: { src?: string | null; name: string }) {

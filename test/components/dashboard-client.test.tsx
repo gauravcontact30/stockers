@@ -104,7 +104,8 @@ describe("DashboardClient", () => {
       await renderDashboard();
       expect(mockReplace).toHaveBeenCalledWith("/signin");
       expect(screen.getByText("Signed in as investor")).toBeInTheDocument();
-      expect(screen.getByText("Plan: Starter")).toBeInTheDocument();
+      expect(screen.getByText("Plan:")).toBeInTheDocument();
+      expect(screen.getByTitle("Included in Starter")).toBeInTheDocument();
     });
 
     it("redirects to /signin when the stored auth value is malformed JSON", async () => {
@@ -125,14 +126,16 @@ describe("DashboardClient", () => {
       await renderDashboard();
       expect(mockReplace).not.toHaveBeenCalled();
       expect(screen.getByText("Signed in as Jane Doe")).toBeInTheDocument();
-      expect(screen.getByText("Plan: Pro")).toBeInTheDocument();
+      expect(screen.getByText("Plan:")).toBeInTheDocument();
+      expect(screen.getByTitle("Included in Pro")).toBeInTheDocument();
     });
 
     it("falls back to default identity text when the stored user has no name or plan", async () => {
       setStoredUser({ id: "1", email: "jane@example.com" });
       await renderDashboard();
       expect(screen.getByText("Signed in as investor")).toBeInTheDocument();
-      expect(screen.getByText("Plan: Starter")).toBeInTheDocument();
+      expect(screen.getByText("Plan:")).toBeInTheDocument();
+      expect(screen.getByTitle("Included in Starter")).toBeInTheDocument();
     });
 
     it("logs out by clearing the session and navigating home", async () => {
@@ -220,7 +223,7 @@ describe("DashboardClient", () => {
           Promise.resolve({
             stock: "RELIANCE",
             summary: "Reliance looks strong this quarter.",
-            recommendation: "Buy",
+            recommendation: "Outperform",
             score: 82,
           }),
       });
@@ -254,7 +257,7 @@ describe("DashboardClient", () => {
 
     it("reopens the modal from the 'View full AI report' button after it was closed", async () => {
       const user = userEvent.setup();
-      installFetchMock({ stock: "RELIANCE", summary: "Summary text.", recommendation: "Buy" });
+      installFetchMock({ stock: "RELIANCE", summary: "Summary text.", recommendation: "Outperform" });
       await renderDashboard();
 
       await user.click(screen.getByRole("button", { name: "Research stock" }));
@@ -294,7 +297,7 @@ describe("DashboardClient", () => {
 
     it.each([
       ["Top Picks", "panel-top-picks"],
-      ["Buy Tomorrow", "panel-buy-tomorrow"],
+      ["Outperform Tomorrow", "panel-buy-tomorrow"],
       ["Dip Winners", "panel-dip-winners"],
       ["Stock Research", "panel-research"],
       ["Compare", "panel-compare"],

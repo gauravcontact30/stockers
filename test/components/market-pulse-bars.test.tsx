@@ -43,7 +43,7 @@ describe("formatRatio", () => {
 describe("breadthLabel", () => {
   it.each([
     [85, "Broad rally"],
-    [60, "Buyers ahead"],
+    [60, "Advancers ahead"],
     [50, "Evenly split"],
     [35, "Sellers ahead"],
     [10, "Broad selling"],
@@ -57,7 +57,7 @@ describe("MarketPulseBars", () => {
     render(<MarketPulseBars advancing={150} declining={100} unchanged={20} live />);
 
     expect(screen.getByText("60.0%")).toBeInTheDocument();
-    expect(screen.getByText("Buyers ahead")).toBeInTheDocument();
+    expect(screen.getByText("Advancers ahead")).toBeInTheDocument();
     expect(screen.getByText("150")).toBeInTheDocument();
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();

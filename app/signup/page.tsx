@@ -17,7 +17,7 @@ export default function SignupPage() {
               Unlock a polished dashboard that combines news-driven insights, risk awareness, and stock suggestions for Indian markets.
             </p>
             <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-              <li>• Free Starter plan, upgrade to Pro any time</li>
+              <li>• Free Starter plan, upgrade to Pro or Elite any time</li>
               <li>• Secure account creation with hashed password storage</li>
               <li>• Instant access to your investor dashboard</li>
             </ul>

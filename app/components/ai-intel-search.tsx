@@ -45,7 +45,7 @@ import { authHeaders } from "./subscription-provider";
  *   a shareholder, and a link to the report it came from. Anything the desk couldn't attribute is
  *   marked unsourced rather than quietly dressed up as sourced;
  *
- *   the buy/hold/sell call and the four holding-period outlooks are computed from measured returns
+ *   the outperform/hold/underperform call and the four holding-period outlooks are computed from measured returns
  *   and the tone of that same coverage. They are a reading of the record, not a promise about the
  *   future, and the footnote says so.
  */
@@ -249,6 +249,12 @@ const STANCE_BAR: Record<Stance, string> = {
   Buy: "bg-emerald-500",
   Hold: "bg-amber-500",
   Sell: "bg-rose-500",
+};
+
+const STANCE_LABEL: Record<Stance, string> = {
+  Buy: "Outperform",
+  Hold: "Hold",
+  Sell: "Underperform",
 };
 
 // ---------------------------------------------------------------------------
@@ -527,7 +533,7 @@ export function VerdictBanner({ outlook }: { outlook: StockOutlook }) {
         <span
           className={`rounded-2xl border px-4 py-2 text-lg font-bold tracking-wide ${STANCE_TONE[outlook.stance]}`}
         >
-          {outlook.stance}
+          {STANCE_LABEL[outlook.stance]}
         </span>
 
         <div className="min-w-0 flex-1 basis-full sm:basis-auto">
@@ -573,7 +579,7 @@ export function HorizonCards({
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{horizon.label}</p>
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${STANCE_TONE[horizon.stance]}`}>
-              {horizon.stance}
+              {STANCE_LABEL[horizon.stance]}
             </span>
           </div>
 
@@ -889,14 +895,14 @@ export function PeerBoard({
  *
  * Two boards rather than one list, because they answer different questions — what in this category
  * has compounded, and what in it has destroyed value. Both are the exchange's own closes; the "to
- * buy" and "to avoid" wording is this app's reading of that ranking, and the note under the boards
+ * outperform" and "to avoid" wording is this app's reading of that ranking, and the note under the boards
  * says so rather than letting the ribbon imply a recommendation.
  */
 export function PeerBoards({ peers }: { peers: IntelPeers }) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <PeerBoard
-        title="Top 20 to buy"
+        title="Top 20 to outperform"
         ribbon="★ Leaders"
         blurb={`Strongest one-year record in ${peers.category}`}
         rows={peers.leaders}
@@ -1207,7 +1213,7 @@ export function AiIntelSearch() {
             </h3>
             <p className="mt-1 max-w-2xl text-xs text-slate-600 dark:text-slate-400">
               The desk reads what Indian publishers have written, sorts what it finds onto a card per subject, and states
-              a buy, hold or sell for six months, a year, three and five — every call computed from measured returns and
+              an outperform, hold or underperform for six months, a year, three and five — every call computed from measured returns and
               the tone of that coverage.
             </p>
           </div>

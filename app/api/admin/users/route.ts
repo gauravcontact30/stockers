@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { listUsers, updateUser, userFromRequest, type AppUser } from "../../../lib/store";
+import { deleteUser, findUserById, listUsers, updateUser, userFromRequest, type AppUser, type AdminUserView } from "../../../lib/store";
 import { renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
 
 export const dynamic = "force-dynamic";
+export const SUPER_ADMIN_EMAIL = "garvcontact30@gmail.com";
 
 /**
  * Managing the people who have signed up.
@@ -17,6 +18,10 @@ async function requireAdmin(request: Request): Promise<AppUser | null> {
   return user && user.role === "admin" ? user : null;
 }
 
+function isSuperAdmin(user: AppUser): boolean {
+  return user.role === "admin" && user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL;
+}
+
 /**
  * Built per call, never shared.
  *
@@ -26,22 +31,27 @@ async function requireAdmin(request: Request): Promise<AppUser | null> {
  */
 const forbidden = () => NextResponse.json({ error: "Admin access required." }, { status: 403 });
 
-export async function GET(request: Request) {
-  if (!(await requireAdmin(request))) return forbidden();
-
-  const users = await listUsers();
-  const today = todayIST();
-
-  // Computed here so every consumer of this endpoint counts the same way.
-  const summary = {
+function summaryFor(users: AdminUserView[], today: string) {
+  return {
     total: users.length,
     verified: users.filter((user) => user.emailVerified).length,
     subscribed: users.filter((user) => user.subscribedUntil && user.subscribedUntil >= today).length,
     admins: users.filter((user) => user.role === "admin").length,
     pro: users.filter((user) => user.plan === "Pro").length,
+    elite: users.filter((user) => user.plan === "Elite").length,
   };
+}
 
-  return NextResponse.json({ users, summary, today });
+async function rosterResponse(extra: Record<string, unknown> = {}) {
+  const users = await listUsers();
+  const today = todayIST();
+  return NextResponse.json({ ...extra, users, summary: summaryFor(users, today), today });
+}
+
+export async function GET(request: Request) {
+  if (!(await requireAdmin(request))) return forbidden();
+
+  return rosterResponse();
 }
 
 /** The fields an admin is allowed to change, and nothing else. */
@@ -78,7 +88,7 @@ export async function PATCH(request: Request) {
 
   const patch: Partial<AppUser> = {};
 
-  if (plan === "Starter" || plan === "Pro") patch.plan = plan;
+  if (plan === "Starter" || plan === "Pro" || plan === "Elite") patch.plan = plan;
   if (role === "admin" || role === "user") patch.role = role;
 
   if (emailVerified === true || emailVerified === false) {
@@ -103,5 +113,38 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No such user." }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, users: await listUsers() });
+  return rosterResponse({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  const admin = await requireAdmin(request);
+  if (!admin) return forbidden();
+
+  if (!isSuperAdmin(admin)) {
+    return NextResponse.json({ error: "Only the super admin can delete users." }, { status: 403 });
+  }
+
+  let body: { id?: unknown };
+  try {
+    body = (await request.json()) as { id?: unknown };
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const { id } = body;
+  if (typeof id !== "string" || !id) {
+    return NextResponse.json({ error: "A user id is required." }, { status: 400 });
+  }
+
+  const target = await findUserById(id);
+  if (!target) {
+    return NextResponse.json({ error: "No such user." }, { status: 404 });
+  }
+
+  if (target.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL) {
+    return NextResponse.json({ error: "The super admin account cannot be deleted." }, { status: 400 });
+  }
+
+  await deleteUser(id);
+  return rosterResponse({ ok: true });
 }

@@ -37,7 +37,7 @@ describe("PricingPlans", () => {
     expect(screen.getByRole("button", { name: /Yearly/ })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("3 months free")).toBeInTheDocument();
 
-    const starter = screen.getByText("Starter").closest<HTMLElement>("div.rounded-3xl")!;
+    const starter = screen.getAllByText("Starter")[0].closest<HTMLElement>("div.rounded-3xl")!;
     // ₹1,341 over twelve months is ₹112 a month, which is the figure worth comparing.
     expect(within(starter).getByText("₹112")).toBeInTheDocument();
     expect(within(starter).getByText(/₹1,341/)).toBeInTheDocument();
@@ -50,11 +50,11 @@ describe("PricingPlans", () => {
 
     await user.click(screen.getByRole("button", { name: "Monthly" }));
 
-    const starter = screen.getByText("Starter").closest<HTMLElement>("div.rounded-3xl")!;
+    const starter = screen.getAllByText("Starter")[0].closest<HTMLElement>("div.rounded-3xl")!;
     expect(within(starter).getByText("₹149")).toBeInTheDocument();
     expect(within(starter).getByText(/Billed monthly/)).toBeInTheDocument();
 
-    const pro = screen.getByText("Pro").closest<HTMLElement>("div.rounded-3xl")!;
+    const pro = screen.getAllByText("Pro")[0].closest<HTMLElement>("div.rounded-3xl")!;
     expect(within(pro).getByText("₹399")).toBeInTheDocument();
   });
 
@@ -86,5 +86,17 @@ describe("PricingPlans", () => {
   it("says the exchange data is the same on every plan", () => {
     render(<PricingPlans />);
     expect(screen.getByText(/Exchange data is the same on every plan/)).toBeInTheDocument();
+  });
+
+  it("shows AI feature categories with top-three star ranks", () => {
+    render(<PricingPlans />);
+
+    expect(screen.getByRole("heading", { name: "AI features by plan" })).toBeInTheDocument();
+    expect(screen.getByText("AI market pulse")).toBeInTheDocument();
+    expect(screen.getByText("Today's AI picks")).toBeInTheDocument();
+    expect(screen.getByText("AI intelligence search")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("3 star Rank 1")).toHaveLength(3);
+    expect(screen.getAllByLabelText("2 star Rank 2")).toHaveLength(3);
+    expect(screen.getAllByLabelText("1 star Rank 3")).toHaveLength(3);
   });
 });

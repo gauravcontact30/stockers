@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { tierForPlan } from "../lib/plan-tiers";
+import { PlanPill } from "./plan-pill";
 import { authHeaders, useSubscription } from "./subscription-provider";
 
-/** One row as the admin API reports it — the password hash never leaves the server. */
+const SUPER_ADMIN_EMAIL = "garvcontact30@gmail.com";
+
+/** One row as the admin API reports it â€” the password hash never leaves the server. */
 export type AdminUser = {
   id: string;
   name: string;
   email: string;
-  plan: "Starter" | "Pro";
+  plan: "Starter" | "Pro" | "Elite";
   role?: "admin" | "user";
   createdAt: string;
   trialStartedAt?: string;
@@ -25,6 +29,7 @@ export type AdminSummary = {
   subscribed: number;
   admins: number;
   pro: number;
+  elite?: number;
 };
 
 export type UserFilter = "all" | "unverified" | "subscribed" | "trial" | "admins";
@@ -75,11 +80,11 @@ export function selectUsers(
   });
 }
 
-/** "8 Aug 2026" — the exchange-facing date format used elsewhere in the app. */
+/** "8 Aug 2026" â€” the exchange-facing date format used elsewhere in the app. */
 export function formatDay(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return "-";
   return parsed.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -96,6 +101,73 @@ function Pill({ children, tone }: { children: React.ReactNode; tone: string }) {
   return <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone}`}>{children}</span>;
 }
 
+function ConfirmDeleteModal({
+  user,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  user: AdminUser | null;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!user) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-user-title"
+        className="w-full max-w-md overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_90px_-35px_rgba(15,23,42,0.85)] dark:border-slate-800 dark:bg-slate-950"
+      >
+        <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-white to-emerald-50 p-6 dark:border-rose-500/20 dark:from-rose-500/10 dark:via-slate-950 dark:to-emerald-500/10">
+          <span className="inline-flex rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+            Confirm delete
+          </span>
+          <h2 id="delete-user-title" className="mt-4 text-xl font-semibold text-slate-900 dark:text-white">
+            Delete this user account?
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+            This permanently removes the account from Stockers.AI. The Super Admin account is protected and cannot be deleted.
+          </p>
+        </div>
+
+        <div className="p-6">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="font-semibold text-slate-900 dark:text-white">{user.name}</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <PlanPill tier={tierForPlan(user.plan)} />
+              {user.role === "admin" && <Pill tone="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400">admin</Pill>}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onCancel}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onConfirm}
+              className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+            >
+              {busy ? "Deleting..." : "Delete user"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminUsers() {
   const { status, loading: statusLoading } = useSubscription();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -106,6 +178,7 @@ export function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -150,6 +223,7 @@ export function AdminUsers() {
         return;
       }
       setUsers(data.users ?? []);
+      if (data.summary) setSummary(data.summary);
     } catch {
       setError("Couldn't reach the server.");
     } finally {
@@ -157,11 +231,49 @@ export function AdminUsers() {
     }
   };
 
+  const requestRemove = (user: AdminUser) => {
+    if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL) return;
+    setPendingDelete(user);
+  };
+
+  const remove = async (user: AdminUser): Promise<boolean> => {
+    if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL) return false;
+    setBusyId(user.id);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ id: user.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.error ?? "That deletion was refused.");
+        return false;
+      }
+      setUsers(data.users ?? []);
+      if (data.summary) setSummary(data.summary);
+      return true;
+    } catch {
+      setError("Couldn't reach the server.");
+      return false;
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmRemove = async () => {
+    if (!pendingDelete) return;
+    const deleted = await remove(pendingDelete);
+    if (deleted) setPendingDelete(null);
+  };
+
   const visible = useMemo(() => selectUsers(users, { query, filter, today }), [users, query, filter, today]);
+  const isSuperAdmin = status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
 
   // The API is the real guard; this only decides what to render while it is being asked.
   if (statusLoading || loading) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts…</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts...</p>;
   }
 
   if (status && !status.isAdmin) {
@@ -183,11 +295,12 @@ export function AdminUsers() {
   return (
     <div className="flex flex-col gap-6">
       {summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <StatTile label="Accounts" value={summary.total} tone="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" />
           <StatTile label="Verified" value={summary.verified} tone="border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10" />
           <StatTile label="Subscribed" value={summary.subscribed} tone="border-sky-200 bg-sky-50 dark:border-sky-500/25 dark:bg-sky-500/10" />
           <StatTile label="Pro plan" value={summary.pro} tone="border-violet-200 bg-violet-50 dark:border-violet-500/25 dark:bg-violet-500/10" />
+          <StatTile label="Elite plan" value={summary.elite ?? 0} tone="border-fuchsia-200 bg-fuchsia-50 dark:border-fuchsia-500/25 dark:bg-fuchsia-500/10" />
           <StatTile label="Admins" value={summary.admins} tone="border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10" />
         </div>
       )}
@@ -270,20 +383,25 @@ export function AdminUsers() {
                       </span>
                     </td>
 
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{user.plan}</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <PlanPill tier={tierForPlan(user.plan)} />
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-400">{formatDay(user.createdAt)}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-400">{formatDay(user.subscribedUntil)}</td>
 
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        <button
-                          type="button"
+                        <select
+                          value={user.plan}
                           disabled={busy}
-                          onClick={() => patch(user.id, { plan: user.plan === "Pro" ? "Starter" : "Pro" })}
-                          className="h-8 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                          aria-label={`Plan for ${user.name}`}
+                          onChange={(event) => patch(user.id, { plan: event.target.value })}
+                          className="h-8 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
                         >
-                          {user.plan === "Pro" ? "→ Starter" : "→ Pro"}
-                        </button>
+                          <option value="Starter">Starter</option>
+                          <option value="Pro">Pro</option>
+                          <option value="Elite">Elite</option>
+                        </select>
                         <button
                           type="button"
                           disabled={busy}
@@ -310,6 +428,16 @@ export function AdminUsers() {
                         >
                           {user.role === "admin" ? "Remove admin" : "Make admin"}
                         </button>
+                        {isSuperAdmin && user.email.toLowerCase() !== SUPER_ADMIN_EMAIL && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => requestRemove(user)}
+                            className="h-8 rounded-full border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:border-rose-400 disabled:opacity-40 dark:border-rose-500/30 dark:text-rose-400"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -324,6 +452,17 @@ export function AdminUsers() {
         Showing {visible.length} of {users.length} accounts. Granting a subscription adds 30 days from today, or extends an
         existing period rather than replacing it.
       </p>
+
+      <ConfirmDeleteModal
+        user={pendingDelete}
+        busy={Boolean(pendingDelete && busyId === pendingDelete.id)}
+        onCancel={() => {
+          if (!busyId) setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          void confirmRemove();
+        }}
+      />
     </div>
   );
 }

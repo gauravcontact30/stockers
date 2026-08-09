@@ -57,7 +57,7 @@ function recommendationStyle(recommendation?: string) {
   const value = (recommendation || "").toLowerCase();
   if (value.includes("avoid") || value.includes("sell") || value.includes("not buy")) {
     return {
-      label: "Avoid — do not buy",
+      label: "Avoid",
       badge: "bg-rose-600 text-white",
       panel: "border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10",
       accent: "text-rose-700 dark:text-rose-400",
@@ -72,7 +72,7 @@ function recommendationStyle(recommendation?: string) {
     };
   }
   return {
-    label: "Buy",
+    label: "Outperform",
     badge: "bg-emerald-600 text-white",
     panel: "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10",
     accent: "text-emerald-700 dark:text-emerald-400",
@@ -290,7 +290,7 @@ export function AiAnalysisReport({
 
       <div className={`rounded-3xl border p-5 transition-colors ${rec.panel}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className={`text-xs font-semibold uppercase tracking-[0.3em] ${rec.accent}`}>🎯 Should you buy?</p>
+          <p className={`text-xs font-semibold uppercase tracking-[0.3em] ${rec.accent}`}>🎯 Should it outperform?</p>
           <span className={`rounded-full px-4 py-1.5 text-base font-bold ${rec.badge}`}>{rec.label}</span>
         </div>
         <div className="mt-3">

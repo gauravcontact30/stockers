@@ -402,7 +402,7 @@ export function DividendBoard() {
       <div className="mt-5 rounded-2xl border border-teal-200 bg-teal-50/60 p-4 text-xs text-teal-900 dark:border-teal-500/25 dark:bg-teal-500/5 dark:text-teal-200">
         <p className="font-semibold">Reading a dividend</p>
         <p className="mt-1.5">
-          You must hold the stock <span className="font-semibold">before</span> the ex-date to receive the payout. Buy on the
+          You must hold the stock <span className="font-semibold">before</span> the ex-date to receive the payout. Enter on the
           ex-date itself and the dividend goes to the seller. The price also typically falls by roughly the dividend amount
           on that date, so a dividend is not free money — it is part of the stock&apos;s value paid out in cash.
         </p>

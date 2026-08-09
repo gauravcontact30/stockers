@@ -101,7 +101,7 @@ export function etfBrief(group: EtfGroup | undefined): BoardBrief | null {
 
   return {
     subject: `${group.name} ETFs listed on NSE, ranked by rupee turnover`,
-    question: "What is this asset class doing, and is any of it expensive to buy into right now?",
+    question: "What is this asset class doing, and is any of it expensive to enter right now?",
     facts: [
       { label: "Funds in this class", value: String(group.etfs.length) },
       { label: "Traded today", value: formatCrore(group.totalTurnover) },

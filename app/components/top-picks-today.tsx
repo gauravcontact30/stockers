@@ -58,7 +58,7 @@ function outlookClass(outlook: string) {
   return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
-// Normalizes whatever free-text call the AI returns (e.g. "Strong Buy", "Avoid for now")
+// Normalizes whatever free-text call the AI returns (e.g. "Strong Outperform", "Avoid for now")
 // down to one clear word so the card stays scannable instead of showing a run-on phrase.
 function normalizeRecommendation(recommendation?: string) {
   const value = (recommendation || "").toLowerCase();
@@ -68,7 +68,7 @@ function normalizeRecommendation(recommendation?: string) {
   if (value.includes("hold")) {
     return { label: "Hold", className: "bg-amber-500 text-white" };
   }
-  return { label: "Buy", className: "bg-emerald-600 text-white" };
+  return { label: "Outperform", className: "bg-emerald-600 text-white" };
 }
 
 function relativeTime(iso?: string) {
@@ -115,7 +115,7 @@ export function TopPicksToday() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Today&apos;s AI picks</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Suggested stocks to buy today</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Suggested stocks to outperform today</h3>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             AI screens the market daily for the strongest bullish setups. Each card shows the price, the call, and why — tap one for the full report.
           </p>

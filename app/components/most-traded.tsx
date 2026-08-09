@@ -162,7 +162,7 @@ export function tradedBrief(stocks: TradedStock[], rank: RankKey): BoardBrief | 
 
   return {
     subject: `NSE's most actively traded stocks, ranked ${rank === "byValue" ? "by rupee turnover" : "by shares traded"}`,
-    question: "Where did the day's money actually go, and was it buying or selling?",
+    question: "Where did the day's money actually go, and was it accumulation or selling?",
     facts: [
       { label: "Stocks on the board", value: String(stocks.length) },
       { label: "Combined turnover", value: formatCrore(turnover) },

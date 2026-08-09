@@ -106,7 +106,7 @@ describe("MarketPulse", () => {
     expect(screen.getByText("70")).toBeInTheDocument();
     // The breadth panel now names the split, the reading behind it and the ratio.
     expect(screen.getByText("63.2%")).toBeInTheDocument();
-    expect(screen.getByText("Buyers ahead")).toBeInTheDocument();
+    expect(screen.getByText("Advancers ahead")).toBeInTheDocument();
     expect(screen.getByText("1.71 : 1")).toBeInTheDocument();
 
     expect(screen.getByText("+1.25%")).toBeInTheDocument();

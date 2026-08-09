@@ -1,7 +1,7 @@
 // The shared "what should I do with this stock" engine.
 //
 // Every AI section in the dashboard asks the same question of a list of symbols: given how the
-// stock has actually performed, is it a buy, a hold or a sell, and why? That question is answered
+// stock has actually performed, is it outperform, hold or underperform, and why? That question is answered
 // once here so the compare tables, the sector showdowns and each section's verdict panel all
 // speak with one voice instead of three.
 //
@@ -97,6 +97,7 @@ export function explainVerdict(summary: PerformanceSummary, stance: Stance, sect
 type AiRationale = { symbol: string; rationale: string };
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+const STANCE_LABELS: Record<Stance, string> = { Buy: "Outperform", Hold: "Hold", Sell: "Underperform" };
 
 /**
  * Asks the model to narrate the calls that have already been made.
@@ -110,7 +111,7 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
   const facts = rows
     .map(
       ({ verdict }) =>
-        `${verdict.symbol} (${verdict.name}, ${verdict.sector ?? "unclassified"}, ${verdict.capTier ?? "unknown"} cap, call ${verdict.stance}): 1W ${percent(verdict.oneWeek)}, 1M ${percent(verdict.oneMonth)}, 6M ${percent(verdict.sixMonth)}, 1Y ${percent(verdict.oneYear)}`,
+        `${verdict.symbol} (${verdict.name}, ${verdict.sector ?? "unclassified"}, ${verdict.capTier ?? "unknown"} cap, call ${STANCE_LABELS[verdict.stance]}): 1W ${percent(verdict.oneWeek)}, 1M ${percent(verdict.oneMonth)}, 6M ${percent(verdict.sixMonth)}, 1Y ${percent(verdict.oneYear)}`,
     )
     .join("\n");
 
@@ -160,7 +161,7 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
   }
 }
 
-/** Buy / hold / sell calls for a list of symbols, in the order given. */
+/** Outperform / hold / underperform calls for a list of symbols, in the order given. */
 export async function verdictsFor(symbols: string[]): Promise<StockVerdict[]> {
   const wanted = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean)));
   if (wanted.length === 0) return [];

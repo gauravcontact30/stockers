@@ -201,7 +201,7 @@ function buildHeuristicNarrative(breadth: MarketBreadth): Narrative {
   const themes = [
     breadth.topSector ? `${breadth.topSector.name} strength` : "Sector rotation",
     breadth.bottomSector ? `${breadth.bottomSector.name} weakness` : "Mixed breadth",
-    mood === "Risk-On" ? "Broad-based buying" : mood === "Risk-Off" ? "Broad-based selling" : "Range-bound trading",
+    mood === "Risk-On" ? "Broad-based accumulation" : mood === "Risk-Off" ? "Broad-based selling" : "Range-bound trading",
   ];
 
   const sectorsToWatch = [breadth.topSector?.name, breadth.bottomSector?.name].filter((s): s is string => Boolean(s));

@@ -33,6 +33,7 @@ import { MarketNews } from "./market-news";
 import { MarketPulse } from "./market-pulse";
 import { MostTraded } from "./most-traded";
 import { MtfTraded } from "./mtf-traded";
+import { PlanPill } from "./plan-pill";
 import { PredictionPanel } from "./prediction-panel";
 import { SectorShowdowns } from "./sector-showdowns";
 import { SectorTrends } from "./sector-trends";
@@ -43,6 +44,7 @@ import { TopPicksToday } from "./top-picks-today";
 import { TripleCompare } from "./triple-compare";
 import { WatchlistCard } from "./watchlist-card";
 import { indianStocks } from "../lib/indian-stocks";
+import { tierForPlan } from "../lib/plan-tiers";
 import { stockIcon } from "../lib/company-logos";
 
 type UserData = {
@@ -120,7 +122,7 @@ function SectionShell({ section, children }: { section: DashboardSection; childr
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{section.description}</p>
       </div>
       {isAiSection(section) ? (
-        <GatedSection feature={section.feature} label={section.featureLabel} gate={section.gate}>
+        <GatedSection feature={section.feature} label={section.featureLabel}>
           {children}
         </GatedSection>
       ) : (
@@ -187,6 +189,7 @@ export function DashboardClient() {
   };
 
   const analysisMeta = analysis ? indianStocks.find((s) => s.symbol === analysis.stock) : undefined;
+  const displayTier = tierForPlan(user?.plan);
 
   const overview = (
     <div className="flex flex-col gap-6">
@@ -194,9 +197,14 @@ export function DashboardClient() {
       {/* The one place a reader can ask their own question rather than pick one of ours, so it
           sits above the standing panels rather than under them. The same panel has a section of
           its own in the rail for anyone who came here to do nothing else. */}
-      <AiIntelSearch />
-      <AiVerdictPanel section="overview" />
+      <GatedSection feature="intel" label="AI intelligence search">
+        <AiIntelSearch />
+      </GatedSection>
+      <GatedSection feature="research" label="AI stock research">
+        <AiVerdictPanel section="overview" />
+      </GatedSection>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <GatedSection feature="research" label="AI stock research">
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI research</p>
@@ -247,6 +255,7 @@ export function DashboardClient() {
           </div>
         )}
       </section>
+      </GatedSection>
 
       <aside className="space-y-6">
         <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
@@ -264,7 +273,9 @@ export function DashboardClient() {
 
       {/* News is a grid of cards with its own pager now, so it gets the full width rather than
           being squeezed into the sidebar column it used to share. */}
-      <MarketNews />
+      <GatedSection feature="news" label="AI market news">
+        <MarketNews />
+      </GatedSection>
 
     </div>
   );
@@ -314,7 +325,10 @@ export function DashboardClient() {
               <div className="flex flex-col items-start gap-3 md:items-end">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
                   <p className="font-semibold">Signed in as {user?.name || "investor"}</p>
-                  <p className="mt-1">Plan: {user?.plan || "Starter"}</p>
+                  <p className="mt-2 flex items-center gap-2">
+                    <span>Plan:</span>
+                    <PlanPill tier={displayTier} />
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
                   {/* Only an admin can open /admin — the page and its API both refuse anyone else —

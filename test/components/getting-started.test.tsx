@@ -50,7 +50,7 @@ describe("GettingStarted", () => {
     expect(screen.getByText(/It writes, it does not decide/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Is any of this investment advice/ }));
-    expect(screen.getByText(/not a recommendation to buy or sell anything/)).toBeInTheDocument();
+    expect(screen.getByText(/not a recommendation to outperform or underperform anything/)).toBeInTheDocument();
   });
 
   it("offers a way to reach a human", () => {

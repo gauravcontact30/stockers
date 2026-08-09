@@ -13,6 +13,8 @@ type PlanChrome = {
   pill: string;
   /** The ribbon corner, which sits over a blurred panel and needs the higher contrast. */
   ribbon: string;
+  /** The outer corner crop and border tint for the diagonal ribbon. */
+  ribbonFrame: string;
   /** Card chrome for the landing page's plan sections — deliberately pale. */
   card: string;
   /** Text accent for a heading or a star. */
@@ -22,25 +24,28 @@ type PlanChrome = {
 export const TIER_CHROME: Record<PlanTier, PlanChrome> = {
   starter: {
     pill: "border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300",
-    ribbon: "bg-sky-600 text-white",
+    ribbon: "bg-sky-100 text-sky-800 dark:bg-sky-400/25 dark:text-sky-100",
+    ribbonFrame: "text-sky-800 dark:text-sky-100",
     card: "border-sky-200 bg-sky-50/70 dark:border-sky-500/25 dark:bg-sky-500/10",
     accent: "text-sky-700 dark:text-sky-300",
   },
   pro: {
     pill: "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    ribbon: "bg-emerald-600 text-white",
+    ribbon: "bg-emerald-100 text-emerald-800 dark:bg-emerald-400/25 dark:text-emerald-100",
+    ribbonFrame: "text-emerald-800 dark:text-emerald-100",
     card: "border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/25 dark:bg-emerald-500/10",
     accent: "text-emerald-700 dark:text-emerald-300",
   },
   elite: {
     pill: "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-300",
-    ribbon: "bg-violet-600 text-white",
+    ribbon: "bg-violet-100 text-violet-800 dark:bg-violet-400/25 dark:text-violet-100",
+    ribbonFrame: "text-violet-800 dark:text-violet-100",
     card: "border-violet-200 bg-violet-50/70 dark:border-violet-500/25 dark:bg-violet-500/10",
     accent: "text-violet-700 dark:text-violet-300",
   },
 };
 
-function LockIcon({ className }: { className?: string }) {
+export function LockIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className={className} aria-hidden="true">
       <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
@@ -88,10 +93,23 @@ export function PlanRibbon({ tier, locked = false }: { tier: PlanTier; locked?: 
 
   return (
     <span
-      className={`pointer-events-none absolute right-0 top-0 z-20 inline-flex items-center gap-1.5 rounded-bl-2xl rounded-tr-2xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] shadow-[0_8px_20px_-10px_rgba(15,23,42,0.8)] ${TIER_CHROME[tier].ribbon}`}
+      className={`pointer-events-none absolute right-0 top-0 z-30 block h-28 w-28 overflow-hidden rounded-tr-[28px] ${TIER_CHROME[tier].ribbonFrame}`}
+      aria-label={`${label} plan`}
+      title={`${label} plan`}
     >
-      {locked && <LockIcon className="h-3 w-3" />}
-      {label}
+      <span
+        className={`absolute left-1 top-7 flex w-36 rotate-45 items-center justify-center gap-1 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] shadow-[0_10px_22px_-12px_rgba(15,23,42,0.9)] ${TIER_CHROME[tier].ribbon}`}
+        aria-hidden="true"
+      >
+        {locked ? (
+          <LockIcon className="h-3 w-3" />
+        ) : (
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+            <path d="m10 1.6 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8L10 1.6Z" />
+          </svg>
+        )}
+        {label}
+      </span>
     </span>
   );
 }

@@ -3,7 +3,7 @@
     "id": "user_msfji04i_180947e2",
     "name": "Garv Tuts",
     "email": "garvcontact30@gmail.com",
-    "passwordHash": "286ec5bcf2c685a965cd0cf911b4ccb0:0c19c9f2709b60d3109f12ca4144068259d5adc9db53934d0c2f93a72e773f4905256ba0f85f4fe21b67cdbbce07e8e82078e653fa89fb6bd72e0b35f815a8fd",
+    "passwordHash": "2b4f64552aa6fc279385825b53f612f9:3ce50cd74279294d9b3613a9c8c3b70e3ae4d5fadeae11732824f611928c6a4c79e09dda8ff4383d9c550830501fe35265dac421c7be07a6a7c14b8c4ff0fa71",
     "plan": "Pro",
     "createdAt": "2026-08-05T03:41:01.090Z",
     "role": "admin",
@@ -11,20 +11,5 @@
     "subscribedUntil": null,
     "emailVerifiedAt": "2026-08-08T14:11:31.951Z",
     "verificationToken": null
-  },
-  {
-    "id": "user_mslbh1m2_01266398",
-    "name": "Gaurav Pandey",
-    "email": "gauravcontact66@gmail.com",
-    "passwordHash": "4f23550b32dbc41c35bdc748ecca6a22:d099eb98faab55101a50676f4f7ccdb2138e736c5879e5fca9526bda01626504872b157ba2e88fa71a239c38e5282d97712f8cd624e1e085d33d3bb9629c90f8",
-    "plan": "Starter",
-    "createdAt": "2026-08-09T04:42:56.234Z",
-    "mobile": "9873510871",
-    "role": "user",
-    "trialStartedAt": "2026-08-09T04:42:56.234Z",
-    "subscribedUntil": null,
-    "emailVerifiedAt": null,
-    "verificationToken": "5ae95936504e381a9c4eec94957f165d5ac4b040f8062568e9a6decdb674de9c",
-    "verificationSentAt": "2026-08-09T04:42:56.897Z"
   }
 ]

@@ -112,7 +112,7 @@ export function BuyTomorrowPicks() {
     <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600 dark:text-amber-400">Buy tomorrow screener</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600 dark:text-amber-400">Outperform tomorrow screener</p>
           <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">10 stocks to watch for the next session</h3>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             Screened for three signals: positive AI-read market news, a cheaper entry price than recent levels, and the kind of

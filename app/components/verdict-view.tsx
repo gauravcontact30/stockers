@@ -27,6 +27,12 @@ const STANCE_STYLES: Record<Stance, string> = {
   Sell: "bg-rose-600 text-white",
 };
 
+export const STANCE_LABELS: Record<Stance, string> = {
+  Buy: "Outperform",
+  Hold: "Hold",
+  Sell: "Underperform",
+};
+
 export function StanceBadge({ stance, size = "md" }: { stance: Stance; size?: "sm" | "md" }) {
   return (
     <span
@@ -34,7 +40,7 @@ export function StanceBadge({ stance, size = "md" }: { stance: Stance; size?: "s
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
       }`}
     >
-      {stance.toUpperCase()}
+      {STANCE_LABELS[stance].toUpperCase()}
     </span>
   );
 }

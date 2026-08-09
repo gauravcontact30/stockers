@@ -112,7 +112,7 @@ export const VERDICT_SOURCES: Record<string, VerdictSource> = {
     feed: "/api/market/most-traded",
     feature: "mtf",
     heading: "AI desk: would you borrow to hold these?",
-    blurb: "Leverage magnifies the trend you buy into, so the trend is the thing to check first.",
+    blurb: "Leverage magnifies the trend you lean into, so the trend is the thing to check first.",
     symbols: (payload) => symbolsOf(list((payload as Payload)?.mtf)).slice(0, 6),
   },
   "stock-news": {
@@ -158,7 +158,7 @@ export const VERDICT_SOURCES: Record<string, VerdictSource> = {
  * A stock-level AI call panel, sitting above whichever section is open.
  *
  * Every AI section in the dashboard used to answer its own narrow question; this adds the one
- * question they all left unanswered — for these specific stocks, buy, hold or sell, and why.
+ * question they all left unanswered — for these specific stocks, outperform, hold or underperform, and why.
  */
 export function AiVerdictPanel({ section }: { section: string }) {
   const config = VERDICT_SOURCES[section];

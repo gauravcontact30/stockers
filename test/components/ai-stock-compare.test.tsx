@@ -288,7 +288,7 @@ describe("AiStockCompare", () => {
     const card = (await screen.findByText("₹2,399.40")).closest("li")!;
     expect(within(card).getByText("Large cap")).toBeInTheDocument();
     expect(within(card).getByText("+16.61%")).toBeInTheDocument();
-    expect(within(card).getByText("SELL")).toBeInTheDocument();
+    expect(within(card).getByText("UNDERPERFORM")).toBeInTheDocument();
     expect(within(card).getByText(/Long-run declines outweigh/)).toBeInTheDocument();
   });
 
