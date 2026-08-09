@@ -106,17 +106,33 @@ export function AuthForm({ mode }: AuthFormProps) {
   const localErrors: FieldErrors =
     mode === "signup" ? validateSignup(fields) : validateSignin({ email: fields.email, password: fields.password });
 
-  /** The message to show for a field: the server's if it has one, otherwise our own. */
+  /**
+   * The message to show for a field: the server's if it has one, otherwise our own.
+   *
+   * A server error may be deliberately blank. Sign-in sends one for the email field so that both
+   * inputs are outlined while only one carries the sentence — saying which of the two was wrong
+   * would tell anyone who asks whether a given address has an account here.
+   */
   const errorFor = (field: keyof SignupFields): string | undefined => {
-    if (serverErrors[field]) return serverErrors[field]?.trim() || undefined;
+    const fromServer = serverErrors[field];
+    if (fromServer !== undefined) return fromServer.trim() || undefined;
     if (!submitted && !touched[field]) return undefined;
     return localErrors[field];
   };
 
+  /** Whether to outline a field. Broader than `errorFor`, which is only about the sentence. */
+  const invalidFor = (field: keyof SignupFields): boolean =>
+    serverErrors[field] !== undefined || Boolean(errorFor(field));
+
   const set = (field: keyof SignupFields) => (value: string) => {
     setFields((current) => ({ ...current, [field]: value }));
     // A field the visitor is fixing should stop being marked by a stale answer from the server.
-    setServerErrors((current) => (current[field] ? { ...current, [field]: undefined } : current));
+    setServerErrors((current) => {
+      if (current[field] === undefined) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
     setMessage(null);
   };
 
@@ -220,8 +236,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             value={fields.name}
             onChange={(event) => set("name")(event.target.value)}
             onBlur={blur("name")}
-            aria-invalid={Boolean(errorFor("name"))}
-            className={`${FIELD_BASE} ${errorFor("name") ? FIELD_BAD : FIELD_OK}`}
+            aria-invalid={invalidFor("name")}
+            className={`${FIELD_BASE} ${invalidFor("name") ? FIELD_BAD : FIELD_OK}`}
             placeholder="Aarav Sharma"
             autoComplete="name"
           />
@@ -234,8 +250,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           value={fields.email}
           onChange={(event) => set("email")(event.target.value)}
           onBlur={blur("email")}
-          aria-invalid={Boolean(errorFor("email"))}
-          className={`${FIELD_BASE} ${errorFor("email") ? FIELD_BAD : FIELD_OK}`}
+          aria-invalid={invalidFor("email")}
+          className={`${FIELD_BASE} ${invalidFor("email") ? FIELD_BAD : FIELD_OK}`}
           placeholder="you@example.com"
           autoComplete="email"
         />
@@ -257,8 +273,8 @@ export function AuthForm({ mode }: AuthFormProps) {
               value={fields.mobile}
               onChange={(event) => set("mobile")(event.target.value)}
               onBlur={blur("mobile")}
-              aria-invalid={Boolean(errorFor("mobile"))}
-              className={`${FIELD_BASE} ${errorFor("mobile") ? FIELD_BAD : FIELD_OK}`}
+              aria-invalid={invalidFor("mobile")}
+              className={`${FIELD_BASE} ${invalidFor("mobile") ? FIELD_BAD : FIELD_OK}`}
               placeholder="98765 43210"
               autoComplete="tel-national"
               maxLength={15}
@@ -274,8 +290,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             value={fields.password}
             onChange={(event) => set("password")(event.target.value)}
             onBlur={blur("password")}
-            aria-invalid={Boolean(errorFor("password"))}
-            className={`${FIELD_BASE} pr-16 ${errorFor("password") ? FIELD_BAD : FIELD_OK}`}
+            aria-invalid={invalidFor("password")}
+            className={`${FIELD_BASE} pr-16 ${invalidFor("password") ? FIELD_BAD : FIELD_OK}`}
             placeholder="••••••••"
             autoComplete={signup ? "new-password" : "current-password"}
           />
@@ -296,8 +312,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             value={fields.confirmPassword}
             onChange={(event) => set("confirmPassword")(event.target.value)}
             onBlur={blur("confirmPassword")}
-            aria-invalid={Boolean(errorFor("confirmPassword"))}
-            className={`${FIELD_BASE} ${errorFor("confirmPassword") ? FIELD_BAD : FIELD_OK}`}
+            aria-invalid={invalidFor("confirmPassword")}
+            className={`${FIELD_BASE} ${invalidFor("confirmPassword") ? FIELD_BAD : FIELD_OK}`}
             placeholder="••••••••"
             autoComplete="new-password"
           />

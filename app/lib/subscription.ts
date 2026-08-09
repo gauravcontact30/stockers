@@ -1,32 +1,65 @@
 import { CACHE_TAGS } from "./cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { PlanName } from "./auth-validation";
 import { cached, fetchNse, todayIST } from "./nse-client";
+import {
+  AI_FEATURES,
+  featureTier,
+  isFeatureKey,
+  TIER_LABEL,
+  tierAtLeast,
+  tierForPlan,
+  type FeatureKey,
+  type PlanTier,
+} from "./plan-tiers";
 import type { AppUser } from "./store";
+
+// The feature table itself lives in ./plan-tiers, which imports nothing from Node — the browser
+// needs the same tiers to decide what to blur. Re-exported here so the routes and pages that have
+// always imported them from this module keep working.
+export {
+  AI_FEATURES,
+  FEATURE_BY_KEY,
+  featureTier,
+  featuresForTier,
+  isFeatureKey,
+  isPlanTier,
+  PLAN_HIGHLIGHTS,
+  PLAN_TIERS,
+  starsFor,
+  TIER_LABEL,
+  TIER_RANK,
+  tierAtLeast,
+  tierForPlan,
+} from "./plan-tiers";
+export type { AiFeature, FeatureKey, PlanTier } from "./plan-tiers";
 
 /** Length of the free trial, counted in open market days rather than calendar days. */
 export const TRIAL_MARKET_DAYS = 5;
 /** How long a renewal buys, in calendar days. */
 export const SUBSCRIPTION_DAYS = 30;
 
-/**
- * Whether an expired trial actually blocks AI features.
- *
- * Off by default: every AI feature stays open and lapsed users are only reminded, not locked out.
- * The trial is still tracked and reported so the reminder can say how many days are left, and
- * setting ENFORCE_AI_PAYWALL=true turns the hard paywall on without any code change. Admin
- * feature locks apply either way.
- */
-export const PAYWALL_ENABLED = process.env.ENFORCE_AI_PAYWALL === "true";
-
 export type AccessState = "admin" | "trial" | "active" | "expired";
 
 export type AccessStatus = {
   state: AccessState;
-  /** True when AI features should be usable. Always true while the paywall is not enforced. */
+  /**
+   * True when the account has any AI entitlement at all — an admin, or a live paid plan.
+   *
+   * This is a summary, not the gate. Which *particular* features are usable depends on the tier
+   * below, because a Starter subscriber is `allowed` and still cannot open a Pro screener.
+   */
   allowed: boolean;
-  /** Whether an expired trial actually locks features, or merely prompts a reminder. */
-  enforced: boolean;
+  /**
+   * The highest tier this account may use, or null when it may use none.
+   *
+   * Null for a lapsed account and for one still inside its free trial: the trial exists to show a
+   * visitor what is here, not to hand out the AI layer for five days. See `accessStatusFor`.
+   */
+  tier: PlanTier | null;
+  /** The plan the account is on, for the client to name it back to them. Null when unsubscribed. */
+  planName: PlanName | null;
   isAdmin: boolean;
   /** Open market days consumed out of the trial allowance. */
   marketDaysUsed: number;
@@ -121,14 +154,20 @@ export function istDateOf(iso: string): string | null {
 /**
  * Works out what a user may currently access.
  *
- * Order matters: admins are unconditional, then a live paid subscription, then the trial. A user
- * whose subscription lapsed falls back to the trial test rather than being locked outright, which
- * keeps the two independent.
+ * A paid plan is the only thing that grants AI access, and the tier of that plan is what decides
+ * how much. Admins are unconditional and sit above the top tier.
+ *
+ * The trial no longer unlocks anything. It is still measured and reported — `state` and
+ * `marketDaysLeft` stay honest so the reminder can say where someone is — but a trial user sees
+ * every AI feature behind its plan's pill rather than getting five days of Elite. The alternative,
+ * a trial that hands over the whole product, meant the pills and the upsell only ever appeared to
+ * someone who had already stopped looking.
  */
 export function accessStatusFor(user: AppUser | null, today: string, holidays: Set<string>): AccessStatus {
   const base = {
     isAdmin: false,
-    enforced: PAYWALL_ENABLED,
+    tier: null as PlanTier | null,
+    planName: null as PlanName | null,
     marketDaysUsed: 0,
     marketDaysLeft: 0,
     trialStartedAt: null as string | null,
@@ -136,38 +175,50 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
     today,
   };
 
-  // `state` always reports the true trial position so the reminder can be specific, while
-  // `allowed` only turns false when the paywall is actually being enforced.
-  const permitted = (allowed: boolean) => allowed || !PAYWALL_ENABLED;
-
-  // Signed-out visitors are treated as lapsed: they see everything, and are invited to sign up.
-  if (!user) return { ...base, state: "expired", allowed: permitted(false) };
+  // Signed-out visitors are treated as lapsed: they are shown what exists and invited to sign up.
+  if (!user) return { ...base, state: "expired", allowed: false };
 
   if (user.role === "admin") {
-    return { ...base, state: "admin", allowed: true, isAdmin: true, marketDaysLeft: TRIAL_MARKET_DAYS };
-  }
-
-  const subscribedUntil = user.subscribedUntil ?? null;
-  if (subscribedUntil && today <= subscribedUntil) {
-    return { ...base, state: "active", allowed: true, subscribedUntil, marketDaysLeft: TRIAL_MARKET_DAYS };
+    return {
+      ...base,
+      state: "admin",
+      allowed: true,
+      isAdmin: true,
+      tier: "elite",
+      planName: "Elite",
+      marketDaysLeft: TRIAL_MARKET_DAYS,
+    };
   }
 
   // Accounts created before trials existed fall back to their creation date, so nobody is denied
-  // a trial they never had the chance to use.
+  // a trial they never had the chance to use. An unparseable date reads as a spent trial.
   const trialStartedAt = user.trialStartedAt ?? user.createdAt;
   const startDate = istDateOf(trialStartedAt);
-
-  if (!startDate) {
-    return { ...base, state: "expired", allowed: permitted(false), subscribedUntil, trialStartedAt };
-  }
-
-  const marketDaysUsed = countMarketDays(startDate, today, holidays);
+  const marketDaysUsed = startDate ? countMarketDays(startDate, today, holidays) : TRIAL_MARKET_DAYS;
   const marketDaysLeft = Math.max(0, TRIAL_MARKET_DAYS - marketDaysUsed);
+
+  const subscribedUntil = user.subscribedUntil ?? null;
+  if (subscribedUntil && today <= subscribedUntil) {
+    const tier = tierForPlan(user.plan);
+    return {
+      ...base,
+      state: "active",
+      allowed: true,
+      tier,
+      // Read back from the tier rather than from the raw record, so a plan string this build does
+      // not recognise still reports a name that matches the access actually granted.
+      planName: TIER_LABEL[tier],
+      subscribedUntil,
+      marketDaysUsed,
+      marketDaysLeft,
+      trialStartedAt,
+    };
+  }
 
   return {
     ...base,
     state: marketDaysLeft > 0 ? "trial" : "expired",
-    allowed: permitted(marketDaysLeft > 0),
+    allowed: false,
     marketDaysUsed,
     marketDaysLeft,
     trialStartedAt,
@@ -198,38 +249,12 @@ export function renewedUntil(current: string | null | undefined, today: string, 
 // Admin-controlled feature locks
 // ---------------------------------------------------------------------------
 
-/** Every AI-backed surface an admin can lock independently. */
-export const AI_FEATURES = [
-  { key: "intel", label: "AI intelligence search" },
-  { key: "market-pulse", label: "AI market pulse" },
-  { key: "top-picks", label: "Today's AI picks" },
-  { key: "buy-tomorrow", label: "Buy tomorrow screener" },
-  { key: "dip-winners", label: "Today's dip screener" },
-  { key: "research", label: "AI stock research" },
-  { key: "compare", label: "AI stock compare" },
-  { key: "news", label: "AI market news" },
-  { key: "etf-research", label: "AI ETF research" },
-  // The exchange boards that moved out of the landing page. The data underneath each is public
-  // and stays visible; what these keys gate is the AI layer now sitting on top of it.
-  { key: "directory", label: "AI company directory" },
-  { key: "sectors", label: "AI sector rotation" },
-  { key: "most-traded", label: "AI most-traded read" },
-  { key: "mtf", label: "AI MTF watch" },
-  { key: "stock-news", label: "AI filings digest" },
-  { key: "dividends", label: "AI dividend planner" },
-  { key: "ipos", label: "AI IPO watch" },
-  { key: "etf-board", label: "AI ETF board" },
-] as const;
-
-export type FeatureKey = (typeof AI_FEATURES)[number]["key"];
+// The surfaces an admin can lock, and the tier each one belongs to, are defined together in
+// ./plan-tiers and re-exported at the top of this file.
 
 export type FeatureLocks = Record<string, boolean>;
 
 const locksPath = path.join(process.cwd(), "app", "data", "feature-locks.json");
-
-export function isFeatureKey(value: unknown): value is FeatureKey {
-  return typeof value === "string" && AI_FEATURES.some((feature) => feature.key === value);
-}
 
 export async function readFeatureLocks(): Promise<FeatureLocks> {
   try {
@@ -261,12 +286,35 @@ export async function setFeatureLock(feature: FeatureKey, locked: boolean): Prom
 }
 
 /**
- * Whether a specific feature is usable right now: the subscription must allow it, and an admin
- * must not have locked it. Admins ignore their own locks so they can still verify a locked
- * feature works.
+ * Whether a specific feature is usable right now.
+ *
+ * Three things have to hold: an admin must not have locked it, the caller must hold a plan, and
+ * that plan must reach the feature's tier. Admins ignore their own locks and every tier, so they
+ * can still verify a locked or top-tier feature works.
  */
 export function canUseFeature(status: AccessStatus, locks: FeatureLocks, feature: string): boolean {
   if (status.isAdmin) return true;
   if (locks[feature]) return false;
-  return status.allowed;
+
+  const required = featureTier(feature);
+  // Not a key this app tiers — fall back to "holds any plan" rather than inventing a price for it.
+  if (!required) return status.allowed;
+
+  return tierAtLeast(status.tier, required);
+}
+
+/**
+ * The plan a caller would have to be on to use a feature they currently cannot.
+ *
+ * Null when the refusal has nothing to do with money — an admin lock, or a key with no tier — so a
+ * caller can tell "buy this" apart from "this is switched off", which are not the same message.
+ */
+export function requiredPlanFor(feature: string, locks: FeatureLocks): PlanName | null {
+  if (locks[feature]) return null;
+  const tier = featureTier(feature);
+  return tier ? TIER_LABEL[tier] : null;
+}
+
+export function featureKeys(): FeatureKey[] {
+  return AI_FEATURES.map((feature) => feature.key);
 }

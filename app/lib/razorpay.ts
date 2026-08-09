@@ -22,6 +22,7 @@
 // existing unpaid renewal flow, so a checkout misconfiguration cannot take the site down.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { PlanName } from "./auth-validation";
 
 const API = "https://api.razorpay.com/v1";
 
@@ -44,7 +45,11 @@ export const PLAN_MONTHLY: Record<PlanKey, number> = {
 /** Nine months for twelve on the annual cycle, matching the pricing page's own arithmetic. */
 export const YEARLY_MONTHS = 9;
 
-export const PLAN_NAMES: Record<PlanKey, string> = { starter: "Starter", pro: "Pro", elite: "Elite" };
+/**
+ * Typed as PlanName rather than string because this is what gets written to the account record,
+ * and that record is what every feature tier is then resolved against.
+ */
+export const PLAN_NAMES: Record<PlanKey, PlanName> = { starter: "Starter", pro: "Pro", elite: "Elite" };
 
 /** How long each cycle buys, in calendar days. */
 export const CYCLE_DAYS: Record<BillingCycle, number> = { monthly: 30, yearly: 365 };

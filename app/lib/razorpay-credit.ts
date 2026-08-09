@@ -38,9 +38,10 @@ export async function creditPayment(input: {
 
   const subscribedUntil = renewedUntil(user.subscribedUntil, todayIST(), CYCLE_DAYS[input.cycle]);
 
-  // The plan the user paid for is what they are on from here — Starter and Pro are the only two
-  // the account record has ever carried, so Elite is stored as Pro's tier of access.
-  const plan = PLAN_NAMES[input.plan] === "Starter" ? "Starter" : "Pro";
+  // The plan the user paid for is what they are on from here. Elite used to be folded into Pro
+  // because access was all-or-nothing and the distinction bought nothing; now that each feature
+  // carries a tier, collapsing the two would silently sell Elite and deliver Pro.
+  const plan = PLAN_NAMES[input.plan];
 
   const updated = await updateUser(user.id, { subscribedUntil, lastPaymentId: input.paymentId, plan });
   if (!updated) return { ok: false, error: "Couldn't record your subscription. Please contact support." };
