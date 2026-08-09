@@ -42,14 +42,21 @@ export async function POST(request: Request) {
   }
 
   const order = await createOrder({ plan, cycle, userId: user.id, email: user.email });
-  if (!order) {
-    return NextResponse.json({ error: "Couldn't reach the payment gateway. Please try again." }, { status: 502 });
+  if (!order.ok) {
+    return NextResponse.json(
+      {
+        error: order.error,
+        gatewayStatus: order.status ?? null,
+        configured: true,
+      },
+      { status: order.status === 401 ? 503 : 502 },
+    );
   }
 
   return NextResponse.json({
-    orderId: order.id,
-    amount: order.amount || amountInPaise(plan, cycle),
-    currency: order.currency || "INR",
+    orderId: order.value.id,
+    amount: order.value.amount || amountInPaise(plan, cycle),
+    currency: order.value.currency || "INR",
     keyId: keys.keyId,
     plan,
     cycle,

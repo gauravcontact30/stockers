@@ -1,6 +1,7 @@
 import { CACHE_TAGS } from "./cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { isSuperAdminEmail } from "./admin-access";
 import type { PlanName } from "./auth-validation";
 import { cached, fetchNse, todayIST } from "./nse-client";
 import {
@@ -178,7 +179,7 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
   // Signed-out visitors are treated as lapsed: they are shown what exists and invited to sign up.
   if (!user) return { ...base, state: "expired", allowed: false };
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || isSuperAdminEmail(user.email)) {
     return {
       ...base,
       state: "admin",

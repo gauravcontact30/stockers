@@ -66,6 +66,11 @@ export function amountInPaise(plan: PlanKey, cycle: BillingCycle): number {
 
 export type RazorpayKeys = { keyId: string; keySecret: string };
 
+function env(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
 /**
  * The API credentials, or null when the environment has none — which is not an error.
  *
@@ -79,8 +84,8 @@ export type RazorpayKeys = { keyId: string; keySecret: string };
  * server and checkout reported itself unconfigured, which is a confusing way to fail.
  */
 export function razorpayKeys(): RazorpayKeys | null {
-  const keyId = process.env.STOCKERS_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const keySecret = process.env.STOCKERS_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  const keyId = env("STOCKERS_RAZORPAY_KEY_ID") || env("RAZORPAY_KEY_ID") || env("NEXT_PUBLIC_RAZORPAY_KEY_ID");
+  const keySecret = env("STOCKERS_RAZORPAY_KEY_SECRET") || env("RAZORPAY_KEY_SECRET");
   return keyId && keySecret ? { keyId, keySecret } : null;
 }
 
@@ -99,12 +104,51 @@ export type RazorpayOrder = {
   status: string;
 };
 
+export type RazorpayGatewayFailure = {
+  ok: false;
+  status?: number;
+  error: string;
+};
+
+export type RazorpayGatewaySuccess<T> = {
+  ok: true;
+  value: T;
+};
+
+export type RazorpayGatewayResult<T> = RazorpayGatewaySuccess<T> | RazorpayGatewayFailure;
+
 export type OrderRequest = {
   plan: PlanKey;
   cycle: BillingCycle;
   userId: string;
   email: string;
 };
+
+function messageForStatus(status: number): string {
+  if (status === 401) {
+    return "Razorpay rejected the API key or secret. Check that both values are from the same Razorpay account and mode.";
+  }
+  if (status === 400) return "Razorpay rejected the order details.";
+  if (status === 429) return "Razorpay is rate limiting order creation. Please try again shortly.";
+  if (status >= 500) return "Razorpay is temporarily unavailable. Please try again shortly.";
+  return "Razorpay refused the order request.";
+}
+
+async function gatewayFailure(response: Response): Promise<RazorpayGatewayFailure> {
+  let detail = "";
+  try {
+    const payload = (await response.json()) as { error?: { description?: unknown; reason?: unknown; code?: unknown } };
+    const description = payload?.error?.description;
+    const reason = payload?.error?.reason;
+    const code = payload?.error?.code;
+    detail = [description, reason, code].filter((part): part is string => typeof part === "string" && part.trim().length > 0).join(" ");
+  } catch {
+    detail = "";
+  }
+
+  const base = messageForStatus(response.status);
+  return { ok: false, status: response.status, error: detail ? `${base} ${detail}` : base };
+}
 
 /**
  * Opens an order for one subscription period.
@@ -114,9 +158,11 @@ export type OrderRequest = {
  * `notes`, so the webhook can tell whose subscription a payment belongs to even if the browser
  * closes before it reports back.
  */
-export async function createOrder(request: OrderRequest): Promise<RazorpayOrder | null> {
+export async function createOrder(request: OrderRequest): Promise<RazorpayGatewayResult<RazorpayOrder>> {
   const keys = razorpayKeys();
-  if (!keys) return null;
+  if (!keys) {
+    return { ok: false, error: "Razorpay API key id and secret are not configured." };
+  }
 
   try {
     const response = await fetch(`${API}/orders`, {
@@ -140,13 +186,13 @@ export async function createOrder(request: OrderRequest): Promise<RazorpayOrder 
       signal: AbortSignal.timeout(15000),
     });
 
-    if (!response.ok) throw new Error(`Razorpay responded with ${response.status}`);
+    if (!response.ok) return gatewayFailure(response);
 
     const payload = (await response.json()) as RazorpayOrder;
-    return payload?.id ? payload : null;
+    return payload?.id ? { ok: true, value: payload } : { ok: false, error: "Razorpay returned an unreadable order." };
   } catch (error) {
     console.error(error);
-    return null;
+    return { ok: false, error: "Couldn't reach Razorpay while creating the order." };
   }
 }
 
@@ -218,7 +264,7 @@ export function verifyPaymentSignature(input: {
  * API key — so the body must be read as text and verified before it is parsed as JSON.
  */
 export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.STOCKERS_RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET;
+  const secret = env("STOCKERS_RAZORPAY_WEBHOOK_SECRET") || env("RAZORPAY_WEBHOOK_SECRET");
   if (!secret || !signature) return false;
 
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");

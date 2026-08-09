@@ -57,6 +57,13 @@ function request(caller: AppUser, body: unknown) {
   });
 }
 
+function queryRequest(caller: AppUser, id: string) {
+  return new Request(`http://localhost/api/admin/users?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${createToken(caller)}` },
+  });
+}
+
 beforeAll(async () => {
   original = await fs.readFile(usersPath, "utf8").catch(() => null);
 });
@@ -96,5 +103,16 @@ describe("DELETE /api/admin/users", () => {
     expect(response.status).toBe(200);
     expect(payload.users.map((user: { id: string }) => user.id)).toEqual([superAdmin.id]);
     expect(payload.summary.total).toBe(1);
+  });
+
+  it("accepts the user id from the query string for DELETE requests", async () => {
+    await writeRoster([superAdmin, regular]);
+
+    const response = await DELETE(queryRequest(superAdmin, regular.id));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.users.map((user: { id: string }) => user.id)).toEqual([superAdmin.id]);
+    expect(payload.permissions.canDeleteUsers).toBe(true);
   });
 });

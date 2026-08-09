@@ -33,6 +33,10 @@ export type AdminSummary = {
   elite?: number;
 };
 
+type AdminPermissions = {
+  canDeleteUsers?: boolean;
+};
+
 export type UserFilter = "all" | "unverified" | "subscribed" | "trial" | "admins";
 type PlanFilter = "all" | "Starter" | "Pro" | "Elite";
 type RoleFilter = "all" | "admin" | "user";
@@ -245,6 +249,7 @@ export function AdminUsers({
   const { status, loading: statusLoading } = useSubscription();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
+  const [permissions, setPermissions] = useState<AdminPermissions>({});
   const [today, setToday] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<UserFilter>(initialFilter);
@@ -274,6 +279,7 @@ export function AdminUsers({
       const data = await response.json();
       setUsers(data.users ?? []);
       setSummary(data.summary ?? null);
+      setPermissions(data.permissions ?? {});
       setToday(data.today ?? "");
     } catch {
       setError("Couldn't load the user list. Please try again.");
@@ -304,6 +310,7 @@ export function AdminUsers({
       }
       setUsers(data.users ?? []);
       if (data.summary) setSummary(data.summary);
+      if (data.permissions) setPermissions(data.permissions);
     } catch {
       setError("Couldn't reach the server.");
     } finally {
@@ -321,10 +328,9 @@ export function AdminUsers({
     setBusyId(user.id);
     setError(null);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch(`/api/admin/users?id=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ id: user.id }),
+        headers: authHeaders(),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -333,6 +339,7 @@ export function AdminUsers({
       }
       setUsers(data.users ?? []);
       if (data.summary) setSummary(data.summary);
+      if (data.permissions) setPermissions(data.permissions);
       return true;
     } catch {
       setError("Couldn't reach the server.");
@@ -388,7 +395,7 @@ export function AdminUsers({
       .slice(0, 6);
   }, [users, query]);
   const showSuggestions = searchFocused && searchSuggestions.length > 0;
-  const isSuperAdmin = status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const canDeleteUsers = permissions.canDeleteUsers ?? status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
 
   // The API is the real guard; this only decides what to render while it is being asked.
   if (statusLoading || loading) {
@@ -671,7 +678,7 @@ export function AdminUsers({
                         >
                           {user.role === "admin" ? "Remove admin" : "Make admin"}
                         </button>
-                        {isSuperAdmin && user.email.toLowerCase() !== SUPER_ADMIN_EMAIL && (
+                        {canDeleteUsers && user.email.toLowerCase() !== SUPER_ADMIN_EMAIL && (
                           <button
                             type="button"
                             disabled={busy}

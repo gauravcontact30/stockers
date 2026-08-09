@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { adminEmails } from "./admin-access";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { normaliseMobile, type PlanName } from "./auth-validation";
 
@@ -54,12 +55,7 @@ const SCRYPT_KEY_LENGTH = 64;
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || "stockers-dev-only-insecure-secret";
 
 /** Emails listed here are promoted to admin on sign-up, so the first admin needs no seeding. */
-const ADMIN_EMAILS = new Set(
-  (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean),
-);
+const ADMIN_EMAILS = adminEmails();
 
 function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");

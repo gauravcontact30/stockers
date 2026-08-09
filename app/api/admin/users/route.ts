@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { isSuperAdminEmail, SUPER_ADMIN_EMAIL } from "../../../lib/admin-access";
 import { deleteUser, findUserById, listUsers, updateUser, userFromRequest, type AppUser, type AdminUserView } from "../../../lib/store";
 import { renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
 
 export const dynamic = "force-dynamic";
-export const SUPER_ADMIN_EMAIL = "garvcontact30@gmail.com";
+export { SUPER_ADMIN_EMAIL };
 
 /**
  * Managing the people who have signed up.
@@ -15,11 +16,11 @@ export const SUPER_ADMIN_EMAIL = "garvcontact30@gmail.com";
  */
 async function requireAdmin(request: Request): Promise<AppUser | null> {
   const user = await userFromRequest(request);
-  return user && user.role === "admin" ? user : null;
+  return user && (user.role === "admin" || isSuperAdminEmail(user.email)) ? user : null;
 }
 
 function isSuperAdmin(user: AppUser): boolean {
-  return user.role === "admin" && user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL;
+  return isSuperAdminEmail(user.email);
 }
 
 /**
@@ -42,16 +43,23 @@ function summaryFor(users: AdminUserView[], today: string) {
   };
 }
 
-async function rosterResponse(extra: Record<string, unknown> = {}) {
+async function rosterResponse(admin: AppUser, extra: Record<string, unknown> = {}) {
   const users = await listUsers();
   const today = todayIST();
-  return NextResponse.json({ ...extra, users, summary: summaryFor(users, today), today });
+  return NextResponse.json({
+    ...extra,
+    users,
+    summary: summaryFor(users, today),
+    today,
+    permissions: { canDeleteUsers: isSuperAdmin(admin) },
+  });
 }
 
 export async function GET(request: Request) {
-  if (!(await requireAdmin(request))) return forbidden();
+  const admin = await requireAdmin(request);
+  if (!admin) return forbidden();
 
-  return rosterResponse();
+  return rosterResponse(admin);
 }
 
 /** The fields an admin is allowed to change, and nothing else. */
@@ -113,7 +121,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No such user." }, { status: 404 });
   }
 
-  return rosterResponse({ ok: true });
+  return rosterResponse(admin, { ok: true });
 }
 
 export async function DELETE(request: Request) {
@@ -124,14 +132,14 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Only the super admin can delete users." }, { status: 403 });
   }
 
-  let body: { id?: unknown };
+  let body: { id?: unknown } = {};
   try {
     body = (await request.json()) as { id?: unknown };
   } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    body = {};
   }
 
-  const { id } = body;
+  const id = typeof body.id === "string" ? body.id : new URL(request.url).searchParams.get("id");
   if (typeof id !== "string" || !id) {
     return NextResponse.json({ error: "A user id is required." }, { status: 400 });
   }
@@ -141,10 +149,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "No such user." }, { status: 404 });
   }
 
-  if (target.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL) {
+  if (isSuperAdminEmail(target.email)) {
     return NextResponse.json({ error: "The super admin account cannot be deleted." }, { status: 400 });
   }
 
   await deleteUser(id);
-  return rosterResponse({ ok: true });
+  return rosterResponse(admin, { ok: true });
 }

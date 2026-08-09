@@ -13,18 +13,18 @@
     "verificationToken": null
   },
   {
-    "id": "user_mslzhrvo_e2aa7b64",
+    "id": "user_msm0xhnz_3cbf71a0",
     "name": "Gaurav Pandey",
     "email": "gauravcontact66@gmail.com",
-    "passwordHash": "6fad72ba99c97142c411c9514165f0ce:ce934b01c66d5579a7c5ac4b1a3a54659861b09d0d59da9d626070f7b829fc2e2e9729ea0dcfddc2512f7e6859ef125d0bb9ef1cd88af59b48678b4d7c973007",
+    "passwordHash": "fc880046567980e75d569b4dca0c21fb:2dd7d00cc30e6f09f1c9224b44f624cc46382be9d86d2bdfe59b51213142a18918ca810d7abe3bbbf1cfd7345a2fbabf3d6d54c3261d9021938b4f62444aadcc",
     "plan": "Starter",
-    "createdAt": "2026-08-09T15:55:21.060Z",
+    "createdAt": "2026-08-09T16:35:33.935Z",
     "mobile": "9873510871",
     "role": "user",
-    "trialStartedAt": "2026-08-09T15:55:21.060Z",
+    "trialStartedAt": "2026-08-09T16:35:33.935Z",
     "subscribedUntil": null,
     "emailVerifiedAt": null,
-    "verificationToken": "b63924d0d4ab0d930a0ba56f7326232ad9da5b59c7155a5bb79ce947e2526602",
-    "verificationSentAt": "2026-08-09T15:55:21.229Z"
+    "verificationToken": "5812e1f65b38af7f82fe206df21d3c4e9c8ad3f475e261df8aa6601f51b6648d",
+    "verificationSentAt": "2026-08-09T16:35:34.071Z"
   }
 ]

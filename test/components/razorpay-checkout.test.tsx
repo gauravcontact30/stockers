@@ -89,15 +89,16 @@ describe("checkoutOptions", () => {
       amount: 79900,
       currency: "INR",
       order_id: "order_test123",
-      description: "pro plan · 1 month",
+      name: "StockersAI",
+      description: "Pro plan - ₹399/month, billed monthly",
       prefill: { name: "Asha", email: "asha@example.com" },
     });
     expect(options.handler).toBe(onSuccess);
   });
 
-  it("says twelve months on the annual cycle", () => {
+  it("shows the annual billed amount and effective monthly price on the annual cycle", () => {
     const options = checkoutOptions({ ...ORDER, cycle: "yearly" }, { onSuccess: jest.fn(), onDismiss: jest.fn() });
-    expect(options.description).toBe("pro plan · 12 months");
+    expect(options.description).toBe("Pro plan - ₹299/month, ₹3,591 billed yearly");
   });
 });
 
@@ -324,6 +325,9 @@ describe("SubscribeButton", () => {
       </SubscriptionProvider>,
     );
 
-    expect(await screen.findByRole("link", { name: "Choose Elite" })).toHaveAttribute("href", "/signup");
+    expect(await screen.findByRole("link", { name: "Choose Elite" })).toHaveAttribute(
+      "href",
+      "/signup?subscribe=1&plan=elite&cycle=monthly",
+    );
   });
 });

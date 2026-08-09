@@ -324,9 +324,9 @@ describe("AdminUsers", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const [url, init] = fetchMock.mock.calls[1];
-    expect(url).toBe("/api/admin/users");
+    expect(url).toBe("/api/admin/users?id=u1");
     expect(init.method).toBe("DELETE");
-    expect(JSON.parse(init.body)).toEqual({ id: "u1" });
+    expect(init.body).toBeUndefined();
     await waitFor(() => expect(screen.queryByText("Aarav Sharma")).not.toBeInTheDocument());
   });
 
