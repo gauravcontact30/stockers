@@ -1,19 +1,30 @@
+"use client";
+
 /**
  * The four full-width scenes behind the landing hero.
  *
- * They are drawn live in SVG and CSS rather than shipped as exported images: the hero is
- * full-bleed, so a raster export is either enormous or visibly soft on a wide display, and at
- * 4:3 crops it reflows badly. Vector scenes stay sharp at any width and cost nothing to download.
+ * They are drawn in CSS and DOM rather than shipped as exported images: the hero is full-bleed, so
+ * a raster export is either enormous or visibly soft on a wide display, and at 4:3 crops it reflows
+ * badly. Drawn scenes stay sharp at any width and cost nothing to download.
  *
- * Every scene is a *depiction* of the product — a themed gainers board, a two-stock contest, a
- * three-stock report, the analysis pipeline — not a screenshot. Company names and BSE scrip codes
- * are real; the prices and percentages are illustrative and each scene says so on its own
- * footnote. The real numbers are a scroll down the page, wired to the exchange feeds.
+ * Three of the four carry **live figures**, and each says so on its own footnote:
+ *
+ *   * The two sector trios — banking, and the data-centre build-out — name three companies each and
+ *     ask the same performance endpoint the watchlist and the dashboard boards use.
+ *   * The last scene is a live screen: the year's strongest performers that are trading below their
+ *     own recent range today, with their headlines counted beside them.
+ *
+ * Only the first scene is a *depiction* — a themed gainers board whose company names and BSE scrip
+ * codes are real but whose prices are illustrative. Its footnote says as much.
  *
  * Every scene is laid out inside one padded card (`SceneCard`) in normal flow — nothing is
  * absolutely positioned against the frame edge, so no content can ever sit flush against it or
  * overlap a neighbour at an unplanned width.
  */
+
+import { useEffect, useState } from "react";
+import { CompanyLogo } from "./company-logo";
+import { useStockPerformance, type StockPerformance } from "./use-stock-performance";
 
 // ---------------------------------------------------------------------------
 // Palettes
@@ -213,15 +224,6 @@ function Panel({ palette, className, children }: { palette: ScenePalette; classN
   );
 }
 
-function PanelHead({ palette, title, right }: { palette: ScenePalette; title: string; right?: React.ReactNode }) {
-  return (
-    <div className={`flex items-center justify-between gap-2 border-b px-4 py-2.5 ${palette.rule}`}>
-      <p className="text-[11px] font-bold tracking-wide text-slate-600 uppercase">{title}</p>
-      {right}
-    </div>
-  );
-}
-
 /**
  * The one card every scene lives inside.
  *
@@ -238,8 +240,11 @@ function SceneCard({
   /**
    * The gap between the card and the edge of the slide. Every slide shares one frame height, so
    * this is how an airier scene gets a shorter card and a denser one gets a taller card.
+   *
+   * Required rather than defaulted: every scene has an opinion about its own density, and a
+   * default only ever meant one of them had not been given the thought.
    */
-  inset = "p-3 sm:p-7 lg:p-10",
+  inset,
   children,
 }: {
   palette: ScenePalette;
@@ -247,7 +252,7 @@ function SceneCard({
   title: string;
   badge: string;
   footnote: string;
-  inset?: string;
+  inset: string;
   children: React.ReactNode;
 }) {
   return (
@@ -421,559 +426,499 @@ export function TopGainersScene() {
 }
 
 // ---------------------------------------------------------------------------
-// Scene 2 — two stocks, compared by AI
+// Scenes 2 and 3 — a sector's leaders, one card each, on live figures
 // ---------------------------------------------------------------------------
+//
+// These two differ from the scenes either side of them in one important way: the numbers are real.
+// The others depict the product with illustrative figures and say so on their footnotes, which is
+// honest but means the hero opens on nothing a reader can act on. These two ask the same
+// performance endpoint the watchlist and the dashboard boards use, so what a visitor sees in the
+// carousel is the same session's exchange data they would find by scrolling down.
+//
+// That costs one request between them. The hook batches every symbol raised in the same tick into
+// a single call and memoises the answer for the session, so all six names resolve together and
+// cycling back to a slide re-fetches nothing.
 
-export type CompareSide = {
-  code: string;
+/** One company on a trio slide, with the accent its card wears. */
+export type TrioStock = {
   symbol: string;
   company: string;
-  price: string;
-  today: number;
-  verdict: string;
-  score: number;
-  pros: string[];
-  cons: string[];
+  /** What this company does, in a few words. A reader may not know the smaller names. */
+  blurb: string;
+  /** Card border tint, so three cards in a row read as three companies rather than one block. */
+  accent: string;
+  /**
+   * The card's pale wash.
+   *
+   * Light rather than saturated on purpose: these cards carry a dozen figures each, and a strong
+   * fill behind small tabular numbers costs more legibility than the separation it buys.
+   */
+  wash: string;
+  /**
+   * Cap tier, carried here rather than read from the quote feed.
+   *
+   * The feed only knows the tier for companies in the curated catalogue, and one of these — Paras
+   * Defence — is outside it, so relying on the feed would print a blank against a real company.
+   * Taken from BSE's own classification.
+   */
+  tier: "Large" | "Mid" | "Small";
 };
 
-/** One measured row of the contest: the same figure for both sides, and who it favours. */
-export type CompareMetric = {
-  label: string;
-  /** What the row measures, in words a reader does not need the jargon to follow. */
-  plain: string;
-  left: string;
-  right: string;
-  /** Which side the number itself favours. Nothing here is a matter of opinion. */
-  winner: "left" | "right";
-};
+/** A trio is exactly three. Stated as a tuple so a slide cannot be built with two or four. */
+export type Trio = readonly [TrioStock, TrioStock, TrioStock];
 
-const LEFT: CompareSide = {
-  code: "500180",
-  symbol: "HDFCBANK",
-  company: "HDFC Bank",
-  price: "1,678.90",
-  today: 2.14,
-  verdict: "Buy",
-  score: 78,
-  pros: ["Best one-year return of the pair", "Deepest delivery volume"],
-  cons: ["Trades at the richer multiple"],
-};
+/** The windows each card reports, shortest first — a single day says almost nothing on its own. */
+const TRIO_PERIODS = [
+  { label: "1W", key: "oneWeek" },
+  { label: "1M", key: "oneMonth" },
+  { label: "6M", key: "sixMonth" },
+  { label: "1Y", key: "oneYear" },
+  { label: "3Y", key: "threeYear" },
+] as const;
 
-const RIGHT: CompareSide = {
-  code: "532174",
-  symbol: "ICICIBANK",
-  company: "ICICI Bank",
-  price: "1,284.60",
-  today: 2.91,
-  verdict: "Hold",
-  score: 64,
-  pros: ["Cheaper on earnings", "Stronger move today"],
-  cons: ["Trails over six months and a year"],
-};
+/** A price in rupees, or a dash when the feed has none. Never a zero standing in for "unknown". */
+export function trioPrice(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** A measured return, or a dash. A company younger than the window genuinely has no figure. */
+export function trioReturn(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value) ? signed(value, 1) : "—";
+}
 
 /**
- * Each row says what it measures in words, not in jargon.
+ * One company's card.
  *
- * "P/E 21.4x vs 17.9x" only helps a reader who already knows that lower wins; "Cheaper on
- * earnings" tells them what the comparison decided and why.
+ * Pure — it is handed its figures rather than fetching them — and deliberately spare. A card in a
+ * hero has a couple of seconds of a reader's attention, so it carries one line of identity, one
+ * line of what the company does, the price, today's move, and the returns. Everything that was
+ * competing with those has gone: a per-card progress bar, and a comparison table underneath that
+ * repeated the same five windows a second time in a denser form.
  */
-const METRICS: CompareMetric[] = [
-  { label: "Return over 1 month", plain: "Which one rose more in the last month", left: "+4.82%", right: "+3.10%", winner: "left" },
-  { label: "Return over 6 months", plain: "Which one rose more since February", left: "+18.40%", right: "+11.75%", winner: "left" },
-  { label: "Return over 1 year", plain: "Which one rose more over the full year", left: "+27.16%", right: "+22.08%", winner: "left" },
-  { label: "Price vs earnings", plain: "How many years of profit the price costs — lower is cheaper", left: "21.4x", right: "17.9x", winner: "right" },
-  { label: "Shares actually delivered", plain: "How much of the trading was real buying, not intraday churn", left: "62.1%", right: "54.8%", winner: "left" },
-];
-
-/**
- * Which side the measured rows favour, and by how many of them.
- *
- * This is the whole honesty contract of the compare feature in one function: the arithmetic
- * counts the rows and picks the winner, and the AI is only ever handed that result to write up.
- */
-export function tallyCompare(metrics: CompareMetric[]): { left: number; right: number; leader: "left" | "right" } {
-  const left = metrics.filter((metric) => metric.winner === "left").length;
-  const right = metrics.length - left;
-  return { left, right, leader: left >= right ? "left" : "right" };
-}
-
-/**
- * One competitor's full card: who it is, what it costs, what the desk calls it, and the two or
- * three points that carried the call.
- */
-function ContenderCard({ side, leading }: { side: CompareSide; leading: boolean }) {
-  return (
-    <Panel palette={SKY} className={`flex flex-col gap-2.5 overflow-hidden p-3 ${leading ? "border-emerald-300 ring-1 ring-emerald-200" : ""}`}>
-      {/* Identity */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate font-mono text-sm font-black text-slate-900">{side.symbol}</p>
-          <p className="truncate text-[10px] text-slate-500">
-            {side.company} · {side.code}
-          </p>
-        </div>
-        {leading && (
-          <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black tracking-wide text-white uppercase">
-            Stronger
-          </span>
-        )}
-      </div>
-
-      {/* Price and verdict, each its own tile so neither reads as a caption on the other. */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="text-[9px] font-semibold tracking-wide text-slate-400 uppercase">Last price</p>
-          <p className="font-mono text-lg font-black text-slate-900">₹{side.price}</p>
-          <p className={`font-mono text-[10px] font-bold ${UP_TEXT}`}>{signed(side.today)} today</p>
-        </div>
-        <div className={`rounded-xl border px-3 py-2 ${leading ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
-          <p className="text-[9px] font-semibold tracking-wide text-slate-400 uppercase">AI verdict</p>
-          <p className="text-lg font-black text-slate-900">{side.verdict}</p>
-          <p className={`font-mono text-[10px] font-bold ${leading ? UP_TEXT : "text-slate-500"}`}>score {side.score}</p>
-        </div>
-      </div>
-
-      {/* Pros and cons, split into their own boxes rather than one mixed list. */}
-      <div className="grid grid-cols-1 gap-2">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
-          <p className="text-[9px] font-black tracking-widest text-emerald-700 uppercase">For</p>
-          {side.pros.map((point) => (
-            <p key={point} className={`mt-1 flex gap-1.5 text-[10px] leading-snug ${UP_TEXT}`}>
-              <span aria-hidden="true">▲</span>
-              <span className="min-w-0 flex-1">{point}</span>
-            </p>
-          ))}
-        </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-2">
-          <p className="text-[9px] font-black tracking-widest text-rose-700 uppercase">Against</p>
-          {side.cons.map((point) => (
-            <p key={point} className={`mt-1 flex gap-1.5 text-[10px] leading-snug ${DOWN_TEXT}`}>
-              <span aria-hidden="true">▼</span>
-              <span className="min-w-0 flex-1">{point}</span>
-            </p>
-          ))}
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
-/**
- * The measure ladder down the middle of the contest.
- *
- * Each rung is one measured row with the figure on each side and an arrow pointing at whichever
- * one it favours — so the reader can see the contest being decided rather than be handed a total.
- */
-/** Which of the two contenders took more of the five measures. */
-export function leaderSymbol(tally: ReturnType<typeof tallyCompare>): string {
-  return tally.leader === "left" ? LEFT.symbol : RIGHT.symbol;
-}
-
-function MeasureLadder({ tally }: { tally: ReturnType<typeof tallyCompare> }) {
-  return (
-    <Panel palette={SKY} className="overflow-hidden">
-      <div className={`border-b px-3 py-2 text-center ${SKY.rule}`}>
-        <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Five things we measured</p>
-        <p className="font-mono text-sm font-black text-slate-900">
-          {tally.left} – {tally.right}
-        </p>
-        <p className="text-[9px] text-slate-500">
-          {leaderSymbol(tally)} wins more of them
-        </p>
-      </div>
-
-      <ul className="divide-y divide-slate-100">
-        {METRICS.map((metric) => (
-          <li key={metric.label} className="px-2.5 py-1.5">
-            <p className="text-[9px] font-bold text-slate-600">{metric.label}</p>
-            <p className="text-[9px] leading-tight text-slate-400">{metric.plain}</p>
-            <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] items-center gap-1">
-              <span
-                className={`text-right font-mono text-[11px] ${metric.winner === "left" ? `font-black ${UP_TEXT}` : "text-slate-400"}`}
-              >
-                {metric.left}
-              </span>
-              <span className={`px-1 text-center text-[10px] ${UP_TEXT}`} aria-label={`favours ${metric.winner}`}>
-                {metric.winner === "left" ? "◀ wins" : "wins ▶"}
-              </span>
-              <span className={`font-mono text-[11px] ${metric.winner === "right" ? `font-black ${UP_TEXT}` : "text-slate-400"}`}>
-                {metric.right}
-              </span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
-export function CompareScene() {
-  const tally = tallyCompare(METRICS);
+export function TrioCard({
+  stock,
+  performance,
+  loading,
+}: {
+  stock: TrioStock;
+  performance: StockPerformance | null;
+  loading: boolean;
+}) {
+  const day = performance?.oneDay ?? null;
 
   return (
-    <SceneCard
-      palette={SKY}
-      eyebrow="Compare with AI"
-      title="Any two stocks, scored on the same five measures"
-      badge="AI DESK"
-      footnote="The five rows decide the winner; the AI only writes up what they say · illustration · not investment advice"
-    >
-      {/* A versus layout rather than a table: contender, ladder, contender. */}
-      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[1fr_0.7fr_1fr]">
-        <ContenderCard side={LEFT} leading={tally.leader === "left"} />
-        <MeasureLadder tally={tally} />
-        <ContenderCard side={RIGHT} leading={tally.leader === "right"} />
-      </div>
-    </SceneCard>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Scene 3 — a three-stock report: buy, hold or sell
-// ---------------------------------------------------------------------------
-
-export type Verdict = "Buy" | "Hold" | "Sell";
-
-export type ReportCard = {
-  code: string;
-  symbol: string;
-  company: string;
-  price: string;
-  verdict: Verdict;
-  score: number;
-  returns: { label: string; value: number }[];
-  because: string;
-};
-
-/** Verdict colours. One palette per stance, so the three cards are legible at a glance. */
-export function verdictStyle(verdict: Verdict): { card: string; badge: string; ring: string } {
-  if (verdict === "Buy") {
-    return { card: "border-emerald-300", badge: "bg-emerald-600 text-white", ring: "#059669" };
-  }
-  if (verdict === "Hold") {
-    return { card: "border-amber-300", badge: "bg-amber-500 text-white", ring: "#d97706" };
-  }
-  return { card: "border-rose-300", badge: "bg-rose-600 text-white", ring: "#e11d48" };
-}
-
-/**
- * Three scrips, scored the same way and landing on three different stances.
- *
- * Deliberately one of each: a report where everything is a buy tells a reader nothing about how
- * the scoring works, and the point of this scene is that the same measures can say sell.
- */
-export const REPORT_CARDS: ReportCard[] = [
-  {
-    code: "500325",
-    symbol: "RELIANCE",
-    company: "Reliance Industries",
-    price: "2,847.50",
-    verdict: "Buy",
-    score: 81,
-    returns: [
-      { label: "1M", value: 6.4 },
-      { label: "6M", value: 19.2 },
-      { label: "1Y", value: 31.7 },
-    ],
-    because: "Positive over every window measured, and the six-month leg is the strongest of the three.",
-  },
-  {
-    code: "532540",
-    symbol: "TCS",
-    company: "Tata Consultancy Services",
-    price: "3,912.20",
-    verdict: "Hold",
-    score: 57,
-    returns: [
-      { label: "1M", value: 1.8 },
-      { label: "6M", value: -2.4 },
-      { label: "1Y", value: 8.9 },
-    ],
-    because: "Up on the year but down over six months — the windows disagree, so the score sits in the middle.",
-  },
-  {
-    code: "500820",
-    symbol: "ASIANPAINT",
-    company: "Asian Paints",
-    price: "2,298.50",
-    verdict: "Sell",
-    score: 28,
-    returns: [
-      { label: "1M", value: -3.1 },
-      { label: "6M", value: -11.6 },
-      { label: "1Y", value: -18.4 },
-    ],
-    because: "Negative over every window measured, and the decline has widened as the window lengthens.",
-  },
-];
-
-function ScoreRing({ value, colour }: { value: number; colour: string }) {
-  const radius = 26;
-  const circumference = 2 * Math.PI * radius;
-  return (
-    <svg viewBox="0 0 68 68" className="h-14 w-14 shrink-0">
-      <circle cx="34" cy="34" r={radius} fill="none" stroke="rgba(15,23,42,0.1)" strokeWidth="6" />
-      <circle
-        cx="34"
-        cy="34"
-        r={radius}
-        fill="none"
-        stroke={colour}
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={`${(value / 100) * circumference} ${circumference}`}
-        transform="rotate(-90 34 34)"
-      />
-      <text x="34" y="33" textAnchor="middle" fontSize="16" fontWeight="800" fill="#0f172a">
-        {value}
-      </text>
-      <text x="34" y="45" textAnchor="middle" fontSize="7" fill="#94a3b8" letterSpacing="1">
-        SCORE
-      </text>
-    </svg>
-  );
-}
-
-function ReportPanel({ card }: { card: ReportCard }) {
-  const style = verdictStyle(card.verdict);
-
-  return (
-    <Panel palette={LILAC} className={`overflow-hidden ${style.card}`}>
-      <div className={`flex items-start justify-between gap-3 border-b px-3 py-2 ${LILAC.rule}`}>
-        <div className="min-w-0">
-          <p className="truncate font-mono text-[13px] font-black text-slate-900">{card.symbol}</p>
-          <p className="truncate text-[10px] text-slate-500">
-            {card.company} · {card.code}
-          </p>
-          <p className="font-mono text-[12px] font-bold text-slate-700">₹{card.price}</p>
+    <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_12px_32px_-20px_rgba(15,23,42,0.5)] ${stock.accent} ${stock.wash}`}>
+      <div className="flex items-start gap-3 px-4 pt-4">
+        <CompanyLogo symbol={stock.symbol} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-black leading-tight text-slate-900">{stock.symbol}</p>
+          <p className="truncate text-xs font-medium text-slate-600">{stock.company}</p>
         </div>
-        <ScoreRing value={card.score} colour={style.ring} />
-      </div>
-
-      <div className="px-3 py-2">
-        <span className={`inline-block rounded-full px-3 py-0.5 text-[13px] font-black tracking-wide uppercase ${style.badge}`}>
-          {card.verdict}
+        <span className="shrink-0 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+          {stock.tier}
         </span>
-
-        <dl className="mt-2 grid grid-cols-3 gap-1.5">
-          {card.returns.map((window) => (
-            <div key={window.label} className="rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-center">
-              <dt className="text-[9px] font-semibold tracking-wide text-slate-400 uppercase">{window.label}</dt>
-              <dd className={`mt-0.5 font-mono text-[11px] font-bold ${tone(window.value)}`}>{signed(window.value, 1)}</dd>
-            </div>
-          ))}
-        </dl>
-
-        <p className="mt-2 line-clamp-3 text-[10px] leading-snug text-slate-600">{card.because}</p>
       </div>
-    </Panel>
+
+      {/* Two lines at most. A third pushes three stacked cards past the frame on a narrow screen. */}
+      <p className="mt-2.5 line-clamp-2 px-4 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
+
+      <div className="mt-3.5 flex items-end justify-between gap-3 px-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">Last price</p>
+          <p className="text-xl font-black leading-tight tabular-nums text-slate-900">
+            {loading ? <span className="inline-block h-6 w-24 animate-pulse rounded bg-white/80" /> : trioPrice(performance?.price)}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black tabular-nums ${
+            day === null ? "bg-white/90 text-slate-400" : day >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+          }`}
+        >
+          {loading ? "…" : trioReturn(day)}
+        </span>
+      </div>
+
+      {/* The returns, as one quiet strip along the foot rather than a second table of their own. */}
+      <dl className="mt-4 flex divide-x divide-white/80 border-t border-white/80 bg-white/70">
+        {TRIO_PERIODS.map((period) => {
+          const value = performance?.[period.key] ?? null;
+          return (
+            <div key={period.label} className="flex-1 px-1 py-2.5 text-center">
+              <dt className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">{period.label}</dt>
+              <dd className={`mt-1 text-[11px] font-black tabular-nums ${value === null ? "text-slate-300" : tone(value)}`}>
+                {loading ? "…" : trioReturn(value)}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }
 
-export function TripleReportScene() {
+/**
+ * Three companies from one sector, side by side on live figures.
+ *
+ * One sector on purpose: three banks can be read against each other, whereas a bank beside a
+ * software firm cannot. Both trio slides share this component, so they differ only in their
+ * companies and their colour — never in how a figure is drawn or in what a blank means.
+ */
+function StockTrioScene({
+  palette,
+  eyebrow,
+  title,
+  badge,
+  footnote,
+  stocks,
+}: {
+  palette: ScenePalette;
+  eyebrow: string;
+  title: string;
+  badge: string;
+  footnote: string;
+  stocks: Trio;
+}) {
+  // Written out rather than looped: hooks cannot be called in a loop, and a trio is always three.
+  // All three symbols are raised in the same tick, so the batching hook sends one request for them.
+  const first = useStockPerformance(stocks[0].symbol);
+  const second = useStockPerformance(stocks[1].symbol);
+  const third = useStockPerformance(stocks[2].symbol);
+  const rows = [first, second, third];
+
   return (
-    <SceneCard
-      palette={LILAC}
-      eyebrow="AI comparison report"
-      title="Three stocks. Buy, hold or sell."
-      badge="SCORED TODAY"
-      inset="p-3 sm:p-10 lg:p-14"
-      footnote="The stance comes from the measured returns, never from the model · illustration · not investment advice"
-    >
-      {/* `items-start` so a card is as tall as its own copy — stretching all three to the row
-          left most of each one empty. */}
+    <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote} inset="p-3 sm:p-8 lg:p-12">
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {REPORT_CARDS.map((card) => (
-          <ReportPanel key={card.code} card={card} />
+        {stocks.map((stock, index) => (
+          <TrioCard key={stock.symbol} stock={stock} performance={rows[index].performance} loading={rows[index].loading} />
         ))}
       </div>
     </SceneCard>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Scene 4 — how the analysis works, and what it likes at today's price
-// ---------------------------------------------------------------------------
-
-/** The four stages every board in this product runs through, in order. */
-export const PIPELINE: { step: string; detail: string }[] = [
-  { step: "Read the exchange", detail: "BSE Bhavcopy and the live quote feed. No sampling, no estimates." },
-  { step: "Measure the returns", detail: "One week, one month, six months and one year, per scrip." },
-  { step: "Score the stance", detail: "Arithmetic picks buy, hold or sell. The model never touches this." },
-  { step: "Write it up", detail: "The AI explains the score it was handed, and may not contradict it." },
-];
-
-export type DipPick = {
-  code: string;
-  symbol: string;
-  company: string;
-  price: string;
-  /** Return over the last year — the reason it is on the list at all. */
-  year: number;
-  /** How far below its own 52-week high it trades today — the reason it is on the list now. */
-  offHigh: number;
-  yearHigh: string;
-  when: "Today" | "Tomorrow";
-};
-
 /**
- * Companies that have delivered over a year but are not at their high right now.
+ * The three listed defence names a reader is most likely to be weighing against each other.
  *
- * Both halves matter and neither is enough on its own: a year of gains with no pullback is not a
- * cheaper entry, and a pullback with no year behind it is just a stock going down.
+ * One theme, three different businesses and three different sizes — aircraft, warships and
+ * components, at large, mid and small cap. That spread is the point rather than a flaw in the
+ * comparison: it is why the same order book can produce very different returns, and the cards say
+ * which tier each one is so a small cap's move is never read as a large cap's.
  */
-export const DIP_PICKS: DipPick[] = [
+export const DEFENCE_TRIO: Trio = [
   {
-    code: "500034",
-    symbol: "BAJFINANCE",
-    company: "Bajaj Finance",
-    price: "1,141.20",
-    year: 31.2,
-    offHigh: 15.8,
-    yearHigh: "1,355.40",
-    when: "Today",
+    symbol: "HAL",
+    company: "Hindustan Aeronautics",
+    blurb: "Builds and services India's military aircraft and helicopters. The largest of the three by far.",
+    accent: "border-emerald-300",
+    wash: "bg-emerald-50/70",
+    tier: "Large",
   },
   {
-    code: "500114",
-    symbol: "TITAN",
-    company: "Titan Company",
-    price: "3,214.80",
-    year: 24.6,
-    offHigh: 12.4,
-    yearHigh: "3,669.60",
-    when: "Today",
+    symbol: "MAZDOCK",
+    company: "Mazagon Dock Shipbuilders",
+    blurb: "The navy's shipyard: destroyers and submarines, on long fixed-price programmes.",
+    accent: "border-teal-300",
+    wash: "bg-teal-50/70",
+    tier: "Mid",
   },
   {
-    code: "500570",
-    symbol: "TATAMOTORS",
-    company: "Tata Motors",
-    price: "684.35",
-    year: 19.4,
-    offHigh: 9.7,
-    yearHigh: "757.90",
-    when: "Tomorrow",
+    symbol: "PARAS",
+    company: "Paras Defence and Space Technologies",
+    blurb: "Optics, electronics and drone systems that go inside other people's platforms.",
+    accent: "border-cyan-300",
+    wash: "bg-cyan-50/70",
+    tier: "Small",
   },
 ];
 
-/**
- * How far along its own 52-week band the price sits, as a percentage.
- *
- * A pick 15.8% off its high is at 84.2% of it — the bar reads as "how much of the high is left in
- * the price", which is the way round a reader thinks about a pullback.
- */
-export function bandPosition(offHigh: number): number {
-  return Math.max(0, Math.min(100, 100 - offHigh));
-}
-
-/**
- * The pipeline as a numbered column down the left.
- *
- * The other three scenes are card grids read left to right; this one puts the method beside the
- * result, so the last slide answers "how" and "what" in one glance instead of stacking two grids.
- */
-function PipelineColumn() {
+export function DefenceStocksScene() {
   return (
-    <Panel palette={SAND} className="overflow-hidden p-4">
-      <p className="text-[10px] font-bold tracking-widest text-amber-700 uppercase">Four steps, every scrip</p>
-
-      <ol className="mt-3 space-y-3">
-        {PIPELINE.map((stage, index) => (
-          <li key={stage.step} className="relative flex gap-2.5">
-            <div className="flex flex-col items-center">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 font-mono text-[10px] font-black text-white">
-                {index + 1}
-              </span>
-              {/* The rail joining one step to the next; the last step has nothing to join to. */}
-              {index < PIPELINE.length - 1 && <span className="mt-0.5 w-px flex-1 bg-amber-300" aria-hidden="true" />}
-            </div>
-            <div className="min-w-0 pb-1">
-              <p className="text-[11px] font-bold text-slate-800">{stage.step}</p>
-              <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">{stage.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </Panel>
+    <StockTrioScene
+      palette={MINT}
+      eyebrow="Defence"
+      title="Aircraft, warships and optics, compared"
+      badge="LIVE FIGURES"
+      footnote="Live prices and returns from the same exchange feed as the boards below · three different cap tiers, so compare the tier as well as the move · measured, not modelled · not investment advice"
+      stocks={DEFENCE_TRIO}
+    />
   );
 }
 
-/**
- * One pick as a price ladder: what it costs today against what it cost at its high, with the gap
- * between them called out. It is the same two facts as before, drawn as the distance the price
- * has to travel rather than as two separate tiles.
- */
-function DipLadder({ pick }: { pick: DipPick }) {
+/** The three listed names that actually build, power and house an Indian data centre. */
+export const DATA_CENTRE_TRIO: Trio = [
+  {
+    symbol: "NETWEB",
+    company: "Netweb Technologies India",
+    blurb: "Builds the high-performance compute and AI servers that fill the racks.",
+    accent: "border-violet-300",
+    wash: "bg-violet-50/70",
+    tier: "Small",
+  },
+  {
+    symbol: "POWERINDIA",
+    company: "Hitachi Energy India",
+    blurb: "Supplies the grid connection, transformers and switchgear that feed them.",
+    accent: "border-fuchsia-300",
+    wash: "bg-fuchsia-50/70",
+    tier: "Large",
+  },
+  {
+    symbol: "LT",
+    company: "Larsen & Toubro",
+    blurb: "Engineers and constructs the buildings themselves, campus by campus.",
+    accent: "border-purple-300",
+    wash: "bg-purple-50/70",
+    tier: "Large",
+  },
+];
+
+export function DataCentreScene() {
   return (
-    <li className="rounded-xl border border-amber-200 bg-white px-4 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-mono text-[13px] font-black text-slate-900">{pick.symbol}</span>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black tracking-wide uppercase ${
-                pick.when === "Today" ? "bg-emerald-600 text-white" : "bg-sky-600 text-white"
-              }`}
-            >
-              Buy {pick.when}
-            </span>
-          </div>
-          <p className="truncate text-[10px] text-slate-500">
-            {pick.company} · {pick.code}
+    <StockTrioScene
+      palette={LILAC}
+      eyebrow="Data centres"
+      title="Three ways to own the build-out"
+      badge="LIVE FIGURES"
+      footnote="The servers, the power and the building — one listed company each · live exchange figures · not investment advice"
+      stocks={DATA_CENTRE_TRIO}
+    />
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Scene 4 — the year's winners that are on sale today
+// ---------------------------------------------------------------------------
+//
+// Two conditions at once, and neither is interesting alone: a company that has compounded over the
+// last year, trading today below its own recent range and down on the session. A winner at its high
+// is not cheap; a stock at its low that went nowhere all year is not a winner, it is a faller.
+//
+// Every figure is measured. The year's return is read from BSE's Bhavcopy archive, and the discount
+// is today's price against this company's own recent published closes — not against a peer group
+// and not against an estimate. The headline count beside each card is exactly that: a count of
+// classified headlines. It colours the card and never decides who is on it, because a screen that
+// moved on sentiment would stop being a measurement.
+
+export type DipNewsTilt = {
+  positive: number;
+  negative: number;
+  neutral: number;
+  total: number;
+  score: number;
+  headline: string | null;
+  headlineUrl: string | null;
+  classifier: "ai" | "heuristic" | null;
+};
+
+export type DipLeader = {
+  code: string;
+  ticker: string;
+  name: string;
+  sector: string | null;
+  capTier: string | null;
+  price: number | null;
+  changePercent: number | null;
+  yearReturn: number | null;
+  referenceHigh: number | null;
+  offRecentHigh: number | null;
+  news: DipNewsTilt;
+};
+
+export type DipLeaderBoard = {
+  leaders: DipLeader[];
+  sessionDate: string | null;
+  examined: number;
+  fetchedAt: string;
+};
+
+/** How the headline count reads, so a card never shows a bare number with no meaning. */
+export function tiltLabel(tilt: DipNewsTilt): string {
+  if (tilt.total === 0) return "No coverage this week";
+  if (tilt.score > 55) return `${tilt.positive} of ${tilt.total} headlines positive`;
+  if (tilt.score < 45) return `${tilt.negative} of ${tilt.total} headlines negative`;
+  return `${tilt.total} headlines, balanced`;
+}
+
+/** The tint the news chip wears — green when the week reads well, red when it does not. */
+export function tiltTone(tilt: DipNewsTilt): string {
+  if (tilt.total === 0) return "bg-slate-100 text-slate-500";
+  if (tilt.score > 55) return "bg-emerald-100 text-emerald-700";
+  if (tilt.score < 45) return "bg-rose-100 text-rose-700";
+  return "bg-amber-100 text-amber-700";
+}
+
+/**
+ * Where today's price sits inside the band between the recent high and the discount's depth, 0-100.
+ *
+ * Drawn as a marker on a rail rather than as a bar, because the reader's question here is "how far
+ * down the range is it", which a position answers and a length does not.
+ */
+export function dipRailPosition(offRecentHigh: number | null): number {
+  if (typeof offRecentHigh !== "number" || !Number.isFinite(offRecentHigh)) return 100;
+  // A 30% discount pins the marker to the cheap end; anything deeper is still just "cheapest".
+  const depth = Math.min(Math.abs(offRecentHigh), 30);
+  return Math.max(0, Math.min(100, 100 - (depth / 30) * 100));
+}
+
+/** A rupee price from the board, or a dash. */
+export function dipPrice(value: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function DipLeaderCard({ leader, rank }: { leader: DipLeader; rank: number }) {
+  return (
+    <div className="flex flex-col rounded-2xl border-2 border-amber-300 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.45)]">
+      <div className="flex items-start gap-2.5 px-3 pt-3">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-black tabular-nums text-amber-700">
+          {rank}
+        </span>
+        <CompanyLogo symbol={leader.ticker} size={32} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-slate-900">{leader.ticker}</p>
+          <p className="truncate text-[11px] font-medium text-slate-600">{leader.name}</p>
+          <p className="truncate text-[10px] text-slate-400">
+            BSE {leader.code}
+            {leader.sector ? ` · ${leader.sector}` : ""}
           </p>
         </div>
+      </div>
 
-        {/* Wraps rather than `shrink-0`: the pair is ~256px of unbreakable labels, which on the
-            narrowest phone was 17px wider than the card and got cropped. Allowed to wrap, the two
-            readings stack instead. */}
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <span className={`font-mono text-[11px] font-black ${UP_TEXT}`}>{signed(pick.year, 1)} over a year</span>
-          <span className="font-mono text-[11px] font-black text-amber-700">{signed(-pick.offHigh, 1)} off its high</span>
+      {/* The two halves of the screen, side by side, because neither means anything alone. */}
+      <div className="mt-3 grid grid-cols-2 gap-px border-y border-slate-100 bg-slate-100">
+        <div className="bg-white px-2 py-2 text-center">
+          <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Last year</p>
+          <p className="mt-0.5 text-sm font-black tabular-nums text-emerald-600">
+            {leader.yearReturn === null ? "—" : signed(leader.yearReturn, 0)}
+          </p>
+        </div>
+        <div className="bg-white px-2 py-2 text-center">
+          <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Off recent high</p>
+          <p className="mt-0.5 text-sm font-black tabular-nums text-rose-600">
+            {leader.offRecentHigh === null ? "—" : signed(leader.offRecentHigh, 1)}
+          </p>
         </div>
       </div>
 
-      {/* The ladder: green is the price you pay today, amber is the distance back to the high. */}
-      <div className="mt-2 flex items-center gap-2">
-        <span className="shrink-0 font-mono text-[11px] font-bold text-slate-900">₹{pick.price}</span>
-        <span className="flex h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
-          <span className="h-2 bg-emerald-500" style={{ width: `${bandPosition(pick.offHigh)}%` }} />
-          <span className="h-2 bg-amber-400" style={{ width: `${pick.offHigh}%` }} />
+      <div className="flex items-end justify-between gap-2 px-3 pt-2.5">
+        <div className="min-w-0">
+          <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Today</p>
+          <p className="text-lg font-black tabular-nums text-slate-900">{dipPrice(leader.price)}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-1 text-[11px] font-black tabular-nums text-rose-700">
+          {leader.changePercent === null ? "—" : signed(leader.changePercent, 2)}
         </span>
-        <span className="shrink-0 font-mono text-[11px] text-slate-500">₹{pick.yearHigh}</span>
       </div>
-      <div className="mt-0.5 flex justify-between text-[9px] font-semibold tracking-wide text-slate-400 uppercase">
-        <span>Today</span>
-        <span>52-week high</span>
+
+      {/* Where it sits between its recent high and the deep-discount end of the rail. */}
+      <div className="px-3 pt-2.5">
+        <div className="flex items-center justify-between text-[9px] font-semibold text-slate-400">
+          <span>CHEAPEST</span>
+          <span className="tabular-nums">RECENT HIGH {dipPrice(leader.referenceHigh)}</span>
+        </div>
+        <div className="relative mt-1 h-1.5 rounded-full bg-gradient-to-r from-emerald-200 to-slate-100">
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 h-3 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900"
+            style={{ left: `${dipRailPosition(leader.offRecentHigh)}%` }}
+          />
+        </div>
       </div>
-    </li>
+
+      {/*
+        The news read, as a count and nothing more.
+        The card used to quote the single most recent headline underneath. In practice that was
+        usually a routine regulatory filing — "reports no requests under SEBI special window" and
+        the like — which told a reader nothing, crowded the card, and risked reading as a reason the
+        stock is on the list when the screen is decided entirely by arithmetic. The count is the
+        part that carries information; the headline itself is a scroll away on the news page.
+      */}
+      <div className="px-3 pt-2.5 pb-3">
+        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${tiltTone(leader.news)}`}>
+          {tiltLabel(leader.news)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** The card's own shape, drawn while the board is still loading. */
+function DipLeaderSkeleton() {
+  return (
+    <div className="rounded-2xl border-2 border-amber-200 bg-white p-3">
+      <div className="flex items-center gap-2.5">
+        <span className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-slate-100" />
+        <div className="flex-1 space-y-1.5">
+          <span className="block h-3 w-20 animate-pulse rounded bg-slate-100" />
+          <span className="block h-2.5 w-28 animate-pulse rounded bg-slate-50" />
+        </div>
+      </div>
+      <div className="mt-3 h-12 animate-pulse rounded bg-slate-50" />
+      <div className="mt-3 h-6 animate-pulse rounded bg-slate-50" />
+    </div>
   );
 }
 
 export function DipBuysScene() {
+  const [board, setBoard] = useState<DipLeaderBoard | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+
+    fetch("/api/market/dip-leaders")
+      .then((response) => {
+        if (!response.ok) throw new Error("Dip leaders unavailable");
+        return response.json();
+      })
+      .then((data: DipLeaderBoard) => {
+        if (live) setBoard(data);
+      })
+      .catch(() => {
+        if (live) setFailed(true);
+      });
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const leaders = board?.leaders ?? [];
+
   return (
     <SceneCard
       palette={SAND}
-      eyebrow="How the analysis works"
-      title="A strong year, on offer at today's price"
-      badge="RESCORED DAILY"
-      inset="p-3 sm:p-6 lg:p-8"
-      footnote="A pullback is not a discount on its own — these are measurements, illustrated · not investment advice"
+      eyebrow="Winners on sale"
+      title="Best of the year, cheapest today"
+      badge="SCREENED LIVE"
+      inset="p-3 sm:p-8 lg:p-12"
+      footnote="Among the year's strongest performers worth ₹1,000 crore or more that traded at least ₹1 crore today, ranked by the discount to their own recent closes · returns from BSE's published sessions, headlines counted separately and never part of the screen · not investment advice"
     >
-      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[0.8fr_1.4fr]">
-        <PipelineColumn />
+      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {leaders.map((leader, index) => (
+          <DipLeaderCard key={leader.code} leader={leader} rank={index + 1} />
+        ))}
 
-        <Panel palette={SAND} className="overflow-hidden">
-          <PanelHead
-            palette={SAND}
-            title="Up over a year, below its own high today"
-            right={<span className="text-[10px] text-slate-500">{DIP_PICKS.length} picks</span>}
-          />
-          <ul className="space-y-2.5 p-3">
-            {DIP_PICKS.map((pick) => (
-              <DipLadder key={pick.code} pick={pick} />
-            ))}
-          </ul>
-        </Panel>
+        {/* Placeholders only while nothing has arrived — never mixed in beside real cards. */}
+        {leaders.length === 0 &&
+          !failed &&
+          [0, 1, 2].map((slot) => <DipLeaderSkeleton key={slot} />)}
       </div>
+
+      {/* Both empty states are real outcomes and say which one happened, rather than one vague
+          message covering an unreachable feed and a market with nothing on sale. */}
+      {failed && (
+        <p className="mt-3 text-xs font-medium text-amber-800">
+          The screen couldn&apos;t reach the exchange feed just now. The live boards below have the same data.
+        </p>
+      )}
+      {!failed && board !== null && leaders.length === 0 && (
+        <p className="mt-3 text-xs font-medium text-amber-800">
+          None of the year&apos;s leaders is trading below its recent range today — nothing is on sale.
+        </p>
+      )}
     </SceneCard>
   );
 }

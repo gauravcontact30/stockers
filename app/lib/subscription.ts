@@ -1,3 +1,4 @@
+import { CACHE_TAGS } from "./cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { cached, fetchNse, todayIST } from "./nse-client";
@@ -75,7 +76,8 @@ export const getTradingHolidays = cached(HOLIDAY_TTL_MS, async (): Promise<Set<s
   }
 
   return holidays;
-});
+  // Not persisted: this resolves to a Set, which does not survive the Data Cache's JSON round trip.
+}, { key: "nse:trading-holidays", tags: [CACHE_TAGS.nse] });
 
 function isWeekend(iso: string): boolean {
   // Parsed as UTC midnight so the weekday can't shift with the server's timezone.

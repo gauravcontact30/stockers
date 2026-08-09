@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cacheHeaders } from "../../../../lib/cache";
 import { getBseMovers, type MoverQuery } from "../../../../lib/bse-market";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,6 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(movers, {
-    headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" },
+    headers: cacheHeaders(60),
   });
 }

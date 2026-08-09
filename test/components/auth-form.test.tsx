@@ -60,30 +60,45 @@ describe("AuthForm", () => {
       expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/signup");
     });
 
-    it("shows a validation error for an invalid email address", async () => {
+    it("marks the email field itself when the address is malformed", async () => {
       const user = userEvent.setup();
       render(<AuthForm mode="signin" />);
 
-      // "jane@localhost" satisfies the browser's own (looser) native email validation, but not
-      // the component's stricter EMAIL_PATTERN (which requires a dot in the domain) — so this
-      // exercises the component's own regex check rather than getting blocked earlier.
-      await user.type(screen.getByPlaceholderText("you@example.com"), "jane@localhost");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      const email = screen.getByPlaceholderText("you@example.com");
+      await user.type(email, "jane@localhost");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
-      expect(await screen.findByText("Please enter a valid email address.")).toBeInTheDocument();
+      expect(await screen.findByText("That doesn't look like an email address.")).toBeInTheDocument();
+      expect(email).toHaveAttribute("aria-invalid", "true");
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it("shows a validation error when the password is too short", async () => {
+    it("asks for a password rather than judging an existing one", async () => {
       const user = userEvent.setup();
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "123");
       submitForm();
 
-      expect(await screen.findByText("Password must be at least 6 characters.")).toBeInTheDocument();
+      expect(await screen.findByText("Please enter your password.")).toBeInTheDocument();
+    });
+
+    /**
+     * An account created under an older, looser policy still has a working password. Holding it to
+     * today's strength rule at sign-in would lock its owner out of an account they own.
+     */
+    it("sends a short but existing password through to the server", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({ ok: true, body: { token: "t", user: { name: "Jane" } } });
+      render(<AuthForm mode="signin" />);
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
+      await user.type(screen.getByPlaceholderText("••••••••"), "old");
+      submitForm();
+
+      await screen.findByText("Signed in! Redirecting to your dashboard...");
+      expect(global.fetch).toHaveBeenCalled();
     });
 
     it("signs in successfully, stores the session, and redirects to /dashboard", async () => {
@@ -92,7 +107,7 @@ describe("AuthForm", () => {
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
       expect(await screen.findByText("Signed in! Redirecting to your dashboard...")).toBeInTheDocument();
@@ -101,7 +116,7 @@ describe("AuthForm", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: "jane@example.com", password: "password123" }),
+          body: JSON.stringify({ email: "jane@example.com", password: "market2026" }),
         })
       );
       expect(JSON.parse(window.localStorage.getItem("stockers-auth") ?? "{}")).toEqual({
@@ -111,13 +126,33 @@ describe("AuthForm", () => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard");
     });
 
+    // The regression this guards: storing the token in localStorage is not enough. Gated endpoints
+    // read the session from the `stockers_session` cookie, so without this mirror a user who had
+    // just signed in was still reported by the server as signed-out and lapsed.
+    it("mirrors the session into the cookie the server actually reads", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({ ok: true, body: { token: "tok-cookie", user: { name: "Jane", plan: "Pro" } } });
+      render(<AuthForm mode="signin" />);
+
+      // jsdom keeps cookies for the whole file, so an earlier sign-in may already have set one.
+      document.cookie = "stockers_session=; path=/; max-age=0";
+      expect(document.cookie).not.toContain("stockers_session");
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
+      submitForm();
+
+      await screen.findByText("Signed in! Redirecting to your dashboard...");
+      expect(document.cookie).toContain(`stockers_session=${encodeURIComponent("tok-cookie")}`);
+    });
+
     it("shows the server-provided error message when sign-in fails", async () => {
       const user = userEvent.setup();
       mockFetchOnce({ ok: false, body: { error: "Invalid credentials." } });
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
       expect(await screen.findByText("Invalid credentials.")).toBeInTheDocument();
@@ -131,7 +166,7 @@ describe("AuthForm", () => {
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
       expect(await screen.findByText("Unable to complete request.")).toBeInTheDocument();
@@ -143,7 +178,7 @@ describe("AuthForm", () => {
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
       expect(
@@ -164,7 +199,7 @@ describe("AuthForm", () => {
 
       render(<AuthForm mode="signin" />);
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
-      await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+      await user.type(screen.getByPlaceholderText("••••••••"), "market2026");
       submitForm();
 
       expect(await screen.findByRole("button", { name: "Working..." })).toBeDisabled();
@@ -198,9 +233,10 @@ describe("AuthForm", () => {
     async function fillValidSignupForm(user: ReturnType<typeof userEvent.setup>) {
       await user.type(screen.getByPlaceholderText("Aarav Sharma"), "Aarav Sharma");
       await user.type(screen.getByPlaceholderText("you@example.com"), "aarav@example.com");
+      await user.type(screen.getByPlaceholderText("98765 43210"), "9876543210");
       const passwordFields = screen.getAllByPlaceholderText("••••••••");
-      await user.type(passwordFields[0], "password123");
-      await user.type(passwordFields[1], "password123");
+      await user.type(passwordFields[0], "market2026");
+      await user.type(passwordFields[1], "market2026");
     }
 
     it("renders the signup heading and signup-only fields", () => {
@@ -208,7 +244,10 @@ describe("AuthForm", () => {
       expect(screen.getByText("Join Stockers.AI")).toBeInTheDocument();
       expect(screen.getByText("Full name")).toBeInTheDocument();
       expect(screen.getByText("Confirm password")).toBeInTheDocument();
-      expect(screen.getByText("Subscription")).toBeInTheDocument();
+      expect(screen.getByText("Mobile number")).toBeInTheDocument();
+      // Signing up starts a free trial for everyone; the plan is chosen at checkout, where its
+      // price and what it buys are both on screen.
+      expect(screen.queryByText("Subscription")).not.toBeInTheDocument();
       expect(screen.getByText("Already have an account?")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/signin");
     });
@@ -226,41 +265,90 @@ describe("AuthForm", () => {
       expect(confirmInput).toHaveAttribute("type", "text");
     });
 
-    it("shows a validation error when the full name is missing or too short", async () => {
+    it("marks the name field when the name is implausibly short", async () => {
       const user = userEvent.setup();
-      render(<AuthForm mode="signup" />);
-
-      await user.type(screen.getByPlaceholderText("you@example.com"), "aarav@example.com");
-      const passwordFields = screen.getAllByPlaceholderText("••••••••");
-      await user.type(passwordFields[0], "password123");
-      await user.type(passwordFields[1], "password123");
-      await user.type(screen.getByPlaceholderText("Aarav Sharma"), "A");
-      submitForm();
-
-      expect(await screen.findByText("Please enter your full name.")).toBeInTheDocument();
-    });
-
-    it("shows a validation error when the passwords do not match", async () => {
-      const user = userEvent.setup();
-      render(<AuthForm mode="signup" />);
-
-      await user.type(screen.getByPlaceholderText("Aarav Sharma"), "Aarav Sharma");
-      await user.type(screen.getByPlaceholderText("you@example.com"), "aarav@example.com");
-      const passwordFields = screen.getAllByPlaceholderText("••••••••");
-      await user.type(passwordFields[0], "password123");
-      await user.type(passwordFields[1], "password456");
-      submitForm();
-
-      expect(await screen.findByText("Passwords do not match.")).toBeInTheDocument();
-    });
-
-    it("signs up successfully with the selected plan, stores the session, and redirects", async () => {
-      const user = userEvent.setup();
-      mockFetchOnce({ ok: true, body: { token: "tok-2", user: { name: "Aarav Sharma", plan: "Pro" } } });
       render(<AuthForm mode="signup" />);
 
       await fillValidSignupForm(user);
-      await user.selectOptions(screen.getByDisplayValue("Starter"), "Pro");
+      await user.clear(screen.getByPlaceholderText("Aarav Sharma"));
+      await user.type(screen.getByPlaceholderText("Aarav Sharma"), "A");
+      submitForm();
+
+      expect(await screen.findByText("That looks too short to be a name.")).toBeInTheDocument();
+    });
+
+    it("marks the confirmation field when the two passwords differ", async () => {
+      const user = userEvent.setup();
+      render(<AuthForm mode="signup" />);
+
+      await fillValidSignupForm(user);
+      const passwordFields = screen.getAllByPlaceholderText("••••••••");
+      await user.clear(passwordFields[1]);
+      await user.type(passwordFields[1], "market2027");
+      submitForm();
+
+      expect(await screen.findByText("The two passwords don't match.")).toBeInTheDocument();
+    });
+
+    it("marks the mobile field when the number could not be an Indian mobile", async () => {
+      const user = userEvent.setup();
+      render(<AuthForm mode="signup" />);
+
+      await fillValidSignupForm(user);
+      const mobile = screen.getByPlaceholderText("98765 43210");
+      await user.clear(mobile);
+      await user.type(mobile, "1234567890");
+      submitForm();
+
+      expect(await screen.findByText(/10-digit Indian mobile/)).toBeInTheDocument();
+      expect(mobile).toHaveAttribute("aria-invalid", "true");
+    });
+
+    /**
+     * A field is only marked once the visitor has finished with it. Turning an input red while
+     * someone is still typing their address tells them they are wrong before they can be right.
+     */
+    it("says nothing while a field is still being typed into", async () => {
+      const user = userEvent.setup();
+      render(<AuthForm mode="signup" />);
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "aar");
+      expect(screen.queryByText("That doesn't look like an email address.")).not.toBeInTheDocument();
+
+      await user.tab();
+      expect(await screen.findByText("That doesn't look like an email address.")).toBeInTheDocument();
+    });
+
+    // The summary says how much is wrong; the fields themselves say what.
+    it("counts the problems in the summary above the button", async () => {
+      render(<AuthForm mode="signup" />);
+      submitForm();
+
+      expect(await screen.findByText(/fields need your attention/)).toBeInTheDocument();
+    });
+
+    // A rejection from the server has to land on the field it is about.
+    it("marks the email field when the server says the address is taken", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({
+        ok: false,
+        body: { error: "An account already exists for this email.", errors: { email: "This email is already registered." } },
+      });
+      render(<AuthForm mode="signup" />);
+
+      await fillValidSignupForm(user);
+      submitForm();
+
+      expect(await screen.findByText("This email is already registered.")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("you@example.com")).toHaveAttribute("aria-invalid", "true");
+    });
+
+    it("signs up successfully, stores the session, and redirects", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({ ok: true, body: { token: "tok-2", user: { name: "Aarav Sharma", plan: "Starter" } } });
+      render(<AuthForm mode="signup" />);
+
+      await fillValidSignupForm(user);
       submitForm();
 
       expect(await screen.findByText("Account created! Redirecting to your dashboard...")).toBeInTheDocument();
@@ -272,19 +360,20 @@ describe("AuthForm", () => {
           body: JSON.stringify({
             name: "Aarav Sharma",
             email: "aarav@example.com",
-            password: "password123",
-            plan: "Pro",
+            mobile: "9876543210",
+            password: "market2026",
+            confirmPassword: "market2026",
           }),
         })
       );
       expect(JSON.parse(window.localStorage.getItem("stockers-auth") ?? "{}")).toEqual({
         token: "tok-2",
-        user: { name: "Aarav Sharma", plan: "Pro" },
+        user: { name: "Aarav Sharma", plan: "Starter" },
       });
       expect(mockPush).toHaveBeenCalledWith("/dashboard");
     });
 
-    it("defaults the plan to Starter when not changed", async () => {
+    it("sends the mobile number it collected", async () => {
       const user = userEvent.setup();
       mockFetchOnce({ ok: true, body: { token: "tok-3", user: { name: "Aarav Sharma" } } });
       render(<AuthForm mode="signup" />);
@@ -299,8 +388,9 @@ describe("AuthForm", () => {
           body: JSON.stringify({
             name: "Aarav Sharma",
             email: "aarav@example.com",
-            password: "password123",
-            plan: "Starter",
+            mobile: "9876543210",
+            password: "market2026",
+            confirmPassword: "market2026",
           }),
         })
       );

@@ -3,6 +3,7 @@
 import { formatRupee, sectorTone } from "./market-format";
 import { CapTierPill } from "./market-badges";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import type { Mover } from "./market-movers";
 
 /** One labelled detail, value under label — the unit each row is built from. */
@@ -44,10 +45,10 @@ function MoverRow({ mover, rank, direction }: { mover: Mover; rank: number; dire
           </span>
           <CompanyLogo symbol={mover.symbol} size={28} />
 
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{mover.symbol}</p>
+          <StockDetailTrigger symbol={mover.symbol}>
+            <p className="truncate text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{mover.symbol}</p>
             <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">{mover.name}</p>
-          </div>
+          </StockDetailTrigger>
         </div>
 
         <dl className="flex flex-1 flex-wrap items-start gap-x-8 gap-y-3 border-slate-200/70 sm:border-l sm:pl-6 dark:border-slate-800">

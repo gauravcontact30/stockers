@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CapTierPill } from "./market-badges";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import type { CapTier } from "../lib/indian-stocks";
 
 export type Mover = {
@@ -58,8 +59,10 @@ function MoverRow({ mover, rank, direction }: { mover: Mover; rank: number; dire
       <CompanyLogo symbol={mover.symbol} size={26} />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{mover.symbol}</p>
-        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{mover.name}</p>
+        <StockDetailTrigger symbol={mover.symbol}>
+          <p className="truncate text-sm font-semibold text-slate-900 underline-offset-2 hover:underline dark:text-white">{mover.symbol}</p>
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{mover.name}</p>
+        </StockDetailTrigger>
         <span className={`mt-1 inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(mover.sector)}`}>
           {mover.sector}
         </span>

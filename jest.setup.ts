@@ -41,6 +41,15 @@ class MockResizeObserver {
 }
 global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
+// jsdom ships no TextEncoder/TextDecoder, though every browser and Node have had them for years.
+// The AI board read decodes a streamed response body with them, so without these it cannot be
+// exercised under test at all. Taken from Node's own `util`, which is the same implementation the
+// server side of the app uses.
+import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from "node:util";
+
+global.TextEncoder ??= NodeTextEncoder as unknown as typeof TextEncoder;
+global.TextDecoder ??= NodeTextDecoder as unknown as typeof TextDecoder;
+
 // Every component under test that fetches data is responsible for mocking the specific
 // response it needs; this default just guarantees `fetch` always exists in jsdom and fails
 // loudly (rejected promise) instead of throwing "fetch is not defined" when a test forgets to

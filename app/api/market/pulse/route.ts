@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature } from "../../../lib/feature-guard";
 import { getMarketPulse } from "../../../lib/market-pulse";
 
@@ -21,5 +22,7 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json({ ...pulse, aiLocked: false });
+  // Private, not shared: the AI half of this board is withheld or included depending on who is
+  // asking, so a shared cache must never hand one reader another's entitlements.
+  return NextResponse.json({ ...pulse, aiLocked: false }, { headers: cacheHeaders(60, "private") });
 }

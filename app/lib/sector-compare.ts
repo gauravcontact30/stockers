@@ -5,6 +5,7 @@
 // only, and every stock keeps its cap tier alongside its call so a small cap is never read as if
 // it were a large cap.
 
+import { CACHE_TAGS } from "./cache";
 import { cached } from "./nse-client";
 import { verdictsFor, type StockVerdict } from "./stock-verdicts";
 
@@ -115,7 +116,9 @@ export const getShowdowns = cached<{ showdowns: ShowdownResult[] }>(SHOWDOWN_TTL
   });
 
   return { showdowns };
-});
+  // Tagged `ai` as well as `nse`: the takeaways under each board are model-written, so purging the
+  // AI layer has to drop these too or the old prose survives the purge.
+}, { key: "compare:showdowns", tags: [CACHE_TAGS.nse, CACHE_TAGS.ai], persist: true });
 
 export type CustomComparison = {
   stocks: StockVerdict[];

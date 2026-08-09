@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import { StockExplorer } from "./stock-explorer";
 import { useStockPerformance } from "./use-stock-performance";
 import { indianStocks } from "../lib/indian-stocks";
@@ -123,7 +124,7 @@ export function WatchRow({ symbol, onRemove }: { symbol: string; onRemove: (symb
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{symbol}</span>
+            <StockDetailTrigger symbol={symbol}><span className="truncate text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{symbol}</span></StockDetailTrigger>
             <span className="shrink-0 font-mono text-sm font-bold text-slate-900 tabular-nums dark:text-white">
               {loading ? "…" : formatPrice(performance?.price ?? null)}
             </span>

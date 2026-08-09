@@ -5,6 +5,8 @@
 // Every call therefore degrades to null on any failure so a section renders an empty state
 // instead of taking a page down.
 
+import { revalidating, type CacheTag } from "./cache";
+
 const NSE_BASE = "https://www.nseindia.com/api";
 const TIMEOUT_MS = 9000;
 
@@ -57,26 +59,19 @@ export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
-/** Simple TTL memo so several sections can share one upstream call per window. */
-export function cached<T>(ttlMs: number, load: () => Promise<T>): () => Promise<T> {
-  let entry: { value: T; expiresAt: number } | null = null;
-  let inFlight: Promise<T> | null = null;
-
-  return async () => {
-    if (entry && entry.expiresAt > Date.now()) return entry.value;
-    // Coalesce concurrent misses: without this, the first render of a page with several NSE-backed
-    // sections would fire the same upstream request several times over.
-    if (inFlight) return inFlight;
-
-    inFlight = load()
-      .then((value) => {
-        entry = { value, expiresAt: Date.now() + ttlMs };
-        return value;
-      })
-      .finally(() => {
-        inFlight = null;
-      });
-
-    return inFlight;
-  };
+/**
+ * A TTL memo so several sections can share one upstream call per window.
+ *
+ * This used to hold its own entry and block whoever arrived after it expired. It now delegates to
+ * `./cache`, which serves the stale value and refreshes behind the reader instead — the seconds an
+ * NSE feed takes to answer are paid once rather than by a visitor every window. The signature
+ * gained a key and tags because those are what the shared cache needs to persist an entry and to
+ * drop it again on demand.
+ */
+export function cached<T>(
+  ttlMs: number,
+  load: () => Promise<T>,
+  options: { key: string; tags?: CacheTag[]; persist?: boolean },
+): () => Promise<T> {
+  return revalidating<T>({ key: options.key, ttlMs, tags: options.tags, persist: options.persist, load });
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { AiBoardRead } from "./ai-board-read";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import { relativeAge, sectorTone } from "./market-format";
 import {
   MarketSection,
@@ -85,7 +86,9 @@ function NewsRow({ item }: { item: StockNewsItem }) {
         <CompanyLogo symbol={item.symbol} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-bold text-slate-900 dark:text-white">{item.symbol}</p>
+            <StockDetailTrigger symbol={item.symbol}>
+              <p className="text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{item.symbol}</p>
+            </StockDetailTrigger>
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${categoryTone(item.category)}`}>
               {item.category}
             </span>

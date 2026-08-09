@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
-import { BseMoversBoard } from "./components/bse-movers-board";
-import { BseSectorMovers } from "./components/bse-sector-movers";
 import { HeroCarousel } from "./components/hero-carousel";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
 import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
+import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
 
@@ -149,9 +148,10 @@ export default function Home() {
           blurb="Two tabs over the whole exchange: everything that closed higher, and everything that closed lower. Each is paged on its own, in descending order of the move, and filters down to a single cap tier."
         />
 
-        <BseMoversBoard />
+        {/* Both resolved on the server and streamed into their slots — see ./components/streamed-boards. */}
+        <StreamedMoversBoard />
 
-        <BseSectorMovers />
+        <StreamedSectorMovers />
 
         <BandHeading
           eyebrow="02 · Everything else, in one workspace"

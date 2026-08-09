@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { buildSectorMoversUrl, type MoverDirection } from "../lib/market-urls";
 import type { BseMoverRow } from "./bse-movers-board";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import { chipFor, formatDayDate, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
 import {
   MarketSection,
@@ -11,6 +13,8 @@ import {
   SectionFootnote,
   SectionSkeleton,
   useMarketFeed,
+  type Prefetched,
+  usePaged,
   type Paged,
 } from "./market-section";
 
@@ -59,22 +63,14 @@ export type BseMoverPage = {
   sessionDate: string | null;
 };
 
-type Direction = "gainers" | "losers";
+type Direction = MoverDirection;
 
-// Twenty-five a page inside a category. Deeper than the exchange-wide board because a category is
-// already a narrow slice — and because every company here is classified, so its sector is a cache
-// hit rather than another request.
-const PAGE_SIZE = 25;
+/** Categories shown per page in the list itself. */
+export const CATEGORIES_PER_PAGE = 10;
 
-export function buildSectorMoversUrl(category: string, direction: Direction, page: number) {
-  const params = new URLSearchParams({
-    category,
-    direction,
-    page: String(page),
-    pageSize: String(PAGE_SIZE),
-  });
-  return `/api/market/bse/movers?${params.toString()}`;
-}
+// Re-exported from ../lib/market-urls, where the server can reach it too; every existing import of
+// it from this module still resolves.
+export { buildSectorMoversUrl };
 
 function count(value: number): string {
   return value.toLocaleString("en-IN");
@@ -146,10 +142,10 @@ export function CategoryMoverRow({ row, rank }: { row: BseMoverRow; rank: number
     <li className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-2.5 py-2 dark:border-slate-800 dark:bg-slate-950/40">
       <span className="w-5 shrink-0 text-[11px] font-bold tabular-nums text-slate-400 dark:text-slate-500">{rank}</span>
       <CompanyLogo symbol={row.ticker} size={28} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{row.ticker}</p>
+      <StockDetailTrigger symbol={row.ticker} className="flex-1">
+        <p className="truncate text-xs font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{row.ticker}</p>
         <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{row.name}</p>
-      </div>
+      </StockDetailTrigger>
       <div className="shrink-0 text-right">
         <p className="text-xs font-semibold tabular-nums text-slate-900 dark:text-white">{formatRupee(row.price)}</p>
         <span className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${chipFor(row.changePercent)}`}>
@@ -311,11 +307,12 @@ function CategoryBlock({
  * the companies mapped so far. Opening a category pages through all of it — every name that rose
  * and every name that fell — rather than a top few.
  */
-export function BseSectorMovers() {
+export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSectorBoardResponse> }) {
   // Bumped by the refresh control to re-ask while the exchange is still being classified.
   const [nonce, setNonce] = useState(0);
   const { data, loading, error } = useMarketFeed<BseSectorBoardResponse>(
     nonce === 0 ? "/api/market/bse/sectors" : `/api/market/bse/sectors?t=${nonce}`,
+    prefetched,
   );
 
   const [search, setSearch] = useState("");
@@ -330,9 +327,23 @@ export function BseSectorMovers() {
     () => arrangeCategories(data?.sectors ?? [], search, sort, show),
     [data, search, sort, show],
   );
-  const openSector = choice ?? sectors.find((summary) => summary.stocks > 0)?.sector ?? "";
+
+  // Ten a page. The exchange publishes over twenty categories and each one opens into two paged
+  // boards of its own, so the whole list at once was a long scroll before the reader reached the
+  // one they came for. The key resets to page one whenever the list underneath becomes a
+  // different list — otherwise a search that narrows to three rows leaves you on an empty page 3.
+  const paged = usePaged(sectors, CATEGORIES_PER_PAGE, `${search}|${sort}|${show}`);
+
+  const openSector = choice ?? paged.slice.find((summary) => summary.stocks > 0)?.sector ?? "";
   const progress = data?.classification;
   const filtered = search.trim().length > 0 || sort !== "az" || show !== "all";
+
+  const resetFilters = () => {
+    setSearch("");
+    setSort("az");
+    setShow("all");
+    setChoice(null);
+  };
 
   return (
     <MarketSection
@@ -381,11 +392,7 @@ export function BseSectorMovers() {
         <CategorySelect label="Show" value={show} options={SHOW_OPTIONS} onChange={setShow} />
         <button
           type="button"
-          onClick={() => {
-            setSearch("");
-            setSort("az");
-            setShow("all");
-          }}
+          onClick={resetFilters}
           disabled={!filtered}
           className="h-9 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
         >
@@ -397,24 +404,49 @@ export function BseSectorMovers() {
       {loading && <SectionSkeleton rows={4} height="h-14" />}
 
       {!loading && sectors.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {sectors.map((summary) => (
-            <CategoryBlock
-              key={summary.sector}
-              summary={summary}
-              open={summary.sector === openSector}
-              onToggle={() => setChoice(summary.sector === openSector ? "" : summary.sector)}
-            />
-          ))}
-        </div>
+        <>
+          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+            Showing{" "}
+            <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
+              {count(paged.from)}–{count(paged.to)}
+            </span>{" "}
+            of <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{count(paged.total)}</span>{" "}
+            categories
+            {search.trim() && <> matching &ldquo;{search.trim()}&rdquo;</>}
+          </p>
+
+          <div className="mt-2 space-y-2">
+            {paged.slice.map((summary) => (
+              <CategoryBlock
+                key={summary.sector}
+                summary={summary}
+                open={summary.sector === openSector}
+                onToggle={() => setChoice(summary.sector === openSector ? "" : summary.sector)}
+              />
+            ))}
+          </div>
+
+          <Pager paged={paged} unit="categories" />
+        </>
       )}
 
       {!loading && sectors.length === 0 && !error && (
-        <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">
-          {filtered
-            ? "No category matches this search and these filters."
-            : "No category is mapped yet — the classification has only just started. It fills in within a few minutes."}
-        </p>
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-800 dark:bg-slate-950/40">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {filtered
+              ? `No category matches ${search.trim() ? `“${search.trim()}”` : "these filters"}.`
+              : "No category is mapped yet — the classification has only just started. It fills in within a few minutes."}
+          </p>
+          {filtered && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="mt-3 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-violet-500"
+            >
+              Reset search
+            </button>
+          )}
+        </div>
       )}
 
       <SectionFootnote>

@@ -5,9 +5,25 @@ import {
   REMIND_EVERY_MS,
   SubscriptionBadge,
   SubscriptionReminder,
+  isReminderFreeRoute,
   reminderCopy,
   shouldRemind,
+  daysUntil,
+  remindersShown,
+  reminderKey,
+  MAX_REMINDERS,
+  REMINDER_COUNT_KEY,
+  reminderKicker,
+  patternSpinClass,
+  todayIST,
 } from "../../app/components/subscription-reminder";
+
+// The reminder asks which route it is on so it can stay off the auth pages. Outside an app-router
+// context `usePathname` returns null, which is what every other test in this file relies on.
+let mockPathname: string | null = null;
+jest.mock("next/navigation", () => ({
+  usePathname: () => mockPathname,
+}));
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -53,11 +69,15 @@ function renderWithProvider(ui: React.ReactNode) {
 }
 
 /**
- * The reminder waits two seconds before its first appearance so the page can be read first. The
- * pending microtasks are flushed before the clock moves, so the status fetch has landed and the
- * timer has actually been scheduled.
+ * The reminder waits two seconds before its first appearance so the page can be read first.
+ *
+ * Two flushes before the clock moves, not one. The status arrives on the first; only then does the
+ * component know which expiry it is counting appearances for, and it reads that count on a second
+ * pass. The delay timer is scheduled after both, so advancing the clock any earlier finds nothing
+ * to advance.
  */
 async function advanceToFirstShow() {
+  await act(async () => {});
   await act(async () => {});
   await act(async () => {
     jest.advanceTimersByTime(2000);
@@ -66,6 +86,9 @@ async function advanceToFirstShow() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // The appearance count now lives in localStorage, so without this a suite that spends the
+  // allowance leaves every test after it looking at a reminder that is correctly suppressed.
+  window.localStorage.clear();
   jest.useFakeTimers();
 });
 
@@ -73,22 +96,105 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe("shouldRemind", () => {
-  it("stays quiet with no status, for admins, for subscribers, and early in the trial", () => {
-    expect(shouldRemind(null)).toBe(false);
-    expect(shouldRemind({ ...baseStatus, isAdmin: true, state: "admin" } as never)).toBe(false);
-    expect(shouldRemind({ ...baseStatus, state: "active" } as never)).toBe(false);
-    expect(shouldRemind({ ...baseStatus, marketDaysLeft: 4 } as never)).toBe(false);
+const TODAY = "2026-08-09";
+
+describe("daysUntil", () => {
+  it("counts whole days from today to the date given", () => {
+    expect(daysUntil("2026-08-10", TODAY)).toBe(1);
+    expect(daysUntil("2026-08-09", TODAY)).toBe(0);
+    expect(daysUntil("2026-08-16", TODAY)).toBe(7);
   });
 
-  it("nudges once the trial is nearly up, and once it has expired", () => {
-    expect(shouldRemind({ ...baseStatus, marketDaysLeft: 2 } as never)).toBe(true);
-    expect(shouldRemind({ ...baseStatus, marketDaysLeft: 1 } as never)).toBe(true);
-    expect(shouldRemind({ ...baseStatus, state: "expired", marketDaysLeft: 0 } as never)).toBe(true);
+  it("goes negative for a date already past", () => {
+    expect(daysUntil("2026-08-08", TODAY)).toBe(-1);
+  });
+
+  // Null rather than zero: zero means "expires today" and would interrupt someone on no evidence.
+  it("says nothing when there is no date to work from", () => {
+    expect(daysUntil(null, TODAY)).toBeNull();
+    expect(daysUntil("not-a-date", TODAY)).toBeNull();
+    expect(daysUntil("2026-08-10", "")).toBeNull();
+  });
+});
+
+describe("shouldRemind", () => {
+  /**
+   * One day, and one day only. The old rule fired from two trial days out and then on every page
+   * for anyone expired — including signed-out visitors, for whom it was a conversion prompt rather
+   * than a reminder about anything.
+   */
+  it("warns a subscriber exactly one day before their access lapses", () => {
+    const active = { ...baseStatus, state: "active", signedIn: true };
+    expect(shouldRemind({ ...active, subscribedUntil: "2026-08-10" } as never, TODAY)).toBe(true);
+  });
+
+  it("leaves a subscriber alone on any other day", () => {
+    const active = { ...baseStatus, state: "active", signedIn: true };
+    expect(shouldRemind({ ...active, subscribedUntil: "2026-08-12" } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...active, subscribedUntil: "2026-08-09" } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...active, subscribedUntil: null } as never, TODAY)).toBe(false);
+  });
+
+  it("warns a trial user on their last market day only", () => {
+    const trial = { ...baseStatus, state: "trial", signedIn: true };
+    expect(shouldRemind({ ...trial, marketDaysLeft: 1 } as never, TODAY)).toBe(true);
+    expect(shouldRemind({ ...trial, marketDaysLeft: 2 } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...trial, marketDaysLeft: 0 } as never, TODAY)).toBe(false);
+  });
+
+  // An expired account cannot be warned about something that has already happened, and a stranger
+  // has no subscription to renew.
+  it("stays quiet for admins, expired accounts and signed-out visitors", () => {
+    expect(shouldRemind(null, TODAY)).toBe(false);
+    expect(shouldRemind({ ...baseStatus, isAdmin: true, state: "admin" } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...baseStatus, state: "expired", signedIn: true } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...baseStatus, state: "trial", marketDaysLeft: 1, signedIn: false } as never, TODAY)).toBe(false);
+  });
+});
+
+describe("remindersShown", () => {
+  it("reads the count back for the expiry it was written against", () => {
+    expect(remindersShown(JSON.stringify({ key: "2026-08-10", count: 2 }), "2026-08-10")).toBe(2);
+  });
+
+  // A new period starts a fresh allowance rather than inheriting a spent one.
+  it("starts again when the expiry it is counting toward has changed", () => {
+    expect(remindersShown(JSON.stringify({ key: "2026-07-10", count: 3 }), "2026-08-10")).toBe(0);
+  });
+
+  // Showing the reminder is a far milder failure than suppressing it forever.
+  it("counts unreadable storage as none shown", () => {
+    expect(remindersShown(null, "2026-08-10")).toBe(0);
+    expect(remindersShown("not json", "2026-08-10")).toBe(0);
+    expect(remindersShown(JSON.stringify({ key: "2026-08-10", count: "many" }), "2026-08-10")).toBe(0);
+    expect(remindersShown(JSON.stringify({ key: "2026-08-10", count: -4 }), "2026-08-10")).toBe(0);
+  });
+});
+
+describe("reminderKey", () => {
+  it("keys a subscriber's count by the day their access lapses", () => {
+    expect(reminderKey({ ...baseStatus, state: "active", subscribedUntil: "2026-08-10" } as never)).toBe("2026-08-10");
+  });
+
+  it("keys a trial user's count by the days they have left", () => {
+    expect(reminderKey({ ...baseStatus, state: "trial", marketDaysLeft: 1 } as never)).toBe("trial:1");
+  });
+
+  it("has no key at all before the status arrives", () => {
+    expect(reminderKey(null)).toBe("");
   });
 });
 
 describe("reminderCopy", () => {
+  it("pluralises the remaining days", () => {
+    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toBe(
+      "You have 2 open market days left on your trial.",
+    );
+    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never).body).toBe(
+      "You have 1 open market day left on your trial.",
+    );
+  });
+
   // One source for both the rendered text and the spoken line, so they cannot diverge.
   it("counts down the trial, with correct pluralisation", () => {
     expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never)).toEqual({
@@ -108,7 +214,51 @@ describe("reminderCopy", () => {
   });
 });
 
+describe("isReminderFreeRoute", () => {
+  it("covers both auth routes and anything nested under them", () => {
+    expect(isReminderFreeRoute("/signin")).toBe(true);
+    expect(isReminderFreeRoute("/signup")).toBe(true);
+    expect(isReminderFreeRoute("/signup/step-two")).toBe(true);
+  });
+
+  it("leaves every other route alone", () => {
+    expect(isReminderFreeRoute("/")).toBe(false);
+    expect(isReminderFreeRoute("/dashboard")).toBe(false);
+    expect(isReminderFreeRoute("/news")).toBe(false);
+    // A route that merely starts with the same letters is not an auth route.
+    expect(isReminderFreeRoute("/signups-are-open")).toBe(false);
+  });
+
+  it("treats an unknown route as ordinary", () => {
+    expect(isReminderFreeRoute(null)).toBe(false);
+  });
+});
+
 describe("SubscriptionReminder", () => {
+  afterEach(() => {
+    mockPathname = null;
+  });
+
+  // The regression this guards: the reminder is `fixed inset-0`, so on the sign-up page it covered
+  // the form and swallowed the click on "Create account" — a new visitor could not sign up at all.
+  it.each(["/signup", "/signin"])("never appears on %s, however lapsed the visitor is", async (route) => {
+    mockPathname = route;
+    mockStatus({ state: "expired", marketDaysLeft: 0 });
+    renderWithProvider(<SubscriptionReminder />);
+
+    await advanceToFirstShow();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("still appears on an ordinary page for the same visitor", async () => {
+    mockPathname = "/dashboard";
+    mockStatus();
+    renderWithProvider(<SubscriptionReminder />);
+
+    await advanceToFirstShow();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("waits before its first appearance, then shows a character shouting", async () => {
     mockStatus();
     renderWithProvider(<SubscriptionReminder />);
@@ -147,6 +297,9 @@ describe("SubscriptionReminder", () => {
   /**
    * The brief asked for a modal that looks different every time it opens, so the chrome, the
    * pattern and the animations rotate on their own cycle alongside the cast.
+   *
+   * Three appearances is the whole allowance now, so three distinct looks is the whole claim —
+   * the six-character, five-theme rotation still guarantees they differ.
    */
   it("opens in a different look each time, not just with a different character", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -157,7 +310,7 @@ describe("SubscriptionReminder", () => {
     const panel = () => screen.getByRole("dialog").firstElementChild as HTMLElement;
     const looks: string[] = [];
 
-    for (let round = 0; round < 6; round++) {
+    for (let round = 0; round < MAX_REMINDERS; round++) {
       looks.push(`${panel().dataset.theme}/${panel().dataset.character}`);
       await user.click(screen.getByText("Maybe later"));
       await act(async () => {
@@ -165,7 +318,7 @@ describe("SubscriptionReminder", () => {
       });
     }
 
-    expect(new Set(looks).size).toBe(6);
+    expect(new Set(looks).size).toBe(MAX_REMINDERS);
   });
 
   it("carries the theme's entrance animation and idle motion onto the panel", async () => {
@@ -189,13 +342,13 @@ describe("SubscriptionReminder", () => {
     );
   });
 
-  it("asks an expired user to subscribe without claiming anything is blocked", async () => {
+  // Nothing can be done about an expiry that has already happened, so the interruption has no
+  // purpose. The reminder's whole job is the day of notice before it.
+  it("never interrupts an account that has already lapsed", async () => {
     mockStatus({ state: "expired", marketDaysLeft: 0 });
-    renderWithProvider(<SubscriptionReminder />);
+    const { container } = renderWithProvider(<SubscriptionReminder />);
     await advanceToFirstShow();
-
-    expect(screen.getByText("Your free trial has ended")).toBeInTheDocument();
-    expect(screen.getByText(/Everything still works/)).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("never interrupts an admin", async () => {
@@ -323,20 +476,59 @@ describe("SubscriptionReminder", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("offers sign-up rather than renewal to a signed-out visitor", async () => {
+  // A stranger has no subscription to be reminded about. This was a conversion prompt wearing a
+  // reminder's clothes, and it interrupted every visitor on every marketing page.
+  it("never interrupts a signed-out visitor", async () => {
     mockStatus({ state: "expired", signedIn: false, marketDaysLeft: 0 });
-    renderWithProvider(<SubscriptionReminder />);
+    const { container } = renderWithProvider(<SubscriptionReminder />);
     await advanceToFirstShow();
-
-    expect(screen.getByText("Create an account")).toHaveAttribute("href", "/signup");
-    expect(screen.queryByText("Renew for 30 days")).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it("pluralises the remaining days", async () => {
-    mockStatus({ marketDaysLeft: 2 });
+  /**
+   * Three appearances, then silence — counted across reloads rather than per page view, because a
+   * reader who opens the dashboard five times has not agreed to be interrupted five times.
+   *
+   * The third appearance has to survive being counted. An earlier version wrote the count as the
+   * modal opened and then hid it in the same render for having reached the limit, so only two of
+   * the three were ever seen.
+   */
+  it("appears three times and no more", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    mockStatus();
     renderWithProvider(<SubscriptionReminder />);
     await advanceToFirstShow();
-    expect(screen.getByText("You have 2 open market days left on your trial.")).toBeInTheDocument();
+
+    for (let shown = 1; shown <= MAX_REMINDERS; shown++) {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      await user.click(screen.getByText("Maybe later"));
+      await act(async () => {
+        jest.advanceTimersByTime(REMIND_EVERY_MS);
+      });
+    }
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("remembers the spent allowance across a reload", async () => {
+    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:1", count: MAX_REMINDERS }));
+    mockStatus();
+
+    const { container } = renderWithProvider(<SubscriptionReminder />);
+    await advanceToFirstShow();
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  // A new subscription period is a new allowance, not an inherited one.
+  it("starts a fresh three when the expiry it is counting toward changes", async () => {
+    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:4", count: MAX_REMINDERS }));
+    mockStatus();
+
+    renderWithProvider(<SubscriptionReminder />);
+    await advanceToFirstShow();
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("closes from the ✕ button", async () => {
@@ -378,7 +570,6 @@ describe("SubscriptionBadge", () => {
     [{}, "Trial · 1 market day left"],
     [{ marketDaysLeft: 3 }, "Trial · 3 market days left"],
     [{ state: "active" }, "Subscribed"],
-    [{ state: "admin", isAdmin: true }, "Admin"],
     [{ state: "expired" }, "Trial ended"],
     [{ state: "expired", signedIn: false }, "Free preview"],
   ])("renders %s as %s", async (overrides, expected) => {
@@ -393,5 +584,57 @@ describe("SubscriptionBadge", () => {
     const { container } = renderWithProvider(<SubscriptionBadge />);
     await act(async () => {});
     expect(container).toBeEmptyDOMElement();
+  });
+
+  /**
+   * The chip tells a reader where they stand with the paywall. An administrator stands outside it,
+   * so the chip had nothing to say to them and simply announced the role in the public header.
+   */
+  it("shows nothing at all to an admin", async () => {
+    mockStatus({ state: "admin", isAdmin: true });
+    const { container } = renderWithProvider(<SubscriptionBadge />);
+    await act(async () => {});
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("reminderCopy across the three states", () => {
+  /**
+   * The bug this covers: a paying subscriber a day from renewal was told their *free trial* was
+   * nearly up. Wrong, and insulting to someone who has already paid.
+   */
+  it("tells a subscriber their subscription is ending, not their trial", () => {
+    const copy = reminderCopy({ ...baseStatus, state: "active", subscribedUntil: "2026-08-10" } as never);
+    expect(copy.headline).toBe("Your subscription ends tomorrow");
+    expect(copy.body).not.toMatch(/trial/i);
+  });
+
+  it("still has its own words for a trial that has run out", () => {
+    const copy = reminderCopy({ ...baseStatus, state: "expired", marketDaysLeft: 0 } as never);
+    expect(copy.headline).toBe("Your free trial has ended");
+  });
+});
+
+describe("reminderKicker", () => {
+  it("calls a subscription ending a subscription, and a trial a trial", () => {
+    expect(reminderKicker({ ...baseStatus, state: "active" } as never)).toBe("Subscription ending");
+    expect(reminderKicker({ ...baseStatus, state: "trial" } as never)).toBe("Trial ending");
+    expect(reminderKicker({ ...baseStatus, state: "expired" } as never)).toBe("Trial ending");
+  });
+});
+
+describe("patternSpinClass", () => {
+  // Radiating wedges only read as a spotlight if they turn; the other patterns are still.
+  it("turns the starburst and leaves every other pattern alone", () => {
+    expect(patternSpinClass("starburst")).toBe("animate-ray-spin");
+    expect(patternSpinClass("confetti")).toBe("");
+  });
+});
+
+describe("todayIST", () => {
+  // The dates it is compared against are IST dates, so a subscriber abroad must not lose a day.
+  it("reports the exchange's date, not the reader's", () => {
+    expect(todayIST()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(todayIST()).toBe(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
   });
 });

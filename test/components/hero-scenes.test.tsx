@@ -1,26 +1,27 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import {
-  CompareScene,
-  DIP_PICKS,
+  DEFENCE_TRIO,
+  DefenceStocksScene,
+  DATA_CENTRE_TRIO,
+  DataCentreScene,
   LILAC,
   MINT,
   SAND,
   SKY,
   DipBuysScene,
+  dipPrice,
+  dipRailPosition,
+  tiltLabel,
+  tiltTone,
   MARKET_THEMES,
-  PIPELINE,
-  REPORT_CARDS,
   TickerTape,
   TopGainersScene,
-  TripleReportScene,
-  bandPosition,
+  TrioCard,
   signed,
   strongestMove,
-  leaderSymbol,
-  tallyCompare,
   themeAverage,
-  verdictStyle,
-  type CompareMetric,
+  trioPrice,
+  trioReturn,
 } from "../../app/components/hero-scenes";
 
 describe("signed", () => {
@@ -116,192 +117,9 @@ describe("TopGainersScene", () => {
 // Scene 2 — two stocks compared
 // ---------------------------------------------------------------------------
 
-describe("tallyCompare", () => {
-  const rows = (winners: CompareMetric["winner"][]): CompareMetric[] =>
-    winners.map((winner, i) => ({ label: `m${i}`, plain: `what m${i} measures`, left: "1", right: "2", winner }));
-
-  it("counts the rows each side won", () => {
-    expect(tallyCompare(rows(["left", "left", "right"]))).toEqual({ left: 2, right: 1, leader: "left" });
-  });
-
-  it("names the right-hand stock when it wins more rows", () => {
-    expect(tallyCompare(rows(["left", "right", "right"])).leader).toBe("right");
-  });
-
-  // A tie goes to the left-hand side rather than flickering: the reader picked that one first.
-  it("settles a tie on the left-hand stock", () => {
-    expect(tallyCompare(rows(["left", "right"])).leader).toBe("left");
-  });
-});
-
-describe("CompareScene", () => {
-  it("puts both stocks head to head on the same five measures", () => {
-    render(<CompareScene />);
-
-    expect(screen.getByText("HDFCBANK")).toBeInTheDocument();
-    expect(screen.getByText("ICICIBANK")).toBeInTheDocument();
-    // Each row names what it measures in words, not in desk shorthand.
-    for (const label of [
-      "Return over 1 month",
-      "Return over 6 months",
-      "Return over 1 year",
-      "Price vs earnings",
-      "Shares actually delivered",
-    ]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-    expect(screen.getByText("Five things we measured")).toBeInTheDocument();
-    expect(screen.getByText("4 – 1")).toBeInTheDocument();
-    expect(screen.getByText("HDFCBANK wins more of them")).toBeInTheDocument();
-  });
-
-  it("badges the side the measured rows favour", () => {
-    render(<CompareScene />);
-    expect(screen.getByText("Stronger")).toBeInTheDocument();
-  });
-
-  // The ladder shows the contest being decided row by row, not just the total.
-  it("points each rung at whichever side that measure favours", () => {
-    render(<CompareScene />);
-    expect(screen.getAllByLabelText("favours left")).toHaveLength(4);
-    expect(screen.getAllByLabelText("favours right")).toHaveLength(1);
-  });
-
-  // A ratio nobody has explained is not information; every row says what it means.
-  it("explains each measure in plain words", () => {
-    render(<CompareScene />);
-    expect(screen.getByText(/How many years of profit the price costs/)).toBeInTheDocument();
-    expect(screen.getByText(/real buying, not intraday churn/)).toBeInTheDocument();
-  });
-
-  it("states a verdict and the key points for each side", () => {
-    render(<CompareScene />);
-
-    expect(screen.getByText("Buy")).toBeInTheDocument();
-    expect(screen.getByText("Hold")).toBeInTheDocument();
-    // Pros and cons live in their own boxes rather than one mixed list.
-    expect(screen.getAllByText("For")).toHaveLength(2);
-    expect(screen.getAllByText("Against")).toHaveLength(2);
-    expect(screen.getByText("Best one-year return of the pair")).toBeInTheDocument();
-    expect(screen.getByText("Trails over six months and a year")).toBeInTheDocument();
-  });
-
-  // The point of the panel is that the model is not the one choosing.
-  it("says the rows decide the winner, not the model", () => {
-    render(<CompareScene />);
-    expect(screen.getByText(/The five rows decide the winner; the AI only writes up what they say/)).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Scene 3 — the three-stock report
-// ---------------------------------------------------------------------------
-
-describe("verdictStyle", () => {
-  it("gives buy, hold and sell three distinct palettes", () => {
-    const palettes = (["Buy", "Hold", "Sell"] as const).map((verdict) => verdictStyle(verdict).ring);
-    expect(new Set(palettes).size).toBe(3);
-  });
-
-  it("colours a buy green, a hold amber and a sell red", () => {
-    expect(verdictStyle("Buy").badge).toContain("emerald");
-    expect(verdictStyle("Hold").badge).toContain("amber");
-    expect(verdictStyle("Sell").badge).toContain("rose");
-  });
-});
-
-describe("TripleReportScene", () => {
-  it("reports one of each stance, so the scoring is visibly capable of saying sell", () => {
-    render(<TripleReportScene />);
-
-    expect(REPORT_CARDS.map((card) => card.verdict).sort()).toEqual(["Buy", "Hold", "Sell"]);
-    expect(screen.getByText("Buy")).toBeInTheDocument();
-    expect(screen.getByText("Hold")).toBeInTheDocument();
-    expect(screen.getByText("Sell")).toBeInTheDocument();
-  });
-
-  it("shows each stock, its score and the three return windows behind it", () => {
-    render(<TripleReportScene />);
-
-    expect(screen.getByText("RELIANCE")).toBeInTheDocument();
-    expect(screen.getByText("81")).toBeInTheDocument();
-    expect(screen.getAllByText("1M")).toHaveLength(3);
-    // A negative window renders signed and in the losing colour.
-    expect(screen.getByText("−11.6%")).toBeInTheDocument();
-    expect(screen.getByText("+19.2%")).toBeInTheDocument();
-  });
-
-  it("gives a reason for each stance rather than a bare label", () => {
-    render(<TripleReportScene />);
-    for (const card of REPORT_CARDS) {
-      expect(screen.getByText(card.because)).toBeInTheDocument();
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Scene 4 — how it works, and what is cheap today
-// ---------------------------------------------------------------------------
-
-describe("bandPosition", () => {
-  it("reads a pullback as how much of the 52-week high is left in the price", () => {
-    expect(bandPosition(15.8)).toBeCloseTo(84.2);
-    expect(bandPosition(0)).toBe(100);
-  });
-
-  // A bar can never run past its track, however the figures arrive.
-  it("clamps to the track at both ends", () => {
-    expect(bandPosition(140)).toBe(0);
-    expect(bandPosition(-10)).toBe(100);
-  });
-});
-
-describe("DipBuysScene", () => {
-  it("spells out the four steps of the analysis, in order", () => {
-    render(<DipBuysScene />);
-
-    expect(PIPELINE).toHaveLength(4);
-    for (const stage of PIPELINE) {
-      expect(screen.getByText(stage.step)).toBeInTheDocument();
-    }
-    expect(screen.getByText(/Arithmetic picks buy, hold or sell/)).toBeInTheDocument();
-  });
-
-  it("lists three picks with both halves of the case: the year behind them and the discount now", () => {
-    render(<DipBuysScene />);
-
-    expect(DIP_PICKS).toHaveLength(3);
-    expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
-    expect(screen.getByText("+31.2% over a year")).toBeInTheDocument();
-    expect(screen.getByText("−15.8% off its high")).toBeInTheDocument();
-    // The ladder runs from today's price to the 52-week high.
-    expect(screen.getByText("₹1,141.20")).toBeInTheDocument();
-    expect(screen.getByText("₹1,355.40")).toBeInTheDocument();
-  });
-
-  it("tags each pick for today or tomorrow", () => {
-    render(<DipBuysScene />);
-    expect(screen.getAllByText("Buy Today")).toHaveLength(2);
-    expect(screen.getByText("Buy Tomorrow")).toBeInTheDocument();
-  });
-
-  // Every pick must clear both bars, or the list is just "stocks that fell".
-  it("only picks companies that are up on the year and below their high", () => {
-    for (const pick of DIP_PICKS) {
-      expect(pick.year).toBeGreaterThan(0);
-      expect(pick.offHigh).toBeGreaterThan(0);
-    }
-  });
-
-  it("says a pullback is not a discount on its own", () => {
-    render(<DipBuysScene />);
-    expect(screen.getByText(/A pullback is not a discount on its own/)).toBeInTheDocument();
-  });
-});
-
 describe("every scene", () => {
   it("carries the same BSE index rail", () => {
-    for (const Scene of [TopGainersScene, CompareScene, TripleReportScene, DipBuysScene]) {
+    for (const Scene of [TopGainersScene, DefenceStocksScene, DataCentreScene, DipBuysScene]) {
       const { container, unmount } = render(<Scene />);
       expect(within(container).getByText("S&P BSE SENSEX")).toBeInTheDocument();
       expect(within(container).getByText("BSE BANKEX")).toBeInTheDocument();
@@ -314,7 +132,7 @@ describe("every scene", () => {
    * content can end up flush against the edge of the slide at any width.
    */
   it("keeps its content inside a padded card, inset from the frame", () => {
-    for (const Scene of [TopGainersScene, CompareScene, TripleReportScene, DipBuysScene]) {
+    for (const Scene of [TopGainersScene, DefenceStocksScene, DataCentreScene, DipBuysScene]) {
       const { container, unmount } = render(<Scene />);
 
       // Each slide sets its own inset — a roomy scene sits further in, a dense one closer to
@@ -332,10 +150,450 @@ describe("every scene", () => {
   });
 });
 
-describe("leaderSymbol", () => {
-  // Both answers matter: whichever way the five measures fall, the card has to name the right one.
-  it("names whichever contender took more of the measures", () => {
-    expect(leaderSymbol({ left: 3, right: 2, leader: "left" })).toBe("HDFCBANK");
-    expect(leaderSymbol({ left: 2, right: 3, leader: "right" })).toBe("ICICIBANK");
+// ---------------------------------------------------------------------------
+// The two live-figure trio slides
+// ---------------------------------------------------------------------------
+
+describe("trioPrice", () => {
+  it("prints rupees in Indian grouping, to paise", () => {
+    expect(trioPrice(1432.5)).toBe("₹1,432.50");
+    expect(trioPrice(1127967)).toBe("₹11,27,967.00");
+  });
+
+  // A missing price is a dash, never a zero — a zero would read as a real quote.
+  it("shows a dash rather than inventing a number", () => {
+    expect(trioPrice(null)).toBe("—");
+    expect(trioPrice(undefined)).toBe("—");
+    expect(trioPrice(Number.NaN)).toBe("—");
+  });
+});
+
+describe("trioReturn", () => {
+  it("always carries the sign, to one place", () => {
+    expect(trioReturn(12.34)).toBe("+12.3%");
+    expect(trioReturn(-4)).toBe("−4.0%");
+  });
+
+  // A company younger than the window genuinely has no figure, and printing 0% would be a lie.
+  it("shows a dash when the window has no measurement", () => {
+    expect(trioReturn(null)).toBe("—");
+    expect(trioReturn(Number.NaN)).toBe("—");
+  });
+});
+
+const SAMPLE_PERFORMANCE = {
+  symbol: "HAL",
+  name: "Hindustan Aeronautics",
+  assetType: "stock" as const,
+  capTier: "Large" as const,
+  currency: "INR",
+  price: 4910,
+  previousClose: 4920,
+  change: -10,
+  oneDay: 1.29,
+  oneWeek: 2.4,
+  oneMonth: -1.1,
+  threeMonth: 5,
+  sixMonth: 8.8,
+  oneYear: 24.6,
+  threeYear: 60,
+  fiveYear: 120,
+  overall: 400,
+  overallSince: "2018-03-28",
+  live: true,
+  asOf: "2026-08-07T10:00:00.000Z",
+  source: "test",
+};
+
+describe("TrioCard", () => {
+  const stock = DEFENCE_TRIO[0];
+
+  it("names the company, its ticker and its real BSE scrip code", () => {
+    render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
+
+    expect(screen.getByText("HAL")).toBeInTheDocument();
+    expect(screen.getByText("Hindustan Aeronautics")).toBeInTheDocument();
+    expect(screen.getByText("Large")).toBeInTheDocument();
+  });
+
+  it("shows the live price and the day's move", () => {
+    render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
+
+    expect(screen.getByText("₹4,910.00")).toBeInTheDocument();
+    expect(screen.getByText("+1.3%")).toBeInTheDocument();
+  });
+
+  it("reports all five windows, not just the day", () => {
+    render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
+
+    for (const label of ["1W", "1M", "6M", "1Y", "3Y"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getByText("+2.4%")).toBeInTheDocument();
+    expect(screen.getByText("−1.1%")).toBeInTheDocument();
+    expect(screen.getByText("+8.8%")).toBeInTheDocument();
+    expect(screen.getByText("+24.6%")).toBeInTheDocument();
+    expect(screen.getByText("+60.0%")).toBeInTheDocument();
+  });
+
+  // A card mid-flight must not print dashes, which would read as "there is no such figure".
+  it("shows placeholders while the figures are still arriving", () => {
+    const { container } = render(<TrioCard stock={stock} performance={null} loading />);
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("…").length).toBeGreaterThan(0);
+    expect(screen.queryByText("₹4,910.00")).not.toBeInTheDocument();
+  });
+
+  // A feed that answered with nothing is not the same as a feed still answering.
+  it("shows dashes when the feed has no figures for the company", () => {
+    render(<TrioCard stock={stock} performance={null} loading={false} />);
+
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+});
+
+describe("the trio line-ups", () => {
+  it("names the three defence companies the slide is about", () => {
+    expect(DEFENCE_TRIO.map((stock) => stock.symbol)).toEqual(["HAL", "MAZDOCK", "PARAS"]);
+    expect(DEFENCE_TRIO.map((stock) => stock.company)).toEqual([
+      "Hindustan Aeronautics",
+      "Mazagon Dock Shipbuilders",
+      "Paras Defence and Space Technologies",
+    ]);
+  });
+
+  // Three different sizes, which is the whole reason the tier is on the card: a small cap's 100%
+  // year and a large cap's 10% year are not the same achievement.
+  it("states the cap tier for each, including the one the quote feed does not classify", () => {
+    expect(DEFENCE_TRIO.map((stock) => stock.tier)).toEqual(["Large", "Mid", "Small"]);
+  });
+
+  it("names the three data-centre companies the slide is about", () => {
+    expect(DATA_CENTRE_TRIO.map((stock) => stock.symbol)).toEqual(["NETWEB", "POWERINDIA", "LT"]);
+    expect(DATA_CENTRE_TRIO.map((stock) => stock.company)).toEqual([
+      "Netweb Technologies India",
+      "Hitachi Energy India",
+      "Larsen & Toubro",
+    ]);
+  });
+
+  // Three cards that look alike are three cards a reader has to read twice to tell apart.
+  it("gives every card in a trio its own accent and its own pale wash", () => {
+    for (const trio of [DEFENCE_TRIO, DATA_CENTRE_TRIO]) {
+      expect(new Set(trio.map((stock) => stock.accent)).size).toBe(3);
+      expect(new Set(trio.map((stock) => stock.wash)).size).toBe(3);
+    }
+  });
+
+  // Light, not saturated: these cards carry a dozen small tabular figures each.
+  it("keeps every wash pale enough to read tabular figures against", () => {
+    for (const trio of [DEFENCE_TRIO, DATA_CENTRE_TRIO]) {
+      for (const stock of trio) expect(stock.wash).toMatch(/-50\//);
+    }
+  });
+});
+
+describe("DefenceStocksScene and DataCentreScene", () => {
+  beforeEach(() => {
+    global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
+  });
+
+  it("puts each defence company on its own card", () => {
+    render(<DefenceStocksScene />);
+
+    for (const stock of DEFENCE_TRIO) {
+      expect(screen.getByText(stock.symbol)).toBeInTheDocument();
+      expect(screen.getByText(stock.company)).toBeInTheDocument();
+    }
+  });
+
+  it("puts each data-centre company on its own card", () => {
+    render(<DataCentreScene />);
+
+    for (const stock of DATA_CENTRE_TRIO) {
+      expect(screen.getByText(stock.symbol)).toBeInTheDocument();
+      expect(screen.getByText(stock.company)).toBeInTheDocument();
+    }
+  });
+
+  /**
+   * These two slides carry real figures, unlike the scenes either side of them. The footnote has
+   * to say so — a reader cannot otherwise tell a live board from an illustration of one.
+   */
+  it("tells the reader the figures are live rather than illustrative", () => {
+    const { unmount } = render(<DefenceStocksScene />);
+    expect(screen.getByText(/measured, not modelled/)).toBeInTheDocument();
+    expect(screen.queryByText(/illustration/)).not.toBeInTheDocument();
+    unmount();
+
+    render(<DataCentreScene />);
+    expect(screen.getByText(/live exchange figures/)).toBeInTheDocument();
+  });
+
+  it("asks the performance endpoint for exactly the companies it shows, in one request", async () => {
+    const asked: string[] = [];
+    global.fetch = jest.fn((url: string) => {
+      asked.push(String(url));
+      return new Promise(() => {});
+    }) as unknown as typeof fetch;
+
+    render(<DataCentreScene />);
+
+    await waitFor(() => expect(asked.length).toBeGreaterThan(0));
+    expect(asked).toHaveLength(1);
+    for (const stock of DATA_CENTRE_TRIO) expect(asked[0]).toContain(stock.symbol);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scene 4 — the year's winners that are on sale today
+// ---------------------------------------------------------------------------
+
+const NO_NEWS = { positive: 0, negative: 0, neutral: 0, total: 0, score: 50, headline: null, headlineUrl: null, classifier: null };
+
+describe("tiltLabel", () => {
+  it("says how the week's headlines fell, rather than showing a bare score", () => {
+    expect(tiltLabel({ ...NO_NEWS, positive: 7, total: 10, score: 68 })).toBe("7 of 10 headlines positive");
+    expect(tiltLabel({ ...NO_NEWS, negative: 6, total: 10, score: 35 })).toBe("6 of 10 headlines negative");
+    expect(tiltLabel({ ...NO_NEWS, total: 10, score: 50 })).toBe("10 headlines, balanced");
+  });
+
+  // Nothing written about a company is not the same as balanced coverage of it.
+  it("distinguishes no coverage from balanced coverage", () => {
+    expect(tiltLabel(NO_NEWS)).toBe("No coverage this week");
+  });
+});
+
+describe("tiltTone", () => {
+  it("tints the chip by how the week read", () => {
+    expect(tiltTone({ ...NO_NEWS, total: 4, score: 70 })).toContain("emerald");
+    expect(tiltTone({ ...NO_NEWS, total: 4, score: 30 })).toContain("rose");
+    expect(tiltTone({ ...NO_NEWS, total: 4, score: 50 })).toContain("amber");
+  });
+
+  it("stays neutral when there is nothing to read", () => {
+    expect(tiltTone(NO_NEWS)).toContain("slate");
+  });
+});
+
+describe("dipRailPosition", () => {
+  // The marker slides toward the cheap end as the discount deepens.
+  it("puts a stock at its recent high at the expensive end", () => {
+    expect(dipRailPosition(0)).toBe(100);
+  });
+
+  it("puts a deeply marked-down stock at the cheap end", () => {
+    expect(dipRailPosition(-30)).toBe(0);
+    expect(dipRailPosition(-60)).toBe(0);
+  });
+
+  it("places a middling discount in between", () => {
+    expect(dipRailPosition(-15)).toBe(50);
+  });
+
+  it("falls back to the expensive end when there is no measurement", () => {
+    expect(dipRailPosition(null)).toBe(100);
+    expect(dipRailPosition(Number.NaN)).toBe(100);
+  });
+});
+
+describe("dipPrice", () => {
+  it("prints rupees in Indian grouping", () => {
+    expect(dipPrice(1141.2)).toBe("₹1,141.20");
+  });
+
+  it("shows a dash rather than a zero when there is no price", () => {
+    expect(dipPrice(null)).toBe("—");
+  });
+});
+
+describe("DipBuysScene", () => {
+  const leader = {
+    code: "500034",
+    ticker: "BAJFINANCE",
+    name: "Bajaj Finance",
+    sector: "Financial Services",
+    capTier: "Large",
+    price: 1141.2,
+    changePercent: -2.4,
+    yearReturn: 31.2,
+    referenceHigh: 1355.4,
+    offRecentHigh: -15.8,
+    news: { positive: 5, negative: 1, neutral: 2, total: 8, score: 63, headline: "Bajaj Finance posts record quarter", headlineUrl: "https://example.test/a", classifier: "ai" as const },
+  };
+
+  const board = { leaders: [leader], sessionDate: "2026-08-07", examined: 150, fetchedAt: "2026-08-07T10:00:00.000Z" };
+
+  const mockBoard = (payload: unknown, ok = true) => {
+    global.fetch = jest.fn().mockResolvedValue({ ok, json: async () => payload } as Response);
+  };
+
+  it("shows the card's shape while the screen is still running", () => {
+    global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
+    const { container } = render(<DipBuysScene />);
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+
+  it("asks the public screen endpoint, which needs no sign-in", async () => {
+    mockBoard(board);
+    render(<DipBuysScene />);
+
+    await screen.findByText("BAJFINANCE");
+    expect(global.fetch).toHaveBeenCalledWith("/api/market/dip-leaders");
+  });
+
+  /**
+   * Both halves of the screen have to be on the card. Either one alone is a different and much
+   * worse idea: a winner at its high is not cheap, and a faller at its low is not a winner.
+   */
+  it("shows the year's return and today's discount together", async () => {
+    mockBoard(board);
+    render(<DipBuysScene />);
+
+    expect(await screen.findByText("+31%")).toBeInTheDocument();
+    expect(screen.getByText("−15.8%")).toBeInTheDocument();
+    expect(screen.getByText("Last year")).toBeInTheDocument();
+    expect(screen.getByText("Off recent high")).toBeInTheDocument();
+  });
+
+  it("shows today's price, today's fall, and the high it is measured against", async () => {
+    mockBoard(board);
+    render(<DipBuysScene />);
+
+    expect(await screen.findByText("₹1,141.20")).toBeInTheDocument();
+    expect(screen.getByText("−2.40%")).toBeInTheDocument();
+    expect(screen.getByText(/₹1,355.40/)).toBeInTheDocument();
+  });
+
+  /**
+   * The count, and only the count.
+   *
+   * The card used to print the most recent headline underneath. In practice that was usually a
+   * routine regulatory filing, which told a reader nothing and risked reading as the reason the
+   * stock is on the list — when the screen is decided entirely by arithmetic.
+   */
+  it("counts the headlines without quoting one", async () => {
+    mockBoard(board);
+    render(<DipBuysScene />);
+
+    expect(await screen.findByText("5 of 8 headlines positive")).toBeInTheDocument();
+    expect(screen.queryByText("Bajaj Finance posts record quarter")).not.toBeInTheDocument();
+  });
+
+  // The footnote is the promise that the news is decoration on the card and not part of the screen.
+  it("says the headlines are counted separately from the screen itself", async () => {
+    mockBoard(board);
+    render(<DipBuysScene />);
+
+    await screen.findByText("BAJFINANCE");
+    expect(screen.getByText(/never part of the screen/)).toBeInTheDocument();
+  });
+
+  // An unreachable feed and a market with nothing on sale are different outcomes, and a reader
+  // deserves to know which one they are looking at.
+  it("distinguishes a feed it could not reach from a market with nothing on sale", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
+    const { unmount } = render(<DipBuysScene />);
+    expect(await screen.findByText(/couldn't reach the exchange feed/)).toBeInTheDocument();
+    unmount();
+
+    mockBoard({ ...board, leaders: [] });
+    render(<DipBuysScene />);
+    expect(await screen.findByText(/nothing is on sale/)).toBeInTheDocument();
+  });
+
+  it("reports a refused response as a failure rather than as an empty market", async () => {
+    mockBoard(null, false);
+    render(<DipBuysScene />);
+
+    expect(await screen.findByText(/couldn't reach the exchange feed/)).toBeInTheDocument();
+  });
+
+  it("shows dashes rather than zeros for a company the feed could not price", async () => {
+    mockBoard({
+      ...board,
+      leaders: [{ ...leader, price: null, changePercent: null, yearReturn: null, offRecentHigh: null, referenceHigh: null, news: NO_NEWS }],
+    });
+    render(<DipBuysScene />);
+
+    await screen.findByText("BAJFINANCE");
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    expect(screen.getByText("No coverage this week")).toBeInTheDocument();
+  });
+});
+
+describe("the branches a quiet day exercises", () => {
+  const stock = DEFENCE_TRIO[0];
+
+  // Green for a rising day, red for a falling one — the chip must not stay green through a fall.
+  it("tints the day chip red when the stock is down", () => {
+    render(<TrioCard stock={stock} performance={{ ...SAMPLE_PERFORMANCE, oneDay: -2.1 }} loading={false} />);
+
+    expect(screen.getByText("−2.1%")).toHaveClass("bg-rose-100");
+  });
+
+  it("tints the day chip green when the stock is up", () => {
+    render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
+
+    expect(screen.getByText("+1.3%")).toHaveClass("bg-emerald-100");
+  });
+
+  it("greys the day chip when the feed has no move for it", () => {
+    render(<TrioCard stock={stock} performance={{ ...SAMPLE_PERFORMANCE, oneDay: null }} loading={false} />);
+
+    expect(screen.getByText("—", { selector: "span" })).toHaveClass("bg-white/90");
+  });
+});
+
+describe("a dip leader BSE never classified", () => {
+  const unclassified = {
+    code: "540079",
+    ticker: "SPRAYKING",
+    name: "Sprayking Ltd",
+    sector: null,
+    capTier: null,
+    price: 84.2,
+    changePercent: -3.1,
+    yearReturn: 88.4,
+    referenceHigh: 102.5,
+    offRecentHigh: -17.9,
+    news: { positive: 0, negative: 0, neutral: 0, total: 0, score: 50, headline: null, headlineUrl: null, classifier: null },
+  };
+
+  // Most of the exchange has no published sector, and a card must not print a stray separator.
+  it("prints the scrip code alone rather than a dangling separator", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ leaders: [unclassified], sessionDate: "2026-08-07", examined: 150, fetchedAt: "2026-08-07T10:00:00.000Z" }),
+    } as Response);
+
+    render(<DipBuysScene />);
+
+    expect(await screen.findByText("BSE 540079")).toBeInTheDocument();
+  });
+
+  // A board that arrives after the reader has moved on must not be written into a dead component.
+  it("says nothing when the board lands after the slide has gone", async () => {
+    let deliver: ((value: unknown) => void) | null = null;
+    global.fetch = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          deliver = resolve;
+        }),
+    ) as unknown as typeof fetch;
+
+    const { unmount } = render(<DipBuysScene />);
+    await waitFor(() => expect(deliver).not.toBeNull());
+
+    unmount();
+    deliver!({ ok: true, json: async () => ({ leaders: [unclassified], sessionDate: null, examined: 0, fetchedAt: "" }) });
+
+    // Nothing to assert on screen — the point is that resolving after unmount throws no warning
+    // and updates no state. A React act() error here would fail the test.
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(screen.queryByText("SPRAYKING")).not.toBeInTheDocument();
   });
 });

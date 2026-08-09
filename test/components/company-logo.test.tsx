@@ -131,4 +131,39 @@ describe("CompanyLogo", () => {
     render(<CompanyLogo symbol="TCS" className="mt-1" />);
     expect(screen.getByAltText("TCS logo")).toHaveClass("mt-1");
   });
+
+  /**
+   * The failure `onError` never sees.
+   *
+   * These rows are rendered on the server now, so the browser starts fetching each logo the moment
+   * the HTML lands — before hydration attaches any handler. A source that 403s quickly fires its
+   * error into nothing, and the row was left showing a broken image indefinitely. An element that
+   * has finished loading with no intrinsic width has failed, whenever it happened.
+   */
+  it("recovers a logo that failed before hydration attached the handler", async () => {
+    // jsdom loads nothing, so `complete`/`naturalWidth` are stubbed to describe an image the
+    // browser already tried and failed to fetch.
+    const complete = jest.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
+    const width = jest.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(0);
+
+    render(<CompanyLogo symbol="SWANDEF" />);
+
+    expect(await screen.findByText("SWA")).toBeInTheDocument();
+    expect(screen.queryByAltText("SWANDEF logo")).not.toBeInTheDocument();
+
+    complete.mockRestore();
+    width.mockRestore();
+  });
+
+  it("leaves a logo that did load alone", () => {
+    const complete = jest.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
+    const width = jest.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(128);
+
+    render(<CompanyLogo symbol="RELIANCE" />);
+
+    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
+
+    complete.mockRestore();
+    width.mockRestore();
+  });
 });

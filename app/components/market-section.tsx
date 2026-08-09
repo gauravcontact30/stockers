@@ -1,14 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
+/**
+ * What the server already resolved for a board before it was sent to the browser.
+ *
+ * `url` is the request that payload answers. It is checked rather than assumed, because a board
+ * only opens on its default filters: the moment the reader changes a tab, a tier or a page, the URL
+ * is a different one and the server's answer no longer describes what they are asking for.
+ */
+export type Prefetched<T> = { url: string; data: T } | null;
 
 /**
  * One fetch-on-mount hook shared by every NSE-backed section, so they all handle loading, HTTP
  * failure and network failure identically instead of each inventing its own states.
+ *
+ * When the page was rendered on the server with the board's opening payload already in hand, that
+ * payload is the hook's first value and no request is made for it at all. That removes a whole
+ * round trip from what the reader waits through: the old sequence was HTML, then JavaScript, then
+ * a fetch, then the numbers, with a skeleton on screen throughout. Changing a filter still goes to
+ * the network — from then on the browser is asking a question the server was never asked.
  */
-export function useMarketFeed<T>(url: string): { data: T | null; loading: boolean; error: string | null } {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useMarketFeed<T>(
+  url: string,
+  prefetched?: Prefetched<T>,
+): { data: T | null; loading: boolean; error: string | null } {
+  const seeded = prefetched && prefetched.url === url ? prefetched.data : null;
+
+  const [data, setData] = useState<T | null>(seeded);
+  const [loading, setLoading] = useState(seeded === null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -24,10 +44,19 @@ export function useMarketFeed<T>(url: string): { data: T | null; loading: boolea
     }
   }, [url]);
 
+  // The URL the server's payload answers, held in a ref so it can be spent exactly once. Without
+  // this, a board whose reader navigates back to its opening filters would skip the refetch and
+  // show them figures from whenever the page was rendered.
+  const unspent = useRef(prefetched?.url ?? null);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch-on-mount; setState only ever runs after the async fetch resolves, not synchronously in this callback.
+    if (unspent.current === url) {
+      unspent.current = null;
+      return;
+    }
+
     load();
-  }, [load]);
+  }, [load, url]);
 
   return { data, loading, error };
 }

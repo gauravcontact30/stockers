@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { AuthForm } from "../components/auth-form";
 import { AuthHeader } from "../components/auth-header";
+import { VerifyNotice } from "../components/verify-notice";
 
 export default function SigninPage() {
   return (
@@ -22,7 +24,12 @@ export default function SigninPage() {
               <li>• Personalized dashboard for tracking your portfolio</li>
             </ul>
           </section>
-          <div className="w-full max-w-md">
+          <div className="flex w-full max-w-md flex-col gap-3">
+            {/* useSearchParams needs a Suspense boundary or the whole route opts out of static
+                rendering; the notice is a thin strip, so there is nothing to fall back to. */}
+            <Suspense fallback={null}>
+              <VerifyNotice />
+            </Suspense>
             <AuthForm mode="signin" />
           </div>
         </div>

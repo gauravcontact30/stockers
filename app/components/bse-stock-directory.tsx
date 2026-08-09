@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AiBoardRead } from "./ai-board-read";
 import type { BseCapTier, BseMoverRow } from "./bse-movers-board";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import { chipFor, formatCrore, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
 import { MarketSection, PillTabs, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed } from "./market-section";
 import type { BoardBrief } from "../lib/board-read";
@@ -191,12 +192,12 @@ export function BseStockDirectory() {
                   <td className="py-2.5 pr-3">
                     <div className="flex items-center gap-2.5">
                       <CompanyLogo symbol={row.ticker} size={32} />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 dark:text-white">{row.ticker}</p>
+                      <StockDetailTrigger symbol={row.ticker}>
+                        <p className="font-semibold text-slate-900 underline-offset-2 hover:underline dark:text-white">{row.ticker}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
                           {row.name} · {row.code}
                         </p>
-                      </div>
+                      </StockDetailTrigger>
                     </div>
                   </td>
                   <td className="py-2.5 pr-3">

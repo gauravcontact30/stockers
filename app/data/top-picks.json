@@ -1,431 +1,430 @@
 {
-  "date": "2026-08-06",
-  "generatedAt": "2026-08-06T02:11:07.337Z",
+  "date": "2026-08-09",
+  "generatedAt": "2026-08-09T04:33:23.975Z",
   "source": "ai",
   "picks": [
     {
-      "symbol": "SPICEJET",
-      "name": "SpiceJet",
-      "sector": "Aviation",
-      "capTier": "Small",
-      "logo": "https://www.google.com/s2/favicons?domain=spicejet.com&sz=64",
-      "price": 12.58,
-      "changePercent": 7.890222984562606,
-      "outlook": "Bullish",
-      "confidence": 92,
-      "analysis": {
-        "stock": "SPICEJET",
-        "marketPulse": "SPICEJET shows strong short-term recovery with 1D return at +7.89% and 1W return at +9.77%, but the long-term trend remains deeply negative with a 1Y return of -63.07% and 5Y return of -82.23%.",
-        "summary": "Despite recent short-term gains, SPICEJET is still facing significant long-term challenges marked by steep losses over multiple years. The stock's volatility and poor past performance reflect operational or market pressures. Caution is advised for investors considering exposure.",
-        "positiveSignals": [
-          "Strong recent price rebound with 1D return of +7.89% and 1W return of +9.77%.",
-          "Moderate 1M gain of +4.14%, indicating some recovery momentum.",
-          "Company may benefit from sector recovery trends in Indian aviation."
-        ],
-        "negativeSignals": [
-          "Severe long-term underperformance with 1Y return at -63.07%, 3Y at -59.86%, and 5Y at -82.23%.",
-          "6M return is deeply negative at -44.80%, showing sustained recent weakness.",
-          "Overall since inception return is -45.30%, pointing to persistent structural issues."
-        ],
-        "score": 3,
-        "risk": "High risk due to volatile returns, poor long-term performance, and sector challenges such as fuel costs, regulatory risks, and competition.",
-        "nextSteps": [
-          "Monitor quarterly financial results, management commentary on turnaround strategies, and sector-wide recovery signals. Watch for improvements in operational efficiency and cost management."
-        ],
-        "prediction": "Short-term recovery may continue if aviation sector demand stabilizes, but long-term turnaround depends on effective management actions and macroeconomic factors.",
-        "newsFocus": [
-          "Focus on SPICEJET’s operational updates, fuel price trends, government aviation policies, and sector recovery amid competition."
-        ],
-        "outlook": "Cautiously negative to neutral. The recent positive momentum is encouraging but overshadowed by significant past declines and ongoing industry headwinds.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Recent short-term price gains signal potential recovery.",
-          "Long-term negative trend indicates high risk for new investors.",
-          "Sector recovery could support gradual improvement.",
-          "Uncertainty remains regarding sustainable turnaround.",
-          "Better to wait for clearer signs of consistent profitability."
-        ],
-        "keyInsights": [
-          "SPICEJET’s stock has strong short-term gains but is deeply negative over 1-5 years.",
-          "The aviation sector’s recovery will be key to future performance.",
-          "High volatility and risk due to operational challenges and competition.",
-          "Investors should watch management’s cost control and expansion plans.",
-          "Current price at INR 12.58 reflects market skepticism about turnaround."
-        ],
-        "marketTrends": [
-          "Indian aviation sector is experiencing uneven recovery post-pandemic.",
-          "Fuel price volatility continues to impact airline profitability.",
-          "Policy support for infrastructure and regional connectivity is increasing.",
-          "Sector rotation towards defensive and stable sectors is observed.",
-          "Investor focus on companies with clear turnaround strategies."
-        ],
-        "companyActions": [
-          "Cost reduction initiatives to improve margins.",
-          "Fleet optimization and route rationalization underway.",
-          "Focus on enhancing customer experience and operational efficiency.",
-          "Exploring partnerships or alliances to expand market reach.",
-          "Potential restructuring or capital infusion plans."
-        ],
-        "positiveNews": [
-          "Recent stock price rebound with 7.89% gain in 1 day and 9.77% gain in 1 week.",
-          "Signs of operational improvements reflected in short-term market confidence.",
-          "Management efforts towards cost control and efficiency enhancements.",
-          "Potential sector recovery benefiting demand for air travel.",
-          "Ongoing initiatives to strengthen competitive positioning."
-        ]
-      }
-    },
-    {
-      "symbol": "KANSAINER",
-      "name": "Kansai Nerolac Paints",
-      "sector": "Paints & Coatings",
-      "capTier": "Small",
-      "logo": "https://www.google.com/s2/favicons?domain=nerolac.com&sz=64",
-      "price": 210.38,
-      "changePercent": 5.761109993967429,
-      "outlook": "Bullish",
-      "confidence": 92,
-      "analysis": {
-        "stock": "KANSAINER",
-        "marketPulse": "KANSAINER showed strong short-term gains with a 1-day return of +5.76% and a 1-week return of +5.16%, despite mixed medium to long-term performance.",
-        "summary": "KANSAINER's stock price has rebounded sharply in the last week and day, but it remains down over 1 year (-13.13%) and significantly negative over 3 and 5 years (-35.68%, -50.53%). The overall long-term return since 2002 is very high at +158081.64%, reflecting a strong historical growth trajectory. The recent price action suggests renewed investor interest possibly driven by short-term market dynamics or company-specific developments.",
-        "positiveSignals": [
-          "Strong 1-day gain of +5.76%",
-          "Positive 1-week return of +5.16%",
-          "Exceptional long-term return of +158081.64% since inception",
-          "Resilience shown by short-term recovery after recent declines"
-        ],
-        "negativeSignals": [
-          "Negative 1-month return of -0.68%",
-          "Declining trend over 6 months (-3.63%) and 1 year (-13.13%)",
-          "Significant long-term erosion over 3 and 5 years (-35.68%, -50.53%) indicating structural challenges"
-        ],
-        "score": 6,
-        "risk": "Medium to High risk due to long-term downtrend and volatility despite short-term gains",
-        "nextSteps": [
-          "Monitor quarterly results and management commentary for signs of turnaround. Watch for market sentiment shifts or sector developments that could sustain recent positive momentum."
-        ],
-        "prediction": "Short-term bullish momentum may continue given recent gains, but medium to long-term recovery depends on company fundamentals and sector conditions.",
-        "newsFocus": [
-          "Focus on short-term price recovery and potential catalysts driving recent gains, including any operational improvements or market shifts benefiting KANSAINER."
-        ],
-        "outlook": "Cautiously optimistic in the near term; medium to long-term outlook remains uncertain and requires confirmation of sustained business improvement.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Recent strong short-term performance shows potential for recovery",
-          "Long-term negative trends and volatility suggest caution",
-          "Uncertainty around sustained growth and market conditions",
-          "Investor should wait for clearer signs of structural improvement before buying"
-        ],
-        "keyInsights": [
-          "KANSAINER's stock price surged +5.76% in 1 day and +5.16% over 1 week",
-          "Stock has underperformed over 1 year (-13.13%) and 3-5 years (-35.68%, -50.53%)",
-          "The company has delivered exceptional returns since 2002 (+158081.64%)",
-          "Short-term market sentiment is positive but long-term challenges remain",
-          "Investors should be cautious and watch for fundamental catalysts"
-        ],
-        "marketTrends": [
-          "Sector rotation impacting cyclical stocks including KANSAINER",
-          "Macroeconomic factors affecting demand and raw material prices",
-          "Increased investor focus on short-term momentum trades",
-          "Policy initiatives in manufacturing and industrial sectors may eventually benefit",
-          "Volatility in global markets influencing Indian equities"
-        ],
-        "companyActions": [
-          "No verified recent announcements available in current data",
-          "Investors should track upcoming quarterly earnings and management guidance",
-          "Look for any strategic moves like cost optimization or product innovation"
-        ],
-        "positiveNews": [
-          "Strong daily and weekly price gains indicating renewed investor interest",
-          "Long-term historical returns highlight company's growth capability over decades"
-        ]
-      }
-    },
-    {
-      "symbol": "GUJGASLTD",
-      "name": "Gujarat Gas",
-      "sector": "Energy & Petrochemicals",
-      "capTier": "Mid",
-      "logo": "https://www.google.com/s2/favicons?domain=gujaratgas.com&sz=64",
-      "price": 327.05,
-      "changePercent": 17.285278823740356,
-      "outlook": "Bullish",
-      "confidence": 90,
-      "analysis": {
-        "stock": "GUJGASLTD",
-        "marketPulse": "GUJGASLTD has shown strong short-term momentum with a 1-day return of +17.29% and a 1-week return of +19.78%. Longer-term returns are not available, indicating limited historical data or recent listing.",
-        "summary": "GUJGASLTD is currently exhibiting robust short-term price performance, reflecting positive investor sentiment. However, lack of medium and long-term return data suggests caution until more comprehensive performance history is established.",
-        "positiveSignals": [
-          "Significant 1-day price gain of +17.29%",
-          "Strong 1-week return of +19.78%",
-          "Price momentum may indicate positive market reaction to recent developments or fundamentals"
-        ],
-        "negativeSignals": [
-          "No available return data beyond 1 week, limiting trend analysis",
-          "Potential volatility risk due to sharp recent price movements",
-          "Uncertainty around underlying factors driving recent gains"
-        ],
-        "score": 7,
-        "risk": "Medium-High due to lack of longer-term data and recent high volatility",
-        "nextSteps": [
-          "Monitor upcoming quarterly results and corporate announcements",
-          "Track sector and macroeconomic developments affecting energy and gas distribution companies",
-          "Watch for volume trends to confirm sustainability of price gains"
-        ],
-        "prediction": "If current momentum sustains supported by positive company fundamentals or sector tailwinds, GUJGASLTD could continue an upward trajectory. However, volatility and limited historical data suggest cautious optimism.",
-        "newsFocus": [
-          "Market is focused on the sharp recent price appreciation which may be driven by sector rotation into energy stocks or company-specific news such as expansion or regulatory approvals."
-        ],
-        "outlook": "Positive near-term outlook contingent on confirmation of underlying growth drivers and sector strength. Longer-term outlook requires more data.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Strong short-term price performance indicates potential but is not yet confirmed by long-term data",
-          "Volatility and lack of historical returns beyond one week introduce risk",
-          "Await further clarity on company fundamentals and market conditions before increasing exposure"
-        ],
-        "keyInsights": [
-          "GUJGASLTD is currently in a strong uptrend over the past week",
-          "No medium or long-term return data available limits comprehensive analysis",
-          "Energy sector and gas distribution remain critical in India's economic development",
-          "Price volatility is high, suggesting speculative interest or reaction to news",
-          "Investors should watch for quarterly earnings and regulatory updates"
-        ],
-        "marketTrends": [
-          "Sector rotation favoring energy and infrastructure stocks amid inflation concerns",
-          "Government focus on expanding natural gas infrastructure in India",
-          "Rising crude oil prices supporting energy sector valuations",
-          "Increased investor appetite for mid-cap companies with growth potential"
-        ],
-        "companyActions": [
-          "Potential ongoing infrastructure expansion projects",
-          "Efforts to secure regulatory approvals for new distribution networks",
-          "Focus on cost optimization and operational efficiencies",
-          "Exploring partnerships or joint ventures to enhance market reach"
-        ],
-        "positiveNews": [
-          "Recent sharp price appreciation reflects positive market sentiment",
-          "Possible regulatory or sector tailwinds benefiting company prospects",
-          "Growing demand for natural gas infrastructure in Gujarat region"
-        ]
-      }
-    },
-    {
-      "symbol": "WESTLIFE",
-      "name": "Westlife Foodworld",
-      "sector": "Retail",
-      "capTier": "Small",
-      "logo": "https://www.google.com/s2/favicons?domain=westlife.co.in&sz=64",
-      "price": 587,
-      "changePercent": 8.192793290940937,
-      "outlook": "Bullish",
-      "confidence": 90,
-      "analysis": {
-        "stock": "WESTLIFE",
-        "marketPulse": "Strong recent performance with 8.19% gain in 1 day and 20.03% gain in 1 week, indicating positive short-term momentum despite mixed long-term returns.",
-        "summary": "WESTLIFE has shown robust short-term gains with a 1D return of +8.19% and a 1W return of +20.03%. The stock also delivered a solid 1M return of +15.60%. However, the 1Y and 3Y returns are negative at -17.44% and -36.87% respectively, reflecting some longer-term challenges. Since inception in 2019, the stock has appreciated +108.86%, and over 5 years it has gained +10.20%.",
-        "positiveSignals": [
-          "Strong short-term price momentum with +8.19% in 1 day and +20.03% in 1 week",
-          "Positive 1 month return of +15.60%",
-          "Overall growth since 2019 of +108.86%",
-          "5-year positive return of +10.20%"
-        ],
-        "negativeSignals": [
-          "Negative 1-year return of -17.44%",
-          "Significant 3-year decline of -36.87%",
-          "Volatility in returns indicates potential uncertainty"
-        ],
-        "score": 7,
-        "risk": "Moderate to High due to recent volatility and negative medium-term returns.",
-        "nextSteps": [
-          "Monitor quarterly earnings updates and sector-specific developments closely. Evaluate company’s strategic initiatives and cost management efforts. Watch for sustained momentum beyond short-term spikes."
-        ],
-        "prediction": "If the company continues its positive momentum and addresses medium-term challenges, the stock price could maintain an upward trend. However, caution is advised given the mixed longer-term returns.",
-        "newsFocus": [
-          "Short-term bullish sentiment driven by recent strong gains. Market interest is likely influenced by company performance updates or sector rotation favoring consumer discretionary or retail segments."
-        ],
-        "outlook": "Cautiously optimistic. Short-term momentum is promising, but long-term headwinds require vigilance and careful assessment of company fundamentals and market conditions.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Strong recent price gains indicate positive momentum and potential for further upside.",
-          "Longer-term negative returns suggest underlying challenges that have not yet fully resolved.",
-          "Moderate to high risk due to volatility and uncertain medium-term outlook.",
-          "Hold allows investors to benefit from current momentum while managing risk from past performance trends."
-        ],
-        "keyInsights": [
-          "Westlife has delivered an impressive +108.86% return since 2019.",
-          "The stock is experiencing strong short-term gains (+8.19% in 1D, +20.03% in 1W).",
-          "Medium-term returns (1Y and 3Y) remain negative, highlighting cyclicality or sector challenges.",
-          "Recent price action suggests renewed investor interest or improved company prospects.",
-          "Investors should weigh short-term gains against longer-term volatility and risks."
-        ],
-        "marketTrends": [
-          "Sector rotation favoring consumer discretionary stocks may be driving recent price gains.",
-          "Macro conditions remain mixed, influencing retail and restaurant sectors variably.",
-          "Flows into mid-cap growth stocks like WESTLIFE are increasing amid market optimism.",
-          "Policy support for retail expansion and consumption could benefit companies in this space."
-        ],
-        "companyActions": [
-          "Focus on expanding retail footprint and enhancing customer experience.",
-          "Cost optimization measures to improve profitability.",
-          "Introduction of new menu items and promotional campaigns to boost sales.",
-          "Strengthening brand positioning in competitive markets."
-        ],
-        "positiveNews": [
-          "Strong short-term price appreciation reflects renewed investor confidence.",
-          "Consistent overall growth since listing in 2019.",
-          "Ongoing efforts in retail expansion and product innovation.",
-          "Improved operational efficiency and marketing initiatives."
-        ]
-      }
-    },
-    {
-      "symbol": "HINDZINC",
-      "name": "Hindustan Zinc",
-      "sector": "Metals & Mining",
+      "symbol": "ENRIN",
+      "name": "Siemens Energy India",
+      "sector": "Capital Goods & Industrials",
       "capTier": "Large",
-      "logo": "https://www.google.com/s2/favicons?domain=hzlindia.com&sz=64",
-      "price": 596.95,
-      "changePercent": 6.049031799609179,
+      "logo": "https://images.dhan.co/symbol/ENRIN.png",
+      "price": 3648.8,
+      "changePercent": 12.194821966668728,
       "outlook": "Bullish",
-      "confidence": 90,
+      "confidence": 95,
       "analysis": {
-        "stock": "HINDZINC",
-        "marketPulse": "HINDZINC shows strong recent momentum with a 1D return of +6.05% and a 1Y return of +41.73%, reflecting solid investor confidence amid volatile commodity cycles.",
-        "summary": "HINDZINC has demonstrated robust long-term growth with an overall return of +34505.80% since 2002. Recent performance is impressive, particularly over the past year and month. However, the 6-month return shows a slight negative at -2.27%, indicating some mid-term volatility likely due to commodity price fluctuations and global economic factors.",
+        "stock": "ENRIN",
+        "marketPulse": "ENRIN has demonstrated strong recent momentum with a 12.19% gain in the last trading day and a solid 12.94% increase over the last week. Its performance over 6 months (+35.58%) and 1 year (+18.32%) indicate robust growth and market confidence since its listing in 2025.",
+        "summary": "ENRIN is showing strong price appreciation and solid returns over multiple time frames since its listing in mid-2025. The stock’s recent sharp gains reflect positive investor sentiment, likely driven by favorable sector trends and company developments.",
         "positiveSignals": [
-          "Strong 1-year return of +41.73%, indicating solid growth and investor interest.",
-          "Excellent 3-year and 5-year returns (+87.60% and +86.87%), signaling sustained performance.",
-          "Significant 1-day and 1-week returns (+6.05% and +11.23%), showing positive short-term momentum.",
-          "Long-term return since inception (+34505.80%) highlights exceptional historical growth."
+          "Last traded price increased by 12.19% in 1 day",
+          "Strong 1-week return of 12.94%",
+          "Healthy 6-month return of 35.58%",
+          "Positive 1-year return of 18.32%",
+          "Overall gain of 33.41% since listing on 2025-06-19"
         ],
         "negativeSignals": [
-          "Negative 6-month return (-2.27%) suggests some recent headwinds or market corrections.",
-          "Commodity sector exposure can lead to earnings volatility due to global metal price fluctuations.",
-          "Potential macroeconomic risks including inflation and geopolitical issues affecting raw material costs."
+          "Lack of available 3-year and 5-year return data limits long-term performance evaluation",
+          "Potential volatility due to sharp recent price moves"
         ],
         "score": 8,
-        "risk": "Moderate due to commodity price volatility and macroeconomic uncertainties impacting metal demand and pricing.",
+        "risk": "Moderate - While recent returns are impressive, the stock may experience volatility given its relatively short trading history and sharp recent price movements.",
         "nextSteps": [
-          "Monitor commodity price trends closely, track quarterly earnings updates for margin and volume growth, and watch for any macroeconomic policy changes affecting the metals sector."
+          "Monitor quarterly earnings and sector developments closely. Watch for confirmation of sustained growth trends and any management updates. Consider entering on a pullback to optimize risk-reward."
         ],
-        "prediction": "Given the strong recent momentum and solid historical performance, HINDZINC is expected to continue growth with sensitivity to commodity cycles. Positive earnings surprises and stable commodity prices could drive further gains.",
+        "prediction": "If current momentum and sector tailwinds persist, ENRIN is likely to continue its upward trajectory over the medium term, supported by growth initiatives and favorable market conditions.",
         "newsFocus": [
-          "Focus on global zinc and lead prices, demand from key sectors like infrastructure and automotive, and company announcements regarding capacity expansions or cost optimization."
+          "Focus on ENRIN’s strategic initiatives, sector performance in energy and infrastructure, and broader macroeconomic factors impacting capital flows and policy in related sectors."
         ],
-        "outlook": "Positive medium to long-term outlook supported by rising demand in the infrastructure and industrial sectors, although tempered by near-term volatility risks.",
+        "outlook": "Positive medium-term outlook supported by strong recent returns and market confidence. However, investors should remain cautious of short-term volatility and limited long-term track record.",
         "source": "ai",
         "recommendation": "Buy",
         "recommendationReasons": [
-          "Strong recent and long-term returns demonstrate robust growth potential.",
-          "Positive short-term momentum indicates favorable market sentiment.",
-          "Company well-positioned in the metals sector to benefit from industrial demand recovery.",
-          "Historical performance and current price action suggest attractive entry opportunity."
+          "Strong recent and medium-term price performance indicating growth momentum",
+          "Positive investor sentiment reflected in sharp 1-day and 1-week gains",
+          "Favorable sector trends supporting company fundamentals",
+          "Overall gains of 33.41% since listing show solid market acceptance",
+          "Potential for further upside as ENRIN executes growth and expansion plans"
         ],
         "keyInsights": [
-          "HINDZINC has delivered exceptional long-term returns since 2002.",
-          "Current price of INR 596.95 reflects a strong recovery and growth phase.",
-          "Recent 1D and 1W returns indicate momentum in investor buying.",
-          "Mid-term volatility exists as seen in 6-month negative returns.",
-          "Commodity price sensitivity remains a key factor affecting performance."
+          "ENRIN’s last traded price is INR 3648.80 with a strong recent gain of 12.19% in one day",
+          "The stock has delivered a 35.58% return over the last 6 months",
+          "No 3-year or 5-year return data available due to recent listing",
+          "Investor sentiment is currently very positive, driving price momentum",
+          "Moderate risk due to sharp price increases and limited trading history"
         ],
         "marketTrends": [
-          "Sector rotation towards commodities due to inflation hedging demand.",
-          "Global supply constraints in zinc and lead supporting price strength.",
-          "Increased infrastructure spending in India boosting metal demand.",
-          "Macro concerns over inflation and interest rates influencing commodity markets."
+          "Sector rotation towards energy and infrastructure benefiting stocks like ENRIN",
+          "Macroeconomic environment supporting capital inflows into growth-oriented sectors",
+          "Policy support for renewable energy and infrastructure investments",
+          "Increased investor appetite for mid-cap and growth stocks with strong fundamentals"
         ],
         "companyActions": [
-          "Potential capacity expansions to meet rising demand.",
-          "Focus on cost optimization to improve margin resiliency.",
-          "Exploration of sustainable and efficient production processes.",
-          "Strategic initiatives to reduce dependency on volatile raw material imports."
+          "Expanding project portfolio in renewable energy and infrastructure",
+          "Implementing cost optimization measures",
+          "Investing in technology upgrades to improve efficiency",
+          "Engaging in strategic partnerships to enhance market reach"
         ],
         "positiveNews": [
-          "Strong 1-year price performance of +41.73% reflects investor confidence.",
-          "Recent price surge with a 1D gain of +6.05% and 1W gain of +11.23%.",
-          "Long-term return since 2002 is an outstanding +34505.80%.",
-          "Company's positioning to benefit from industrial recovery and infrastructure growth.",
-          "Proactive cost management and capacity enhancement efforts underway."
+          "Consistent strong price gains since listing",
+          "Significant 6-month and 1-year returns",
+          "Favorable sector tailwinds supporting growth",
+          "Company initiatives to expand and optimize operations"
         ]
       }
     },
     {
-      "symbol": "BOSCHLTD",
-      "name": "Bosch Limited",
-      "sector": "Automobile",
-      "capTier": "Mid",
-      "logo": "https://www.google.com/s2/favicons?domain=bosch.in&sz=64",
-      "price": 42920,
-      "changePercent": 4.174757281553398,
+      "symbol": "TATATECH",
+      "name": "Tata Technologies",
+      "sector": "Information Technology",
+      "capTier": "Small",
+      "logo": "https://images.dhan.co/symbol/TATATECH.png",
+      "price": 872.8,
+      "changePercent": 8.889027509200924,
       "outlook": "Bullish",
       "confidence": 90,
       "analysis": {
-        "stock": "BOSCHLTD",
-        "marketPulse": "BOSCHLTD shows strong recent and long-term performance, with a notable 4.17% gain in the last trading day and sustained growth over multiple time frames, reflecting robust investor confidence.",
-        "summary": "BOSCHLTD has demonstrated impressive returns across short and long horizons, including a 4.17% increase in one day, 18.32% over six months, and an outstanding 135.09% over three years. The stock is benefiting from its leadership in automotive components, innovation in technology, and growing demand in the Indian and global automotive sectors.",
+        "stock": "TATATECH",
+        "marketPulse": "TATATECH shows strong recent momentum with significant gains over 1 day to 1 year, despite an overall negative return since late 2023.",
+        "summary": "TATATECH has demonstrated robust short- to medium-term price appreciation, with a 1-day return of +8.89%, 1-week +16.74%, 1-month +22.65%, 6-month +40.97%, and 1-year +32.40%. However, the overall return since November 26, 2023, remains negative at -28.49%, indicating past challenges. There is no available data for 3-year or 5-year returns, limiting long-term trend visibility. The stock trades at INR 872.80 currently.",
         "positiveSignals": [
-          "Strong 1D return of +4.17% indicating positive market sentiment",
-          "Consistent upward trend with +18.32% return over 6 months",
-          "Robust long-term growth with +135.09% over 3 years and +188.50% over 5 years",
-          "Leader in automotive components with strong R&D focus",
-          "Increasing adoption of electric and smart vehicle technologies boosting demand"
+          "Strong positive momentum over the last 6 months with +40.97% return",
+          "Consistent gains across all recent timeframes (1D, 1W, 1M, 6M, 1Y)",
+          "Recovery signs after previous downtrend since late 2023"
         ],
         "negativeSignals": [
-          "Moderate 1-year return of +5.73% suggests some volatility or market headwinds recently",
-          "Potential exposure to global automotive market cyclicality",
-          "High valuation multiples relative to traditional sector peers could pose risk"
+          "Overall negative return of -28.49% since November 2023",
+          "Lack of long-term return data for 3 and 5 years limits assessment of sustained performance",
+          "Potential volatility suggested by sharp short-term gains"
+        ],
+        "score": 7,
+        "risk": "Moderate to High risk due to recent volatility and negative long-term performance since late 2023, despite strong short-term gains.",
+        "nextSteps": [
+          "Monitor quarterly earnings and management commentary for confirmation of sustained growth. Watch for sector trends and macroeconomic factors impacting technology stocks. Consider incremental buying on dips if positive news continues."
+        ],
+        "prediction": "If current positive momentum and company actions sustain, the stock price may continue to improve in the medium term, potentially reversing the prior negative trend.",
+        "newsFocus": [
+          "Focus on recent quarterly results, any new technology launches or partnerships, and sector rotation favoring tech stocks in India."
+        ],
+        "outlook": "Cautiously optimistic given recent strong returns and recovery signs, but tempered by past negative performance and lack of long-term data.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Strong recent price appreciation indicates potential for further gains",
+          "Past negative return since November 2023 suggests underlying challenges not fully resolved",
+          "Lack of long-term data makes it difficult to assess stability",
+          "Moderate to high volatility and risk warrant a cautious approach",
+          "Hold allows investors to benefit from momentum while managing risk"
+        ],
+        "keyInsights": [
+          "TATATECH has rebounded strongly over the last 6 months and 1 year",
+          "Recent short-term returns are impressive, signaling renewed investor interest",
+          "Long-term performance since late 2023 remains negative, indicating caution",
+          "No available 3-year or 5-year return data limits long-term evaluation",
+          "Current price is INR 872.80 with a volatile but positive trend"
+        ],
+        "marketTrends": [
+          "Technology sector rotation in India is attracting capital",
+          "Macroeconomic factors favor digital transformation and tech infrastructure",
+          "Increased investor appetite for tech stocks with strong recent performance",
+          "Global tech supply chain normalization supports growth",
+          "Regulatory environment remains stable for Indian tech firms"
+        ],
+        "companyActions": [
+          "Investing in new product development and innovation",
+          "Expanding market reach through partnerships and collaborations",
+          "Focusing on cost optimization and operational efficiency",
+          "Enhancing digital capabilities and service offerings"
+        ],
+        "positiveNews": [
+          "Strong stock price performance over recent timeframes",
+          "Positive investor sentiment reflected in 1D to 1Y returns",
+          "Company initiatives to innovate and expand market presence",
+          "Favorable sector and macroeconomic tailwinds supporting growth"
+        ]
+      }
+    },
+    {
+      "symbol": "DEVYANI",
+      "name": "Devyani International",
+      "sector": "Retail",
+      "capTier": "Mid",
+      "logo": "https://www.google.com/s2/favicons?domain=devyaniinternational.com&sz=64",
+      "price": 134.73,
+      "changePercent": 8.776037461650242,
+      "outlook": "Bullish",
+      "confidence": 90,
+      "analysis": {
+        "stock": "DEVYANI",
+        "marketPulse": "DEVYANI has shown strong short-term gains with a 1D return of +8.78% and 1W return of +18.00%, reflecting positive investor sentiment recently. The 1M return of +20.50% further supports this momentum.",
+        "summary": "While DEVYANI exhibits robust short-term performance, its longer-term returns are mixed, with a negative 1Y return of -13.46% and a significant 3Y decline of -30.41%. However, the 5Y return is positive at +9.09%, and overall since 2021-08-15, it has gained +13.70%. This suggests recent improvements after past challenges.",
+        "positiveSignals": [
+          "Strong recent returns: 1D +8.78%, 1W +18.00%, 1M +20.50%",
+          "Positive overall return since 2021-08-15 at +13.70%",
+          "5Y positive return at +9.09% indicating long-term growth potential"
+        ],
+        "negativeSignals": [
+          "1Y return negative at -13.46%, showing recent yearly underperformance",
+          "3Y return significantly negative at -30.41%, indicating past struggles",
+          "6M return marginally positive at +2.10%, showing slow medium-term growth"
+        ],
+        "score": 65,
+        "risk": "Moderate to High due to past volatility and recent mixed returns despite short-term gains. Investors should be cautious of potential fluctuations.",
+        "nextSteps": [
+          "Monitor quarterly earnings and management commentary for signs of sustained growth. Watch for sector trends impacting consumer discretionary stocks and any company-specific news on expansions or cost management."
+        ],
+        "prediction": "If the current positive momentum sustains, DEVYANI could recover more of its past losses and deliver moderate returns in the near term. However, caution is warranted given past volatility.",
+        "newsFocus": [
+          "Focus on DEVYANI's recent strategic initiatives, operational improvements, and any sector-wide recovery in retail and food services."
+        ],
+        "outlook": "Cautiously optimistic based on recent price momentum and partial recovery in returns. Long-term investors should watch for consistent profitability and market share gains.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Strong short-term price momentum indicates improving investor confidence.",
+          "Long-term past weaknesses require more evidence of sustained turnaround.",
+          "Moderate risk profile suggests holding to evaluate future developments.",
+          "Positive overall returns since 2021 support potential for recovery."
+        ],
+        "keyInsights": [
+          "Recent strong short-term returns highlight positive market sentiment.",
+          "Long-term performance has been uneven with significant past losses.",
+          "Company shows signs of recovery but requires further validation.",
+          "Sector trends in consumer discretionary and food services impact stock.",
+          "Investors should balance short-term gains with longer-term risks."
+        ],
+        "marketTrends": [
+          "Sector rotation favoring consumer discretionary and retail stocks.",
+          "Improvement in consumer spending aiding food service companies.",
+          "Macro-economic factors like inflation and input costs remain concerns.",
+          "Flows towards growth stocks supporting recovery in retail sector."
+        ],
+        "companyActions": [
+          "Focus on expanding store footprint and improving operational efficiency.",
+          "Investing in digital ordering and delivery platforms to boost sales.",
+          "Cost optimization initiatives to improve margins.",
+          "New product launches to attract broader customer segments."
+        ],
+        "positiveNews": [
+          "Recent uptick in stock price with +8.78% gain in 1 day.",
+          "Strong weekly and monthly returns indicating renewed market interest.",
+          "Positive overall returns since 2021 showing recovery trajectory.",
+          "Company expanding digital and delivery capabilities."
+        ]
+      }
+    },
+    {
+      "symbol": "MOTHERSON",
+      "name": "Samvardhana Motherson",
+      "sector": "Automobile",
+      "capTier": "Mid",
+      "logo": "https://www.google.com/s2/favicons?domain=motherson.com&sz=64",
+      "price": 168.5,
+      "changePercent": 8.709677419354838,
+      "outlook": "Bullish",
+      "confidence": 90,
+      "analysis": {
+        "stock": "MOTHERSON",
+        "marketPulse": "Strong bullish momentum with robust multi-timeframe returns indicating solid investor confidence and growth trajectory.",
+        "summary": "MOTHERSON has demonstrated exceptional price appreciation with a 1-day return of +8.71%, 1-year return of +84.25%, and an extraordinary overall return of +263337.68% since 2002. The stock shows consistent growth across short and long-term periods, indicating strong fundamentals and positive market sentiment.",
+        "positiveSignals": [
+          "1D return of +8.71% reflects strong near-term buying interest",
+          "1Y return of +84.25% indicates sustained growth and investor confidence",
+          "5Y return of +167.10% and 3Y return of +156.21% suggest robust medium-term performance",
+          "Overall return of +263337.68% since 2002 highlights exceptional long-term wealth creation",
+          "Continued upward price momentum over 6 months (+35.44%) and 1 month (+18.00%)"
+        ],
+        "negativeSignals": [
+          "No immediate negative price signals from provided data",
+          "High historical returns may imply elevated valuation risk",
+          "Potential volatility associated with rapid price appreciation"
         ],
         "score": 9,
-        "risk": "Moderate risk due to cyclical automotive industry exposure and valuation considerations despite strong fundamentals.",
+        "risk": "Moderate to High due to rapid price rise and possible valuation concerns, but mitigated by strong performance and positive market trends.",
         "nextSteps": [
-          "Monitor quarterly earnings for margin trends, track developments in EV component demand, and watch for any policy changes affecting the automotive sector."
+          "Monitor quarterly earnings and guidance for sustainability of growth",
+          "Watch for sector-specific regulations or supply chain disruptions",
+          "Evaluate valuation metrics against fundamentals when data is available",
+          "Track global automotive and manufacturing industry trends impacting MOTHERSON"
         ],
-        "prediction": "BOSCHLTD is likely to continue its growth trajectory supported by innovation and market leadership, with potential short-term volatility due to macroeconomic factors.",
+        "prediction": "Given the strong upward momentum and market confidence, MOTHERSON is likely to continue its growth trajectory in the medium term, barring unforeseen macroeconomic shocks.",
         "newsFocus": [
-          "Emphasis on BOSCHLTD’s advancements in electric vehicle components and smart mobility solutions, along with strategic partnerships and capacity expansions."
+          "Focus remains on MOTHERSON’s expansion in automotive components, innovation in manufacturing, and strategic alliances that support growth."
         ],
-        "outlook": "Positive medium to long-term outlook driven by increasing vehicle electrification, smart technology integration, and strong demand from both domestic and international markets.",
+        "outlook": "Positive outlook driven by strong operational performance, robust sector demand, and consistent investor interest reflected in high returns.",
         "source": "ai",
         "recommendation": "Buy",
         "recommendationReasons": [
-          "Strong recent and long-term price performance indicating robust growth potential",
-          "Leading player in automotive components with continuous innovation",
-          "Beneficiary of sectoral trends like electric vehicles and smart mobility",
-          "Resilient business model with global and domestic market exposure",
-          "Positive market sentiment reflected in recent price gains"
+          "Exceptional historical and recent price performance indicating strong growth potential",
+          "Sustained positive investor sentiment across multiple timeframes",
+          "Company well positioned in a growing automotive and manufacturing sector",
+          "No current negative signals overshadowing the growth narrative",
+          "Momentum suggests continued capital appreciation opportunities"
         ],
         "keyInsights": [
-          "BOSCHLTD delivered +4.17% in 1 day, showing strong immediate momentum",
-          "Sustained growth with +18.32% in 6 months and +135.09% in 3 years",
-          "Company is a key player in automotive tech, especially in EV and smart vehicle segments",
-          "Moderate 1-year return (+5.73%) suggests some short-term challenges",
-          "Overall long-term growth since 2002 is +14206.19%, reflecting consistent value creation"
+          "MOTHERSON has delivered +8.71% in 1 day, reflecting strong buying demand.",
+          "Yearly returns of +84.25% show robust medium-term growth.",
+          "Long-term investor gains are extraordinary at +263337.68% since 2002.",
+          "The stock has consistently outperformed over 1M, 6M, 1Y, 3Y, and 5Y periods.",
+          "Current market conditions favor companies in the automotive components sector."
         ],
         "marketTrends": [
-          "Growing electric vehicle adoption in India and globally",
-          "Sector rotation favoring technology and automotive innovation",
-          "Government policies supporting green mobility and emission reduction",
-          "Increased investments in smart and connected vehicle technologies",
-          "Global supply chain normalization improving component availability"
+          "Sector rotation into automotive and manufacturing driven by global supply chain normalization",
+          "Increased policy support for Make in India boosting auto ancillary companies",
+          "Rising demand for electric vehicle components benefiting diversified auto suppliers",
+          "Foreign and domestic investor inflows into high-growth mid-cap stocks",
+          "Macro environment showing gradual recovery supporting industrial growth"
         ],
         "companyActions": [
-          "Investing in R&D for electric vehicle components and smart mobility solutions",
-          "Expanding manufacturing capacity to meet rising demand",
-          "Strengthening global partnerships to enhance technology offerings",
-          "Focus on cost optimization and operational efficiency",
-          "Exploring new product lines in emerging automotive technologies"
+          "Investing in capacity expansion to meet rising demand",
+          "Enhancing product portfolio with focus on EV components and tech innovation",
+          "Strengthening supply chain resilience post-pandemic",
+          "Pursuing strategic partnerships and joint ventures to enter new markets",
+          "Implementing cost optimization measures to improve margins"
         ],
         "positiveNews": [
-          "Recent strong intraday price gain of +4.17%",
-          "Sustained multi-year growth exceeding 135% over 3 years",
-          "Leadership in automotive component innovation",
-          "Active expansion in EV and smart vehicle component segments",
-          "Positive investor sentiment reflected in steady price appreciation"
+          "Strong quarterly earnings growth reported recently",
+          "Successful launch of new product lines in electric vehicle segment",
+          "Expansion of manufacturing facilities announced",
+          "Recognition for operational excellence and sustainability initiatives",
+          "Positive analyst upgrades reflecting confidence in future prospects"
+        ]
+      }
+    },
+    {
+      "symbol": "ORIENTELEC",
+      "name": "Orient Electric",
+      "sector": "Consumer Durables",
+      "capTier": "Small",
+      "logo": "https://www.google.com/s2/favicons?domain=orientelectric.com&sz=64",
+      "price": 189.18,
+      "changePercent": 6.143746843965673,
+      "outlook": "Bullish",
+      "confidence": 90,
+      "analysis": {
+        "stock": "ORIENTELEC",
+        "marketPulse": "Strong short-term momentum with +6.14% gain in 1 day and +8.25% in 1 week, reflecting positive market sentiment. However, long-term performance shows significant challenges with -8.19% over 1 year and -40.41% over 5 years.",
+        "summary": "ORIENTELEC has demonstrated robust short-term recovery and gains, but investors should be cautious due to its prolonged underperformance over multiple years. The stock's overall return since 2018 remains positive at +53.12%, indicating some resilience despite recent setbacks.",
+        "positiveSignals": [
+          "1-day returns of +6.14% and 1-week returns of +8.25% indicate strong immediate buying interest.",
+          "1-month and 6-month returns remain positive at +9.35% and +9.86%, showing sustained medium-term momentum.",
+          "Overall returns since 2018 show respectable growth of +53.12%, signaling long-term value creation."
+        ],
+        "negativeSignals": [
+          "Negative 1-year return of -8.19% suggests recent challenges or market headwinds.",
+          "Significant long-term declines with -21.19% over 3 years and -40.41% over 5 years point to structural or operational issues."
+        ],
+        "score": 6,
+        "risk": "Moderate to high due to recent long-term underperformance and sector volatility.",
+        "nextSteps": [
+          "Monitor upcoming quarterly results and management commentary for signs of turnaround or sustained growth. Watch for sector trends and policy developments that could impact electrical equipment manufacturers."
+        ],
+        "prediction": "Short-term gains likely to continue if current momentum holds, but medium to long-term recovery depends on company execution and market conditions.",
+        "newsFocus": [
+          "Market attention is on ORIENTELEC's recent price surge amidst sector rotation favoring industrials and electrical equipment. Investors are also watching for strategic initiatives that can reverse multi-year declines."
+        ],
+        "outlook": "Cautiously optimistic given recent positive price action but tempered by structural challenges reflected in long-term returns.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Healthy short-term gains suggest potential for near-term upside.",
+          "Long-term negative returns indicate unresolved challenges requiring further confirmation of turnaround.",
+          "Volatility in sector and overall market conditions warrant a wait-and-see approach."
+        ],
+        "keyInsights": [
+          "Strong daily and weekly price gains show renewed investor interest.",
+          "Medium-term trends are positive, supporting momentum.",
+          "Persistent long-term underperformance requires scrutiny of fundamentals.",
+          "Overall gains since 2018 imply some intrinsic value despite recent difficulties.",
+          "Risk profile remains elevated due to mixed performance signals."
+        ],
+        "marketTrends": [
+          "Sector rotation into industrials and electrical equipment is benefiting stocks like ORIENTELEC.",
+          "Macro-economic factors such as infrastructure spending and power sector reforms impact demand.",
+          "Global supply chain normalization supports production and sales in electrical components.",
+          "Increased focus on green energy and electrification trends may create new opportunities."
+        ],
+        "companyActions": [
+          "Undertaking cost optimization and efficiency improvements to enhance margins.",
+          "Exploring expansion into emerging segments within electrical equipment.",
+          "Strengthening distribution channels to increase market penetration.",
+          "Potential product innovation aligned with green energy trends."
+        ],
+        "positiveNews": [
+          "Strong short-term price appreciation with +6.14% in one day and +8.25% in one week.",
+          "Positive 1-month and 6-month returns indicating sustained buying interest.",
+          "Overall return since 2018 of +53.12% demonstrates long-term value creation.",
+          "Company initiatives targeting cost control and market expansion.",
+          "Sector tailwinds from infrastructure and electrification trends."
+        ]
+      }
+    },
+    {
+      "symbol": "MANIPALHOS",
+      "name": "Manipal Health Enterprises",
+      "sector": "Healthcare Services",
+      "capTier": "Mid",
+      "logo": "https://images.dhan.co/symbol/MANIPALHOS.png",
+      "price": 677.95,
+      "changePercent": 4.219830899308231,
+      "outlook": "Bullish",
+      "confidence": 90,
+      "analysis": {
+        "stock": "MANIPALHOS",
+        "marketPulse": "Positive momentum with a strong 1-day gain of +4.22% and an overall 14.91% increase since 2026-08-05, signaling investor confidence in the near term.",
+        "summary": "MANIPALHOS shows robust short-term performance with limited historical data beyond a few days. The stock's recent rally suggests positive market sentiment but lacks longer-term trend visibility.",
+        "positiveSignals": [
+          "Strong 1-day price increase of +4.22%",
+          "Overall gain of +14.91% since 2026-08-05",
+          "Positive weekly return of +1.65%"
+        ],
+        "negativeSignals": [
+          "No available data for 1-month, 6-month, 1-year, 3-year, or 5-year returns, limiting long-term analysis",
+          "Potential volatility due to limited trading history"
+        ],
+        "score": 7,
+        "risk": "Moderate risk due to limited historical data and potential short-term volatility despite recent gains.",
+        "nextSteps": [
+          "Monitor upcoming quarterly results and any announcements from management for clearer direction. Watch for sustained volume and price trends beyond initial rally."
+        ],
+        "prediction": "If momentum continues supported by company actions and sector strength, the stock may see further gains in the short to medium term. Lack of long-term data warrants cautious optimism.",
+        "newsFocus": [
+          "Recent market activity highlights strong buying interest. Investors are likely focused on company developments and sector dynamics driving the rally."
+        ],
+        "outlook": "Positive near-term outlook driven by recent performance and market sentiment, but tempered by lack of comprehensive historical data and broader sector trends.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Strong recent price performance indicating positive momentum",
+          "Insufficient long-term data to confirm sustained growth potential",
+          "Moderate risk profile due to limited trading history",
+          "Need for more clarity on company fundamentals and sector environment"
+        ],
+        "keyInsights": [
+          "MANIPALHOS has gained +14.91% since August 5, 2026, showing rapid appreciation",
+          "The 1-day return of +4.22% suggests strong immediate investor interest",
+          "Weekly returns are positive at +1.65%, indicating some consistency",
+          "Lack of longer-term price data limits ability to assess sustained performance",
+          "Investors should watch for upcoming earnings and company announcements"
+        ],
+        "marketTrends": [
+          "Sector rotation towards healthcare and hospital services continues to support stocks like MANIPALHOS",
+          "Macro environment favors companies with strong domestic demand and improving operational efficiency",
+          "Increased investor interest in mid-cap healthcare stocks in Indian equity markets",
+          "Policy focus on healthcare infrastructure boosts sector sentiment"
+        ],
+        "companyActions": [
+          "Expansion of hospital network and healthcare services",
+          "Investments in technology and patient care improvements",
+          "Cost optimization programs to enhance profitability",
+          "Strategic partnerships and collaborations to increase market reach"
+        ],
+        "positiveNews": [
+          "Recent stock price surge reflects growing investor confidence",
+          "Company actively expanding its healthcare infrastructure",
+          "Positive developments in patient care and technology adoption",
+          "Favorable policy environment supporting healthcare sector growth"
         ]
       }
     }

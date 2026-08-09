@@ -1,3 +1,4 @@
+import { CACHE_TAGS } from "./cache";
 import { cached, fetchNse, toNumber, toText } from "./nse-client";
 import { getIndustryMap, type IndustryMap } from "./nse-industry";
 
@@ -69,7 +70,8 @@ const loadMtfUniverse = cached(30 * 60_000, async (): Promise<Set<string>> => {
   const payload = await fetchNse<unknown>("/master-quote");
   if (!Array.isArray(payload)) return new Set<string>();
   return new Set(payload.filter((value): value is string => typeof value === "string"));
-});
+  // Not persisted: a Set does not survive the Data Cache's JSON round trip.
+}, { key: "nse:mtf-universe", tags: [CACHE_TAGS.nse] });
 
 export type MostTradedBoard = {
   byVolume: TradedStock[];
@@ -118,7 +120,7 @@ export const getMostTraded = cached(TTL_MS, async (): Promise<MostTradedBoard> =
     fetchedAt: new Date().toISOString(),
     live: byVolume.length > 0 || byValue.length > 0,
   };
-});
+}, { key: "nse:most-traded", tags: [CACHE_TAGS.nse], persist: true });
 
 export type SectorTrend = {
   symbol: string;
@@ -171,7 +173,7 @@ export const getTrendingSectors = cached(TTL_MS, async (): Promise<SectorBoard> 
     .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
 
   return { sectors, fetchedAt: new Date().toISOString(), live: sectors.length > 0 };
-});
+}, { key: "nse:trending-sectors", tags: [CACHE_TAGS.nse], persist: true });
 
 export type EtfRow = {
   symbol: string;
@@ -282,4 +284,4 @@ export const getEtfBoard = cached(TTL_MS, async (): Promise<EtfBoard> => {
   }).filter((group) => group.etfs.length > 0);
 
   return { groups, fetchedAt: new Date().toISOString(), live: groups.length > 0 };
-});
+}, { key: "nse:etf-board", tags: [CACHE_TAGS.nse], persist: true });

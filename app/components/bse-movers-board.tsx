@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  MOVERS_PAGE_SIZE,
+  buildMoversUrl,
+  type MoverDirection as MoverDirectionType,
+  type MoverMoveKey,
+  type MoverPeriodKey,
+  type MoverTierKey,
+} from "../lib/market-urls";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import {
   chipFor,
   formatCrore,
@@ -19,6 +28,7 @@ import {
   SectionFootnote,
   SectionSkeleton,
   useMarketFeed,
+  type Prefetched,
   type Paged,
 } from "./market-section";
 
@@ -68,12 +78,13 @@ export type BseMoverPage = {
   sessionDate: string | null;
 };
 
-export type MoverDirection = "gainers" | "losers";
+// Re-exported from ../lib/market-urls, where the server can reach them too; every existing import
+// of these from this module still resolves.
+export { buildMoversUrl };
+export type MoverDirection = MoverDirectionType;
 
-type TierKey = "all" | "large" | "mid" | "small";
-
-/** The size of move a reader is willing to look at, as a percentage. "0" means show everything. */
-type MoveKey = "0" | "2" | "5" | "10" | "20" | "50" | "100" | "200" | "300" | "500";
+type TierKey = MoverTierKey;
+type MoveKey = MoverMoveKey;
 
 const TIER_OPTIONS: { key: TierKey; label: string }[] = [
   { key: "all", label: "Whole exchange" },
@@ -83,7 +94,7 @@ const TIER_OPTIONS: { key: TierKey; label: string }[] = [
 ];
 
 /** The return window the board is ranked by. */
-export type PeriodKey = "1d" | "1w" | "3m" | "6m" | "1y" | "3y" | "5y" | "overall";
+export type PeriodKey = MoverPeriodKey;
 
 // Longest first, because that is the order a trader reads a return table in — and "Overall" leads
 // because it is what the board opens on.
@@ -119,26 +130,12 @@ const MOVE_OPTIONS: { key: MoveKey; label: string }[] = [
   { key: "500", label: "500% or more" },
 ];
 
-/** Ten a page: a readable list, and ten sector lookups rather than fifty per page turn. */
-const PAGE_SIZE = 10;
+const PAGE_SIZE = MOVERS_PAGE_SIZE;
 
 // Long enough that typing a company name is one request rather than one per keystroke — the same
 // settle the company directory uses.
 const SEARCH_DEBOUNCE_MS = 350;
 
-export function buildMoversUrl(
-  tier: TierKey,
-  direction: MoverDirection,
-  period: PeriodKey,
-  term: string,
-  move: MoveKey,
-  page: number,
-) {
-  const params = new URLSearchParams({ tier, direction, period, page: String(page), pageSize: String(PAGE_SIZE) });
-  if (term) params.set("q", term);
-  if (move !== "0") params.set("min", move);
-  return `/api/market/bse/movers?${params.toString()}`;
-}
 
 /** Everything each tab says about itself, so the two differ in copy and colour, not in code. */
 const VOICE: Record<
@@ -385,10 +382,12 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
         <div className="flex items-center gap-2.5">
           <CompanyLogo symbol={row.ticker} size={32} />
           <div className="min-w-0">
-            <p className="font-semibold text-slate-900 dark:text-white">{row.ticker}</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {row.name} · {row.code}
-            </p>
+            <StockDetailTrigger symbol={row.ticker}>
+              <p className="font-semibold text-slate-900 underline-offset-2 hover:underline dark:text-white">{row.ticker}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {row.name} · {row.code}
+              </p>
+            </StockDetailTrigger>
             {row.sector && (
               <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(row.sector)}`}>
                 {row.sector}
@@ -457,7 +456,7 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
  * the index heavyweights. Ranking and paging happen on the server: the list runs to thousands of
  * rows and each row's sector costs an upstream call, so only the twenty-five on screen are resolved.
  */
-export function BseMoversBoard() {
+export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMoverPage> }) {
   const [direction, setDirection] = useState<MoverDirection>("gainers");
   const [tier, setTier] = useState<TierKey>("all");
   // The board opens on the whole story rather than today's noise: ranked by overall return, the
@@ -492,6 +491,7 @@ export function BseMoversBoard() {
 
   const { data, loading, error } = useMarketFeed<BseMoverPage>(
     buildMoversUrl(tier, direction, period, term, move, page),
+    prefetched,
   );
   const rows = data?.rows ?? [];
 

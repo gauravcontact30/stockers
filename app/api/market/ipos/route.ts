@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { companyLogoUrl } from "../../../lib/indian-stocks";
 import { anticipatedIpos } from "../../../lib/open-ipos";
 import { getIpoFeed } from "../../../lib/nse-ipos";
 
-export const dynamic = "force-dynamic";
+// Request-independent, so Next may serve the whole response without running the handler.
+export const revalidate = 600;
 
 export async function GET() {
   const feed = await getIpoFeed();
@@ -28,5 +30,5 @@ export async function GET() {
     source: feed.live
       ? "Live IPO calendar and subscription figures from NSE India"
       : "NSE IPO feed unreachable right now",
-  });
+  }, { headers: cacheHeaders(600) });
 }

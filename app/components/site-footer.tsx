@@ -1,32 +1,43 @@
 import Link from "next/link";
 import { Logo } from "./logo";
 
+/**
+ * The footer's links.
+ *
+ * Every href is absolute. They used to be bare fragments — `#market-pulse` and the like — which
+ * work on the landing page and go nowhere from the policy or account pages, where the footer also
+ * appears. A link that silently does nothing on half the site is worse than no link.
+ */
 const footerColumns: { heading: string; links: { href: string; label: string }[] }[] = [
   {
     heading: "Markets & Data",
     links: [
-      { href: "#market-pulse", label: "Market Pulse" },
-      { href: "#top-picks", label: "Top Picks" },
-      { href: "#dip-winners", label: "Dip Screener" },
-      { href: "#ipos", label: "IPO Watch" },
-      { href: "#etfs", label: "ETFs" },
+      { href: "/dashboard#market-pulse", label: "Market Pulse" },
+      { href: "/dashboard#top-picks", label: "Top Picks" },
+      { href: "/dashboard#dip-winners", label: "Dip Screener" },
+      { href: "/dashboard#ipos", label: "IPO Watch" },
+      { href: "/dashboard#etf-board", label: "ETFs" },
+      { href: "/news", label: "Market News" },
     ],
   },
   {
-    heading: "AI Tools",
+    heading: "Company",
     links: [
-      { href: "#research", label: "AI Research" },
-      { href: "#compare", label: "AI Compare" },
-    ],
-  },
-  {
-    heading: "Account",
-    links: [
-      { href: "#pricing", label: "Pricing" },
-      { href: "#support", label: "Support" },
+      { href: "/about", label: "About Us" },
+      { href: "/contact", label: "Contact Us" },
+      { href: "/#pricing", label: "Pricing" },
+      { href: "/dashboard#support", label: "Getting Started" },
       { href: "/signin", label: "Sign in" },
       { href: "/signup", label: "Sign up" },
-      { href: "/dashboard", label: "Dashboard" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { href: "/refund-policy", label: "Refund Policy" },
+      { href: "/return-policy", label: "Return Policy" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
+      { href: "/disclaimer", label: "Disclaimer" },
     ],
   },
 ];
@@ -53,12 +64,12 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2.5 text-sm">
               {column.links.map((link) => (
                 <li key={link.href}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-slate-600 transition hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -67,7 +78,16 @@ export function SiteFooter() {
       </div>
 
       <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800 dark:text-slate-400">
-        <p>© {new Date().getFullYear()} Stockers.AI — AI-powered Indian stock research.</p>
+        <div className="space-y-1">
+          <p>© {new Date().getFullYear()} Stockers.AI — AI-powered Indian stock research.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Not a SEBI-registered investment adviser or research analyst. Market risk applies —{" "}
+            <Link href="/disclaimer" className="underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400">
+              read the disclaimer
+            </Link>
+            .
+          </p>
+        </div>
         <a
           href="#"
           className="inline-flex w-fit items-center gap-1.5 font-medium text-slate-600 transition hover:text-emerald-600 dark:text-slate-300 dark:hover:text-emerald-400"

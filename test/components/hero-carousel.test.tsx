@@ -17,6 +17,9 @@ const dotMark = (index: number) => dots()[index].querySelector("span")!;
 describe("HeroCarousel", () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    // Two of the four slides carry live figures. Left unstubbed they reject against jsdom and
+    // push a state update through outside act(), which is noise rather than a finding.
+    global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -55,19 +58,30 @@ describe("HeroCarousel", () => {
   });
 
   // Every scene is drawn live rather than loaded as an image.
-  it("draws the scenes inline, with no image to download", () => {
+  /**
+   * The scene artwork is drawn, not downloaded — that is why the hero stays sharp on a wide
+   * display. The only images in the frame are the company marks on the two live-figure slides,
+   * which are 32px logos rather than scene artwork, and each falls back to a drawn monogram.
+   */
+  it("draws the scene artwork inline, with no artwork image to download", () => {
     const { container } = render(<HeroCarousel />);
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(container.querySelectorAll("svg").length).toBeGreaterThan(0);
+
+    const images = Array.from(container.querySelectorAll("img"));
+    expect(images.every((image) => (image.getAttribute("alt") ?? "").endsWith(" logo"))).toBe(true);
+
+    // The scenes themselves are DOM and CSS, so there is real content in the frame that arrived
+    // with the page rather than over the network.
+    const frame = container.querySelector('[aria-roledescription="carousel"]')!;
+    expect(frame.querySelectorAll("div").length).toBeGreaterThan(20);
   });
 
   // One scene per question the product answers, in the order a reader meets them.
-  it("mounts all four scenes: movers, a pair, a three-stock report and the predictions", () => {
+  it("mounts all four scenes: movers, defence, data centres and the winners on sale", () => {
     render(<HeroCarousel />);
     expect(screen.getByText("Today's top performers")).toBeInTheDocument();
-    expect(screen.getByText("Compare with AI")).toBeInTheDocument();
-    expect(screen.getByText("AI comparison report")).toBeInTheDocument();
-    expect(screen.getByText("How the analysis works")).toBeInTheDocument();
+    expect(screen.getByText("Aircraft, warships and optics, compared")).toBeInTheDocument();
+    expect(screen.getByText("Three ways to own the build-out")).toBeInTheDocument();
+    expect(screen.getByText("Best of the year, cheapest today")).toBeInTheDocument();
   });
 
   // Only the visible slide is exposed to a screen reader.

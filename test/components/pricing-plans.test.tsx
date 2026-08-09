@@ -3,16 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { PLANS, PricingPlans, rupees, yearlyPrice, yearlySaving } from "../../app/components/pricing-plans";
 
 describe("pricing arithmetic", () => {
-  // Ten months for twelve is the standard annual discount here, and deriving it means the
-  // advertised saving can never drift from the advertised price.
-  it("charges ten months on the annual cycle", () => {
-    expect(yearlyPrice(299)).toBe(2990);
-    expect(yearlyPrice(799)).toBe(7990);
+  // Nine months for twelve is the annual discount, and deriving it means the advertised saving can
+  // never drift from the advertised price.
+  it("charges nine months on the annual cycle", () => {
+    expect(yearlyPrice(149)).toBe(1341);
+    expect(yearlyPrice(399)).toBe(3591);
   });
 
-  it("saves exactly the two months it claims", () => {
-    expect(yearlySaving(299)).toBe(299 * 2);
-    expect(yearlySaving(1999)).toBe(1999 * 2);
+  it("saves exactly the three months it claims", () => {
+    expect(yearlySaving(149)).toBe(149 * 3);
+    expect(yearlySaving(899)).toBe(899 * 3);
   });
 
   it("formats rupees the Indian way", () => {
@@ -35,13 +35,13 @@ describe("PricingPlans", () => {
     render(<PricingPlans />);
 
     expect(screen.getByRole("button", { name: /Yearly/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("2 months free")).toBeInTheDocument();
+    expect(screen.getByText("3 months free")).toBeInTheDocument();
 
     const starter = screen.getByText("Starter").closest<HTMLElement>("div.rounded-3xl")!;
-    // ₹2,990 over twelve months is ₹249 a month, which is the figure worth comparing.
-    expect(within(starter).getByText("₹249")).toBeInTheDocument();
-    expect(within(starter).getByText(/₹2,990/)).toBeInTheDocument();
-    expect(within(starter).getByText("₹598")).toBeInTheDocument();
+    // ₹1,341 over twelve months is ₹112 a month, which is the figure worth comparing.
+    expect(within(starter).getByText("₹112")).toBeInTheDocument();
+    expect(within(starter).getByText(/₹1,341/)).toBeInTheDocument();
+    expect(within(starter).getByText("₹447")).toBeInTheDocument();
   });
 
   it("switches every plan to the monthly rate together", async () => {
@@ -51,11 +51,11 @@ describe("PricingPlans", () => {
     await user.click(screen.getByRole("button", { name: "Monthly" }));
 
     const starter = screen.getByText("Starter").closest<HTMLElement>("div.rounded-3xl")!;
-    expect(within(starter).getByText("₹299")).toBeInTheDocument();
+    expect(within(starter).getByText("₹149")).toBeInTheDocument();
     expect(within(starter).getByText(/Billed monthly/)).toBeInTheDocument();
 
     const pro = screen.getByText("Pro").closest<HTMLElement>("div.rounded-3xl")!;
-    expect(within(pro).getByText("₹799")).toBeInTheDocument();
+    expect(within(pro).getByText("₹399")).toBeInTheDocument();
   });
 
   // Both cycles quote a per-month figure, so the reader is never comparing a month against a year.

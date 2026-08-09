@@ -1,3 +1,4 @@
+import { CACHE_TAGS } from "./cache";
 import { cached, fetchNse, toText } from "./nse-client";
 import { getIndustryMap, UNCLASSIFIED } from "./nse-industry";
 
@@ -110,4 +111,4 @@ export const getStockNews = cached(TTL_MS, async (): Promise<StockNewsBoard> => 
     });
 
   return { sectors, total, fetchedAt: new Date().toISOString(), live: total > 0 };
-});
+}, { key: "nse:stock-news", tags: [CACHE_TAGS.nse], persist: true });

@@ -7,6 +7,8 @@
 // NSE publishes these for its own website rather than as a documented API, so every field is
 // parsed defensively and a failed fetch degrades to an empty list rather than throwing.
 
+import { CACHE_TAGS, revalidating } from "./cache";
+
 export type IpoStatus = "open" | "upcoming" | "closed";
 
 export type IpoSubscriptionCategory = {
@@ -70,7 +72,6 @@ const MONTHS: Record<string, string> = {
   jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
 };
 
-let cache: { data: IpoFeed; expiresAt: number } | null = null;
 
 export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -277,8 +278,7 @@ async function attachSubscriptions(ipos: NseIpo[]): Promise<void> {
 
 const STATUS_ORDER: Record<IpoStatus, number> = { open: 0, upcoming: 1, closed: 2 };
 
-export async function getIpoFeed(): Promise<IpoFeed> {
-  if (cache && cache.expiresAt > Date.now()) return cache.data;
+async function loadIpoFeed(): Promise<IpoFeed> {
 
   const today = todayIST();
   const [current, past] = await Promise.all([
@@ -334,6 +334,20 @@ export async function getIpoFeed(): Promise<IpoFeed> {
     live: ipos.length > 0,
   };
 
-  cache = { data: feed, expiresAt: Date.now() + CACHE_TTL_MS };
   return feed;
 }
+
+/**
+ * The IPO calendar.
+ *
+ * NSE answers the two upcoming/past-issue endpoints slowly — 4745ms measured cold against the
+ * production build — so an expired feed is served as it stands and refreshed behind the reader
+ * rather than made to wait for the exchange twice a day.
+ */
+export const getIpoFeed = revalidating<IpoFeed>({
+  key: "nse:ipo-feed",
+  ttlMs: CACHE_TTL_MS,
+  tags: [CACHE_TAGS.nse],
+  persist: true,
+  load: loadIpoFeed,
+});

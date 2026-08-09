@@ -11,6 +11,7 @@
 // its answer is kept for a day since a company's sector does not move.
 
 import { fetchBse, fetchBseText } from "./bse-client";
+import { CACHE_TAGS } from "./cache";
 // Sector classification lives on its own because it is the one thing this feed will not answer in
 // bulk: see ./bse-sectors for why the whole exchange is mapped in the background.
 import {
@@ -163,7 +164,8 @@ export const getBseUniverse = cached<BseUniverse>(UNIVERSE_TTL_MS, async () => {
     byCode: new Map(stocks.map((stock) => [stock.code, stock])),
     totalMarketCapCr: ranked.reduce((sum, stock) => sum + (stock.marketCapCr ?? 0), 0),
   };
-});
+  // Not persisted: `byCode` is a Map, which does not survive the Data Cache's JSON round trip.
+}, { key: "bse:universe", tags: [CACHE_TAGS.bse] });
 
 export type BseTapeRow = {
   code: string;
@@ -271,7 +273,8 @@ export const getBseTape = cached<BseTape>(TAPE_TTL_MS, async () => {
   }
 
   return { rows: new Map(), sessionDate: null };
-});
+  // Not persisted: `rows` is a Map, which does not survive the Data Cache's JSON round trip.
+}, { key: "bse:tape", tags: [CACHE_TAGS.bse] });
 
 function emptyQuote(): BseQuote {
   return {
@@ -370,7 +373,7 @@ export const getBseIndustries = cached<string[]>(UNIVERSE_TTL_MS, async () => {
 
   const names = raw.map((entry) => toText(entry.Industry_name)).filter((name) => name.length > 0);
   return [...new Set(names)];
-});
+}, { key: "bse:industries", tags: [CACHE_TAGS.bse], persist: true });
 
 /**
  * What counts as a standout move, up or down.

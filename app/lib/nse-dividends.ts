@@ -1,3 +1,4 @@
+import { CACHE_TAGS } from "./cache";
 import { cached, fetchNse, toNumber, toText, todayIST } from "./nse-client";
 import { getIndustryMap, UNCLASSIFIED } from "./nse-industry";
 
@@ -187,4 +188,4 @@ export const getDividendBoard = cached(TTL_MS, async (): Promise<DividendBoard> 
     fetchedAt: new Date().toISOString(),
     live: total > 0,
   };
-});
+}, { key: "nse:dividends", tags: [CACHE_TAGS.nse], persist: true });

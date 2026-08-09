@@ -25,6 +25,7 @@
 // is more honest than silently dropping it, and it lets a reader discount it.
 
 import { HISTORY_PERIODS, getBaseline, overallReturn, periodReturn, type Baseline } from "./bse-history";
+import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { getBseDirectory, getBseMovers } from "./bse-market";
 import { categoryOf } from "./bse-sectors";
 import { fetchNewsQuery, matchCompany, type NewsItem } from "./market-news";
@@ -733,18 +734,11 @@ export function composeAnswer(
 // coverage behind it changes on the scale of hours — so re-asking the model per reader would only
 // spend money.
 const ANSWER_TTL_MS = 10 * 60_000;
-const cache = new Map<string, { value: IntelAnswer; expiresAt: number }>();
-
 function cacheKey(intel: IntelQuery): string {
   return `${intel.query.toLowerCase()}|${intel.topic}|${intel.window}|${intel.sort}`;
 }
 
-/** Everything an intelligence search returns: the company, the call, the answer and its sources. */
-export async function searchIntel(intel: IntelQuery): Promise<IntelAnswer> {
-  const key = cacheKey(intel);
-  const hit = cache.get(key);
-  if (hit && hit.expiresAt > Date.now()) return hit.value;
-
+async function loadIntel(intel: IntelQuery): Promise<IntelAnswer> {
   const resolved = resolveStock(intel.query);
   const subject = resolved?.name ?? intel.query;
 
@@ -795,8 +789,25 @@ export async function searchIntel(intel: IntelQuery): Promise<IntelAnswer> {
     fetchedAt: new Date().toISOString(),
   };
 
-  // An empty search is retried sooner: an upstream hiccup shouldn't leave "no coverage" on screen
-  // for the full window.
-  cache.set(key, { value, expiresAt: Date.now() + (items.length > 0 ? ANSWER_TTL_MS : 60_000) });
   return value;
 }
+
+/**
+ * Everything an intelligence search returns: the company, the call, the answer and its sources.
+ *
+ * A search costs a news fetch, a set of Bhavcopy baselines and a model call. One company, one topic
+ * and one window is the same answer for everyone who asks it, so it is cached per question — and
+ * because the answer is served while the next is fetched behind the reader, the second person to
+ * ask a popular question gets it back immediately rather than waiting out the model again.
+ */
+export const searchIntel = revalidatingBy<IntelQuery, IntelAnswer>({
+  key: "intel:answer",
+  ttlMs: ANSWER_TTL_MS,
+  // An empty search is retried sooner: an upstream hiccup shouldn't leave "no coverage" on screen
+  // for the full window.
+  ttlFor: (answer) => (answer.sources.length > 0 ? ANSWER_TTL_MS : 60_000),
+  tags: [CACHE_TAGS.ai, CACHE_TAGS.news],
+  persist: true,
+  keyOf: cacheKey,
+  load: loadIntel,
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore, type ReactElement } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { GatedSection } from "./ai-gate";
@@ -36,6 +37,7 @@ import { PredictionPanel } from "./prediction-panel";
 import { SectorShowdowns } from "./sector-showdowns";
 import { SectorTrends } from "./sector-trends";
 import { StockExplorer } from "./stock-explorer";
+import { syncSessionCookie, useSubscription } from "./subscription-provider";
 import { StocksInNews } from "./stocks-in-news";
 import { TopPicksToday } from "./top-picks-today";
 import { TripleCompare } from "./triple-compare";
@@ -130,6 +132,7 @@ function SectionShell({ section, children }: { section: DashboardSection; childr
 
 export function DashboardClient() {
   const router = useRouter();
+  const { refresh: refreshSubscription, status: subscriptionStatus } = useSubscription();
   const [user] = useState<UserData | null>(readStoredUser);
   // Reading the hash through useSyncExternalStore keeps the server (which has no hash) and the
   // first client render in agreement, then resyncs to the real URL right after hydration.
@@ -174,6 +177,12 @@ export function DashboardClient() {
 
   const logout = () => {
     window.localStorage.removeItem("stockers-auth");
+    // The token is mirrored into a cookie that the server reads on every gated request, so
+    // clearing only localStorage left the session live: the browser kept sending the cookie and
+    // the API kept answering as the signed-in user. syncSessionCookie expires it once the stored
+    // token is gone, and the refresh drops the cached status the UI is still rendering from.
+    syncSessionCookie();
+    void refreshSubscription();
     router.push("/");
   };
 
@@ -307,12 +316,25 @@ export function DashboardClient() {
                   <p className="font-semibold">Signed in as {user?.name || "investor"}</p>
                   <p className="mt-1">Plan: {user?.plan || "Starter"}</p>
                 </div>
-                <button
-                  onClick={logout}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  Logout
-                </button>
+                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  {/* Only an admin can open /admin — the page and its API both refuse anyone else —
+                      so the link is shown only to the people it will actually work for. */}
+                  {subscriptionStatus?.isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10"
+                    >
+                      Manage users
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Logout
+                  </button>
+                </div>
               </div>
             </header>
 

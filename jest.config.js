@@ -7,6 +7,12 @@ const customJestConfig = {
   testEnvironment: "jest-environment-jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   testMatch: ["<rootDir>/test/**/*.test.{ts,tsx}"],
+  // Several suites mount a whole page of panels and drive it through userEvent. Those take tens of
+  // seconds once Jest is running files in parallel, and against the 5s default they failed
+  // intermittently in full runs while passing in isolation — with the failure landing on a
+  // different test each time. The work is slow, not stuck, so the budget is raised; a genuine hang
+  // still fails, just 20s later.
+  testTimeout: 20_000,
   collectCoverage: true,
   collectCoverageFrom: ["app/components/**/*.{ts,tsx}"],
   coverageThreshold: {

@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { BseMoverRow } from "../../app/components/bse-movers-board";
 import {
+  CATEGORIES_PER_PAGE,
   BseSectorMovers,
   CategoryMoverRow,
   buildSectorMoversUrl,
@@ -141,10 +142,18 @@ function mockFeed(summary: BseSectorBoardResponse = board, ok = true) {
   }) as unknown as typeof fetch;
 }
 
+describe("page sizes", () => {
+  it("shows ten categories a page, and five stocks a page inside one", () => {
+    expect(CATEGORIES_PER_PAGE).toBe(10);
+    // The inner boards are paged by the server, so the page size travels in the request.
+    expect(buildSectorMoversUrl("Energy", "gainers", 1)).toContain("pageSize=5");
+  });
+});
+
 describe("buildSectorMoversUrl", () => {
   it("asks for one page of one category, in one direction", () => {
     expect(buildSectorMoversUrl("Oil, Gas & Consumable Fuels", "losers", 2)).toBe(
-      "/api/market/bse/movers?category=Oil%2C+Gas+%26+Consumable+Fuels&direction=losers&page=2&pageSize=25",
+      "/api/market/bse/movers?category=Oil%2C+Gas+%26+Consumable+Fuels&direction=losers&page=2&pageSize=5",
     );
   });
 });
@@ -350,7 +359,7 @@ describe("BseSectorMovers", () => {
 
     await user.type(screen.getByPlaceholderText("Search categories"), "zzz");
     expect(clear).toBeEnabled();
-    expect(screen.getByText("No category matches this search and these filters.")).toBeInTheDocument();
+    expect(screen.getByText("No category matches “zzz”.")).toBeInTheDocument();
 
     await user.click(clear);
 
@@ -396,5 +405,92 @@ describe("BseSectorMovers", () => {
       expect(screen.getByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
     });
     expect(screen.getByText(/Categories are BSE's own sector classification/)).toBeInTheDocument();
+  });
+});
+
+describe("BseSectorMovers pagination", () => {
+  /**
+   * The category count line, as one string.
+   *
+   * Its figures sit in their own spans so they can be emphasised, which means the default text
+   * matcher — which only ever sees a single element's own text — cannot match the sentence. This
+   * reads the whole paragraph instead, and picks the categories one rather than the gainers and
+   * losers pagers inside an open accordion, which start with the same word.
+   */
+  const showingLine = () =>
+    screen
+      .getAllByText((_, element) => /^Showing .*categories/.test(element?.textContent ?? ""))
+      .filter((element) => element.tagName === "P")[0];
+
+  const many: BseSectorBoardResponse = {
+    ...board,
+    sectors: Array.from({ length: 23 }, (_, index) => ({
+      sector: `Category ${String(index + 1).padStart(2, "0")}`,
+      stocks: 10,
+      gainers: 6,
+      losers: 4,
+      star: 1,
+      red: 1,
+      house: false,
+    })),
+  };
+
+  it("shows ten categories a page and says which ten they are", async () => {
+    mockFeed(many);
+    render(<BseSectorMovers />);
+
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23 categories"));
+    expect(screen.getByRole("button", { name: /Category 01/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Category 11/ })).not.toBeInTheDocument();
+  });
+
+  it("pages on to the next ten", async () => {
+    const user = userEvent.setup();
+    mockFeed(many);
+    render(<BseSectorMovers />);
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+
+    await user.click(screen.getByRole("button", { name: "Page 2" }));
+
+    expect(showingLine()).toHaveTextContent("Showing 11–20 of 23");
+    expect(screen.getByRole("button", { name: /Category 11/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Category 01/ })).not.toBeInTheDocument();
+  });
+
+  it("returns to page one when a search narrows the list under the reader", async () => {
+    const user = userEvent.setup();
+    mockFeed(many);
+    render(<BseSectorMovers />);
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+
+    await user.click(screen.getByRole("button", { name: "Page 3" }));
+    expect(showingLine()).toHaveTextContent("Showing 21–23 of 23");
+
+    // Without the reset key this would leave the reader on an empty page 3.
+    await user.type(screen.getByPlaceholderText("Search categories"), "Category 0");
+    expect(showingLine()).toHaveTextContent("Showing 1–9 of 9");
+  });
+
+  it("offers a reset from the empty state and restores the full list", async () => {
+    const user = userEvent.setup();
+    mockFeed(many);
+    render(<BseSectorMovers />);
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+
+    await user.type(screen.getByPlaceholderText("Search categories"), "zzzz");
+    expect(screen.getByText("No category matches “zzzz”.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reset search" }));
+    expect(showingLine()).toHaveTextContent("Showing 1–10 of 23");
+  });
+
+  it("names the filters rather than a search term when only a filter is set", async () => {
+    const user = userEvent.setup();
+    mockFeed({ ...board, sectors: [{ sector: "Empty", stocks: 0, gainers: 0, losers: 0, star: 0, red: 0, house: false }] });
+    render(<BseSectorMovers />);
+    await screen.findByRole("button", { name: /Empty/ });
+
+    await user.selectOptions(screen.getByLabelText("Show"), "mapped");
+    expect(screen.getByText("No category matches these filters.")).toBeInTheDocument();
   });
 });

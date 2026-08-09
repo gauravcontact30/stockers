@@ -10,11 +10,12 @@ import {
   SectionFootnote,
   SectionSkeleton,
   useMarketFeed,
+  type Prefetched,
   usePaged,
 } from "../../app/components/market-section";
 
-function Probe({ url }: { url: string }) {
-  const { data, loading, error } = useMarketFeed<{ value: string }>(url);
+function Probe({ url, prefetched }: { url: string; prefetched?: Prefetched<{ value: string }> }) {
+  const { data, loading, error } = useMarketFeed<{ value: string }>(url, prefetched);
   return (
     <div>
       <span data-testid="loading">{String(loading)}</span>
@@ -46,6 +47,50 @@ describe("useMarketFeed", () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
     render(<Probe url="/api/test" />);
     await waitFor(() => expect(screen.getByTestId("error")).toHaveTextContent(/Couldn't reach the market data feed/));
+  });
+
+  // The server resolves a board's opening payload and sends it with the page. Using it removes a
+  // whole round trip from what the reader waits through: there is no loading state to pass
+  // through and no request to make.
+  it("opens on the payload the server already resolved, without asking for it", async () => {
+    global.fetch = jest.fn();
+    render(<Probe url="/api/test" prefetched={{ url: "/api/test", data: { value: "from the server" } }} />);
+
+    expect(screen.getByTestId("value")).toHaveTextContent("from the server");
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    await waitFor(() => expect(global.fetch).not.toHaveBeenCalled());
+  });
+
+  // A payload only answers the URL it was resolved for. A board rendered on different filters is
+  // asking a different question, so the prefetch is ignored rather than shown as its answer.
+  it("ignores a payload that answers a different request", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ value: "fetched" }) } as Response);
+    render(<Probe url="/api/test?page=2" prefetched={{ url: "/api/test", data: { value: "from the server" } }} />);
+
+    expect(screen.getByTestId("loading")).toHaveTextContent("true");
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("fetched"));
+    expect(global.fetch).toHaveBeenCalledWith("/api/test?page=2");
+  });
+
+  /**
+   * The server's payload is spent once.
+   *
+   * A reader who changes a filter and then changes it back is asking for the opening view again —
+   * but time has passed, so they get a fresh answer rather than figures from whenever the page was
+   * rendered.
+   */
+  it("refetches the opening view if the reader returns to it", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ value: "fetched" }) } as Response);
+    const prefetched = { url: "/api/test", data: { value: "from the server" } };
+
+    const { rerender } = render(<Probe url="/api/test" prefetched={prefetched} />);
+    expect(screen.getByTestId("value")).toHaveTextContent("from the server");
+
+    rerender(<Probe url="/api/test?page=2" prefetched={prefetched} />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/test?page=2"));
+
+    rerender(<Probe url="/api/test" prefetched={prefetched} />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/test"));
   });
 });
 

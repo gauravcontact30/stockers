@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { CompareScene, DipBuysScene, TopGainersScene, TripleReportScene } from "./hero-scenes";
+import { DataCentreScene, DefenceStocksScene, DipBuysScene, TopGainersScene } from "./hero-scenes";
 
 /** How long each slide holds before the carousel advances on its own. */
 const SLIDE_MS = 6000;
@@ -14,16 +14,20 @@ type Slide = {
 
 /**
  * Four scenes, each answering one question in the order a reader asks it: what is running today,
- * how do two names compare, what does a full report look like, and how does any of this work.
+ * how do the defence names compare, who is building the data centres, and how does any of this work.
  *
- * Nothing is written over them. The scenes carry their own labels — index levels, scrip codes,
+ * The two middle slides carry live exchange figures rather than an illustration — a reader who
+ * never scrolls past the hero has still seen the session's real prices and returns for six
+ * companies. All six symbols are raised in the same tick, so they cost one batched request.
+ *
+ * Nothing is written over the scenes. They carry their own labels — index levels, scrip codes,
  * panel headings — and a headline laid on top only competed with those. The pitch and the calls
  * to action sit underneath the frame instead, where they obscure nothing.
  */
 const slides: Slide[] = [
   { caption: "Today's top performers by theme", scene: <TopGainersScene /> },
-  { caption: "Two stocks compared by AI", scene: <CompareScene /> },
-  { caption: "A three-stock buy, hold or sell report", scene: <TripleReportScene /> },
+  { caption: "HAL, Mazagon Dock and Paras Defence compared", scene: <DefenceStocksScene /> },
+  { caption: "Three data-centre stocks compared", scene: <DataCentreScene /> },
   { caption: "How the AI works, and what it likes cheap today", scene: <DipBuysScene /> },
 ];
 
@@ -51,7 +55,11 @@ export function HeroCarousel() {
           frame read as two unrelated sections stacked on top of each other. */}
       <section className="w-full bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-white">
         <div
-          className="relative min-h-[560px] w-full overflow-hidden sm:min-h-[620px] lg:min-h-[680px]"
+          /* The frame clips rather than scrolls, so its height has to cover the tallest thing any
+             slide needs — the narrow case, where three comparison cards stack into a column instead
+             of sitting in a row. Measured against the real scenes at each breakpoint rather than
+             guessed. */
+          className="relative min-h-[1160px] w-full overflow-hidden sm:min-h-[820px] lg:min-h-[660px]"
           aria-roledescription="carousel"
           aria-label="Stockers.AI product scenes"
         >

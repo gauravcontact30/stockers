@@ -33,9 +33,16 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Mail recorded locally when no provider is configured — contains real addresses.
+/app/data/outbox.json
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local mail and SMS logs when no provider is configured — these hold real addresses and numbers.
+app/data/outbox.json
+app/data/sms-outbox.json

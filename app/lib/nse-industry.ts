@@ -1,3 +1,4 @@
+import { CACHE_TAGS } from "./cache";
 import { indianStocks } from "./indian-stocks";
 import { cached } from "./nse-client";
 
@@ -125,4 +126,5 @@ export const getIndustryMap = cached(TTL_MS, async (): Promise<IndustryMap> => {
   }
 
   return map;
-});
+  // Not persisted: a Map does not survive the Data Cache's JSON round trip.
+}, { key: "nse:industry-map", tags: [CACHE_TAGS.nse] });

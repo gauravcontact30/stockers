@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { AiBoardRead } from "./ai-board-read";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import {
   chipFor,
   formatCrore,
@@ -74,8 +75,10 @@ export function TradedRow({ stock, rank }: { stock: TradedStock; rank: number })
           </span>
           <CompanyLogo symbol={stock.symbol} size={36} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
-            <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</p>
+            <StockDetailTrigger symbol={stock.symbol}>
+              <p className="truncate text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{stock.symbol}</p>
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</p>
+            </StockDetailTrigger>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {stock.sector && (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(stock.sector)}`}>

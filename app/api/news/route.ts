@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cacheHeaders } from "../../lib/cache";
 import { guardFeature, lockedResponse } from "../../lib/feature-guard";
 import { getMarketNews } from "../../lib/market-news";
 
@@ -12,6 +13,6 @@ export async function GET(request: NextRequest) {
   const feed = await getMarketNews(symbol);
 
   return NextResponse.json(feed, {
-    headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=600" },
+    headers: cacheHeaders(300, "private"),
   });
 }

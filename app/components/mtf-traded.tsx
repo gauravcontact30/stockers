@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { AiBoardRead } from "./ai-board-read";
 import { CompanyLogo } from "./company-logo";
+import { StockDetailTrigger } from "./stock-detail-provider";
 import { chipFor, formatCrore, formatQuantity, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
 import { MarketSection, Pager, SectionError, SectionFootnote, SectionSkeleton, useMarketFeed, usePaged } from "./market-section";
 import type { MostTradedBoard, TradedStock } from "./most-traded";
@@ -43,8 +44,10 @@ function MtfRow({ stock, rank }: { stock: TradedStock; rank: number }) {
       <CompanyLogo symbol={stock.symbol} size={34} />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
-        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</p>
+        <StockDetailTrigger symbol={stock.symbol}>
+          <p className="truncate text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">{stock.symbol}</p>
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</p>
+        </StockDetailTrigger>
         {stock.sector && (
           <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(stock.sector)}`}>
             {stock.sector}

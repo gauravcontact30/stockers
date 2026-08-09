@@ -14,9 +14,9 @@ import { SubscribeButton, type PlanKey } from "./razorpay-checkout";
 
 export type Billing = "monthly" | "yearly";
 
-// Two months free on an annual commitment: the standard discount in this market, and the reason
-// the yearly figure is derived rather than typed — the saving can never drift from the price.
-const YEARLY_MONTHS = 10;
+// Three months free on an annual commitment, and the reason the yearly figure is derived rather
+// than typed — the saving can never drift from the price it is quoted against.
+const YEARLY_MONTHS = 9;
 
 export type Plan = {
   /** The key the payment server prices this plan by — the two must never drift apart. */
@@ -36,7 +36,7 @@ export const PLANS: Plan[] = [
   {
     key: "starter",
     name: "Starter",
-    monthly: 299,
+    monthly: 149,
     blurb: "For someone tracking a handful of holdings.",
     chrome: "border-sky-200 bg-sky-50/80 dark:border-sky-500/30 dark:bg-sky-500/10",
     accent: "text-sky-700 dark:text-sky-300",
@@ -51,7 +51,7 @@ export const PLANS: Plan[] = [
   {
     key: "pro",
     name: "Pro",
-    monthly: 799,
+    monthly: 399,
     blurb: "For an active investor running their own screens.",
     featured: true,
     chrome: "border-emerald-300 bg-emerald-50/90 dark:border-emerald-500/40 dark:bg-emerald-500/10",
@@ -68,7 +68,7 @@ export const PLANS: Plan[] = [
   {
     key: "elite",
     name: "Elite",
-    monthly: 1999,
+    monthly: 899,
     blurb: "For anyone managing money across many positions.",
     chrome: "border-violet-200 bg-violet-50/80 dark:border-violet-500/30 dark:bg-violet-500/10",
     accent: "text-violet-700 dark:text-violet-300",
@@ -135,7 +135,7 @@ export function PricingPlans() {
               {option.label}
               {option.key === "yearly" && (
                 <span className="ml-1.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  2 months free
+                  3 months free
                 </span>
               )}
             </button>

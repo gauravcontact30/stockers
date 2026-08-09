@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { normaliseTicker, stockLogoUrl } from "../lib/company-logos";
 import { indianStocks } from "../lib/indian-stocks";
 
@@ -92,6 +92,26 @@ export function CompanyLogo({
   const src = sources[index] ?? null;
   const box = { width: size, height: size };
 
+  /**
+   * The failure that happens before React is listening.
+   *
+   * `onError` only catches a source that fails *after* hydration attaches the handler. Now that the
+   * boards are rendered on the server, these `<img>` tags arrive in the HTML and the browser starts
+   * fetching them immediately — so a source that 403s quickly fires its error while the page is
+   * still hydrating, and that event is gone by the time `onError` exists. The image then sits there
+   * broken forever, because nothing ever advanced to the next source.
+   *
+   * An element that has finished loading with no intrinsic width has failed, whenever that
+   * happened. Checking that on mount recovers exactly the errors the handler could not see.
+   */
+  const image = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const element = image.current;
+    if (element?.complete && element.naturalWidth === 0) {
+      setAttempt({ symbol, index: index + 1 });
+    }
+  }, [symbol, index, src]);
+
   if (src === null) {
     return (
       <span
@@ -109,6 +129,7 @@ export function CompanyLogo({
       // Keyed by the URL so React swaps the element when a source fails, rather than reusing the
       // one already in its error state and never firing load for the next candidate.
       key={src}
+      ref={image}
       src={src}
       alt={`${symbol} logo`}
       style={box}

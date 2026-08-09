@@ -10,6 +10,7 @@
 
 import zlib from "node:zlib";
 import { fetchBseText } from "./bse-client";
+import { CACHE_TAGS } from "./cache";
 import { cached, toNumber } from "./nse-client";
 
 export type ReturnPeriod = "1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "3y" | "5y" | "overall";
@@ -158,7 +159,13 @@ const baselines = new Map<string, () => Promise<Baseline>>();
 export function getBaseline(period: Exclude<ReturnPeriod, "1d" | "overall">): Promise<Baseline> {
   let load = baselines.get(period);
   if (!load) {
-    load = cached<Baseline>(TTL_MS, () => loadBaseline(new Date(Date.now() - LOOKBACK_DAYS[period] * 86_400_000)));
+    load = cached<Baseline>(
+      TTL_MS,
+      () => loadBaseline(new Date(Date.now() - LOOKBACK_DAYS[period] * 86_400_000)),
+      // Keyed by period so each window gets its own entry and its own clock. Not persisted: a
+      // baseline holds its closes in a Map, which does not survive the Data Cache's JSON round trip.
+      { key: `bse:baseline:${period}`, tags: [CACHE_TAGS.bse] },
+    );
     baselines.set(period, load);
   }
 

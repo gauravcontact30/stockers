@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { normaliseMobile, type PlanName } from "./auth-validation";
 
 export type UserRole = "admin" | "user";
 
@@ -9,8 +10,15 @@ export type AppUser = {
   name: string;
   email: string;
   passwordHash: string;
-  plan: "Starter" | "Pro";
+  plan: PlanName;
   createdAt: string;
+  /**
+   * The ten-digit Indian mobile number, stored without a country code or separators.
+   *
+   * Optional on the type rather than required because accounts created before the field existed
+   * do not have one, and a stored record must describe what is actually there.
+   */
+  mobile?: string | null;
   /** Admins bypass every paywall and are the only accounts that can lock or unlock features. */
   role?: UserRole;
   /** When the free trial clock started. Absent on accounts created before trials existed. */
@@ -24,6 +32,17 @@ export type AppUser = {
    * the same successful payment, and whichever arrives second sees its own id here and stops.
    */
   lastPaymentId?: string | null;
+  /** When the address was confirmed. Null or absent means unverified. */
+  emailVerifiedAt?: string | null;
+  /**
+   * The single-use secret in the verification link, or null once it has been spent.
+   *
+   * Stored rather than derived (an HMAC over the email, say) so that verifying can be made to work
+   * exactly once and a resend can invalidate the previous link.
+   */
+  verificationToken?: string | null;
+  /** When the most recent verification mail was dispatched — throttles resends. */
+  verificationSentAt?: string | null;
 };
 
 const filePath = path.join(process.cwd(), "app", "data", "users.json");
@@ -85,7 +104,13 @@ async function writeUsers(users: AppUser[]) {
   await fs.writeFile(filePath, JSON.stringify(users, null, 2), "utf8");
 }
 
-export async function createUser(user: { name: string; email: string; password: string; plan: "Starter" | "Pro" }) {
+export async function createUser(user: {
+  name: string;
+  email: string;
+  password: string;
+  plan: PlanName;
+  mobile?: string | null;
+}) {
   const users = await readUsers();
   const normalizedEmail = user.email.trim().toLowerCase();
   const emailTaken = users.some((entry) => entry.email === normalizedEmail);
@@ -101,15 +126,90 @@ export async function createUser(user: { name: string; email: string; password: 
     passwordHash: hashPassword(user.password),
     plan: user.plan,
     createdAt: now,
+    // Normalised on the way in, so every stored number has the same shape whatever was typed.
+    mobile: user.mobile ? normaliseMobile(user.mobile) : null,
     role: ADMIN_EMAILS.has(normalizedEmail) ? "admin" : "user",
     // The trial clock starts at sign-up and is measured in open market days, not calendar days.
     trialStartedAt: now,
     subscribedUntil: null,
+    // Unverified until the link in the welcome mail is followed. Nothing is gated on this yet —
+    // the trial starts either way — so a mail that never arrives cannot lock anyone out.
+    emailVerifiedAt: null,
+    verificationToken: newVerificationToken(),
+    verificationSentAt: null,
   };
 
   users.push(newUser);
   await writeUsers(users);
   return newUser;
+}
+
+/** A fresh single-use secret for a verification link. */
+export function newVerificationToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Spends a verification token.
+ *
+ * Returns the user it belonged to, or null when the token is unknown — which is also what a token
+ * that has already been used looks like, since verifying clears it. Verifying twice is therefore
+ * not an error the caller has to distinguish; the route reports it as "already verified" by
+ * checking the address separately.
+ */
+export async function verifyEmailToken(token: string): Promise<AppUser | null> {
+  if (!token) return null;
+
+  const users = await readUsers();
+  const index = users.findIndex((user) => user.verificationToken === token);
+  if (index === -1) return null;
+
+  users[index] = {
+    ...users[index],
+    emailVerifiedAt: new Date().toISOString(),
+    verificationToken: null,
+  };
+  await writeUsers(users);
+  return users[index];
+}
+
+/**
+ * Issues a new verification token for one user, invalidating any previous link.
+ *
+ * Returns null when the id is unknown or the address is already verified — there is nothing to
+ * confirm in either case.
+ */
+export async function refreshVerificationToken(id: string): Promise<{ user: AppUser; token: string } | null> {
+  const users = await readUsers();
+  const index = users.findIndex((user) => user.id === id);
+  if (index === -1 || users[index].emailVerifiedAt) return null;
+
+  const token = newVerificationToken();
+  users[index] = { ...users[index], verificationToken: token };
+  await writeUsers(users);
+  return { user: users[index], token };
+}
+
+/**
+ * Every account, newest first, for the admin dashboard.
+ *
+ * The password hash and the live verification token are stripped here rather than at the route:
+ * neither has any business leaving the server, and removing them at the single point where the
+ * list is produced means a future caller cannot forget to.
+ */
+export type AdminUserView = Omit<AppUser, "passwordHash" | "verificationToken"> & {
+  emailVerified: boolean;
+};
+
+export async function listUsers(): Promise<AdminUserView[]> {
+  const users = await readUsers();
+
+  return users
+    .map(({ passwordHash: _passwordHash, verificationToken: _verificationToken, ...rest }) => ({
+      ...rest,
+      emailVerified: Boolean(rest.emailVerifiedAt),
+    }))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 /** Persists changes to one user, matched by id. Returns null when the id is unknown. */

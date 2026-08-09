@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./lib/theme-provider";
+import { StockDetailProvider } from "./components/stock-detail-provider";
 import { SubscriptionProvider } from "./components/subscription-provider";
 import { SubscriptionReminder } from "./components/subscription-reminder";
 
@@ -62,8 +63,11 @@ export default function RootLayout({
           {/* Wraps the whole app so any section can ask whether a feature is unlocked, and the
               renewal reminder can appear on whichever page the user lands on. */}
           <SubscriptionProvider>
-            {children}
-            <SubscriptionReminder />
+            {/* Mounted app-wide so any board can open a company's detail sheet by ticker. */}
+            <StockDetailProvider>
+              {children}
+              <SubscriptionReminder />
+            </StockDetailProvider>
           </SubscriptionProvider>
         </ThemeProvider>
       </body>

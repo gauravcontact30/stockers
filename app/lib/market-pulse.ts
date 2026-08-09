@@ -1,5 +1,6 @@
+import { CACHE_TAGS, revalidating } from "./cache";
 import { indianStocks, type CapTier } from "./indian-stocks";
-import { getAllQuotes } from "./market-data";
+import { getAllQuotes, type LiveQuote } from "./market-data";
 import { getBenchmarkIndices, type IndexQuote } from "./market-indices";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
@@ -47,18 +48,43 @@ export type MarketPulse = {
   sectorsToWatch: string[];
   generatedAt: string;
   source: "ai" | "heuristic";
+  /**
+   * True while the composed narrative is standing in for one the model is still writing.
+   *
+   * Without this the card cannot tell the two reasons for a composed read apart, and would label a
+   * read that is seconds from arriving as "no AI key configured" — which is simply untrue.
+   */
+  narrativePending: boolean;
   /** Most recent trade timestamp across the tracked universe; lets the client tell a trading day from an exchange holiday. */
   lastTradeAt: string | null;
   /** When the breadth numbers below were computed — distinct from the narrative's generatedAt. */
   breadthAsOf: string;
 };
 
-// Only the written narrative is cached: it costs a 20s model call and reads the same either way
-// a few minutes later. Breadth itself is recomputed on every request from the 60s quote cache,
-// so the numbers and the live pulse bars stay current without paying for the model each time.
+// The narrative is cached far longer than the tape it describes: it costs a model call and reads
+// the same either way a few minutes later, while breadth moves through the session. Both are held
+// now — the tape for a minute, the narrative for fifteen — and both are served while their
+// replacement is fetched, so neither ever makes a reader wait. The index tiles on the card have
+// their own live poller on top of this, so the headline levels stay to the second.
 type Narrative = { summary: string; themes: string[]; sectorsToWatch: string[]; generatedAt: string; source: "ai" | "heuristic" };
 
-let cache: { data: Narrative; expiresAt: number } | null = null;
+// The narrative was the single slowest thing this application did: 7756ms measured cold against
+// the production build, all of it a model call, and paid again by whichever visitor happened to
+// land first after the window lapsed. Under the shared cache the lapsed narrative is served
+// straight away and a new one is written behind the reader, so that cost is paid once.
+const loadNarrative = revalidating<Narrative>({
+  key: "pulse:narrative",
+  ttlMs: CACHE_TTL_MS,
+  tags: [CACHE_TAGS.ai],
+  persist: true,
+  load: async () => {
+    // Breadth is recomputed here rather than passed in, so a background refresh narrates the market
+    // as it stands at the moment it runs rather than as it stood for whichever reader triggered it.
+    // `getAllQuotes` is itself cached, so this costs nothing beyond the model call.
+    const breadth = computeBreadth(await getAllQuotes());
+    return (await generateNarrativeWithAI(breadth)) ?? buildHeuristicNarrative(breadth);
+  },
+});
 
 // Ranked within each cap tier rather than across the whole universe, because a small cap's 8%
 // day and a large cap's 3% day are not comparable — pooling them would let small caps crowd out
@@ -269,20 +295,56 @@ function latestTradeAt(quotes: { asOf: string | null }[]): string | null {
   return latest;
 }
 
+/**
+ * The whole tape behind this board: every tracked constituent, plus the three benchmarks.
+ *
+ * Breadth is measured across roughly 270 names, and a cold pass over them is 270 upstream quote
+ * requests — a little over five seconds, measured. The per-symbol cache underneath already holds
+ * each quote for a minute, but it blocks on expiry, so once a minute somebody paid the whole cost
+ * again. Held here instead, an expired tape is handed over as it stands and refetched behind the
+ * reader.
+ *
+ * The fetch time travels with it because the board publishes when its breadth was measured. Serving
+ * a tape from fifty seconds ago is fine; stamping it "now" is not.
+ */
+const loadTape = revalidating<{ quotes: LiveQuote[]; indices: IndexQuote[]; at: string }>({
+  key: "pulse:tape",
+  ttlMs: 60_000,
+  tags: [CACHE_TAGS.nse],
+  load: async () => {
+    // Fetched together so the index levels and the constituent breadth describe the same instant.
+    const [quotes, indices] = await Promise.all([getAllQuotes(), getBenchmarkIndices()]);
+    return { quotes, indices, at: new Date().toISOString() };
+  },
+});
+
 export async function getMarketPulse(): Promise<MarketPulse> {
-  // Fetched together so the index levels and the constituent breadth describe the same instant.
-  const [quotes, indices] = await Promise.all([getAllQuotes(), getBenchmarkIndices()]);
+  const tape = await loadTape();
+  const { quotes, indices } = tape;
   const breadth = computeBreadth(quotes);
 
-  let narrative = cache && cache.expiresAt > Date.now() ? cache.data : null;
-  if (!narrative) {
-    narrative = (await generateNarrativeWithAI(breadth)) ?? buildHeuristicNarrative(breadth);
-    cache = { data: narrative, expiresAt: Date.now() + CACHE_TTL_MS };
-  }
+  /**
+   * The model does not get to hold up the board.
+   *
+   * Everything else here is exchange data and resolves in milliseconds; the written narrative is a
+   * model call that measured 7.6 seconds cold against the production build, and awaiting it meant
+   * the reader saw nothing at all for that whole time — not even the index levels and breadth that
+   * were already in hand.
+   *
+   * So when nothing has been written yet, the composed narrative goes out immediately and the model
+   * runs behind the reader. The card polls, so the model's version replaces it in place a few
+   * seconds later, and `narrativePending` lets the card say which of the two it is showing rather
+   * than labelling a not-yet-finished read as "no AI key configured".
+   */
+  const held = loadNarrative.peek();
+  if (!held) void loadNarrative().catch(() => undefined);
+
+  const narrative = held?.value ?? buildHeuristicNarrative(breadth);
 
   return {
     breadth,
     indices,
+    narrativePending: !held && Boolean(process.env.OPENROUTER_API_KEY),
     // Always derived from the breadth being displayed, never taken from the model, so the mood
     // badge can never contradict the advance/decline numbers rendered beside it.
     mood: moodFromBreadth(breadth),
@@ -294,6 +356,9 @@ export async function getMarketPulse(): Promise<MarketPulse> {
     // Indices are included because they always print on a trading day, so the session/holiday
     // check still works even if the individual stock quotes come back empty.
     lastTradeAt: latestTradeAt([...quotes, ...indices]),
-    breadthAsOf: new Date().toISOString(),
+    // When the tape was actually fetched, not when this response was assembled. A tape served
+    // while its replacement is in flight is up to a minute old, and saying otherwise would be a
+    // lie the reader has no way to catch.
+    breadthAsOf: tape.at,
   };
 }

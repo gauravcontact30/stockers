@@ -1,3 +1,4 @@
+import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { indianStocks } from "./indian-stocks";
 import { searchIndex } from "./stock-search";
 
@@ -51,8 +52,6 @@ const SYMBOL_QUERY = (name: string) => `"${name}" (share OR stock OR results OR 
 const ITEM_LIMIT = 12;
 const MARKET_ITEM_LIMIT = 48;
 const CACHE_TTL_MS = 10 * 60_000;
-
-const cache = new Map<string, { data: NewsFeed; expiresAt: number }>();
 
 function feedUrl(query: string) {
   return `${FEED_BASE}?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
@@ -418,13 +417,8 @@ export async function fetchNewsQuery(
 
 const fetchFeed = (query: string) => fetchNewsQuery(query);
 
-export async function getMarketNews(symbolInput?: string | null): Promise<NewsFeed> {
-  const symbol = symbolInput ? symbolInput.trim().toUpperCase() : null;
+async function loadMarketNews(symbol: string | null): Promise<NewsFeed> {
   const { scope, queries } = queryFor(symbol);
-  const cacheKey = symbol ?? "__market__";
-
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
   // The searches run together and are merged by URL — the same story reaching two of them is one
   // headline, not two. One failing search costs its own results and nothing else.
@@ -453,8 +447,33 @@ export async function getMarketNews(symbolInput?: string | null): Promise<NewsFe
     classifier: aiSentiments ? "ai" : "heuristic",
   };
 
-  // An empty feed is retried sooner so a transient upstream failure doesn't leave the panel
-  // blank for the full cache window.
-  cache.set(cacheKey, { data: feed, expiresAt: Date.now() + (classified.length > 0 ? CACHE_TTL_MS : 30_000) });
   return feed;
+}
+
+/**
+ * Headlines for the market, or for one company.
+ *
+ * Fetching several Google News feeds and then classifying every headline through a model measured
+ * 3492ms cold against the production build. Each symbol keeps its own entry with its own clock,
+ * and a lapsed one is served while the next is fetched behind the reader, so only the very first
+ * request for a given symbol ever pays that.
+ *
+ * The family is bounded because the key is a reader-supplied ticker: without a cap, something
+ * walking every symbol on the exchange would grow the map without limit.
+ */
+const loadNewsFor = revalidatingBy<string | null, NewsFeed>({
+  key: "news:feed",
+  ttlMs: CACHE_TTL_MS,
+  // An empty feed is far more likely to be a transient upstream failure than a market with no news
+  // in it, so it is only stood behind for half a minute rather than the full window.
+  ttlFor: (feed) => (feed.items.length > 0 ? CACHE_TTL_MS : 30_000),
+  tags: [CACHE_TAGS.news, CACHE_TAGS.ai],
+  persist: true,
+  capacity: 120,
+  keyOf: (symbol) => symbol ?? "__market__",
+  load: loadMarketNews,
+});
+
+export function getMarketNews(symbolInput?: string | null): Promise<NewsFeed> {
+  return loadNewsFor(symbolInput ? symbolInput.trim().toUpperCase() : null);
 }

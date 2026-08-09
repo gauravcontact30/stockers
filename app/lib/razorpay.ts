@@ -36,13 +36,13 @@ export type PlanKey = "starter" | "pro" | "elite";
  * price that differs between the page and the charge is the worst bug this file could have.
  */
 export const PLAN_MONTHLY: Record<PlanKey, number> = {
-  starter: 299,
-  pro: 799,
-  elite: 1999,
+  starter: 149,
+  pro: 399,
+  elite: 899,
 };
 
-/** Ten months for twelve on the annual cycle, matching the pricing page's own arithmetic. */
-export const YEARLY_MONTHS = 10;
+/** Nine months for twelve on the annual cycle, matching the pricing page's own arithmetic. */
+export const YEARLY_MONTHS = 9;
 
 export const PLAN_NAMES: Record<PlanKey, string> = { starter: "Starter", pro: "Pro", elite: "Elite" };
 
@@ -69,9 +69,20 @@ export function amountInPaise(plan: PlanKey, cycle: BillingCycle): number {
 
 export type RazorpayKeys = { keyId: string; keySecret: string };
 
-/** The API credentials, or null when the environment has none — which is not an error. */
+/**
+ * The API credentials, or null when the environment has none — which is not an error.
+ *
+ * `NEXT_PUBLIC_RAZORPAY_KEY_ID` is accepted as an alias for the key id because that is the name
+ * Razorpay's own guides use and the one an operator reaches for first. It is a genuine alias and
+ * not a second key: the id is public by design — the browser needs it to open checkout, and this
+ * app already sends it down in the order response. Only the *secret* must stay server-side, and it
+ * has no public alias for exactly that reason.
+ *
+ * Silently reading only the unprefixed name meant a correctly-supplied key id was invisible to the
+ * server and checkout reported itself unconfigured, which is a confusing way to fail.
+ */
 export function razorpayKeys(): RazorpayKeys | null {
-  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   return keyId && keySecret ? { keyId, keySecret } : null;
 }
