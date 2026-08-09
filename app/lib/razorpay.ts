@@ -23,12 +23,21 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PlanName } from "./auth-validation";
+import { CHECKOUT_BRAND_NAME, CHECKOUT_WEBSITE_URL } from "./checkout-brand";
+import {
+  billedAmount,
+  isBillingCycle,
+  isPlanKey,
+  PLAN_MONTHLY,
+  YEARLY_MONTHS,
+  type BillingCycle,
+  type PlanKey,
+} from "./subscription-pricing";
 
 const API = "https://api.razorpay.com/v1";
 
-export type BillingCycle = "monthly" | "yearly";
-
-export type PlanKey = "starter" | "pro" | "elite";
+export { isBillingCycle, isPlanKey, PLAN_MONTHLY, YEARLY_MONTHS };
+export type { BillingCycle, PlanKey };
 
 /**
  * What each plan costs, in rupees a month, and what the annual cycle multiplies that by.
@@ -36,15 +45,6 @@ export type PlanKey = "starter" | "pro" | "elite";
  * These are the same figures the pricing table renders — a test asserts the two agree, because a
  * price that differs between the page and the charge is the worst bug this file could have.
  */
-export const PLAN_MONTHLY: Record<PlanKey, number> = {
-  starter: 149,
-  pro: 399,
-  elite: 899,
-};
-
-/** Nine months for twelve on the annual cycle, matching the pricing page's own arithmetic. */
-export const YEARLY_MONTHS = 9;
-
 /**
  * Typed as PlanName rather than string because this is what gets written to the account record,
  * and that record is what every feature tier is then resolved against.
@@ -54,17 +54,9 @@ export const PLAN_NAMES: Record<PlanKey, PlanName> = { starter: "Starter", pro: 
 /** How long each cycle buys, in calendar days. */
 export const CYCLE_DAYS: Record<BillingCycle, number> = { monthly: 30, yearly: 365 };
 
-export function isPlanKey(value: unknown): value is PlanKey {
-  return value === "starter" || value === "pro" || value === "elite";
-}
-
-export function isBillingCycle(value: unknown): value is BillingCycle {
-  return value === "monthly" || value === "yearly";
-}
-
 /** What a plan and cycle costs, in whole rupees. */
 export function priceFor(plan: PlanKey, cycle: BillingCycle): number {
-  return cycle === "yearly" ? PLAN_MONTHLY[plan] * YEARLY_MONTHS : PLAN_MONTHLY[plan];
+  return billedAmount(plan, cycle);
 }
 
 /** Razorpay works in the smallest currency unit, so every amount crosses the wire in paise. */
@@ -87,8 +79,8 @@ export type RazorpayKeys = { keyId: string; keySecret: string };
  * server and checkout reported itself unconfigured, which is a confusing way to fail.
  */
 export function razorpayKeys(): RazorpayKeys | null {
-  const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keyId = process.env.STOCKERS_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const keySecret = process.env.STOCKERS_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
   return keyId && keySecret ? { keyId, keySecret } : null;
 }
 
@@ -140,6 +132,9 @@ export async function createOrder(request: OrderRequest): Promise<RazorpayOrder 
           email: request.email,
           plan: request.plan,
           cycle: request.cycle,
+          brand: CHECKOUT_BRAND_NAME,
+          website: CHECKOUT_WEBSITE_URL,
+          product: "StockersAI subscription",
         },
       }),
       signal: AbortSignal.timeout(15000),
@@ -223,7 +218,7 @@ export function verifyPaymentSignature(input: {
  * API key — so the body must be read as text and verified before it is parsed as JSON.
  */
 export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const secret = process.env.STOCKERS_RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!secret || !signature) return false;
 
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");

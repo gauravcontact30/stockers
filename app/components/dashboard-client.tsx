@@ -259,7 +259,7 @@ export function DashboardClient() {
 
       <aside className="space-y-6">
         <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">What Stockers.AI watches</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">What StockersAI watches</p>
           <ul className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-400">
             <li>• Earnings momentum and guidance changes</li>
             <li>• FII/DII flow and macro sentiment</li>
@@ -316,7 +316,7 @@ export function DashboardClient() {
           <div className="mx-auto flex max-w-7xl flex-col gap-6">
             <header className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] transition-colors md:flex-row md:items-center md:justify-between dark:border-slate-800 dark:bg-slate-900">
               <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400">Stockers.AI</p>
+                <p className="text-sm uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400">StockersAI</p>
                 <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">Investor intelligence dashboard</h1>
                 <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
                   Research stocks with AI-backed insights, monitor the latest market narrative, and compare the positives and negatives before you act.

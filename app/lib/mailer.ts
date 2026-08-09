@@ -7,7 +7,7 @@
 //
 // Required environment to actually deliver:
 //   RESEND_API_KEY   the API key from resend.com
-//   MAIL_FROM        the verified sender, e.g. "Stockers.AI <hello@yourdomain.com>"
+//   MAIL_FROM        the verified sender, e.g. "StockersAI <hello@yourdomain.com>"
 //
 // Without them nothing is sent and nothing throws: the message is appended to a local outbox file
 // instead, so the sign-up flow can be developed and tested end to end with no credentials and no
@@ -132,7 +132,7 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const BRAND = "Stockers.AI";
+const BRAND = "StockersAI";
 
 /**
  * The welcome-and-verify message sent the moment an account is created.

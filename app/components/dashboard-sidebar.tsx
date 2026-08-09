@@ -595,7 +595,7 @@ export function DashboardSidebar({ active, onSelect }: NavProps) {
       <div className={`flex items-center gap-2 border-b border-slate-200/80 px-3 py-4 dark:border-slate-800 ${collapsed ? "justify-center" : ""}`}>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Stockers.AI</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">StockersAI</p>
             <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">AI workspace</p>
           </div>
         )}

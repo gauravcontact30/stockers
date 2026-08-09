@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CHECKOUT_BRAND_NAME, CHECKOUT_LOGO_URL, CHECKOUT_WEBSITE_URL } from "../../../../lib/checkout-brand";
 import { userFromRequest } from "../../../../lib/store";
 import {
   amountInPaise,
@@ -7,6 +8,7 @@ import {
   isPlanKey,
   razorpayKeys,
 } from "../../../../lib/razorpay";
+import { billedAmount, billingSummary, monthlyEquivalent } from "../../../../lib/subscription-pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +53,13 @@ export async function POST(request: Request) {
     keyId: keys.keyId,
     plan,
     cycle,
+    amountRupees: billedAmount(plan, cycle),
+    monthlyEquivalentRupees: monthlyEquivalent(plan, cycle),
+    billingSummary: billingSummary(plan, cycle),
     name: user.name,
     email: user.email,
+    brandName: CHECKOUT_BRAND_NAME,
+    websiteUrl: CHECKOUT_WEBSITE_URL,
+    logoUrl: CHECKOUT_LOGO_URL,
   });
 }

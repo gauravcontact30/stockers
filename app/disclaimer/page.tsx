@@ -4,9 +4,9 @@ import { PolicyCallout, PolicyList, PolicyPage, PolicySection, PolicyTable } fro
 import { COMPANY, CONTACT, DATA_SOURCES, POLICY_UPDATED } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "Disclaimer · Stockers.AI",
+  title: "Disclaimer · StockersAI",
   description:
-    "Stockers.AI is a research tool, not an investment adviser. What the figures are, where they come from, what the AI does and does not do, and what none of it promises.",
+    "StockersAI is a research tool, not an investment adviser. What the figures are, where they come from, what the AI does and does not do, and what none of it promises.",
 };
 
 export default function DisclaimerPage() {

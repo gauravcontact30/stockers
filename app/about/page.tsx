@@ -6,9 +6,9 @@ import { SiteFooter } from "../components/site-footer";
 import { COMPANY, DATA_SOURCES, TERMS } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "About Us · Stockers.AI",
+  title: "About Us · StockersAI",
   description:
-    "What Stockers.AI is, where its numbers come from, what its AI is allowed to do, and the rules it holds itself to.",
+    "What StockersAI is, where its numbers come from, what its AI is allowed to do, and the rules it holds itself to.",
 };
 
 /** The rules the product is built to. Each is a claim the rest of the site has to keep. */

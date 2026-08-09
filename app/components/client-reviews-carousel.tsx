@@ -102,7 +102,7 @@ export function ClientReviewsCarousel({ initialReviews = DEFAULT_CLIENT_REVIEWS 
       <div className="grid gap-0 lg:grid-cols-[0.72fr_1.28fr]">
         <div className="border-b border-slate-200 bg-gradient-to-br from-rose-50 via-white to-emerald-50 p-6 sm:p-8 lg:border-r lg:border-b-0 dark:border-slate-800 dark:from-rose-500/10 dark:via-slate-900 dark:to-emerald-500/10">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-600 dark:text-rose-300">Client reviews</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Indian investors reading the market with Stockers.AI</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Indian investors reading the market with StockersAI</h3>
           <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             Representative feedback from retail-investor workflows across research, screeners, ETFs, dividends and market pulse.
           </p>

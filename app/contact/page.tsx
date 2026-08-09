@@ -7,9 +7,9 @@ import { SiteFooter } from "../components/site-footer";
 import { COMPANY, CONTACT } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "Contact Us · Stockers.AI",
+  title: "Contact Us · StockersAI",
   description:
-    "Reach the Stockers.AI desk: support, billing, privacy requests and complaints, with the addresses and response times for each.",
+    "Reach the StockersAI desk: support, billing, privacy requests and complaints, with the addresses and response times for each.",
 };
 
 /** Who to write to, and what to expect back. Stated per route so nobody waits on the wrong inbox. */

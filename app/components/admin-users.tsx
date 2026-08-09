@@ -197,7 +197,7 @@ function ConfirmDeleteModal({
             Delete this user account?
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-            This permanently removes the account from Stockers.AI. The Super Admin account is protected and cannot be deleted.
+            This permanently removes the account from StockersAI. The Super Admin account is protected and cannot be deleted.
           </p>
         </div>
 
@@ -587,7 +587,7 @@ export function AdminUsers({
       ) : (
         <div className="overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-800">
           <table className="w-full min-w-[820px] border-collapse text-left text-sm">
-            <caption className="sr-only">Every account registered on Stockers.AI</caption>
+            <caption className="sr-only">Every account registered on StockersAI</caption>
             <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400">
               <tr>
                 <th scope="col" className="px-4 py-3 font-bold">Account</th>

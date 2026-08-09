@@ -122,10 +122,10 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
  * both a phishing signal to the recipient and a reason for a carrier to filter it.
  */
 export function welcomeSms(name: string): string {
-  return `Welcome to Stockers.AI, ${name}. Your account is active and your 5-day free trial has started. Check your email to confirm your address.`;
+  return `Welcome to StockersAI, ${name}. Your account is active and your 5-day free trial has started. Check your email to confirm your address.`;
 }
 
 /** The message sent once a subscription payment has been captured. */
 export function subscriptionSms(params: { name: string; plan: string; until: string }): string {
-  return `Hi ${params.name}, your Stockers.AI ${params.plan} subscription is active until ${params.until}. Thank you for subscribing.`;
+  return `Hi ${params.name}, your StockersAI ${params.plan} subscription is active until ${params.until}. Thank you for subscribing.`;
 }

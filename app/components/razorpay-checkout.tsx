@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { CHECKOUT_BRAND_NAME, CHECKOUT_LOGO_URL, CHECKOUT_WEBSITE_URL } from "../lib/checkout-brand";
+import {
+  billingSummary,
+  PLAN_LABEL,
+  type BillingCycle,
+  type PlanKey,
+} from "../lib/subscription-pricing";
 import { authHeaders, useSubscription } from "./subscription-provider";
 
 /**
@@ -25,8 +32,10 @@ import { authHeaders, useSubscription } from "./subscription-provider";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
-export type PlanKey = "starter" | "pro" | "elite";
-export type BillingCycle = "monthly" | "yearly";
+export type { BillingCycle, PlanKey } from "../lib/subscription-pricing";
+export type PendingSubscription = { plan: PlanKey; cycle: BillingCycle };
+
+const PENDING_SUBSCRIPTION_KEY = "stockers-pending-subscription";
 
 export type OrderResponse = {
   orderId: string;
@@ -37,6 +46,12 @@ export type OrderResponse = {
   cycle: BillingCycle;
   name: string;
   email: string;
+  brandName?: string;
+  websiteUrl?: string;
+  logoUrl?: string;
+  amountRupees?: number;
+  monthlyEquivalentRupees?: number;
+  billingSummary?: string;
 };
 
 type CheckoutResult = {
@@ -80,20 +95,62 @@ export function loadCheckoutScript(): Promise<boolean> {
   });
 }
 
+export function subscriptionSignupHref(plan: PlanKey, cycle: BillingCycle): string {
+  return `/signup?subscribe=1&plan=${encodeURIComponent(plan)}&cycle=${encodeURIComponent(cycle)}`;
+}
+
+export function savePendingSubscription(plan: PlanKey, cycle: BillingCycle) {
+  try {
+    window.localStorage.setItem(PENDING_SUBSCRIPTION_KEY, JSON.stringify({ plan, cycle }));
+  } catch {}
+}
+
+export function readPendingSubscription(): PendingSubscription | null {
+  try {
+    const raw = window.localStorage.getItem(PENDING_SUBSCRIPTION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PendingSubscription>;
+    const plan = parsed.plan;
+    const cycle = parsed.cycle;
+    return (plan === "starter" || plan === "pro" || plan === "elite") && (cycle === "monthly" || cycle === "yearly")
+      ? { plan, cycle }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingSubscription() {
+  try {
+    window.localStorage.removeItem(PENDING_SUBSCRIPTION_KEY);
+  } catch {}
+}
+
 /** What Razorpay's checkout is opened with. Pure, so the wiring can be checked without a gateway. */
 export function checkoutOptions(
   order: OrderResponse,
   handlers: { onSuccess: (result: CheckoutResult) => void; onDismiss: () => void },
 ): Record<string, unknown> {
+  const brandName = order.brandName ?? CHECKOUT_BRAND_NAME;
+  const websiteUrl = order.websiteUrl ?? CHECKOUT_WEBSITE_URL;
+  const summary = order.billingSummary ?? billingSummary(order.plan, order.cycle);
+
   return {
     key: order.keyId,
     amount: order.amount,
     currency: order.currency,
-    name: "Stockers.AI",
-    description: `${order.plan} plan · ${order.cycle === "yearly" ? "12 months" : "1 month"}`,
+    name: brandName,
+    image: order.logoUrl ?? CHECKOUT_LOGO_URL,
+    description: `${PLAN_LABEL[order.plan]} plan - ${summary}`,
     order_id: order.orderId,
     prefill: { name: order.name, email: order.email },
-    notes: { plan: order.plan, cycle: order.cycle },
+    notes: {
+      plan: order.plan,
+      cycle: order.cycle,
+      brand: brandName,
+      website: websiteUrl,
+      product: "StockersAI subscription",
+    },
     theme: { color: "#059669" },
     handler: handlers.onSuccess,
     modal: { ondismiss: handlers.onDismiss },
@@ -121,7 +178,7 @@ export function SubscribeButton({
   // has to exist before a subscription can be attached to it.
   if (status && !status.signedIn) {
     return (
-      <Link href="/signup" className={className}>
+      <Link href={subscriptionSignupHref(plan, cycle)} onClick={() => savePendingSubscription(plan, cycle)} className={className}>
         {label}
       </Link>
     );

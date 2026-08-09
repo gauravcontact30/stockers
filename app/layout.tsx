@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stockers.AI | AI Indian Stock Market Researcher",
+  title: "StockersAI | AI Indian Stock Market Researcher",
   description: "An AI-powered stock research assistant for Indian investors with market news, trend analysis, and positive/negative sentiment insights.",
 };
 

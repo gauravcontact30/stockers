@@ -218,7 +218,7 @@ function SuperAdminSidebar({ active }: { active: SuperAdminSectionId }) {
       <div className={`flex items-center gap-2 border-b border-slate-200/80 px-3 py-4 dark:border-slate-800 ${collapsed ? "justify-center" : ""}`}>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">Stockers.AI</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">StockersAI</p>
             <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">Super Admin</p>
           </div>
         )}

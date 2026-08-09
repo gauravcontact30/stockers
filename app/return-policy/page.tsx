@@ -4,9 +4,9 @@ import { PolicyCallout, PolicyList, PolicyPage, PolicySection } from "../compone
 import { COMPANY, CONTACT, POLICY_UPDATED, TERMS } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "Return Policy · Stockers.AI",
+  title: "Return Policy · StockersAI",
   description:
-    "Stockers.AI sells a digital subscription, so there is nothing to ship back. This page explains what takes the place of a return, and how to end a subscription.",
+    "StockersAI sells a digital subscription, so there is nothing to ship back. This page explains what takes the place of a return, and how to end a subscription.",
 };
 
 export default function ReturnPolicyPage() {
@@ -14,7 +14,7 @@ export default function ReturnPolicyPage() {
     <PolicyPage
       eyebrow="Legal"
       title="Return Policy"
-      summary="Stockers.AI sells access to a research tool. Nothing is shipped, so nothing can be sent back — what would be a return for a physical product is a refund here. This page says plainly what that means and where the equivalent rights live."
+      summary="StockersAI sells access to a research tool. Nothing is shipped, so nothing can be sent back — what would be a return for a physical product is a refund here. This page says plainly what that means and where the equivalent rights live."
       updated={POLICY_UPDATED.returns}
     >
       <PolicyCallout>

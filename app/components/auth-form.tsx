@@ -10,10 +10,28 @@ import {
   type FieldErrors,
   type SignupFields,
 } from "../lib/auth-validation";
+import { readPendingSubscription, savePendingSubscription, type PendingSubscription } from "./razorpay-checkout";
 
 type AuthMode = "signin" | "signup";
 
 type AuthFormProps = { mode: AuthMode };
+
+function checkoutTargetFromLocation(): PendingSubscription | null {
+  if (typeof window === "undefined") return null;
+
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get("plan");
+  const cycle = params.get("cycle");
+  if (
+    params.get("subscribe") === "1" &&
+    (plan === "starter" || plan === "pro" || plan === "elite") &&
+    (cycle === "monthly" || cycle === "yearly")
+  ) {
+    return { plan, cycle };
+  }
+
+  return readPendingSubscription();
+}
 
 /**
  * The sign-up and sign-in form.
@@ -88,6 +106,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [checkoutTarget] = useState<PendingSubscription | null>(() => checkoutTargetFromLocation());
 
   // If the visitor already has a session, skip the form and send them straight to the dashboard.
   useEffect(() => {
@@ -102,6 +121,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       router.replace("/dashboard");
     }
   }, [router]);
+
+  useEffect(() => {
+    if (checkoutTarget) savePendingSubscription(checkoutTarget.plan, checkoutTarget.cycle);
+  }, [checkoutTarget]);
 
   const localErrors: FieldErrors =
     mode === "signup" ? validateSignup(fields) : validateSignin({ email: fields.email, password: fields.password });
@@ -204,9 +227,17 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       setSuccess(true);
       setMessage(
-        mode === "signup" ? "Account created! Redirecting to your dashboard..." : "Signed in! Redirecting to your dashboard...",
+        checkoutTarget
+          ? "Account ready! Redirecting to complete your subscription..."
+          : mode === "signup"
+            ? "Account created! Redirecting to your dashboard..."
+            : "Signed in! Redirecting to your dashboard...",
       );
-      router.push("/dashboard");
+      router.push(
+        checkoutTarget
+          ? `/?subscribe=1&plan=${encodeURIComponent(checkoutTarget.plan)}&cycle=${encodeURIComponent(checkoutTarget.cycle)}#pricing`
+          : "/dashboard",
+      );
     } catch {
       setMessage("Network error. Please check your connection and try again.");
       setLoading(false);
@@ -226,7 +257,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {signup ? "Create your account" : "Welcome back"}
         </p>
         <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
-          {signup ? "Join Stockers.AI" : "Sign in to Stockers.AI"}
+          {signup ? "Join StockersAI" : "Sign in to StockersAI"}
         </h2>
       </div>
 
@@ -351,7 +382,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           </>
         ) : (
           <>
-            New to Stockers.AI?{" "}
+            New to StockersAI?{" "}
             <a href="/signup" className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
               Create an account
             </a>

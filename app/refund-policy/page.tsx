@@ -4,9 +4,9 @@ import { PolicyCallout, PolicyList, PolicyPage, PolicySection } from "../compone
 import { COMPANY, CONTACT, POLICY_UPDATED, TERMS } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "Refund Policy · Stockers.AI",
+  title: "Refund Policy · StockersAI",
   description:
-    "When a Stockers.AI subscription can be refunded, how much, how to ask, and how long it takes to reach your account.",
+    "When a StockersAI subscription can be refunded, how much, how to ask, and how long it takes to reach your account.",
 };
 
 export default function RefundPolicyPage() {
@@ -14,7 +14,7 @@ export default function RefundPolicyPage() {
     <PolicyPage
       eyebrow="Legal"
       title="Refund Policy"
-      summary="Stockers.AI is a subscription to a research tool. This page says exactly when your money comes back, how much of it, and how long that takes — including the cases where it does not."
+      summary="StockersAI is a subscription to a research tool. This page says exactly when your money comes back, how much of it, and how long that takes — including the cases where it does not."
       updated={POLICY_UPDATED.refunds}
     >
       <PolicyCallout>

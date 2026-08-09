@@ -49,7 +49,7 @@ export function HeroCarousel() {
     <>
       {/* The page still needs exactly one h1 for a screen reader and for search, but the visible
           headline was cut, so the site name carries it out of sight instead. */}
-      <h1 className="sr-only">Stockers.AI — AI stock research for Indian investors</h1>
+      <h1 className="sr-only">StockersAI — AI stock research for Indian investors</h1>
 
       {/* The scenes are light now, so the panel around them is too — a dark band under a pale
           frame read as two unrelated sections stacked on top of each other. */}
@@ -61,7 +61,7 @@ export function HeroCarousel() {
              guessed. */
           className="relative min-h-[1160px] w-full overflow-hidden sm:min-h-[820px] lg:min-h-[660px]"
           aria-roledescription="carousel"
-          aria-label="Stockers.AI product scenes"
+          aria-label="StockersAI product scenes"
         >
           {slides.map((slide, index) => (
             <div

@@ -4,9 +4,9 @@ import { PolicyCallout, PolicyList, PolicyPage, PolicySection, PolicyTable } fro
 import { ACCOUNT_FIELDS, CLIENT_STORAGE, COMPANY, CONTACT, DATA_SOURCES, POLICY_UPDATED, PROCESSORS } from "../lib/policy";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · Stockers.AI",
+  title: "Privacy Policy · StockersAI",
   description:
-    "Exactly what Stockers.AI stores about you, what your browser keeps, who else sees it, how long it is held, and how to have it deleted.",
+    "Exactly what StockersAI stores about you, what your browser keeps, who else sees it, how long it is held, and how to have it deleted.",
 };
 
 export default function PrivacyPolicyPage() {

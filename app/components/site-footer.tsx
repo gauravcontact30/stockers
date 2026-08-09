@@ -79,7 +79,7 @@ export function SiteFooter() {
 
       <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800 dark:text-slate-400">
         <div className="space-y-1">
-          <p>© {new Date().getFullYear()} Stockers.AI — AI-powered Indian stock research.</p>
+          <p>© {new Date().getFullYear()} StockersAI — AI-powered Indian stock research.</p>
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Not a SEBI-registered investment adviser or research analyst. Market risk applies —{" "}
             <Link href="/disclaimer" className="underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400">

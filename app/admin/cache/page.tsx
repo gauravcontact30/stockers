@@ -3,7 +3,7 @@ import { SuperAdminDashboard } from "../../components/super-admin-dashboard";
 
 export const metadata: Metadata = {
   title: "Cache Control | Super Admin | Stockers",
-  description: "Revalidate Stockers.AI market, AI and news cache families.",
+  description: "Revalidate StockersAI market, AI and news cache families.",
   robots: { index: false, follow: false },
 };
 

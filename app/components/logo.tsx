@@ -19,7 +19,7 @@ export function LogoMark({
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
       role="img"
-      aria-label="Stockers.AI"
+      aria-label="StockersAI"
     >
       <rect width="40" height="40" rx="11" fill={`url(#${gradientId})`} />
       <rect width="40" height="40" rx="11" fill={`url(#${glossId})`} />
@@ -65,7 +65,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
     <span className={`font-semibold tracking-tight ${className}`}>
       <span className="text-slate-900 dark:text-white">Stockers</span>
       <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-400 dark:to-teal-300">
-        .AI
+        AI
       </span>
     </span>
   );

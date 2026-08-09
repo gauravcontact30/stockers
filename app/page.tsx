@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
+import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
 import { HeroCarousel } from "./components/hero-carousel";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
+import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
 import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
 import { StreamedAccuracyMatrixSection } from "./components/accuracy-matrix-section";
@@ -128,6 +130,7 @@ export default function Home() {
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">
             <SubscriptionBadge />
             <ThemeToggle />
+            <HeaderSubscriptionCta />
             <Link href="/signin" className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
               Sign in
             </Link>
@@ -219,6 +222,7 @@ export default function Home() {
       </div>
 
       <BackToTop />
+      <PendingSubscriptionCheckout />
     </main>
   );
 }

@@ -3,7 +3,7 @@ import { SuperAdminDashboard } from "../../components/super-admin-dashboard";
 
 export const metadata: Metadata = {
   title: "Client Reviews | Super Admin | Stockers",
-  description: "Upload and manage Stockers.AI landing page client reviews.",
+  description: "Upload and manage StockersAI landing page client reviews.",
   robots: { index: false, follow: false },
 };
 

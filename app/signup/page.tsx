@@ -9,7 +9,7 @@ export default function SignupPage() {
 
         <div className="flex flex-1 flex-col gap-10 lg:flex-row lg:items-center">
           <section className="max-w-xl space-y-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400">Stockers.AI</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400">StockersAI</p>
             <h1 className="text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl dark:text-white">
               Start your intelligent research journey today.
             </h1>

@@ -22,7 +22,7 @@ import { CYCLE_DAYS } from "./razorpay";
  * postal address on these pages, not a brand name alone.
  */
 export const COMPANY = {
-  brand: "Stockers.AI",
+  brand: "StockersAI",
   /** TODO: the registered company or proprietorship name. */
   legalName: "[Registered legal entity name]",
   /** TODO: full registered address including PIN code. */

@@ -3,7 +3,7 @@ import { SuperAdminDashboard } from "../components/super-admin-dashboard";
 
 export const metadata: Metadata = {
   title: "Super Admin | Stockers",
-  description: "Manage Stockers.AI accounts, subscriptions, feature locks and application operations.",
+  description: "Manage StockersAI accounts, subscriptions, feature locks and application operations.",
   robots: { index: false, follow: false },
 };
 

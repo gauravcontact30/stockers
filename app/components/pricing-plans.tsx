@@ -1,8 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import {
+  billedAmount,
+  monthlyEquivalent,
+  PLAN_MONTHLY,
+  rupees,
+  YEARLY_MONTHS,
+  yearlySaving as yearlySavingForPlan,
+  type BillingCycle,
+  type PlanKey,
+} from "../lib/subscription-pricing";
 import { featuresForTier, PLAN_TIERS, starsFor, TIER_LABEL, type PlanTier } from "../lib/plan-tiers";
-import { SubscribeButton, type PlanKey } from "./razorpay-checkout";
+import { SubscribeButton } from "./razorpay-checkout";
 
 /**
  * Pricing, benchmarked against what Indian retail research actually costs.
@@ -13,12 +23,12 @@ import { SubscribeButton, type PlanKey } from "./razorpay-checkout";
  * like whichever way the reader is thinking about it.
  */
 
-export type Billing = "monthly" | "yearly";
+export type Billing = BillingCycle;
+
+export { rupees } from "../lib/subscription-pricing";
 
 // Three months free on an annual commitment, and the reason the yearly figure is derived rather
 // than typed — the saving can never drift from the price it is quoted against.
-const YEARLY_MONTHS = 9;
-
 export type Plan = {
   /** The key the payment server prices this plan by — the two must never drift apart. */
   key: PlanKey;
@@ -37,7 +47,7 @@ export const PLANS: Plan[] = [
   {
     key: "starter",
     name: "Starter",
-    monthly: 149,
+    monthly: PLAN_MONTHLY.starter,
     blurb: "For someone tracking a handful of holdings.",
     chrome: "border-sky-200 bg-sky-50/80 dark:border-sky-500/30 dark:bg-sky-500/10",
     accent: "text-sky-700 dark:text-sky-300",
@@ -52,7 +62,7 @@ export const PLANS: Plan[] = [
   {
     key: "pro",
     name: "Pro",
-    monthly: 399,
+    monthly: PLAN_MONTHLY.pro,
     blurb: "For an active investor running their own screens.",
     featured: true,
     chrome: "border-emerald-300 bg-emerald-50/90 dark:border-emerald-500/40 dark:bg-emerald-500/10",
@@ -69,7 +79,7 @@ export const PLANS: Plan[] = [
   {
     key: "elite",
     name: "Elite",
-    monthly: 899,
+    monthly: PLAN_MONTHLY.elite,
     blurb: "For anyone managing money across many positions.",
     chrome: "border-violet-200 bg-violet-50/80 dark:border-violet-500/30 dark:bg-violet-500/10",
     accent: "text-violet-700 dark:text-violet-300",
@@ -91,10 +101,6 @@ export function yearlyPrice(monthly: number): number {
 /** What the annual cycle saves against paying month to month, in whole rupees. */
 export function yearlySaving(monthly: number): number {
   return monthly * 12 - yearlyPrice(monthly);
-}
-
-export function rupees(value: number): string {
-  return `₹${value.toLocaleString("en-IN")}`;
 }
 
 const BILLING_OPTIONS: { key: Billing; label: string }[] = [
@@ -244,10 +250,10 @@ export function PricingPlans() {
 
       <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
         {PLANS.map((plan) => {
-          const yearly = yearlyPrice(plan.monthly);
-          // Both cycles are quoted per month. A yearly plan billed at ten months' cost still
-          // works out at 10/12 of the monthly rate, and that is the number worth comparing.
-          const perMonth = billing === "yearly" ? Math.round(yearly / 12) : plan.monthly;
+          const yearly = billedAmount(plan.key, "yearly");
+          // Both cycles are quoted per month. A yearly plan billed at nine months' cost works out
+          // at 9/12 of the monthly rate, and that is the number worth comparing.
+          const perMonth = monthlyEquivalent(plan.key, billing);
 
           return (
             <div
@@ -275,7 +281,7 @@ export function PricingPlans() {
                   <>
                     <span className="tabular-nums">{rupees(yearly)}</span> billed yearly · saves{" "}
                     <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {rupees(yearlySaving(plan.monthly))}
+                      {rupees(yearlySavingForPlan(plan.key))}
                     </span>
                   </>
                 ) : (
@@ -315,7 +321,7 @@ export function PricingPlans() {
       <PlanFeatureCards />
 
       <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-        Payments are taken by Razorpay — cards, UPI and netbanking — and settle to Stockers.AI&apos;s own bank account.
+        Payments are taken by Razorpay — cards, UPI and netbanking — and settle to StockersAI&apos;s own bank account.
         Prices in Indian rupees, inclusive of GST. Exchange data is the same on every plan — what a plan buys is the AI
         layer on top of it. Cancel any time; annual plans are refunded pro rata.
       </p>
