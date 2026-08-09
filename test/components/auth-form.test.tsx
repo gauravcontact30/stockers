@@ -396,4 +396,50 @@ describe("AuthForm", () => {
       );
     });
   });
+
+  describe("server errors on the fields they belong to", () => {
+    /**
+     * A wrong address and a wrong password get one message between them — saying which was wrong
+     * tells anyone who asks whether an email has an account here. The email input is still marked
+     * so the reader sees both fields are in question, but it carries no message of its own.
+     */
+    it("outlines the email without repeating the message when sign-in fails", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({
+        ok: false,
+        body: { error: "Invalid email or password.", errors: { email: " ", password: "Invalid email or password." } },
+      });
+      render(<AuthForm mode="signin" />);
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
+      await user.type(screen.getByPlaceholderText("••••••••"), "wrongpass1");
+      submitForm();
+
+      expect(await screen.findAllByText("Invalid email or password.")).toHaveLength(2);
+      expect(screen.getByPlaceholderText("you@example.com")).toHaveAttribute("aria-invalid", "true");
+    });
+
+    // A field being fixed should stop being marked by a stale answer from the server.
+    it("clears a server error as soon as that field is edited", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({
+        ok: false,
+        body: { error: "An account already exists for this email.", errors: { email: "This email is already registered." } },
+      });
+      render(<AuthForm mode="signup" />);
+
+      await user.type(screen.getByPlaceholderText("Aarav Sharma"), "Aarav Sharma");
+      await user.type(screen.getByPlaceholderText("you@example.com"), "taken@example.com");
+      await user.type(screen.getByPlaceholderText("98765 43210"), "9876543210");
+      const passwords = screen.getAllByPlaceholderText("••••••••");
+      await user.type(passwords[0], "market2026");
+      await user.type(passwords[1], "market2026");
+      submitForm();
+
+      expect(await screen.findByText("This email is already registered.")).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "x");
+      expect(screen.queryByText("This email is already registered.")).not.toBeInTheDocument();
+    });
+  });
 });
