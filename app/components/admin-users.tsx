@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { tierForPlan } from "../lib/plan-tiers";
+import { pageWindow } from "./market-section";
 import { PlanPill } from "./plan-pill";
 import { authHeaders, useSubscription } from "./subscription-provider";
 
@@ -33,6 +34,11 @@ export type AdminSummary = {
 };
 
 export type UserFilter = "all" | "unverified" | "subscribed" | "trial" | "admins";
+type PlanFilter = "all" | "Starter" | "Pro" | "Elite";
+type RoleFilter = "all" | "admin" | "user";
+type VerificationFilter = "all" | "verified" | "unverified";
+type SubscriptionFilter = "all" | "active" | "trial" | "expired";
+type AdminUsersMode = "users" | "subscriptions";
 
 export const USER_FILTERS: readonly { key: UserFilter; label: string }[] = [
   { key: "all", label: "Everyone" },
@@ -40,6 +46,35 @@ export const USER_FILTERS: readonly { key: UserFilter; label: string }[] = [
   { key: "subscribed", label: "Subscribed" },
   { key: "trial", label: "On trial" },
   { key: "admins", label: "Admins" },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+const PAGE_BUTTON = "rounded-full border px-3 py-1.5 text-xs font-semibold tabular-nums transition disabled:opacity-40";
+
+const PLAN_FILTERS: readonly { key: PlanFilter; label: string }[] = [
+  { key: "all", label: "All plans" },
+  { key: "Starter", label: "Starter" },
+  { key: "Pro", label: "Pro" },
+  { key: "Elite", label: "Elite" },
+];
+
+const ROLE_FILTERS: readonly { key: RoleFilter; label: string }[] = [
+  { key: "all", label: "All roles" },
+  { key: "user", label: "Users" },
+  { key: "admin", label: "Admins" },
+];
+
+const VERIFICATION_FILTERS: readonly { key: VerificationFilter; label: string }[] = [
+  { key: "all", label: "Any verification" },
+  { key: "verified", label: "Verified" },
+  { key: "unverified", label: "Unverified" },
+];
+
+const SUBSCRIPTION_FILTERS: readonly { key: SubscriptionFilter; label: string }[] = [
+  { key: "all", label: "Any subscription" },
+  { key: "active", label: "Active paid" },
+  { key: "trial", label: "Trial / unpaid" },
+  { key: "expired", label: "Expired paid" },
 ];
 
 /** Whether one account currently holds a paid period. */
@@ -55,7 +90,23 @@ export function isSubscribed(user: AdminUser, today: string): boolean {
  */
 export function selectUsers(
   users: AdminUser[],
-  { query, filter, today }: { query: string; filter: UserFilter; today: string },
+  {
+    query,
+    filter,
+    today,
+    plan = "all",
+    role = "all",
+    verification = "all",
+    subscription = "all",
+  }: {
+    query: string;
+    filter: UserFilter;
+    today: string;
+    plan?: PlanFilter;
+    role?: RoleFilter;
+    verification?: VerificationFilter;
+    subscription?: SubscriptionFilter;
+  },
 ): AdminUser[] {
   const needle = query.trim().toLowerCase();
 
@@ -67,16 +118,32 @@ export function selectUsers(
 
     switch (filter) {
       case "unverified":
-        return !user.emailVerified;
+        if (user.emailVerified) return false;
+        break;
       case "subscribed":
-        return isSubscribed(user, today);
+        if (!isSubscribed(user, today)) return false;
+        break;
       case "trial":
-        return !isSubscribed(user, today) && user.role !== "admin";
+        if (isSubscribed(user, today) || user.role === "admin") return false;
+        break;
       case "admins":
-        return user.role === "admin";
+        if (user.role !== "admin") return false;
+        break;
       default:
-        return true;
+        break;
     }
+
+    if (plan !== "all" && user.plan !== plan) return false;
+    if (role !== "all" && (user.role ?? "user") !== role) return false;
+    if (verification === "verified" && !user.emailVerified) return false;
+    if (verification === "unverified" && user.emailVerified) return false;
+
+    const subscribed = isSubscribed(user, today);
+    if (subscription === "active" && !subscribed) return false;
+    if (subscription === "trial" && (subscribed || user.role === "admin")) return false;
+    if (subscription === "expired" && (subscribed || !user.subscribedUntil)) return false;
+
+    return true;
   });
 }
 
@@ -168,13 +235,26 @@ function ConfirmDeleteModal({
   );
 }
 
-export function AdminUsers() {
+export function AdminUsers({
+  initialFilter = "all",
+  mode = "users",
+}: {
+  initialFilter?: UserFilter;
+  mode?: AdminUsersMode;
+} = {}) {
   const { status, loading: statusLoading } = useSubscription();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [today, setToday] = useState("");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<UserFilter>("all");
+  const [filter, setFilter] = useState<UserFilter>(initialFilter);
+  const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [verificationFilter, setVerificationFilter] = useState<VerificationFilter>("all");
+  const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>(mode === "subscriptions" ? "active" : "all");
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -268,7 +348,46 @@ export function AdminUsers() {
     if (deleted) setPendingDelete(null);
   };
 
-  const visible = useMemo(() => selectUsers(users, { query, filter, today }), [users, query, filter, today]);
+  const resetPage = () => setCurrentPage(1);
+
+  const updateQuery = (next: string) => {
+    setQuery(next);
+    resetPage();
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setSearchFocused(false);
+    resetPage();
+  };
+
+  const visible = useMemo(
+    () =>
+      selectUsers(users, {
+        query,
+        filter,
+        today,
+        plan: planFilter,
+        role: roleFilter,
+        verification: verificationFilter,
+        subscription: subscriptionFilter,
+      }),
+    [users, query, filter, today, planFilter, roleFilter, verificationFilter, subscriptionFilter],
+  );
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const page = Math.min(currentPage, pageCount);
+  const startIndex = visible.length === 0 ? 0 : (page - 1) * pageSize;
+  const pageUsers = visible.slice(startIndex, startIndex + pageSize);
+  const endIndex = visible.length === 0 ? 0 : startIndex + pageUsers.length;
+  const searchSuggestions = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return users.slice(0, 6);
+
+    return users
+      .filter((user) => `${user.name} ${user.email} ${user.id}`.toLowerCase().includes(needle))
+      .slice(0, 6);
+  }, [users, query]);
+  const showSuggestions = searchFocused && searchSuggestions.length > 0;
   const isSuperAdmin = status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
 
   // The API is the real guard; this only decides what to render while it is being asked.
@@ -305,31 +424,155 @@ export function AdminUsers() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search name, email or id"
-          aria-label="Search accounts"
-          className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none ring-emerald-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-        />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start">
+          <div className="relative min-w-0 flex-1">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => updateQuery(event.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
+              placeholder={mode === "subscriptions" ? "Search subscription users by name, email or id" : "Search users by name, email or id"}
+              aria-label="Search accounts"
+              aria-controls="admin-user-search-suggestions"
+              className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 pr-20 text-sm text-slate-900 outline-none ring-rose-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 h-7 -translate-y-1/2 rounded-full border border-slate-200 px-2.5 text-xs font-semibold text-slate-500 transition hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-rose-500/40 dark:hover:text-rose-300"
+              >
+                Clear
+              </button>
+            )}
+            {showSuggestions && (
+              <div
+                id="admin-user-search-suggestions"
+                role="listbox"
+                className="absolute left-0 right-0 top-12 z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_-28px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950"
+              >
+                {searchSuggestions.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    role="option"
+                    aria-selected={query.trim().toLowerCase() === user.email.toLowerCase()}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      updateQuery(user.email);
+                      setSearchFocused(false);
+                    }}
+                    className="block w-full border-b border-slate-100 px-4 py-2.5 text-left text-sm text-slate-700 transition last:border-0 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                  >
+                    {user.name} - {user.email}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("all");
+              setPlanFilter("all");
+              setRoleFilter("all");
+              setVerificationFilter("all");
+              setSubscriptionFilter(mode === "subscriptions" ? "active" : "all");
+              clearSearch();
+            }}
+            className="h-11 shrink-0 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+          >
+            Reset filters
+          </button>
+        </div>
+
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
           {USER_FILTERS.map((option) => (
             <button
               key={option.key}
               type="button"
-              onClick={() => setFilter(option.key)}
+              onClick={() => {
+                setFilter(option.key);
+                resetPage();
+              }}
               aria-pressed={filter === option.key}
               className={`h-9 shrink-0 rounded-full border px-3.5 text-xs font-semibold transition ${
                 filter === option.key
-                  ? "border-transparent bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                  ? "border-transparent bg-rose-600 text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-rose-500/40 dark:hover:text-rose-300"
               }`}
             >
               {option.label}
             </button>
           ))}
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Plan
+            <select
+              value={planFilter}
+              onChange={(event) => {
+                setPlanFilter(event.target.value as PlanFilter);
+                resetPage();
+              }}
+              className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm normal-case tracking-normal text-slate-700 outline-none ring-rose-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              {PLAN_FILTERS.map((option) => (
+                <option key={option.key} value={option.key}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Role
+            <select
+              value={roleFilter}
+              onChange={(event) => {
+                setRoleFilter(event.target.value as RoleFilter);
+                resetPage();
+              }}
+              className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm normal-case tracking-normal text-slate-700 outline-none ring-rose-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              {ROLE_FILTERS.map((option) => (
+                <option key={option.key} value={option.key}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Verification
+            <select
+              value={verificationFilter}
+              onChange={(event) => {
+                setVerificationFilter(event.target.value as VerificationFilter);
+                resetPage();
+              }}
+              className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm normal-case tracking-normal text-slate-700 outline-none ring-rose-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              {VERIFICATION_FILTERS.map((option) => (
+                <option key={option.key} value={option.key}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Subscription
+            <select
+              value={subscriptionFilter}
+              onChange={(event) => {
+                setSubscriptionFilter(event.target.value as SubscriptionFilter);
+                resetPage();
+              }}
+              className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm normal-case tracking-normal text-slate-700 outline-none ring-rose-500 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              {SUBSCRIPTION_FILTERS.map((option) => (
+                <option key={option.key} value={option.key}>{option.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
@@ -356,7 +599,7 @@ export function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {visible.map((user) => {
+              {pageUsers.map((user) => {
                 const subscribed = isSubscribed(user, today);
                 const busy = busyId === user.id;
 
@@ -448,10 +691,83 @@ export function AdminUsers() {
         </div>
       )}
 
-      <p className="text-xs text-slate-400 dark:text-slate-500">
-        Showing {visible.length} of {users.length} accounts. Granting a subscription adds 30 days from today, or extends an
-        existing period rather than replacing it.
-      </p>
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+            Showing{" "}
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {visible.length === 0 ? 0 : startIndex + 1}-{endIndex}
+            </span>{" "}
+            of <span className="font-semibold text-slate-900 dark:text-white">{visible.length.toLocaleString("en-IN")}</span>{" "}
+            accounts
+          </p>
+          <label className="flex items-center gap-2 font-semibold">
+            Rows
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number]);
+                resetPage();
+              }}
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {pageCount > 1 && (
+          <nav aria-label="account pages" className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {users.length.toLocaleString("en-IN")} total accounts. Granting a subscription adds 30 days from today, or extends an existing period.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setCurrentPage(page - 1)}
+                className={`${PAGE_BUTTON} border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300`}
+              >
+                ← Prev
+              </button>
+
+              {pageWindow(page, pageCount).map((number) => (
+                <button
+                  key={number}
+                  type="button"
+                  onClick={() => setCurrentPage(number)}
+                  aria-current={number === page ? "page" : undefined}
+                  aria-label={`Page ${number}`}
+                  className={`${PAGE_BUTTON} ${
+                    number === page
+                      ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                      : "border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  {number}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={page >= pageCount}
+                onClick={() => setCurrentPage(page + 1)}
+                className={`${PAGE_BUTTON} border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300`}
+              >
+                Next →
+              </button>
+            </div>
+          </nav>
+        )}
+
+        {pageCount <= 1 && (
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            {users.length.toLocaleString("en-IN")} total accounts. Granting a subscription adds 30 days from today, or extends an existing period.
+          </p>
+        )}
+      </div>
 
       <ConfirmDeleteModal
         user={pendingDelete}

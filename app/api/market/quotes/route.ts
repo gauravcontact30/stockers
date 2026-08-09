@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { indianStocks, sectors } from "../../../lib/indian-stocks";
 import { stockIcon } from "../../../lib/company-logos";
 import { getAllQuotes } from "../../../lib/market-data";
@@ -31,12 +32,15 @@ export async function GET() {
 
   const liveCount = stocks.filter((stock) => stock.live).length;
 
-  return NextResponse.json({
-    stocks,
-    sectors,
-    generatedAt: new Date().toISOString(),
-    liveCount,
-    totalCount: stocks.length,
-    source: "Yahoo Finance (unofficial public feed)",
-  });
+  return NextResponse.json(
+    {
+      stocks,
+      sectors,
+      generatedAt: new Date().toISOString(),
+      liveCount,
+      totalCount: stocks.length,
+      source: "Yahoo Finance (unofficial public feed)",
+    },
+    { headers: cacheHeaders(60) },
+  );
 }

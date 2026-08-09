@@ -1,4 +1,5 @@
 import { indianStocks } from "./indian-stocks";
+import { CACHE_TAGS, revalidatingBy } from "./cache";
 
 export type QuoteSubject = { symbol: string; yahooSymbol: string };
 
@@ -18,11 +19,6 @@ export type LiveQuote = {
 const LIVE_TTL_MS = 60_000;
 const RETRY_TTL_MS = 10_000;
 const CONCURRENCY = 12;
-
-// Keyed by yahooSymbol (globally unique, unlike display symbol) so stocks and ETFs can
-// safely share one cache without risk of collision. The fetch time is kept rather than an expiry
-// so one caller can ask for a fresher copy than the shared default without disturbing the rest.
-const cache = new Map<string, { data: LiveQuote; fetchedAt: number }>();
 
 function emptyQuote(symbol: string): LiveQuote {
   return {
@@ -76,17 +72,27 @@ async function fetchYahooQuote(subject: QuoteSubject): Promise<LiveQuote> {
   }
 }
 
-async function getQuoteCached(subject: QuoteSubject, maxAgeMs: number): Promise<LiveQuote> {
-  const cached = cache.get(subject.yahooSymbol);
-  if (cached) {
-    // A failed quote is retried sooner than a good one, but never later than the caller asked for.
-    const ttl = cached.data.live ? maxAgeMs : Math.min(maxAgeMs, RETRY_TTL_MS);
-    if (Date.now() - cached.fetchedAt < ttl) return cached.data;
-  }
+const quoteLoaders = new Map<number, ReturnType<typeof revalidatingBy<QuoteSubject, LiveQuote>>>();
 
-  const data = await fetchYahooQuote(subject);
-  cache.set(subject.yahooSymbol, { data, fetchedAt: Date.now() });
-  return data;
+function quoteLoader(maxAgeMs: number) {
+  const ttlMs = Math.max(1_000, Math.round(maxAgeMs));
+  const existing = quoteLoaders.get(ttlMs);
+  if (existing) return existing;
+
+  const loader = revalidatingBy<QuoteSubject, LiveQuote>({
+    key: `quotes:${ttlMs}`,
+    ttlMs,
+    ttlFor: (quote) => (quote.live ? ttlMs : Math.min(ttlMs, RETRY_TTL_MS)),
+    maxStaleMs: Math.max(ttlMs * 5, RETRY_TTL_MS * 2),
+    tags: [CACHE_TAGS.quotes],
+    persist: true,
+    capacity: 700,
+    keyOf: (subject) => subject.yahooSymbol,
+    load: fetchYahooQuote,
+  });
+
+  quoteLoaders.set(ttlMs, loader);
+  return loader;
 }
 
 export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -110,7 +116,8 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (i
  * affordable because it asks for three symbols rather than three hundred.
  */
 export async function getQuotesFor(subjects: QuoteSubject[], maxAgeMs = LIVE_TTL_MS): Promise<LiveQuote[]> {
-  return mapWithConcurrency(subjects, CONCURRENCY, (subject) => getQuoteCached(subject, maxAgeMs));
+  const cachedQuote = quoteLoader(maxAgeMs);
+  return mapWithConcurrency(subjects, CONCURRENCY, cachedQuote);
 }
 
 export async function getAllQuotes(): Promise<LiveQuote[]> {

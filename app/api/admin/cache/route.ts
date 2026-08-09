@@ -41,6 +41,7 @@ const PREFIXES: Record<CacheTag, string[]> = {
   nse: ["nse:", "compare:"],
   ai: ["pulse:", "intel:", "compare:"],
   news: ["news:", "intel:"],
+  quotes: ["quotes:"],
 };
 
 export async function POST(request: Request) {

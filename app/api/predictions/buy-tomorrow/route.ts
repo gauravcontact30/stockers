@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { getBuyTomorrowPicks } from "../../../lib/buy-tomorrow";
 import { getDailyPredictions } from "../../../lib/daily-predictions";
@@ -21,5 +22,5 @@ export async function GET(request: Request) {
     oneMonth
   );
 
-  return NextResponse.json(cache);
+  return NextResponse.json(cache, { headers: cacheHeaders(300, "private") });
 }

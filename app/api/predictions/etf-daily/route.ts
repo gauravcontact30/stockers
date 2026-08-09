@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { indianETFs } from "../../../lib/indian-etfs";
 import { getDailyEtfPredictions } from "../../../lib/daily-predictions";
@@ -15,5 +16,5 @@ export async function GET(request: Request) {
     quotes.map((quote) => ({ symbol: quote.symbol, changePercent: quote.changePercent }))
   );
 
-  return NextResponse.json(cache);
+  return NextResponse.json(cache, { headers: cacheHeaders(300, "private") });
 }

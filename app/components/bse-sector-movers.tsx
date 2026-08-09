@@ -214,10 +214,12 @@ function CategoryList({ category, direction }: { category: string; direction: Di
 
 /** One figure of a category's matrix — the same shape whichever number it is holding. */
 function Metric({ label, value, tone }: { label: string; value: number; tone: string }) {
+  const displayLabel = label.includes("leading") ? "leaders" : label.includes("lagging") ? "laggards" : label;
+
   return (
-    <span className={`flex items-baseline gap-1.5 rounded-lg px-2 py-1 ${tone}`}>
-      <span className="text-sm font-bold tabular-nums">{count(value)}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{label}</span>
+    <span className={`flex min-w-[96px] items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2 ${tone}`}>
+      <span className="text-base font-semibold tabular-nums">{count(value)}</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-75">{displayLabel}</span>
     </span>
   );
 }
@@ -235,13 +237,13 @@ function CategoryBlock({
   const panelId = `sector-panel-${summary.sector.replace(/\W+/g, "-").toLowerCase()}`;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_14px_38px_-30px_rgba(15,23,42,0.55)] transition-colors hover:border-violet-200 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-violet-500/30">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
+        className="grid w-full grid-cols-1 gap-4 px-4 py-4 text-left transition hover:bg-slate-50/80 md:grid-cols-[minmax(0,1fr)_auto] md:items-center dark:hover:bg-slate-900/60"
       >
         <span className="flex min-w-0 items-center gap-3">
           <span aria-hidden="true" className="text-xs text-slate-400 dark:text-slate-500">
@@ -256,19 +258,24 @@ function CategoryBlock({
               our grouping
             </span>
           )}
+          <span className="hidden text-[11px] font-medium text-slate-500 dark:text-slate-400 sm:inline">
+            {summary.stocks === 0 ? "Classification pending" : `${count(summary.stocks)} mapped stocks`}
+          </span>
         </span>
 
         {summary.stocks === 0 ? (
-          <span className="text-[11px] text-slate-500 dark:text-slate-400">no company mapped here yet</span>
+          <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            No company mapped yet
+          </span>
         ) : (
           // No `shrink-0` here: it and `flex-wrap` pull against each other — the span kept its full
           // unwrapped width (~460px), so on a phone the last two figures were cropped away by the
           // card's `overflow-hidden` with no way to scroll to them. Allowed to shrink, the five
           // pills wrap onto a second row instead.
-          <span className="flex flex-wrap items-center gap-1.5">
-            <Metric label="stocks" value={summary.stocks} tone="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" />
-            <Metric label="gainers" value={summary.gainers} tone="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" />
-            <Metric label="losers" value={summary.losers} tone="bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400" />
+          <span className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+            <Metric label="stocks" value={summary.stocks} tone="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" />
+            <Metric label="gainers" value={summary.gainers} tone="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-400" />
+            <Metric label="losers" value={summary.losers} tone="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-400" />
             <Metric label="★ leading" value={summary.star} tone="bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" />
             <Metric label="▼ lagging" value={summary.red} tone="bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" />
           </span>
@@ -276,7 +283,7 @@ function CategoryBlock({
       </button>
 
       {open && (
-        <div id={panelId} className="border-t border-slate-200 p-4 dark:border-slate-800">
+        <div id={panelId} className="border-t border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
           {summary.stocks === 0 ? (
             // Nothing to ask the endpoint for yet, so it is not asked.
             <p className="text-xs text-slate-500 dark:text-slate-400">

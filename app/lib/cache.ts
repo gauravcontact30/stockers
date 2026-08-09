@@ -40,6 +40,8 @@ export const CACHE_TAGS = {
   ai: "ai",
   /** Headlines and story pages. */
   news: "news",
+  /** Yahoo quote snapshots for curated stocks, ETFs and benchmark indices. */
+  quotes: "quotes",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];

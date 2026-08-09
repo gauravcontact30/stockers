@@ -11,5 +11,20 @@
     "subscribedUntil": null,
     "emailVerifiedAt": "2026-08-08T14:11:31.951Z",
     "verificationToken": null
+  },
+  {
+    "id": "user_mslskaqs_029a4cb9",
+    "name": "Gaurav Pandey",
+    "email": "gauravcontact66@gmail.com",
+    "passwordHash": "5f73ee3ea15405616c26af8b2170debf:f56741b45fd77d4ca38521270ffd572df177c19e41febae85e822e98a5df9643c4963d421a7859b7660bda55dae37a8ac18393680427dbdf7aab1b9455738dd7",
+    "plan": "Starter",
+    "createdAt": "2026-08-09T12:41:21.508Z",
+    "mobile": "9873510871",
+    "role": "user",
+    "trialStartedAt": "2026-08-09T12:41:21.508Z",
+    "subscribedUntil": null,
+    "emailVerifiedAt": null,
+    "verificationToken": "3f4c6fa90725e032eed546dc4af1e8367f425eb6becd5936d6ccbcf7959ef372",
+    "verificationSentAt": "2026-08-09T12:41:21.608Z"
   }
 ]

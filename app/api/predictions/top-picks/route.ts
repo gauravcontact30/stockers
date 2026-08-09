@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { getDailyPredictions } from "../../../lib/daily-predictions";
 import { getAllQuotes } from "../../../lib/market-data";
@@ -19,5 +20,5 @@ export async function GET(request: Request) {
     predictions
   );
 
-  return NextResponse.json(cache);
+  return NextResponse.json(cache, { headers: cacheHeaders(300, "private") });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { stockIcon } from "../../../lib/company-logos";
 import { etfCategories, indianETFs } from "../../../lib/indian-etfs";
 import { getQuotesFor } from "../../../lib/market-data";
@@ -32,12 +33,15 @@ export async function GET() {
 
   const liveCount = etfs.filter((etf) => etf.live).length;
 
-  return NextResponse.json({
-    etfs,
-    categories: etfCategories,
-    generatedAt: new Date().toISOString(),
-    liveCount,
-    totalCount: etfs.length,
-    source: "Yahoo Finance (unofficial public feed)",
-  });
+  return NextResponse.json(
+    {
+      etfs,
+      categories: etfCategories,
+      generatedAt: new Date().toISOString(),
+      liveCount,
+      totalCount: etfs.length,
+      source: "Yahoo Finance (unofficial public feed)",
+    },
+    { headers: cacheHeaders(60) },
+  );
 }
