@@ -46,3 +46,7 @@ next-env.d.ts
 # Local mail and SMS logs when no provider is configured — these hold real addresses and numbers.
 app/data/outbox.json
 app/data/sms-outbox.json
+
+# The account store: real email addresses and password hashes. Each deployment keeps its own, so
+# there is nothing here worth sharing and a committed copy would publish credentials.
+app/data/users.json

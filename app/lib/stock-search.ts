@@ -16,6 +16,11 @@ export type SearchHit = {
   name: string;
   sector: string;
   capTier: CapTier;
+  /**
+   * BSE's own scrip code, which is what the exchange's price tape is keyed by. Empty for the
+   * handful of hand-classified names the BSE catalogue does not carry.
+   */
+  scripCode: string;
   /** True for the hand-classified names, which is what the empty-query view shows. */
   curated: boolean;
 };
@@ -45,6 +50,10 @@ let index: SearchHit[] | null = null;
 export function searchIndex(): SearchHit[] {
   if (index) return index;
 
+  const catalogue = bseCatalogue();
+  // A hand-classified entry keeps its own sector and name but still needs the exchange's scrip
+  // code, because that — not the ticker — is what the Bhavcopy tape is keyed by.
+  const scripCodes = new Map(catalogue.map((entry) => [entry.symbol, entry.scripCode]));
   const bySymbol = new Map<string, SearchHit>();
 
   for (const stock of indianStocks) {
@@ -53,17 +62,19 @@ export function searchIndex(): SearchHit[] {
       name: stock.name,
       sector: stock.sector,
       capTier: stock.capTier,
+      scripCode: scripCodes.get(stock.symbol) ?? "",
       curated: true,
     });
   }
 
-  for (const entry of bseCatalogue()) {
+  for (const entry of catalogue) {
     if (bySymbol.has(entry.symbol)) continue;
     bySymbol.set(entry.symbol, {
       symbol: entry.symbol,
       name: entry.name,
       sector: sectorNameFor(entry.sector),
       capTier: entry.capTier,
+      scripCode: entry.scripCode,
       curated: false,
     });
   }
@@ -143,6 +154,40 @@ export function searchStocks(query: string, sector: string = ALL_SECTORS): Searc
     shown: groups.reduce((sum, group) => sum + group.stocks.length, 0),
     sectors: searchSectors(),
   };
+}
+
+/** As many suggestions as one dropdown will ever be asked for, however large `limit` is. */
+const MAX_SUGGESTIONS = 50;
+
+export type SuggestResult = {
+  hits: SearchHit[];
+  /** Every match, including the ones beyond `limit`. */
+  total: number;
+};
+
+/**
+ * Matches for a query as one ranked list, which is what a type-ahead needs.
+ *
+ * `searchStocks` buckets by sector because the directory browses that way; a dropdown does not —
+ * it wants the single best answer on the first row, so the sector grouping is exactly what gets in
+ * the way. The ranking is the same one, applied across the whole exchange rather than within a
+ * bucket. A scrip code is matched in full only: typing "500325" should find Reliance, but the
+ * digits of one code have no business surfacing the fifty codes that contain them.
+ */
+export function suggestStocks(query: string, limit = 20): SuggestResult {
+  const term = query.trim().toLowerCase();
+
+  const matches = searchIndex().filter((hit) => {
+    // Same as searchStocks: an empty box offers the browsable catalogue, not 4,950 rows.
+    if (!term) return hit.curated;
+    return hit.symbol.toLowerCase().includes(term) || hit.name.toLowerCase().includes(term) || hit.scripCode === term;
+  });
+
+  const hits = [...matches]
+    .sort((a, b) => rank(a, term) - rank(b, term) || a.symbol.localeCompare(b.symbol))
+    .slice(0, Math.max(1, Math.min(limit, MAX_SUGGESTIONS)));
+
+  return { hits, total: matches.length };
 }
 
 /** One company by ticker, or null. Used to name a stock the browser only knows the symbol of. */

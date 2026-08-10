@@ -369,6 +369,9 @@ function ThemeRow({ stock, rank, theme, largest }: { stock: ThemeStock; rank: nu
         <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black ${theme.chip}`}>
           {rank}
         </span>
+        {/* The company's own mark, at the size the trio slides use, so the three themed panels
+            read as nine companies rather than nine codes. */}
+        <CompanyLogo symbol={stock.symbol} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate font-mono text-[12px] font-bold text-slate-800">{stock.symbol}</span>

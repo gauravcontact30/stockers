@@ -7,7 +7,7 @@ import { MobileNav } from "./components/mobile-nav";
 import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
 import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
-import { StreamedAccuracyMatrixSection } from "./components/accuracy-matrix-section";
+import { AccuracyMatrixSection } from "./components/accuracy-matrix-section";
 import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { SubscriptionBadge } from "./components/subscription-reminder";
@@ -20,9 +20,7 @@ const navLinks = [
   { href: "#bse-sectors", label: "By Category" },
   { href: "#workspace", label: "Workspace" },
   { href: "#accuracy", label: "Accuracy" },
-  { href: "/news", label: "News" },
   { href: "#pricing", label: "Pricing" },
-  { href: "/dashboard#support", label: "Getting Started" },
   { href: "/dashboard", label: "AI Dashboard" },
 ];
 
@@ -213,7 +211,7 @@ export default function Home() {
 
         <StreamedClientReviews />
 
-        <StreamedAccuracyMatrixSection />
+        <AccuracyMatrixSection />
 
         <PricingPlans />
 

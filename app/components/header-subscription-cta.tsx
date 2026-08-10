@@ -40,12 +40,34 @@ export function HeaderSubscriptionCta() {
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
+        aria-haspopup="dialog"
+        className={`group inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-px hover:border-emerald-300 hover:shadow-[0_10px_24px_-14px_rgba(5,150,105,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-500/45 dark:focus-visible:ring-offset-slate-900 ${
+          open
+            ? "border-emerald-300 shadow-[0_10px_24px_-14px_rgba(5,150,105,0.7)] dark:border-emerald-500/45"
+            : "border-slate-200 dark:border-slate-700"
+        }`}
       >
+        {/* Small emerald mark keeps the commercial intent readable without turning the whole
+            control into a second primary button next to "Get started". */}
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-400">
+          <path
+            d="M3.5 7.5h13M6 4.5h8a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 13V7A2.5 2.5 0 0 1 6 4.5Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M6.5 12h3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
         Buy plan
-        <span aria-hidden="true" className={`text-xs transition ${open ? "rotate-180" : ""}`}>
-          v
-        </span>
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400 ${open ? "rotate-180" : ""}`}
+        >
+          <path d="m5.5 8 4.5 4.5L14.5 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
 
       {open && (

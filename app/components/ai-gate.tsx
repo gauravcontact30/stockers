@@ -183,7 +183,12 @@ export function GatedSection({
           <FeatureLockToggle feature={feature} label={label} />
         </div>
       )}
-      <div className="relative overflow-hidden rounded-[32px]">
+      {/* Deliberately not `overflow-hidden`: this wraps whole sections, and every menu inside one
+          — the compare pickers most visibly — is absolutely positioned and taller than the space
+          left below it, so clipping here cut the options off at the card's edge. Nothing needs the
+          clip: the corner ribbon rounds and clips itself, the locked state has its own clipping
+          wrapper in <AiGate>, and the cards inside carry their own radius. */}
+      <div className="relative rounded-[32px]">
         {requiredTier && <PlanRibbon tier={requiredTier} />}
         {gate ? (
           <AiGate feature={feature} label={label}>

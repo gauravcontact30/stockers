@@ -1,2371 +1,2371 @@
 {
-  "date": "2026-08-09",
-  "generatedAt": "2026-08-09T07:58:45.138Z",
+  "date": "2026-08-10",
+  "generatedAt": "2026-08-10T15:20:43.746Z",
   "source": "ai",
   "predictions": {
     "TCS": {
       "symbol": "TCS",
-      "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Strong 3.36% gain indicates positive momentum for TCS."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "TCS shows a notable decline of -1.1%, indicating bearish sentiment today."
     },
     "INFY": {
       "symbol": "INFY",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Moderate 0.87% rise suggests steady interest in Infosys."
+      "confidence": 65,
+      "note": "Infosys up 0.67%, suggesting mild bullish momentum."
     },
     "WIPRO": {
       "symbol": "WIPRO",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small 0.76% increase; cautious optimism for Wipro."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Wipro down -1.08%, bearish trend evident."
     },
     "HCLTECH": {
       "symbol": "HCLTECH",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "1.62% gain shows healthy buying in HCL Technologies."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "HCL Technologies nearly flat with 0.04% change, neutral outlook."
     },
     "TECHM": {
       "symbol": "TECHM",
-      "outlook": "Neutral",
+      "outlook": "Bullish",
       "confidence": 55,
-      "note": "Minimal 0.17% change; mixed signals for Tech Mahindra."
+      "note": "Tech Mahindra shows slight gain of 0.3%, mild bullish bias."
     },
     "LTM": {
       "symbol": "LTM",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong 2.90% rise indicates solid investor confidence."
+      "confidence": 80,
+      "note": "LTM up 2.72%, strong bullish momentum expected."
     },
     "MPHASIS": {
       "symbol": "MPHASIS",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "2.19% gain points to positive sentiment in Mphasis."
+      "confidence": 75,
+      "note": "Mphasis gained 1.33%, indicating bullish trend."
     },
     "PERSISTENT": {
       "symbol": "PERSISTENT",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small 0.28% rise; watch for further confirmation."
+      "confidence": 50,
+      "note": "Persistent Systems flat with negligible change, neutral stance."
     },
     "COFORGE": {
       "symbol": "COFORGE",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minimal 0.18% gain; sideways movement likely."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Coforge up 1.91%, strong bullish outlook."
     },
     "LTTS": {
       "symbol": "LTTS",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "1.22% increase suggests steady buying interest."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "L&T Technology Services down -0.43%, mild bearish signal."
     },
     "OFSS": {
       "symbol": "OFSS",
-      "outlook": "Neutral",
+      "outlook": "Bullish",
       "confidence": 65,
-      "note": "0.60% gain; cautious positive outlook."
+      "note": "Oracle Financial Services Software up 0.72%, bullish bias."
     },
     "KPITTECH": {
       "symbol": "KPITTECH",
-      "outlook": "Neutral",
-      "confidence": 65,
-      "note": "1.11% rise indicates mild bullishness."
+      "outlook": "Bearish",
+      "confidence": 55,
+      "note": "KPIT Technologies down -0.32%, slight bearishness."
     },
     "ZENSARTECH": {
       "symbol": "ZENSARTECH",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "0.33% drop hints at weak pressure on Zensar Tech."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Zensar Technologies nearly flat, neutral outlook."
     },
     "SONATSOFTW": {
       "symbol": "SONATSOFTW",
-      "outlook": "Bearish",
-      "confidence": 85,
-      "note": "Significant 4.19% fall signals strong negative sentiment."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Sonata Software up 0.64%, mild bullish trend."
     },
     "NEWGEN": {
       "symbol": "NEWGEN",
       "outlook": "Bullish",
       "confidence": 75,
-      "note": "1.59% gain shows positive investor interest."
+      "note": "Newgen up 2.21%, strong bullish momentum."
     },
     "ROUTE": {
       "symbol": "ROUTE",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 70,
-      "note": "0.97% decline suggests bearish pressure."
+      "note": "Route Mobile up 1.36%, bullish sentiment."
     },
     "FSL": {
       "symbol": "FSL",
-      "outlook": "Bearish",
-      "confidence": 90,
-      "note": "Sharp 4.80% drop indicates strong selling trend."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Firstsource Solutions flat, neutral stance."
     },
     "HDFCBANK": {
       "symbol": "HDFCBANK",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "0.45% decline reflects cautious stance on HDFC Bank."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "HDFC Bank unchanged, neutral outlook."
     },
     "ICICIBANK": {
       "symbol": "ICICIBANK",
-      "outlook": "Bearish",
-      "confidence": 85,
-      "note": "2.50% fall marks notable bearish sentiment."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "ICICI Bank up 0.76%, mild bullish momentum."
     },
     "SBIN": {
       "symbol": "SBIN",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 75,
-      "note": "1.12% rise shows positive momentum for SBI."
+      "note": "State Bank of India down -2.39%, strong bearish trend."
     },
     "KOTAKBANK": {
       "symbol": "KOTAKBANK",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "0.82% drop indicates mild bearishness."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Kotak Mahindra Bank up 0.70%, mild bullish bias."
     },
     "AXISBANK": {
       "symbol": "AXISBANK",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "1.43% decline signals bearish pressure."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Axis Bank up 0.75%, mild bullish sentiment."
     },
     "INDUSINDBK": {
       "symbol": "INDUSINDBK",
-      "outlook": "Neutral",
-      "confidence": 65,
-      "note": "0.57% gain; mixed signals for IndusInd Bank."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "IndusInd Bank up 0.52%, mild bullish trend."
     },
     "BANKBARODA": {
       "symbol": "BANKBARODA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minor 0.12% fall; sideways outlook likely."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Bank of Baroda down -1.15%, bearish momentum."
     },
     "PNB": {
       "symbol": "PNB",
-      "outlook": "Neutral",
-      "confidence": 65,
-      "note": "0.45% rise; cautious optimism for PNB."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Punjab National Bank down -1.14%, bearish outlook."
     },
     "IDFCFIRSTB": {
       "symbol": "IDFCFIRSTB",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 70,
-      "note": "Declining trend with -0.85% change suggests bearish sentiment."
+      "note": "Moderate positive change indicates potential upward movement."
     },
     "FEDERALBNK": {
       "symbol": "FEDERALBNK",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive change of 0.76% indicates mild bullish momentum."
+      "confidence": 70,
+      "note": "Slight positive change suggests bullish sentiment."
     },
     "AUBANK": {
       "symbol": "AUBANK",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant drop of -1.89% shows bearish outlook."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal change indicates uncertain short-term direction."
     },
     "BANDHANBNK": {
       "symbol": "BANDHANBNK",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive change near 0.78% implies bullish sentiment."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Significant negative change signals bearish outlook."
     },
     "YESBANK": {
       "symbol": "YESBANK",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal change of 0.04% suggests neutral stance."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Small positive change, slightly bullish."
     },
     "RBLBANK": {
       "symbol": "RBLBANK",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Slight decline of -0.56% indicates bearish bias."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Small positive change, slightly bullish."
     },
     "CANBK": {
       "symbol": "CANBK",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small positive change of 0.19% suggests neutral outlook."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Notable negative change implies bearish trend."
     },
     "UNIONBANK": {
       "symbol": "UNIONBANK",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Positive change of 0.60% points to bullish trend."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Moderate negative change suggests bearish bias."
     },
     "INDIANB": {
       "symbol": "INDIANB",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Strong positive change of 1.32% supports bullish view."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Slight negative change indicates bearish pressure."
     },
     "BANKINDIA": {
       "symbol": "BANKINDIA",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Good gain of 1.64% indicates bullish momentum."
+      "outlook": "Bearish",
+      "confidence": 85,
+      "note": "Strong negative change points to bearish sentiment."
     },
     "MAHABANK": {
       "symbol": "MAHABANK",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small positive change 0.14% implies neutral outlook."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Moderate positive change suggests bullish momentum."
     },
     "KARURVYSYA": {
       "symbol": "KARURVYSYA",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline of -0.58% points to bearish sentiment."
+      "confidence": 70,
+      "note": "Negative change indicates bearish bias."
     },
     "CUB": {
       "symbol": "CUB",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong gain of 1.73% shows bullish trend."
+      "confidence": 80,
+      "note": "Strong positive change signals bullish outlook."
     },
     "DCBBANK": {
       "symbol": "DCBBANK",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Decline of -1.19% suggests bearish outlook."
+      "confidence": 85,
+      "note": "Significant negative change implies bearish trend."
     },
     "BAJFINANCE": {
       "symbol": "BAJFINANCE",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 85,
-      "note": "Sharp decline of -5.83% indicates strong bearish trend."
+      "note": "Strong positive change reflects bullish momentum."
     },
     "BAJAJFINSV": {
       "symbol": "BAJAJFINSV",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Significant drop of -3.70% shows bearish momentum."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Moderate positive change suggests bullishness."
     },
     "CHOLAFIN": {
       "symbol": "CHOLAFIN",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Decline of -3.80% supports bearish stance."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Strong positive change indicates bullish sentiment."
     },
     "MUTHOOTFIN": {
       "symbol": "MUTHOOTFIN",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minor decline of -0.15% suggests neutral outlook."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Small positive change, mild bullish outlook."
     },
     "PFC": {
       "symbol": "PFC",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Positive change of 0.48% indicates mild bullish trend."
+      "outlook": "Bearish",
+      "confidence": 90,
+      "note": "Large negative change signals strong bearish trend."
     },
     "RECLTD": {
       "symbol": "RECLTD",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Good gain of 1.52% supports bullish sentiment."
+      "outlook": "Bearish",
+      "confidence": 90,
+      "note": "Significant negative change implies strong bearish sentiment."
     },
     "LICHSGFIN": {
       "symbol": "LICHSGFIN",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight decline of -0.15% implies neutral stance."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Slight negative change suggests bearish bias."
     },
     "SHRIRAMFIN": {
       "symbol": "SHRIRAMFIN",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Decline of -2.28% signals bearish outlook."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong positive change indicates bullish momentum."
     },
     "SBICARD": {
       "symbol": "SBICARD",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small decline of -0.15% suggests neutral bias."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Small negative change shows bearish pressure."
     },
     "MFSL": {
       "symbol": "MFSL",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Decline of -1.41% indicates bearish momentum."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Moderate positive change suggests bullish trend."
     },
     "MANAPPURAM": {
       "symbol": "MANAPPURAM",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive change of 0.76% points to bullish trend."
+      "confidence": 70,
+      "note": "Small positive change indicates bullish bias."
     },
     "IIFL": {
       "symbol": "IIFL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small positive change, watch for confirmation amid NBFC sector uncertainty."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong 2.31% gain indicates positive momentum in NBFC sector."
     },
     "POONAWALLA": {
       "symbol": "POONAWALLA",
       "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant drop indicates bearish sentiment in NBFC sector."
+      "confidence": 65,
+      "note": "Slight decline of -0.7% suggests weakness in Poonawalla Fincorp."
     },
     "M&MFIN": {
       "symbol": "M&MFIN",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong positive change signals bullish momentum in NBFC space."
+      "confidence": 75,
+      "note": "Moderate 0.94% rise shows steady strength in Mahindra & Mahindra Financial."
     },
     "CREDITACC": {
       "symbol": "CREDITACC",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change suggests cautious outlook for CreditAccess Grameen."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Small 0.45% gain; cautious optimism for CreditAccess Grameen."
     },
     "FIVESTAR": {
       "symbol": "FIVESTAR",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Decline indicates bearish trend in NBFC segment."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Marginal 0.61% increase; watch for confirmation in Five-Star Business Finance."
     },
     "AAVAS": {
       "symbol": "AAVAS",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight negative change, but no strong directional signal."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Strong 2.37% gain signals bullish trend for Aavas Financiers."
     },
     "TATACAP": {
       "symbol": "TATACAP",
       "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Notable drop reflects bearish pressure in Tata Capital."
+      "confidence": 65,
+      "note": "Decline of -0.66% indicates short-term pressure on Tata Capital."
     },
     "HDFCLIFE": {
       "symbol": "HDFCLIFE",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minor decline, neutral stance on insurance sector leader."
+      "confidence": 50,
+      "note": "No change; outlook remains neutral for HDFC Life Insurance."
     },
     "SBILIFE": {
       "symbol": "SBILIFE",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight negative movement, maintain neutral view."
+      "confidence": 55,
+      "note": "Minimal decline (-0.03%) suggests sideways movement for SBI Life."
     },
     "ICICIPRULI": {
       "symbol": "ICICIPRULI",
       "outlook": "Bearish",
       "confidence": 70,
-      "note": "Downtrend suggests cautious approach for ICICI Prudential Life."
+      "note": "Drop of -0.26% may indicate cautious sentiment on ICICI Prudential Life."
     },
     "ICICIGI": {
       "symbol": "ICICIGI",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 70,
-      "note": "Decline signals bearish sentiment in general insurance."
+      "note": "0.6% rise shows positive momentum in ICICI Lombard General Insurance."
     },
     "GICRE": {
       "symbol": "GICRE",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minor decrease, neutral outlook for General Insurance Corp."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "1.23% fall signals bearish pressure on General Insurance Corporation."
     },
     "NIACL": {
       "symbol": "NIACL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Downward movement indicates bearish bias for New India Assurance."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong 1.38% gain suggests optimism in New India Assurance."
     },
     "LICI": {
       "symbol": "LICI",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Positive change highlights bullish interest in LIC India."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Small decline (-0.25%) indicates cautious stance on Life Insurance Corp."
     },
     "STARHEALTH": {
       "symbol": "STARHEALTH",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline suggests cautious stance on Star Health insurance."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "0.89% gain shows healthy momentum in Star Health and Allied Insurance."
     },
     "GODIGIT": {
       "symbol": "GODIGIT",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Positive movement indicates bullish sentiment in digital insurance."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "1.41% drop signals weakness for Go Digit General Insurance."
     },
     "NIVABUPA": {
       "symbol": "NIVABUPA",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative change implies bearish outlook in health insurance sector."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Minor 0.23% rise; neutral outlook for Niva Bupa Health Insurance."
     },
     "RELIANCE": {
       "symbol": "RELIANCE",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 70,
-      "note": "Positive gain reflects bullish momentum in energy & petrochemicals."
+      "note": "Decline of -0.56% suggests short-term pressure on Reliance Industries."
     },
     "ONGC": {
       "symbol": "ONGC",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Small positive change, cautiously bullish on ONGC."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Small 0.41% gain; cautious optimism for Oil & Natural Gas Corporation."
     },
     "IOC": {
       "symbol": "IOC",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive movement suggests mild bullish sentiment."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Near 1% drop indicates bearish sentiment for Indian Oil Corporation."
     },
     "BPCL": {
       "symbol": "BPCL",
       "outlook": "Bearish",
       "confidence": 70,
-      "note": "Decline points to bearish pressure in Bharat Petroleum."
+      "note": "0.78% decline suggests weakness in Bharat Petroleum."
     },
     "HINDPETRO": {
       "symbol": "HINDPETRO",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative trend signals cautious stance on Hindustan Petroleum."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal change (+0.03%) keeps outlook neutral for Hindustan Petroleum."
     },
     "GAIL": {
       "symbol": "GAIL",
       "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant drop indicates bearish outlook for GAIL India."
+      "confidence": 70,
+      "note": "0.65% fall indicates negative trend in GAIL India."
     },
     "OIL": {
       "symbol": "OIL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight negative change, maintain neutral perspective."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong 2.3% gain shows bullish momentum in Oil India."
     },
     "PETRONET": {
       "symbol": "PETRONET",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong positive change suggests bullish momentum for Petronet LNG."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Small drop (-0.21%) points to mild weakness in Petronet LNG."
     },
     "MRPL": {
       "symbol": "MRPL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight decline, watch for market trend in Energy sector."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Significant negative change in energy sector suggests bearish trend."
     },
     "IGL": {
       "symbol": "IGL",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Notable drop, cautious outlook for gas sector."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal positive change indicates neutral outlook."
     },
     "MGL": {
       "symbol": "MGL",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Positive gain indicates upward momentum in gas sector."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Notable negative change in energy sector implies bearish sentiment."
     },
     "ATGL": {
       "symbol": "ATGL",
-      "outlook": "Neutral",
+      "outlook": "Bullish",
       "confidence": 60,
-      "note": "Minor decline, mixed signals in gas sector."
+      "note": "Slight positive gain indicates mild bullishness in energy."
     },
     "HINDUNILVR": {
       "symbol": "HINDUNILVR",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Steady gain, strong FMCG demand expected."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Small decline in FMCG stock suggests cautious bearishness."
     },
     "ITC": {
       "symbol": "ITC",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal change, stable outlook."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Moderate negative change in FMCG sector indicates bearish trend."
     },
     "NESTLEIND": {
       "symbol": "NESTLEIND",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 65,
-      "note": "Moderate gain, positive FMCG sentiment."
+      "note": "Negative change signals mild bearish sentiment in FMCG."
     },
     "BRITANNIA": {
       "symbol": "BRITANNIA",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong gain, bullish FMCG momentum."
+      "confidence": 75,
+      "note": "Strong positive change suggests bullish momentum in FMCG."
     },
     "DABUR": {
       "symbol": "DABUR",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight dip, watch for sector trends."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Moderate positive gain indicates bullish outlook in FMCG."
     },
     "GODREJCP": {
       "symbol": "GODREJCP",
       "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant drop, cautious on FMCG outlook."
+      "confidence": 70,
+      "note": "Significant negative change points to bearish trend in FMCG."
     },
     "MARICO": {
       "symbol": "MARICO",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small gain, steady FMCG demand."
+      "confidence": 55,
+      "note": "Minimal positive change suggests neutral stance."
     },
     "COLPAL": {
       "symbol": "COLPAL",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal change, stable FMCG sector."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Small negative change implies mild bearishness."
     },
     "TATACONSUM": {
       "symbol": "TATACONSUM",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate decline, watch for consumer trends."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong positive gain shows bullish trend in FMCG."
     },
     "VBL": {
       "symbol": "VBL",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline, cautious sentiment."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Positive change supports bullish sentiment."
     },
     "EMAMILTD": {
       "symbol": "EMAMILTD",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Good gain, positive momentum in FMCG."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change suggests cautious bearishness."
     },
     "UBL": {
       "symbol": "UBL",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Downtrend in brewery segment."
+      "confidence": 65,
+      "note": "Moderate negative change indicates bearish trend."
     },
     "UNITDSPR": {
       "symbol": "UNITDSPR",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline reflects cautious consumer spirits demand."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Positive change implies bullish momentum."
     },
     "RADICO": {
       "symbol": "RADICO",
       "outlook": "Bullish",
       "confidence": 65,
-      "note": "Moderate gain, positive spirits sector."
+      "note": "Moderate positive change supports bullish outlook."
     },
     "PATANJALI": {
       "symbol": "PATANJALI",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive movement in FMCG niche."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change suggests mild bearish sentiment."
     },
     "BIKAJI": {
       "symbol": "BIKAJI",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minor dip, stable outlook."
+      "confidence": 50,
+      "note": "Negligible change indicates neutral outlook."
     },
     "GILLETTE": {
       "symbol": "GILLETTE",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight decline, watch consumer staples."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Small negative change implies bearishness."
     },
     "MARUTI": {
       "symbol": "MARUTI",
-      "outlook": "Neutral",
+      "outlook": "Bullish",
       "confidence": 60,
-      "note": "Small decline, watch auto sector trends."
+      "note": "Slight positive change supports bullish view."
     },
     "TMPV": {
       "symbol": "TMPV",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Positive gain, improving passenger vehicle demand."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Minimal positive change suggests neutral stance."
     },
     "TMCV": {
       "symbol": "TMCV",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Notable drop, challenges in commercial vehicles."
+      "confidence": 65,
+      "note": "Negative change indicates bearish trend."
     },
     "M&M": {
       "symbol": "M&M",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong gain, positive momentum in autos."
+      "confidence": 60,
+      "note": "Slight positive change signals bullish sentiment."
     },
     "BAJAJ-AUTO": {
       "symbol": "BAJAJ-AUTO",
       "outlook": "Neutral",
       "confidence": 60,
-      "note": "Small positive change; steady momentum in automobile sector."
+      "note": "Slight positive change, steady performance expected."
     },
     "EICHERMOT": {
       "symbol": "EICHERMOT",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Moderate positive change indicating buying interest."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Moderate decline suggests caution in near term."
     },
     "HEROMOTOCO": {
       "symbol": "HEROMOTOCO",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong positive change suggests solid bullish momentum."
+      "confidence": 75,
+      "note": "Strong positive change indicates upward momentum."
     },
     "TVSMOTOR": {
       "symbol": "TVSMOTOR",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Good positive change; momentum likely to continue."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Mild positive change, watch for confirmation."
     },
     "ASHOKLEY": {
       "symbol": "ASHOKLEY",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No change; outlook uncertain without fresh catalysts."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Significant decline signals potential downside risk."
     },
     "MOTHERSON": {
       "symbol": "MOTHERSON",
-      "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Very strong positive change, indicating robust buying."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Slight negative change, cautious outlook advised."
     },
     "BOSCHLTD": {
       "symbol": "BOSCHLTD",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong positive change; positive sector sentiment."
+      "confidence": 70,
+      "note": "Good positive movement suggests buying interest."
     },
     "MRF": {
       "symbol": "MRF",
       "outlook": "Neutral",
       "confidence": 55,
-      "note": "Slight positive change; cautious optimism."
+      "note": "Minor decline, neutral stance recommended."
     },
     "APOLLOTYRE": {
       "symbol": "APOLLOTYRE",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change suggests selling pressure."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Small gain, likely stable performance."
     },
     "BALKRISIND": {
       "symbol": "BALKRISIND",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal change; unclear direction."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Strong positive change, bullish trend likely."
     },
     "EXIDEIND": {
       "symbol": "EXIDEIND",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Good positive change; bullish momentum present."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Moderate drop suggests caution."
     },
     "ARE&M": {
       "symbol": "ARE&M",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small positive change; outlook cautious."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Sharp decline indicates bearish momentum."
     },
     "SONACOMS": {
       "symbol": "SONACOMS",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong positive change; bullish sentiment."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Slight negative change, cautious approach advised."
     },
     "UNOMINDA": {
       "symbol": "UNOMINDA",
       "outlook": "Neutral",
-      "confidence": 65,
-      "note": "Moderate positive change; watch for confirmation."
+      "confidence": 60,
+      "note": "Small positive change, neutral outlook."
     },
     "TIINDIA": {
       "symbol": "TIINDIA",
       "outlook": "Bullish",
       "confidence": 70,
-      "note": "Moderate positive change; momentum likely."
+      "note": "Good positive gain indicates strength."
     },
     "SUNPHARMA": {
       "symbol": "SUNPHARMA",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Slight negative change; weak selling pressure."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal change, stable outlook."
     },
     "DRREDDY": {
       "symbol": "DRREDDY",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minimal positive change; mixed signals."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Noticeable decline, bearish bias."
     },
     "CIPLA": {
       "symbol": "CIPLA",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change; bearish bias."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Slight gain, neutral stance."
     },
     "DIVISLAB": {
       "symbol": "DIVISLAB",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change; downside pressure present."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Small positive change, stable trend."
     },
     "LUPIN": {
       "symbol": "LUPIN",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change; cautious outlook."
+      "confidence": 75,
+      "note": "Significant drop, bearish outlook."
     },
     "AUROPHARMA": {
       "symbol": "AUROPHARMA",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong positive change; bullish momentum."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Moderate decline suggests caution."
     },
     "TORNTPHARM": {
       "symbol": "TORNTPHARM",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative change; weak selling pressure."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "No change, neutral outlook."
     },
     "ALKEM": {
       "symbol": "ALKEM",
-      "outlook": "Neutral",
+      "outlook": "Bearish",
       "confidence": 60,
-      "note": "Small positive change; cautious optimism."
+      "note": "Slight decline, cautious approach."
     },
     "BIOCON": {
       "symbol": "BIOCON",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Strong negative change; bearish sentiment."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal change, stable outlook."
     },
     "ZYDUSLIFE": {
       "symbol": "ZYDUSLIFE",
       "outlook": "Neutral",
-      "confidence": 65,
-      "note": "Small positive change; uncertain direction."
+      "confidence": 60,
+      "note": "Small positive change, watch for trend."
     },
     "MANKIND": {
       "symbol": "MANKIND",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong positive momentum with 1.48% gain in pharma sector."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Stock declined by 0.73%, indicating bearish sentiment in pharma sector."
     },
     "GLENMARK": {
       "symbol": "GLENMARK",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate gain of 0.4%, steady pharma sector performance."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "1.22% drop shows negative momentum in Glenmark Pharmaceuticals."
     },
     "IPCALAB": {
       "symbol": "IPCALAB",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal change of 0.09%, uncertain near-term movement."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Sharp 2.88% fall suggests strong bearish trend for IPCA Laboratories."
     },
     "LAURUSLABS": {
       "symbol": "LAURUSLABS",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Good gain of 0.78% indicating positive sentiment."
+      "confidence": 65,
+      "note": "0.53% rise indicates positive movement for Laurus Labs."
     },
     "GLAND": {
       "symbol": "GLAND",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline of 0.28%, cautious outlook."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong 2.55% gain reflects bullish momentum for Gland Pharma."
     },
     "ABBOTINDIA": {
       "symbol": "ABBOTINDIA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Marginal drop of 0.07%, sideways trend likely."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "1.08% decline signals bearish trend for Abbott India."
     },
     "AJANTPHARM": {
       "symbol": "AJANTPHARM",
       "outlook": "Bullish",
-      "confidence": 68,
-      "note": "Positive 0.54% gain, bullish signals in pharma."
+      "confidence": 60,
+      "note": "Mild 0.49% increase suggests slight bullishness in Ajanta Pharma."
     },
     "NATCOPHARM": {
       "symbol": "NATCOPHARM",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 65,
-      "note": "Up 0.45%, steady pharma sector strength."
+      "note": "0.67% drop indicates weak bearish sentiment in Natco Pharma."
     },
     "TATASTEEL": {
       "symbol": "TATASTEEL",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Decline near 0.92%, weak metals sector pressure."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "1.43% gain reflects strong bullish trend in Tata Steel."
     },
     "JSWSTEEL": {
       "symbol": "JSWSTEEL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 0.64%, metals sector facing headwinds."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Marginal 0.19% increase indicates neutral outlook for JSW Steel."
     },
     "HINDALCO": {
       "symbol": "HINDALCO",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 3.17% gain, robust metals sector momentum."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "0.52% decline suggests mild bearish trend in Hindalco Industries."
     },
     "VEDL": {
       "symbol": "VEDL",
       "outlook": "Bullish",
       "confidence": 75,
-      "note": "Up 1.4%, positive metals sector trend."
+      "note": "1.72% rise shows strong positive momentum for Vedanta."
     },
     "SAIL": {
       "symbol": "SAIL",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight dip of 0.09%, uncertain metals outlook."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "2.34% fall highlights strong bearish pressure on Steel Authority of India."
     },
     "NMDC": {
       "symbol": "NMDC",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant 1.48% drop, weak metals sentiment."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "0.66% gain indicates positive sentiment for NMDC Limited."
     },
     "JINDALSTEL": {
       "symbol": "JINDALSTEL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small gain of 0.18%, cautious optimism."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "1.99% increase shows strong bullish trend for Jindal Steel & Power."
     },
     "COALINDIA": {
       "symbol": "COALINDIA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal change, sideways trading expected."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "1.02% decline suggests bearishness in Coal India."
     },
     "NATIONALUM": {
       "symbol": "NATIONALUM",
       "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No change, no clear trend."
+      "confidence": 55,
+      "note": "0.45% rise is marginal, indicating neutral outlook for National Aluminium."
     },
     "HINDZINC": {
       "symbol": "HINDZINC",
-      "outlook": "Bullish",
-      "confidence": 78,
-      "note": "Strong 2.2% rise, metals sector strength."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "1.30% drop highlights bearish trend in Hindustan Zinc."
     },
     "APLAPOLLO": {
       "symbol": "APLAPOLLO",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Up 1.29%, positive momentum in metals."
+      "confidence": 80,
+      "note": "2.54% gain shows strong bullish momentum for APL Apollo Tubes."
     },
     "JSL": {
       "symbol": "JSL",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small gain of 0.29%, stable outlook."
+      "confidence": 50,
+      "note": "0.26% decline is minor, indicating neutral stance for Jindal Stainless."
     },
     "WELCORP": {
       "symbol": "WELCORP",
       "outlook": "Bullish",
-      "confidence": 68,
-      "note": "Up 1.11%, metals sector positive."
+      "confidence": 60,
+      "note": "0.47% increase shows mild bullish sentiment for Welspun Corp."
     },
     "RATNAMANI": {
       "symbol": "RATNAMANI",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 85,
-      "note": "Sharp 7.3% drop, strong negative momentum."
+      "note": "Strong 3.25% rise signals robust bullish trend for Ratnamani Metals & Tubes."
     },
     "ULTRACEMCO": {
       "symbol": "ULTRACEMCO",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small gain of 0.25%, steady cement sector."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "0.55% decline suggests mild bearishness in UltraTech Cement."
     },
     "SHREECEM": {
       "symbol": "SHREECEM",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Drop of 0.9%, weak cement sector signals."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "0.35% gain is marginal, indicating neutral outlook for Shree Cement."
     },
     "AMBUJACEM": {
       "symbol": "AMBUJACEM",
       "outlook": "Bearish",
       "confidence": 65,
-      "note": "Down 0.57%, cautious cement sector outlook."
+      "note": "0.73% fall indicates bearish sentiment for Ambuja Cements."
     },
     "ACC": {
       "symbol": "ACC",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Price down over 1%, indicating selling pressure in cement sector."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Slight decline but stable, no clear direction today."
     },
     "DALBHARAT": {
       "symbol": "DALBHARAT",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight positive change, but lacks strong momentum."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive change signals potential upward momentum."
     },
     "JKCEMENT": {
       "symbol": "JKCEMENT",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate decline suggests bearish sentiment."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal positive change, cautious outlook."
     },
     "RAMCOCEM": {
       "symbol": "RAMCOCEM",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Small negative change, cautious outlook."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Strong positive change indicates bullish sentiment."
     },
     "NUVOCO": {
       "symbol": "NUVOCO",
       "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Nearly 2% drop signals strong downward pressure."
+      "confidence": 80,
+      "note": "Significant decline suggests bearish pressure."
     },
     "JKLAKSHMI": {
       "symbol": "JKLAKSHMI",
       "outlook": "Bearish",
       "confidence": 70,
-      "note": "Over 1% decline points to negative bias."
+      "note": "Moderate decline, likely downward trend."
     },
     "HEIDELBERG": {
       "symbol": "HEIDELBERG",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Mild negative change indicates weak momentum."
+      "confidence": 65,
+      "note": "Negative change, bearish bias."
     },
     "LT": {
       "symbol": "LT",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal change, uncertain direction in infrastructure."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Positive change, bullish bias in infrastructure."
     },
     "GMRAIRPORT": {
       "symbol": "GMRAIRPORT",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Small gain suggests positive sentiment in airport sector."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change, cautious outlook."
     },
     "IRB": {
       "symbol": "IRB",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Over 1% drop reflects selling pressure in infrastructure."
+      "confidence": 60,
+      "note": "Decline indicates bearish sentiment."
     },
     "NBCC": {
       "symbol": "NBCC",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Close to 1% decline shows cautious outlook."
+      "confidence": 60,
+      "note": "Slight decline, bearish bias."
     },
     "RVNL": {
       "symbol": "RVNL",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Small decline, weak momentum in rail infrastructure."
+      "confidence": 70,
+      "note": "Moderate decline, bearish outlook."
     },
     "KEC": {
       "symbol": "KEC",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight gain, but insufficient for bullish stance."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change, bearish bias."
     },
     "ADANIENT": {
       "symbol": "ADANIENT",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal negative change, outlook uncertain."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Small decline, cautious bearish."
     },
     "PNCINFRA": {
       "symbol": "PNCINFRA",
       "outlook": "Bearish",
       "confidence": 85,
-      "note": "Sharp 6.4% drop signals strong negative trend."
+      "note": "Sharp decline signals strong bearish trend."
     },
     "KNRCON": {
       "symbol": "KNRCON",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Small decline suggests weak negative sentiment."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Strong positive change suggests bullish momentum."
     },
     "GRINFRA": {
       "symbol": "GRINFRA",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Over 2% drop indicates strong bearishness."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive change indicates bullish sentiment."
     },
     "HCC": {
       "symbol": "HCC",
       "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Near 5% decline signals significant selling pressure."
+      "confidence": 70,
+      "note": "Significant decline, bearish outlook."
     },
     "NTPC": {
       "symbol": "NTPC",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Close to 1% decline shows weak momentum."
+      "confidence": 60,
+      "note": "Slight decline, bearish bias in power sector."
     },
     "POWERGRID": {
       "symbol": "POWERGRID",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 60,
-      "note": "Small positive change indicates mild optimism."
+      "note": "Minor negative change, cautious bearish."
     },
     "TATAPOWER": {
       "symbol": "TATAPOWER",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate gain suggests positive sentiment."
+      "confidence": 60,
+      "note": "Small positive change, mild bullishness."
     },
     "ADANIPOWER": {
       "symbol": "ADANIPOWER",
       "outlook": "Bullish",
       "confidence": 65,
-      "note": "Moderate gain reflects improving outlook."
+      "note": "Positive change supports bullish outlook."
     },
     "NHPC": {
       "symbol": "NHPC",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Close to 1% decline indicates cautious stance."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Small positive change, mild bullish."
     },
     "SJVN": {
       "symbol": "SJVN",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Small decline, weak bearish momentum."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Flat movement, no clear trend."
     },
     "ADANIENSOL": {
       "symbol": "ADANIENSOL",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Strongest gain in power sector, bullish outlook."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal positive change, neutral outlook."
     },
     "TORNTPOWER": {
       "symbol": "TORNTPOWER",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong positive momentum with nearly 2% gain signals potential continued upside."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CESC": {
       "symbol": "CESC",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate positive change suggests steady bullish sentiment."
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "JSWENERGY": {
       "symbol": "JSWENERGY",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight positive change, but momentum is weak for a strong outlook."
+      "outlook": "Bullish",
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "IREDA": {
       "symbol": "IREDA",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative price change over 1% indicates bearish pressure."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BHARTIARTL": {
       "symbol": "BHARTIARTL",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Mild positive change reflects cautious optimism in telecom sector."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IDEA": {
       "symbol": "IDEA",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive movement near 0.8% suggests improving sentiment."
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "INDUSTOWER": {
       "symbol": "INDUSTOWER",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Small positive gain indicates potential upside momentum."
+      "outlook": "Bearish",
+      "confidence": 92,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "HFCL": {
       "symbol": "HFCL",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong 2%+ gain signals robust bullish trend in telecom."
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "STLTECH": {
       "symbol": "STLTECH",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate positive change supports a bullish outlook."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TITAN": {
       "symbol": "TITAN",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "More than 1% decline indicates negative short-term trend."
+      "outlook": "Bullish",
+      "confidence": 79,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "HAVELLS": {
       "symbol": "HAVELLS",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal positive change, outlook remains cautious."
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "VOLTAS": {
       "symbol": "VOLTAS",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive change near 0.8% suggests mild bullishness."
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "CROMPTON": {
       "symbol": "CROMPTON",
-      "outlook": "Bearish",
-      "confidence": 90,
-      "note": "Sharp 7.4% drop signals strong bearish momentum."
+      "outlook": "Neutral",
+      "confidence": 63,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DIXON": {
       "symbol": "DIXON",
       "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No price change, outlook remains neutral."
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BLUESTARCO": {
       "symbol": "BLUESTARCO",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Significant drop of 3.6% indicates bearish pressure."
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "WHIRLPOOL": {
       "symbol": "WHIRLPOOL",
       "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Over 2% decline suggests bearish sentiment."
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "VGUARD": {
       "symbol": "VGUARD",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Small negative change indicates mild bearishness."
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ORIENTELEC": {
       "symbol": "ORIENTELEC",
-      "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Strong 6%+ gain signals strong bullish momentum."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SYMPHONY": {
       "symbol": "SYMPHONY",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal positive change suggests a neutral stance."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "CERA": {
       "symbol": "CERA",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Over 4% decline signals strong bearish trend."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DLF": {
       "symbol": "DLF",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No change in price, neutral outlook."
+      "outlook": "Bullish",
+      "confidence": 77,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "GODREJPROP": {
       "symbol": "GODREJPROP",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight negative change suggests mild bearishness."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "OBEROIRLTY": {
       "symbol": "OBEROIRLTY",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Very small negative change, outlook remains neutral."
+      "outlook": "Bullish",
+      "confidence": 63,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "PRESTIGE": {
       "symbol": "PRESTIGE",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Small positive change indicates mild bullish sentiment."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PHOENIXLTD": {
       "symbol": "PHOENIXLTD",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Nearly 1% decline suggests bearish pressure."
+      "outlook": "Bullish",
+      "confidence": 72,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SOBHA": {
       "symbol": "SOBHA",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 70,
-      "note": "Price dropped 1.25%, indicating short-term weakness in Realty sector."
+      "note": "Positive momentum in Realty sector with 1.25% gain."
     },
     "BRIGADE": {
       "symbol": "BRIGADE",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Gained 1.75%, showing positive momentum in Realty sector."
+      "confidence": 85,
+      "note": "Strong 4.42% gain signals bullish sentiment."
     },
     "MAHLIFE": {
       "symbol": "MAHLIFE",
       "outlook": "Neutral",
       "confidence": 50,
-      "note": "Minimal change near zero, uncertain direction for Mahindra Lifespace."
+      "note": "Minimal change suggests uncertain direction."
     },
     "SUNTECK": {
       "symbol": "SUNTECK",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 0.83%, slight bearish pressure in Realty sector."
+      "confidence": 60,
+      "note": "Slight decline of -0.2% indicating mild bearishness."
     },
     "LODHA": {
       "symbol": "LODHA",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Small gain of 0.39%, mild positive bias in Macrotech Developers."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Continued weakness with -0.47% drop."
     },
     "SUNTV": {
       "symbol": "SUNTV",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Decline of 0.52%, slight negative sentiment in Media & Entertainment."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Small positive change, outlook remains cautious."
     },
     "ZEEL": {
       "symbol": "ZEEL",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Up 1.75%, strong positive momentum for Zee Entertainment."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Marginal gain, no clear trend established."
     },
     "PVRINOX": {
       "symbol": "PVRINOX",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Gained 0.49%, signaling mild bullish trend in Media & Entertainment."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Notable decline of -1.04% suggests bearish trend."
     },
     "NAZARA": {
       "symbol": "NAZARA",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal decline of 0.14%, unclear near-term direction."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Positive 0.61% change, upbeat sentiment."
     },
     "SAREGAMA": {
       "symbol": "SAREGAMA",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Down 1.67%, indicating bearish pressure in Media & Entertainment."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong 2.09% gain indicates bullish momentum."
     },
     "NETWORK18": {
       "symbol": "NETWORK18",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Dropped 1.17%, showing bearish sentiment in Media sector."
+      "confidence": 65,
+      "note": "Decline of -0.81%, bearish bias."
     },
     "DMART": {
       "symbol": "DMART",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 0.79%, slight bearish bias in Retail sector."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Robust 3.95% gain, strong bullish sentiment."
     },
     "TRENT": {
       "symbol": "TRENT",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Declined 3.54%, strong bearish momentum in Retail."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Moderate gain of 0.93%, positive outlook."
     },
     "ABFRL": {
       "symbol": "ABFRL",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small gain of 0.11%, neutral outlook for Aditya Birla Fashion."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Significant drop of -3.62% signals strong bearishness."
     },
     "JUBLFOOD": {
       "symbol": "JUBLFOOD",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong gain of 2.85%, bullish outlook for Jubilant FoodWorks."
+      "confidence": 75,
+      "note": "Healthy gain of 1.75%, bullish outlook."
     },
     "VMART": {
       "symbol": "VMART",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Dropped 1.79%, bearish trend in V-Mart Retail."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Strong 2.38% gain supports bullish view."
     },
     "SHOPERSTOP": {
       "symbol": "SHOPERSTOP",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight gain of 0.13%, neutral near-term trend."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive 1.39% change suggests bullishness."
     },
     "METROBRAND": {
       "symbol": "METROBRAND",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 0.88%, indicating mild bearish sentiment."
+      "confidence": 60,
+      "note": "Slight decline of -0.54%, cautious bearish."
     },
     "DEVYANI": {
       "symbol": "DEVYANI",
-      "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Strong jump of 8.78%, very bullish for Devyani International."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Decline of -0.87%, bearish sentiment."
     },
     "WESTLIFE": {
       "symbol": "WESTLIFE",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Up 2.78%, positive momentum in retail food sector."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Drop of -1.46% indicates bearish trend."
     },
     "PIDILITIND": {
       "symbol": "PIDILITIND",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Dropped 1.54%, bearish pressure in Chemicals sector."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "1.51% gain supports bullish outlook."
     },
     "SRF": {
       "symbol": "SRF",
       "outlook": "Bearish",
       "confidence": 60,
-      "note": "Slight decline of 0.38%, mild bearish sentiment."
+      "note": "Small decline of -0.19%, cautious bearish."
     },
     "UPL": {
       "symbol": "UPL",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal gain of 0.04%, neutral outlook for UPL."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Notable -1.05% drop, bearish sentiment."
     },
     "AARTIIND": {
       "symbol": "AARTIIND",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 60,
-      "note": "Small gain of 0.18%, mild bullish bias."
+      "note": "Mild decline of -0.31%, bearish bias."
     },
     "DEEPAKNTR": {
       "symbol": "DEEPAKNTR",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Up 2.63%, strong bullish momentum in Chemicals sector."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Drop of -0.96% suggests bearish trend."
     },
     "TATACHEM": {
       "symbol": "TATACHEM",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong positive change signals bullish momentum in chemicals sector."
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NAVINFLUOR": {
       "symbol": "NAVINFLUOR",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Significant negative change suggests bearish outlook for Navin Fluorine."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "VINATIORGA": {
       "symbol": "VINATIORGA",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Moderate negative change indicates bearish sentiment in Vinati Organics."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CLEAN": {
       "symbol": "CLEAN",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong positive change reflects bullish trend for Clean Science and Technology."
+      "confidence": 63,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "FLUOROCHEM": {
       "symbol": "FLUOROCHEM",
       "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight negative change, outlook remains neutral for Gujarat Fluorochemicals."
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ALKYLAMINE": {
       "symbol": "ALKYLAMINE",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 65,
-      "note": "Moderate negative change indicates bearish sentiment for Alkyl Amines Chemicals."
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "INDIGO": {
       "symbol": "INDIGO",
       "outlook": "Neutral",
       "confidence": 55,
-      "note": "Minimal positive change suggests neutral outlook for InterGlobe Aviation."
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SPICEJET": {
       "symbol": "SPICEJET",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Negative change indicates bearish trend for SpiceJet."
+      "outlook": "Bullish",
+      "confidence": 77,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ADANIPORTS": {
       "symbol": "ADANIPORTS",
       "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Almost flat change, neutral outlook for Adani Ports & SEZ."
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CONCOR": {
       "symbol": "CONCOR",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative change suggests bearish sentiment for Container Corporation of India."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GESHIP": {
       "symbol": "GESHIP",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slightly negative change indicates bearish trend for Great Eastern Shipping."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BLUEDART": {
       "symbol": "BLUEDART",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal negative change, neutral outlook for Blue Dart Express."
+      "outlook": "Bullish",
+      "confidence": 71,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "DELHIVERY": {
       "symbol": "DELHIVERY",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong positive change signals bullish momentum for Delhivery."
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "TCI": {
       "symbol": "TCI",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative change suggests bearish outlook for Transport Corporation of India."
+      "outlook": "Bullish",
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ASIANPAINT": {
       "symbol": "ASIANPAINT",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight negative change indicates bearish sentiment for Asian Paints."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BERGEPAINT": {
       "symbol": "BERGEPAINT",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate negative change suggests bearish trend for Berger Paints India."
+      "outlook": "Bullish",
+      "confidence": 72,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "KANSAINER": {
       "symbol": "KANSAINER",
       "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Slight positive change indicates mild bullish sentiment for Kansai Nerolac Paints."
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "INDIGOPNTS": {
       "symbol": "INDIGOPNTS",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight negative change suggests bearish outlook for Indigo Paints."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "APOLLOHOSP": {
       "symbol": "APOLLOHOSP",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal negative change, neutral outlook for Apollo Hospitals Enterprise."
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MAXHEALTH": {
       "symbol": "MAXHEALTH",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal negative change indicates neutral sentiment for Max Healthcare Institute."
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "FORTIS": {
       "symbol": "FORTIS",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong positive change reflects bullish outlook for Fortis Healthcare."
+      "outlook": "Bearish",
+      "confidence": 63,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NH": {
       "symbol": "NH",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Flat change, neutral outlook for Narayana Hrudayalaya."
+      "outlook": "Bearish",
+      "confidence": 76,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "METROPOLIS": {
       "symbol": "METROPOLIS",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight negative change, neutral outlook for Metropolis Healthcare."
+      "outlook": "Bullish",
+      "confidence": 68,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "LALPATHLAB": {
       "symbol": "LALPATHLAB",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Minimal positive change suggests neutral to mild bullish sentiment."
+      "outlook": "Bullish",
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "KIMS": {
       "symbol": "KIMS",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Slight positive change indicates neutral to mild bullish outlook for KIMS."
+      "outlook": "Bullish",
+      "confidence": 63,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "RAINBOW": {
       "symbol": "RAINBOW",
       "outlook": "Bearish",
       "confidence": 70,
-      "note": "Healthcare stock declined over 1%, cautious sentiment amid sector pressures."
+      "note": "Negative price change indicates bearish sentiment in healthcare services."
     },
     "MEDANTA": {
       "symbol": "MEDANTA",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate gain in healthcare; positive momentum expected."
+      "confidence": 75,
+      "note": "Positive gain suggests bullish momentum in healthcare sector."
     },
     "SIEMENS": {
       "symbol": "SIEMENS",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight decline in capital goods; mixed industrial cues."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Slight decline shows bearish pressure in capital goods."
     },
     "ABB": {
       "symbol": "ABB",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Significant drop in industrials; caution advised."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Positive change hints at bullish trend in industrials."
     },
     "CUMMINSIND": {
       "symbol": "CUMMINSIND",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Small gain in capital goods; steady outlook."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minimal positive change; outlook uncertain in capital goods."
     },
     "BHEL": {
       "symbol": "BHEL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline in heavy electricals; weak demand signals."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Near 1% gain supports bullish outlook in heavy electricals."
     },
     "HAL": {
       "symbol": "HAL",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Marginal decline; defense sector stable but cautious."
+      "confidence": 60,
+      "note": "Small positive change suggests cautious optimism."
     },
     "BEL": {
       "symbol": "BEL",
       "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Minor gain in electronics; positive defense spend outlook."
+      "confidence": 70,
+      "note": "Steady gain in defense electronics sector indicates bullishness."
     },
     "THERMAX": {
       "symbol": "THERMAX",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong gain in capital goods; good industrial demand."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Slight negative change; mixed signals in capital goods."
     },
     "AIAENG": {
       "symbol": "AIAENG",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline in engineering; possible sector weakness."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Small positive change; moderate confidence in outlook."
     },
     "SKFINDIA": {
       "symbol": "SKFINDIA",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Nearly 1% rise; favorable industrial demand."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Marginal gain suggests neutral outlook."
     },
     "CGPOWER": {
       "symbol": "CGPOWER",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Moderate gain; positive sentiment in industrial solutions."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "No price change; outlook neutral."
     },
     "MAZDOCK": {
       "symbol": "MAZDOCK",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline in shipbuilders; cautious outlook amid volatility."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong positive change signals bullish trend in shipbuilders."
     },
     "COCHINSHIP": {
       "symbol": "COCHINSHIP",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 75,
-      "note": "Nearly 2% gain; strong shipyard demand signals."
+      "note": "Decline over 1% shows bearish sentiment in shipyard sector."
     },
     "POLYCAB": {
       "symbol": "POLYCAB",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Over 1% fall; potential pressure in electrical goods."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Positive gain indicates bullishness in capital goods."
     },
     "TATACOMM": {
       "symbol": "TATACOMM",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Good gain in data centers; positive tech infrastructure demand."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Negative change reflects bearishness in data centers."
     },
     "RAILTEL": {
       "symbol": "RAILTEL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Decline in data centers; sector uncertainty remains."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive gain supports bullish outlook in data centers."
     },
     "NETWEB": {
       "symbol": "NETWEB",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 2.5% gain; robust data center demand."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative price change indicates bearish trend in data centers."
     },
     "ANANTRAJ": {
       "symbol": "ANANTRAJ",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight decline; neutral outlook in data centers."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Significant drop signals strong bearish outlook in data centers."
     },
     "OKPLA": {
       "symbol": "OKPLA",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Over 1% drop in toys; weak consumer demand signals."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive change suggests bullish momentum in toys sector."
     },
     "KVTOYS": {
       "symbol": "KVTOYS",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No change; market awaits direction."
+      "outlook": "Bearish",
+      "confidence": 85,
+      "note": "Sharp decline indicates strong bearish sentiment in toys."
     },
     "TATATECH": {
       "symbol": "TATATECH",
       "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Strong 8.9% surge; excellent momentum in IT sector."
+      "confidence": 70,
+      "note": "Positive gain signals bullish trend in IT sector."
     },
     "HEXT": {
       "symbol": "HEXT",
       "outlook": "Bullish",
       "confidence": 75,
-      "note": "Good 1.5% gain; positive IT sector momentum."
+      "note": "Strong positive change supports bullish outlook in IT."
     },
     "IKS": {
       "symbol": "IKS",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "1.4% decline; IT sector pressure noted."
+      "confidence": 60,
+      "note": "Negative change shows bearish pressure in IT sector."
     },
     "IDBI": {
       "symbol": "IDBI",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Small decline in banking; cautious sentiment."
+      "confidence": 80,
+      "note": "Over 1% decline indicates bearish sentiment in banking."
     },
     "IOB": {
       "symbol": "IOB",
       "outlook": "Bearish",
       "confidence": 75,
-      "note": "Significant drop of -1.55% suggests negative sentiment for Indian Overseas Bank."
+      "note": "Significant negative change signals bearish sentiment for Indian Overseas Bank."
     },
     "UCOBANK": {
       "symbol": "UCOBANK",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate decline of -0.90% indicates bearish trend for UCO Bank."
+      "confidence": 70,
+      "note": "Moderate decline suggests bearish outlook for UCO Bank."
     },
     "CENTRALBK": {
       "symbol": "CENTRALBK",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight decline of -0.48% suggests cautious outlook for Central Bank of India."
+      "outlook": "Bearish",
+      "confidence": 72,
+      "note": "Negative change percent indicates bearish trend for Central Bank of India."
     },
     "JIOFIN": {
       "symbol": "JIOFIN",
       "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Sharp fall of -2.39% signals strong bearish momentum for Jio Financial Services."
+      "confidence": 75,
+      "note": "Jio Financial Services shows notable decline, bearish outlook."
     },
     "ICICIAMC": {
       "symbol": "ICICIAMC",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal change of -0.25% implies neutral stance for ICICI AMC."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Slight negative change, cautious bearish stance for ICICI AMC."
     },
     "BAJAJHLDNG": {
       "symbol": "BAJAJHLDNG",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Decline of -1.09% reflects bearish pressure on Bajaj Holdings."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong positive change indicates bullish sentiment for Bajaj Holdings."
     },
     "GROWW": {
       "symbol": "GROWW",
       "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Positive change of 0.77% indicates mild bullishness for Groww."
+      "confidence": 75,
+      "note": "Positive momentum suggests bullish outlook for Groww."
     },
     "SBIFUNDS": {
       "symbol": "SBIFUNDS",
-      "outlook": "Bullish",
+      "outlook": "Neutral",
       "confidence": 55,
-      "note": "Small gain of 0.49% suggests slight bullish sentiment for SBI Funds."
+      "note": "Minimal negative change, neutral outlook for SBI Funds Management."
     },
     "IRFC": {
       "symbol": "IRFC",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Decline of -0.60% shows weak bearish trend for Indian Railway Finance."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Slight decline, neutral to cautious stance for Indian Railway Finance."
     },
     "ABCAPITAL": {
       "symbol": "ABCAPITAL",
-      "outlook": "Bearish",
-      "confidence": 85,
-      "note": "Significant drop of -3.19% indicates strong bearish outlook for Aditya Birla Capital."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Very slight negative change, maintain neutral view for Aditya Birla Capital."
     },
     "HDFCAMC": {
       "symbol": "HDFCAMC",
       "outlook": "Bullish",
-      "confidence": 55,
-      "note": "Small rise of 0.27% signals mild bullishness for HDFC AMC."
+      "confidence": 65,
+      "note": "Positive change supports a bullish outlook for HDFC Asset Management."
     },
     "PAYTM": {
       "symbol": "PAYTM",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Negligible change near zero indicates neutral trend for Paytm."
+      "outlook": "Bullish",
+      "confidence": 90,
+      "note": "Strong positive surge indicates very bullish sentiment for Paytm."
     },
     "LTF": {
       "symbol": "LTF",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Sharp decline of -2.73% shows strong bearish momentum for L&T Finance."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Moderate positive change suggests bullish outlook for L&T Finance."
     },
     "NAM-INDIA": {
       "symbol": "NAM-INDIA",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Drop of -2.00% signals bearish outlook for Nippon Life India AMC."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Slight negative change, neutral stance for Nippon Life India AMC."
     },
     "POLICYBZR": {
       "symbol": "POLICYBZR",
       "outlook": "Bullish",
-      "confidence": 55,
-      "note": "Small gain of 0.34% suggests slight bullishness for PB Fintech."
+      "confidence": 70,
+      "note": "Positive momentum supports bullish view for PB Fintech (Policybazaar)."
     },
     "BAJAJHFL": {
       "symbol": "BAJAJHFL",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Moderate decline of -0.72% indicates bearish sentiment for Bajaj Housing Finance."
+      "confidence": 65,
+      "note": "Negative change indicates bearish outlook for Bajaj Housing Finance."
     },
     "MCX": {
       "symbol": "MCX",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal change of -0.08% implies neutral stance for MCX."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "Strong positive change suggests bullish sentiment for Multi Commodity Exchange."
     },
     "HDBFS": {
       "symbol": "HDBFS",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 70,
-      "note": "Decline of -1.37% points to bearish pressure on HDB Financial Services."
+      "note": "Positive change supports bullish outlook for HDB Financial Services."
     },
     "MOTILALOFS": {
       "symbol": "MOTILALOFS",
-      "outlook": "Bearish",
-      "confidence": 55,
-      "note": "Small drop of -0.46% suggests weak bearish trend for Motilal Oswal Financial."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive momentum indicates bullish trend for Motilal Oswal Financial."
     },
     "SUNDARMFIN": {
       "symbol": "SUNDARMFIN",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Decline of -0.93% indicates bearish sentiment for Sundaram Finance."
+      "confidence": 65,
+      "note": "Negative change suggests bearish outlook for Sundaram Finance."
     },
     "AIIL": {
       "symbol": "AIIL",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal positive change of 0.07% suggests neutral outlook for Authum Investment."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Strong negative change indicates bearish sentiment for Authum Investment."
     },
     "PIRAMALFIN": {
       "symbol": "PIRAMALFIN",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "No change detected, neutral outlook for Piramal Finance."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Moderate negative change suggests bearish view for Piramal Finance."
     },
     "360ONE": {
       "symbol": "360ONE",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Drop of -1.51% signals bearish momentum for 360 ONE WAM."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "Slight positive change supports mild bullish stance for 360 ONE WAM."
     },
     "HUDCO": {
       "symbol": "HUDCO",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Decline of -0.53% shows weak bearish trend for HUDCO."
+      "confidence": 65,
+      "note": "Negative change signals bearish outlook for HUDCO."
     },
     "TATAINVEST": {
       "symbol": "TATAINVEST",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong gain of 3.98% indicates bullish momentum for Tata Investment Corporation."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Negative change percent indicates bearish trend for Tata Investment."
     },
     "ANANDRATHI": {
       "symbol": "ANANDRATHI",
       "outlook": "Bullish",
       "confidence": 75,
-      "note": "Positive momentum with 1.45% rise suggests bullish trend."
+      "note": "Strong positive change indicates bullish momentum in NBFC sector."
     },
     "CRISIL": {
       "symbol": "CRISIL",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Up 1.24%, showing steady strength in NBFC sector."
+      "confidence": 65,
+      "note": "Moderate positive change suggests steady growth outlook."
     },
     "CHOLAHLDNG": {
       "symbol": "CHOLAHLDNG",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 1.21%, indicating potential weakness ahead."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Slight negative change, watch for sector trends."
     },
     "TVSHLTD": {
       "symbol": "TVSHLTD",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline of 0.4% suggests cautious outlook."
+      "confidence": 70,
+      "note": "Notable negative change indicates bearish sentiment."
     },
     "NUVAMA": {
       "symbol": "NUVAMA",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Down nearly 1%, watch for further downside risk."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Minor negative change; outlook uncertain."
     },
     "PNBHOUSING": {
       "symbol": "PNBHOUSING",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 60,
-      "note": "Decline of 0.6% indicates short-term pressure."
+      "note": "Positive change suggests cautious optimism."
     },
     "ABSLAMC": {
       "symbol": "ABSLAMC",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Marginal 0.12% rise suggests sideways movement."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Significant negative change points to bearish trend."
     },
     "ANGELONE": {
       "symbol": "ANGELONE",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Down 1.7%, bearish sentiment likely to continue."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Positive change supports bullish outlook."
     },
     "AEGISLOG": {
       "symbol": "AEGISLOG",
       "outlook": "Bearish",
       "confidence": 75,
-      "note": "Sharp 2.07% drop signals strong bearish trend."
+      "note": "Strong negative change in energy sector signals bearishness."
     },
     "AEGISVOPAK": {
       "symbol": "AEGISVOPAK",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Down 1.18%, weak momentum in energy sector."
+      "confidence": 75,
+      "note": "Significant drop indicates bearish trend."
     },
     "GODFRYPHLP": {
       "symbol": "GODFRYPHLP",
       "outlook": "Neutral",
       "confidence": 50,
-      "note": "Minimal change, likely consolidation phase."
+      "note": "Minimal positive change, neutral stance."
     },
     "PGHH": {
       "symbol": "PGHH",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small gain of 0.15%, cautious optimism."
+      "confidence": 50,
+      "note": "Slight negative change, neutral outlook."
     },
     "AWL": {
       "symbol": "AWL",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Flat movement suggests indecision."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change suggests weak momentum."
     },
     "HYUNDAI": {
       "symbol": "HYUNDAI",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Down 0.52%, slight bearish pressure in auto."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive change indicates bullish sentiment in auto sector."
     },
     "BHARATFORG": {
       "symbol": "BHARATFORG",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 2.5% gain, bullish momentum evident."
+      "outlook": "Bearish",
+      "confidence": 85,
+      "note": "Sharp decline indicates strong bearish trend."
     },
     "SCHAEFFLER": {
       "symbol": "SCHAEFFLER",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Almost flat, sideways trend likely."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Moderate positive change supports bullish view."
     },
     "ATHERENERG": {
       "symbol": "ATHERENERG",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Up 1.95%, positive trend in automobile sector."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change suggests caution despite sector potential."
     },
     "ENDURANCE": {
       "symbol": "ENDURANCE",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "0.93% rise supports mild bullish outlook."
+      "confidence": 80,
+      "note": "Strong positive change signals robust bullish momentum."
     },
     "ZFCVINDIA": {
       "symbol": "ZFCVINDIA",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 2.2% gain, solid bullish momentum."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Negative change indicates bearish pressure."
     },
     "CRAFTSMAN": {
       "symbol": "CRAFTSMAN",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Down 0.68%, weak near-term outlook."
+      "confidence": 70,
+      "note": "Decline suggests bearish outlook."
     },
     "MSUMI": {
       "symbol": "MSUMI",
       "outlook": "Neutral",
       "confidence": 55,
-      "note": "Small gain 0.37%, trend unclear."
+      "note": "Slight negative change, neutral stance advised."
     },
     "ANTHEM": {
       "symbol": "ANTHEM",
       "outlook": "Bullish",
       "confidence": 75,
-      "note": "Up 1.86%, strong performance in pharma sector."
+      "note": "Strong positive change in pharma sector."
     },
     "GLAXO": {
       "symbol": "GLAXO",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Moderate 0.78% rise, positive pharma sentiment."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Minimal positive change, neutral outlook."
     },
     "EMCURE": {
       "symbol": "EMCURE",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 2.15% gain, bullish pharma momentum."
+      "confidence": 65,
+      "note": "Positive change suggests bullish trend."
     },
     "WOCKPHARMA": {
       "symbol": "WOCKPHARMA",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Up 2.33%, very strong bullish trend."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Significant negative change indicates bearish trend."
     },
     "NEULANDLAB": {
       "symbol": "NEULANDLAB",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong 6% gain indicates positive momentum in pharmaceuticals sector."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Significant negative change suggests bearish sentiment for Neuland Laboratories."
     },
     "SAILIFE": {
       "symbol": "SAILIFE",
-      "outlook": "Bearish",
-      "confidence": 75,
-      "note": "Decline over 3% suggests weakness in Sai Life Sciences today."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Strong positive change indicates bullish outlook for Sai Life Sciences."
     },
     "PPLPHARMA": {
       "symbol": "PPLPHARMA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small positive change implies cautious sentiment in Piramal Pharma."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Moderate positive change suggests bullish trend for Piramal Pharma."
     },
     "RUBICON": {
       "symbol": "RUBICON",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Modest gain signals potential upward movement in Rubicon Research."
+      "confidence": 75,
+      "note": "Good positive change signals bullish momentum for Rubicon Research."
     },
     "VAML": {
       "symbol": "VAML",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "More than 2% drop reflects pressure on Vedanta Aluminium & Metal."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Slight positive change indicates a neutral outlook for Vedanta Aluminium & Metal."
     },
     "LLOYDSME": {
       "symbol": "LLOYDSME",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "2% rise indicates improving sentiment for Lloyds Metals and Energy."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Notable negative change points to bearish sentiment for Lloyds Metals and Energy."
     },
     "HINDCOPPER": {
       "symbol": "HINDCOPPER",
       "outlook": "Bearish",
       "confidence": 65,
-      "note": "Near 2% fall shows selling pressure on Hindustan Copper."
+      "note": "Negative change suggests bearish trend for Hindustan Copper."
     },
     "SHYAMMETL": {
       "symbol": "SHYAMMETL",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline suggests cautious stance on Shyam Metalics and Energy."
+      "outlook": "Neutral",
+      "confidence": 50,
+      "note": "Marginal negative change implies a neutral outlook for Shyam Metalics and Energy."
     },
     "GRASIM": {
       "symbol": "GRASIM",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong 3.2% gain signals positive outlook for Grasim Industries."
+      "confidence": 70,
+      "note": "Positive change supports a bullish outlook for Grasim Industries."
     },
     "ADANIGREEN": {
       "symbol": "ADANIGREEN",
       "outlook": "Neutral",
       "confidence": 55,
-      "note": "Minimal change indicates indecision in Adani Green Energy."
+      "note": "Minor negative change suggests a neutral stance for Adani Green Energy."
     },
     "NTPCGREEN": {
       "symbol": "NTPCGREEN",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small positive move suggests mixed sentiment for NTPC Green Energy."
+      "confidence": 60,
+      "note": "Slight positive change indicates a neutral outlook for NTPC Green Energy."
     },
     "NLCINDIA": {
       "symbol": "NLCINDIA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Negligible change indicates steady outlook for NLC India."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Sharp negative change signals bearish trend for NLC India."
     },
     "ACMESOLAR": {
       "symbol": "ACMESOLAR",
       "outlook": "Bearish",
-      "confidence": 65,
-      "note": "1.8% drop shows weakness in ACME Solar Holdings."
+      "confidence": 60,
+      "note": "Negative change points to bearish sentiment for ACME Solar Holdings."
     },
     "BHARTIHEXA": {
       "symbol": "BHARTIHEXA",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 70,
-      "note": "1.6% gain reflects positive momentum in Bharti Hexacom."
+      "note": "Considerable negative change indicates bearish outlook for Bharti Hexacom."
     },
     "ITI": {
       "symbol": "ITI",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 65,
-      "note": "1.7% decline indicates selling pressure on ITI."
+      "note": "Positive change suggests bullish momentum for ITI."
     },
     "LGEINDIA": {
       "symbol": "LGEINDIA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small positive change suggests cautious optimism for LG Electronics India."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Negative change indicates bearish sentiment for LG Electronics India."
     },
     "CPPLUS": {
       "symbol": "CPPLUS",
       "outlook": "Bullish",
-      "confidence": 70,
-      "note": "1.4% rise signals positive sentiment for Aditya Infotech (CP Plus)."
+      "confidence": 65,
+      "note": "Moderate positive change implies bullish outlook for Aditya Infotech (CP Plus)."
     },
     "AMBER": {
       "symbol": "AMBER",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal gain shows limited movement for Amber Enterprises India."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Significant negative change points to bearish trend for Amber Enterprises India."
     },
     "ETERNAL": {
       "symbol": "ETERNAL",
       "outlook": "Bearish",
-      "confidence": 55,
-      "note": "Slight fall points to weak sentiment in Eternal (Zomato)."
+      "confidence": 60,
+      "note": "Negative change suggests bearish sentiment for Eternal (Zomato)."
     },
     "LENSKART": {
       "symbol": "LENSKART",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "0.8% rise indicates mild positive momentum for Lenskart Solutions."
+      "confidence": 70,
+      "note": "Strong positive change indicates bullish outlook for Lenskart Solutions."
     },
     "NYKAA": {
       "symbol": "NYKAA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Negligible change suggests steady trend for Nykaa."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Negative change signals bearish trend for Nykaa (FSN E-Commerce Ventures)."
     },
     "MEESHO": {
       "symbol": "MEESHO",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong 2.8% gain signals robust buying interest in Meesho."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Slight positive change implies a neutral outlook for Meesho."
     },
     "SWIGGY": {
       "symbol": "SWIGGY",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "2.7% decline shows notable selling pressure on Swiggy."
+      "confidence": 60,
+      "note": "Minor negative change points to bearish sentiment for Swiggy."
     },
     "KALYANKJIL": {
       "symbol": "KALYANKJIL",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "1.4% gain reflects positive sentiment for Kalyan Jewellers India."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Negative change indicates bearish outlook for Kalyan Jewellers India."
     },
     "VMM": {
       "symbol": "VMM",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Near 0.7% drop indicates mild weakness in Vishal Mega Mart."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Negligible negative change suggests a neutral stance for Vishal Mega Mart."
     },
     "SOLARINDS": {
       "symbol": "SOLARINDS",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Positive price momentum in Chemicals sector indicates bullish short-term outlook."
+      "confidence": 70,
+      "note": "Moderate positive momentum in Chemicals sector signals potential upward trend."
     },
     "COROMANDEL": {
       "symbol": "COROMANDEL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative price change suggests bearish sentiment in Chemicals sector."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Strong positive change suggests bullish sentiment in Chemicals sector."
     },
     "LINDEINDIA": {
       "symbol": "LINDEINDIA",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline indicates cautious bearishness in Chemicals sector."
+      "confidence": 65,
+      "note": "Negative price change indicates possible short-term bearish movement."
     },
     "FACT": {
       "symbol": "FACT",
       "outlook": "Bearish",
-      "confidence": 55,
-      "note": "Minor negative change points to weak bearish trend in Chemicals."
+      "confidence": 60,
+      "note": "Slight decline hints at cautious outlook in Chemicals."
     },
     "PIIND": {
       "symbol": "PIIND",
       "outlook": "Bearish",
       "confidence": 65,
-      "note": "Declining price signals bearish outlook in Chemicals sector."
+      "note": "Downward price movement suggests bearish trend continuation."
     },
     "HSCL": {
       "symbol": "HSCL",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Strong negative move suggests bearish trend in Chemicals sector."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Significant positive change shows strong bullish momentum."
     },
     "ACUTAAS": {
       "symbol": "ACUTAAS",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Strong positive change supports bullish outlook in Chemicals sector."
+      "outlook": "Bearish",
+      "confidence": 55,
+      "note": "Minor decline suggests weak bearish sentiment."
     },
     "SUMICHEM": {
       "symbol": "SUMICHEM",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong gain indicates bullish momentum in Chemicals sector."
+      "confidence": 85,
+      "note": "Robust gain indicates strong bullish outlook in Chemicals."
     },
     "JSWINFRA": {
       "symbol": "JSWINFRA",
       "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Robust price increase suggests bullish trend in Ports & Logistics."
+      "confidence": 75,
+      "note": "Good positive change supports bullish view in Ports & Logistics."
     },
     "MANIPALHOS": {
       "symbol": "MANIPALHOS",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong rise signals bullish sentiment in Healthcare Services."
+      "confidence": 70,
+      "note": "Positive change signals favorable movement in Healthcare Services."
     },
     "ASTERDM": {
       "symbol": "ASTERDM",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Solid positive change supports bullish outlook in Healthcare Services."
+      "outlook": "Bearish",
+      "confidence": 55,
+      "note": "Slight decline indicates mild bearish sentiment."
     },
     "POWERINDIA": {
       "symbol": "POWERINDIA",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Good positive momentum indicates bullish trend in Capital Goods."
+      "confidence": 90,
+      "note": "Strong double-digit gain suggests very bullish outlook in Capital Goods."
     },
     "ENRIN": {
       "symbol": "ENRIN",
-      "outlook": "Bullish",
-      "confidence": 90,
-      "note": "Exceptional gain confirms strong bullish sentiment in Capital Goods."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "Notable decline indicates bearish trend likely."
     },
     "GVT&D": {
       "symbol": "GVT&D",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Significant decline suggests bearish outlook in Capital Goods."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Moderate positive change suggests bullish bias."
     },
     "WAAREEENER": {
       "symbol": "WAAREEENER",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Positive price change supports bullish trend in Capital Goods."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Decline points to bearish pressure."
     },
     "APARINDS": {
       "symbol": "APARINDS",
-      "outlook": "Bullish",
-      "confidence": 80,
-      "note": "Strong positive move indicates bullish sentiment in Capital Goods."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Downward movement signals bearish trend."
     },
     "SUZLON": {
       "symbol": "SUZLON",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Minimal price change points to neutral outlook in Capital Goods."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Significant decline indicates bearish outlook."
     },
     "KEI": {
       "symbol": "KEI",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Negligible price movement suggests neutral trend in Capital Goods."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Positive change supports bullish sentiment."
     },
     "PREMIERENE": {
       "symbol": "PREMIERENE",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Moderate positive change indicates bullish bias in Capital Goods."
+      "outlook": "Bearish",
+      "confidence": 55,
+      "note": "Slight negative movement suggests weak bearishness."
     },
     "BDL": {
       "symbol": "BDL",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight negative change indicates weak bearish trend in Capital Goods."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Good positive change indicates bullish trend."
     },
     "SUPREMEIND": {
       "symbol": "SUPREMEIND",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate decline suggests bearish sentiment in Capital Goods."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Positive momentum suggests bullish outlook."
     },
     "INDOMIM": {
       "symbol": "INDOMIM",
       "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Significant negative move signals bearish trend in Capital Goods."
+      "confidence": 85,
+      "note": "Sharp decline signals strong bearish sentiment."
     },
     "ASTRAL": {
       "symbol": "ASTRAL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Small positive change indicates neutral to slightly bullish trend."
+      "outlook": "Bearish",
+      "confidence": 55,
+      "note": "Minor decline indicates weak bearishness."
     },
     "ESCORTS": {
       "symbol": "ESCORTS",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Near flat price change suggests neutral outlook in Capital Goods."
+      "confidence": 50,
+      "note": "Minimal change suggests neutral outlook."
     },
     "HONAUT": {
       "symbol": "HONAUT",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Noticeable decline points to bearish outlook in Capital Goods."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Small positive change implies neutral to slightly bullish trend."
     },
     "SCHNEIDER": {
       "symbol": "SCHNEIDER",
       "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Strong positive change suggests upward momentum."
+      "confidence": 85,
+      "note": "Strong 5.17% gain indicates positive momentum in capital goods sector."
     },
     "KIRLOSENG": {
       "symbol": "KIRLOSENG",
       "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Significant negative change indicates potential decline."
+      "confidence": 70,
+      "note": "Decline of 1.41% suggests near-term weakness for Kirloskar Oil Engines."
     },
     "RRKABEL": {
       "symbol": "RRKABEL",
       "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Slight negative change but overall stable trend."
+      "confidence": 50,
+      "note": "Minimal change (-0.09%) implies uncertain short-term direction."
     },
     "GRSE": {
       "symbol": "GRSE",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal change suggests sideways movement."
+      "outlook": "Bearish",
+      "confidence": 60,
+      "note": "Slight decline (-0.46%) in shipbuilders hints at cautious sentiment."
     },
     "PTCIL": {
       "symbol": "PTCIL",
       "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Robust positive change signals strong buying interest."
+      "confidence": 75,
+      "note": "1.54% rise shows positive investor interest in PTC Industries."
     },
     "SYRMA": {
       "symbol": "SYRMA",
       "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Modest positive change indicates mild upward trend."
+      "confidence": 90,
+      "note": "Strong 6.44% gain highlights robust bullish sentiment in tech sector."
     },
     "KAYNES": {
       "symbol": "KAYNES",
-      "outlook": "Bullish",
-      "confidence": 65,
-      "note": "Positive change suggests gradual strength."
+      "outlook": "Bearish",
+      "confidence": 80,
+      "note": "3.14% drop signals notable weakness in Kaynes Technology India."
     },
     "TIMKEN": {
       "symbol": "TIMKEN",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Small positive change, outlook cautiously optimistic."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "2.00% decline suggests negative outlook for Timken India."
     },
     "E2E": {
       "symbol": "E2E",
-      "outlook": "Bearish",
-      "confidence": 85,
-      "note": "Notable drop suggests bearish pressure."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "4.75% gain reflects optimism in data center business."
     },
     "INDHOTEL": {
       "symbol": "INDHOTEL",
-      "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight decline may continue short term weakness."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Small decline (-0.31%) indicates mixed signals in hospitality sector."
     },
     "NAUKRI": {
       "symbol": "NAUKRI",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Moderate negative change hints at downward pressure."
+      "outlook": "Bullish",
+      "confidence": 85,
+      "note": "4.63% rise shows strong momentum for Info Edge (Naukri)."
     },
     "IRCTC": {
       "symbol": "IRCTC",
       "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal negative change, neutral stance advised."
+      "confidence": 60,
+      "note": "Marginal 0.44% increase points to stable outlook for IRCTC."
     },
     "PWL": {
       "symbol": "PWL",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Strong positive change signals potential rally."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "3.09% fall indicates pressure on PhysicsWallah shares."
     },
     "ITCHOTELS": {
       "symbol": "ITCHOTELS",
-      "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Small negative change, sideways movement likely."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "1.04% drop suggests cautious sentiment in ITC Hotels."
     },
     "REDINGTON": {
       "symbol": "REDINGTON",
-      "outlook": "Bullish",
-      "confidence": 70,
-      "note": "Positive change indicates buying interest."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Small decline (-0.46%) reflects uncertainty in services sector."
     },
     "PAGEIND": {
       "symbol": "PAGEIND",
       "outlook": "Bearish",
-      "confidence": 60,
-      "note": "Slight negative change suggests mild weakness."
+      "confidence": 80,
+      "note": "3.11% drop signals weakness for Page Industries in textiles."
     },
     "KPRMILL": {
       "symbol": "KPRMILL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Negative change implies downward bias."
+      "outlook": "Bullish",
+      "confidence": 60,
+      "note": "0.86% gain shows mild positive momentum in textiles."
     },
     "GODREJIND": {
       "symbol": "GODREJIND",
-      "outlook": "Bullish",
-      "confidence": 60,
-      "note": "Small positive change indicates cautious optimism."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "1.47% decline indicates bearish sentiment in diversified sector."
     },
     "3MINDIA": {
       "symbol": "3MINDIA",
       "outlook": "Neutral",
-      "confidence": 50,
-      "note": "Minimal positive change, outlook neutral."
+      "confidence": 55,
+      "note": "Slight fall (-0.37%) suggests cautious stance on 3M India."
     }
   }
 }

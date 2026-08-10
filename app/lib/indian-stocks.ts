@@ -38,6 +38,10 @@ export const sectors: SectorMeta[] = [
   { key: "power", name: "Power & Utilities", description: "Generation, transmission, and distribution utilities powering the grid." },
   { key: "telecom", name: "Telecom", description: "Mobile network operators and telecom infrastructure providers." },
   { key: "durables", name: "Consumer Durables", description: "Appliance, electronics, and durable-goods manufacturers." },
+  // BSE files jewellers under Consumer Durables, which buries a set of companies that trade on
+  // gold rather than on discretionary spending. They get their own bucket here, as the finer
+  // classification a hand-curated entry is for.
+  { key: "jewellery", name: "Gems & Jewellery", description: "Listed jewellery retailers, gold and diamond houses, and the exporters that supply them." },
   { key: "realty", name: "Realty", description: "Residential and commercial real-estate developers." },
   { key: "media", name: "Media & Entertainment", description: "Broadcasting, television, and cinema exhibition businesses." },
   { key: "retail", name: "Retail", description: "Organized retail chains and quick-service restaurant operators." },
@@ -281,7 +285,6 @@ const raw: RawStock[] = [
   ["STLTECH", "Sterlite Technologies", "telecom", "stl.tech", "Small"],
 
   // Consumer Durables
-  ["TITAN", "Titan Company", "durables", "titancompany.in", "Large"],
   ["HAVELLS", "Havells India", "durables", "havells.com", "Large"],
   ["VOLTAS", "Voltas", "durables", "voltas.com", "Mid"],
   ["CROMPTON", "Crompton Greaves Consumer", "durables", "crompton.co.in", "Small"],
@@ -504,8 +507,32 @@ const raw: RawStock[] = [
   ["NYKAA", "Nykaa (FSN E-Commerce Ventures)", "retail", "", "Mid"],
   ["MEESHO", "Meesho", "retail", "", "Mid"],
   ["SWIGGY", "Swiggy", "retail", "", "Mid"],
-  ["KALYANKJIL", "Kalyan Jewellers India", "retail", "", "Mid"],
   ["VMM", "Vishal Mega Mart", "retail", "", "Mid"],
+
+  // Gems & Jewellery
+  // Every ticker here was checked against the live quote feed before it was added, and the two
+  // that do not trade on the NSE carry their BSE scrip code as the Yahoo symbol — a bare
+  // "SYMBOL.NS" for those returns nothing, which is how a stock ends up on the board with no
+  // price beside it.
+  ["TITAN", "Titan Company", "jewellery", "titancompany.in", "Large"],
+  ["KALYANKJIL", "Kalyan Jewellers India", "jewellery", "", "Mid"],
+  ["THANGAMAYL", "Thangamayil Jewellery", "jewellery", "", "Small"],
+  ["SENCO", "Senco Gold", "jewellery", "", "Small"],
+  ["PCJEWELLER", "PC Jeweller", "jewellery", "", "Small"],
+  ["SKYGOLD", "Sky Gold and Diamonds", "jewellery", "", "Small"],
+  ["GOLDIAM", "Goldiam International", "jewellery", "", "Small"],
+  ["RAJESHEXPO", "Rajesh Exports", "jewellery", "", "Small"],
+  ["TBZ", "Tribhovandas Bhimji Zaveri", "jewellery", "", "Small"],
+  ["MOTISONS", "Motisons Jewellers", "jewellery", "", "Small"],
+  ["PNGJL", "P N Gadgil Jewellers", "jewellery", "", "Small"],
+  ["DPABHUSHAN", "D. P. Abhushan", "jewellery", "", "Small"],
+  ["RADHIKAJWE", "Radhika Jeweltech", "jewellery", "", "Small"],
+  ["SHANTIGOLD", "Shanti Gold International", "jewellery", "", "Small"],
+  ["BLUESTONE", "BlueStone Jewellery and Lifestyle", "jewellery", "", "Small"],
+  // Renamed from Renaissance Jewellery; both names are carried so either one finds it in search.
+  ["RGL", "Renaissance Global (Renaissance Jewellery)", "jewellery", "", "Small"],
+  ["UDAYJEW", "Uday Jewellery Industries", "jewellery", "", "Small", "539518.BO"],
+  ["GOLKUNDIA", "Golkunda Diamonds & Jewellery", "jewellery", "", "Small", "523676.BO"],
 
   // Chemicals
   ["SOLARINDS", "Solar Industries India", "chemicals", "", "Large"],

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { IndianStocksMarket } from "./indian-stocks-market";
+import { StockCombobox } from "./stock-combobox";
 import { indianStocks } from "../lib/indian-stocks";
 import { stockIcon } from "../lib/company-logos";
 
@@ -63,15 +64,15 @@ export function LandingResearch() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <input
+        <StockCombobox
           value={stock}
-          onChange={(event) => setStock(event.target.value)}
-          className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none ring-0 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          onChange={setStock}
+          className="flex-1"
           placeholder="Try HDFC BANK or TCS"
         />
         <button
           type="submit"
-          className="rounded-full bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-500"
+          className="shrink-0 rounded-full bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-500"
         >
           {loading ? "Researching..." : "Analyze stock"}
         </button>

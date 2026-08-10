@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CompanyLogo } from "./company-logo";
+import { TopPerformers } from "./top-performers";
 
 type BseAccuracyMatch = {
   symbol: string;
@@ -136,7 +137,7 @@ export function BseAccuracyLookup() {
   }, [canSearch, loading, matches.length, result]);
 
   return (
-    <div className="border-t border-slate-200 bg-slate-50/80 p-6 dark:border-slate-800 dark:bg-slate-950/40 sm:p-8">
+    <div className="bg-slate-50/80 p-6 dark:bg-slate-950/40 sm:p-8">
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.26em] text-sky-600 dark:text-sky-400">
@@ -264,26 +265,11 @@ export function BseAccuracyLookup() {
                 <Meter value={result.predictionConfidence} label="Prediction" tone="bg-rose-500" />
               </div>
 
-              <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950/60">
-                {result.checks.map((check) => (
-                  <div key={check.label} className="flex gap-3 p-3">
-                    <span className={`mt-0.5 h-6 w-6 shrink-0 rounded-full text-center text-[10px] font-bold leading-6 ${check.ok ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"}`}>
-                      {check.ok ? "OK" : "!"}
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold text-slate-900 dark:text-white">{check.label}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{check.detail}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : (
-            <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="max-w-sm text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                Select a suggestion or run a search to see stock-level matrix coverage, BSE tape availability and prediction confidence.
-              </p>
-            </div>
+            // Until something has been looked up, the panel earns its space by answering the
+            // question most visitors arrive with: which listed names actually compounded.
+            <TopPerformers />
           )}
         </div>
       </div>
