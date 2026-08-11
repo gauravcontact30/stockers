@@ -34,6 +34,10 @@ function mockFetch(handler: (url: string) => unknown) {
 }
 
 describe("useStockPerformance", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("returns nothing and never fetches for a null symbol", async () => {
     const fetchMock = mockFetch(() => ({}));
     const { result } = renderHook(() => useStockPerformance(null));
@@ -51,6 +55,15 @@ describe("useStockPerformance", () => {
     await waitFor(() => expect(result.current.performance?.symbol).toBe("BATCH_ONE"));
     expect(result.current.loading).toBe(false);
     expect(result.current.performance?.oneYear).toBe(7);
+  });
+
+  it("renders an initial server value immediately while the background request is pending", () => {
+    global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
+    const initial = performanceFor("BATCH_INITIAL");
+    const { result } = renderHook(() => useStockPerformance("BATCH_INITIAL", initial));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.performance).toBe(initial);
   });
 
   // The whole point of the batching layer: a landing page full of cards must not fire one
@@ -111,6 +124,39 @@ describe("useStockPerformance", () => {
     expect(second.result.current.loading).toBe(false);
     expect(second.result.current.performance?.symbol).toBe("BATCH_CACHED");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("paints a locally cached symbol immediately and revalidates it in the background", async () => {
+    const stored = performanceFor("BATCH_STORED");
+    window.localStorage.setItem(
+      "stockers:performance-cache:v1",
+      JSON.stringify({ savedAt: Date.now(), values: { BATCH_STORED: stored } }),
+    );
+    const fetchMock = mockFetch(() => ({ results: [{ ...stored, price: 111 }] }));
+
+    const { result } = renderHook(() => useStockPerformance("BATCH_STORED"));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.performance?.price).toBe(100);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.performance?.price).toBe(111));
+  });
+
+  it("keeps a locally cached symbol visible when background revalidation fails", async () => {
+    const stored = performanceFor("BATCH_STALE");
+    window.localStorage.setItem(
+      "stockers:performance-cache:v1",
+      JSON.stringify({ savedAt: Date.now(), values: { BATCH_STALE: stored } }),
+    );
+    global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
+
+    const { result } = renderHook(() => useStockPerformance("BATCH_STALE"));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.performance?.symbol).toBe("BATCH_STALE");
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    expect(result.current.performance?.symbol).toBe("BATCH_STALE");
   });
 
   it("resolves to null for a symbol the batch response omits", async () => {

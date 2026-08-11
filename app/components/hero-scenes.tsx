@@ -22,7 +22,7 @@
  * overlap a neighbour at an unplanned width.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CompanyLogo } from "./company-logo";
 import { useStockPerformance, type StockPerformance } from "./use-stock-performance";
 
@@ -471,12 +471,23 @@ export type TrioStock = {
 export type Trio = readonly [TrioStock, TrioStock, TrioStock];
 
 /** The windows each card reports, shortest first — a single day says almost nothing on its own. */
-const TRIO_PERIODS = [
+type TrioPeriodKey = keyof Pick<StockPerformance, "oneWeek" | "oneMonth" | "sixMonth" | "oneYear" | "threeYear" | "fiveYear" | "overall">;
+type TrioPeriod = { label: string; key: TrioPeriodKey };
+
+const TRIO_PERIODS: readonly TrioPeriod[] = [
   { label: "1W", key: "oneWeek" },
   { label: "1M", key: "oneMonth" },
   { label: "6M", key: "sixMonth" },
   { label: "1Y", key: "oneYear" },
   { label: "3Y", key: "threeYear" },
+] as const;
+
+const LONG_RETURN_TRIO_PERIODS: readonly TrioPeriod[] = [
+  { label: "1M", key: "oneMonth" },
+  { label: "1Y", key: "oneYear" },
+  { label: "3Y", key: "threeYear" },
+  { label: "5Y", key: "fiveYear" },
+  { label: "Overall", key: "overall" },
 ] as const;
 
 /** A price in rupees, or a dash when the feed has none. Never a zero standing in for "unknown". */
@@ -490,6 +501,22 @@ export function trioReturn(value: number | null | undefined): string {
   return typeof value === "number" && Number.isFinite(value) ? signed(value, 1) : "—";
 }
 
+function trioUpdatedAt(performance: StockPerformance | null, loading: boolean): string {
+  if (loading) return "Updating from live feed";
+  if (!performance?.asOf) return "Feed timestamp pending";
+
+  const date = new Date(performance.asOf);
+  if (Number.isNaN(date.getTime())) return "Feed timestamp filed";
+
+  return `Updated ${date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  })}`;
+}
+
 /**
  * One company's card.
  *
@@ -499,20 +526,150 @@ export function trioReturn(value: number | null | undefined): string {
  * competing with those has gone: a per-card progress bar, and a comparison table underneath that
  * repeated the same five windows a second time in a denser form.
  */
+const measured = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
+
+export type TrioStats = {
+  priced: number;
+  advancing: number;
+  bestOneYear: { symbol: string; value: number } | null;
+  averageOneYear: number | null;
+  latestAsOf: string | null;
+};
+
+function trioCapMix(stocks: Trio): string {
+  const counts = stocks.reduce(
+    (total, stock) => ({ ...total, [stock.tier]: total[stock.tier] + 1 }),
+    { Large: 0, Mid: 0, Small: 0 },
+  );
+
+  return (["Large", "Mid", "Small"] as const)
+    .filter((tier) => counts[tier] > 0)
+    .map((tier) => `${counts[tier]} ${tier}`)
+    .join(" / ");
+}
+
+export function formatTrioAsOf(value: string | null): string {
+  if (!value) return "Awaiting feed";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Feed time filed";
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+}
+
+export function trioStats(stocks: Trio, performances: (StockPerformance | null)[]): TrioStats {
+  const priced = performances.filter((performance) => measured(performance?.price)).length;
+  const advancing = performances.filter((performance) => measured(performance?.oneDay) && performance.oneDay >= 0).length;
+  const oneYearRows = performances
+    .map((performance, index) => ({
+      symbol: performance?.symbol || stocks[index].symbol,
+      value: performance?.oneYear ?? null,
+    }))
+    .filter((row): row is { symbol: string; value: number } => measured(row.value));
+  const bestOneYear = oneYearRows.length > 0 ? [...oneYearRows].sort((a, b) => b.value - a.value)[0] : null;
+  const averageOneYear =
+    oneYearRows.length > 0 ? oneYearRows.reduce((sum, row) => sum + row.value, 0) / oneYearRows.length : null;
+  const latestAsOf =
+    performances
+      .map((performance) => performance?.asOf ?? null)
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+  return { priced, advancing, bestOneYear, averageOneYear, latestAsOf };
+}
+
+function TrioStatsStrip({
+  stocks,
+  performances,
+  loading,
+}: {
+  stocks: Trio;
+  performances: (StockPerformance | null)[];
+  loading: boolean;
+}) {
+  const stats = trioStats(stocks, performances);
+  const items = [
+    { label: "Priced stocks", value: loading ? "..." : `${stats.priced}/${stocks.length}` },
+    { label: "Advancing today", value: loading ? "..." : `${stats.advancing}/${stocks.length}` },
+    {
+      label: "Best 1Y",
+      value: loading ? "..." : stats.bestOneYear ? `${stats.bestOneYear.symbol} ${trioReturn(stats.bestOneYear.value)}` : "â€”",
+    },
+    { label: "Avg 1Y", value: loading ? "..." : trioReturn(stats.averageOneYear) },
+    { label: "Feed date", value: loading ? "..." : formatTrioAsOf(stats.latestAsOf) },
+  ];
+
+  return (
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-xl border border-white/80 bg-white/65 px-3 py-2 shadow-sm">
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{item.label}</p>
+          <p className="mt-0.5 truncate text-[12px] font-black tabular-nums text-slate-900">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VisibleTrioStatsStrip({
+  stocks,
+  performances,
+  loading,
+  metricsLabel = "Price / 1D / 1Y",
+}: {
+  stocks: Trio;
+  performances: (StockPerformance | null)[];
+  loading: boolean;
+  metricsLabel?: string;
+}) {
+  const stats = trioStats(stocks, performances);
+  const items = [
+    { label: "BSE stocks", value: `${stocks.length}` },
+    { label: "Cap mix", value: trioCapMix(stocks) },
+    { label: "Metrics", value: metricsLabel },
+    { label: "Priced", value: loading ? "Loading" : `${stats.priced}/${stocks.length}` },
+    { label: "Advancing", value: loading ? "Loading" : `${stats.advancing}/${stocks.length}` },
+    {
+      label: "Best 1Y",
+      value: loading ? "Loading" : stats.bestOneYear ? `${stats.bestOneYear.symbol} ${trioReturn(stats.bestOneYear.value)}` : "—",
+    },
+    { label: "Avg 1Y", value: loading ? "Loading" : trioReturn(stats.averageOneYear) },
+    { label: "Feed date", value: loading ? "Loading" : formatTrioAsOf(stats.latestAsOf) },
+  ];
+
+  return (
+    <div className="mb-2 rounded-2xl border border-white/80 bg-white/55 p-2 shadow-sm">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Stock stats</p>
+        <p className="text-[10px] font-semibold text-slate-400">Real companies, live feed when available</p>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-xl border border-white/80 bg-white/80 px-2 py-1.5 shadow-sm">
+            <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">{item.label}</p>
+            <p className="mt-0.5 truncate text-[11px] font-black tabular-nums text-slate-900">{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TrioCard({
   stock,
   performance,
   loading,
+  periods = TRIO_PERIODS,
 }: {
   stock: TrioStock;
   performance: StockPerformance | null;
   loading: boolean;
+  periods?: readonly TrioPeriod[];
 }) {
   const day = performance?.oneDay ?? null;
+  const matrixRows = periods.map((period) => ({ ...period, value: performance?.[period.key] ?? null }));
 
   return (
     <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_12px_32px_-20px_rgba(15,23,42,0.5)] ${stock.accent} ${stock.wash}`}>
-      <div className="flex items-start gap-3 px-4 pt-4">
+      <div className="flex items-start gap-3 px-3 pt-3">
         <CompanyLogo symbol={stock.symbol} size={36} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-black leading-tight text-slate-900">{stock.symbol}</p>
@@ -524,12 +681,13 @@ export function TrioCard({
       </div>
 
       {/* Two lines at most. A third pushes three stacked cards past the frame on a narrow screen. */}
-      <p className="mt-2.5 line-clamp-2 px-4 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
+      <p className="mt-2 line-clamp-2 px-3 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
 
-      <div className="mt-3.5 flex items-end justify-between gap-3 px-4">
+      <div className="mt-2.5 rounded-xl border border-white/80 bg-white/65 p-2.5 mx-3">
+        <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">Last price</p>
-          <p className="text-xl font-black leading-tight tabular-nums text-slate-900">
+          <p className="text-[10px] font-black tracking-wide text-slate-500 uppercase">Last Price</p>
+          <p className="text-lg font-black leading-tight tabular-nums text-slate-900">
             {loading ? <span className="inline-block h-6 w-24 animate-pulse rounded bg-white/80" /> : trioPrice(performance?.price)}
           </p>
         </div>
@@ -540,22 +698,32 @@ export function TrioCard({
         >
           {loading ? "…" : trioReturn(day)}
         </span>
+        </div>
+        <p className="mt-1 truncate text-[9px] font-semibold text-slate-400">
+          {trioUpdatedAt(performance, loading)}
+          {performance?.source ? ` · ${performance.source}` : ""}
+        </p>
       </div>
 
-      {/* The returns, as one quiet strip along the foot rather than a second table of their own. */}
-      <dl className="mt-4 flex divide-x divide-white/80 border-t border-white/80 bg-white/70">
-        {TRIO_PERIODS.map((period) => {
-          const value = performance?.[period.key] ?? null;
+      <div className="mx-3 mt-2 overflow-hidden rounded-xl border border-white/80 bg-white/70">
+        <div className="flex items-center justify-between border-b border-white/80 px-2.5 py-1.5">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Performance Matrix</p>
+          <p className="text-[9px] font-semibold text-slate-400">Latest feed</p>
+        </div>
+        <dl className="grid grid-cols-5 divide-x divide-white/80">
+        {matrixRows.map((period) => {
+          const value = period.value;
           return (
-            <div key={period.label} className="flex-1 px-1 py-2.5 text-center">
-              <dt className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">{period.label}</dt>
+            <div key={period.label} className="px-1 py-2 text-center">
+              <dt className="text-[10px] font-black tracking-wide text-slate-500 uppercase">{period.label}</dt>
               <dd className={`mt-1 text-[11px] font-black tabular-nums ${value === null ? "text-slate-300" : tone(value)}`}>
                 {loading ? "…" : trioReturn(value)}
               </dd>
             </div>
           );
         })}
-      </dl>
+        </dl>
+      </div>
     </div>
   );
 }
@@ -574,6 +742,8 @@ function StockTrioScene({
   badge,
   footnote,
   stocks,
+  periods = TRIO_PERIODS,
+  initialPerformances = [],
 }: {
   palette: ScenePalette;
   eyebrow: string;
@@ -581,19 +751,22 @@ function StockTrioScene({
   badge: string;
   footnote: string;
   stocks: Trio;
+  periods?: readonly TrioPeriod[];
+  initialPerformances?: readonly StockPerformance[];
 }) {
+  const initialBySymbol = new Map(initialPerformances.map((performance) => [performance.symbol, performance]));
   // Written out rather than looped: hooks cannot be called in a loop, and a trio is always three.
   // All three symbols are raised in the same tick, so the batching hook sends one request for them.
-  const first = useStockPerformance(stocks[0].symbol);
-  const second = useStockPerformance(stocks[1].symbol);
-  const third = useStockPerformance(stocks[2].symbol);
+  const first = useStockPerformance(stocks[0].symbol, initialBySymbol.get(stocks[0].symbol) ?? null);
+  const second = useStockPerformance(stocks[1].symbol, initialBySymbol.get(stocks[1].symbol) ?? null);
+  const third = useStockPerformance(stocks[2].symbol, initialBySymbol.get(stocks[2].symbol) ?? null);
   const rows = [first, second, third];
 
   return (
-    <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote} inset="p-3 sm:p-8 lg:p-12">
+    <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote} inset="p-3 sm:p-6 lg:p-8">
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {stocks.map((stock, index) => (
-          <TrioCard key={stock.symbol} stock={stock} performance={rows[index].performance} loading={rows[index].loading} />
+          <TrioCard key={stock.symbol} stock={stock} performance={rows[index].performance} loading={rows[index].loading} periods={periods} />
         ))}
       </div>
     </SceneCard>
@@ -635,15 +808,17 @@ export const DEFENCE_TRIO: Trio = [
   },
 ];
 
-export function DefenceStocksScene() {
+export function DefenceStocksScene({ initialPerformances = [] }: { initialPerformances?: readonly StockPerformance[] }) {
   return (
     <StockTrioScene
       palette={MINT}
       eyebrow="Defence"
-      title="Aircraft, warships and optics, compared"
+      title="Compare three defence stocks by market performance"
       badge="LIVE FIGURES"
       footnote="Live prices and returns from the same exchange feed as the boards below · three different cap tiers, so compare the tier as well as the move · measured, not modelled · not investment advice"
       stocks={DEFENCE_TRIO}
+      periods={LONG_RETURN_TRIO_PERIODS}
+      initialPerformances={initialPerformances}
     />
   );
 }
@@ -676,15 +851,17 @@ export const DATA_CENTRE_TRIO: Trio = [
   },
 ];
 
-export function DataCentreScene() {
+export function DataCentreScene({ initialPerformances = [] }: { initialPerformances?: readonly StockPerformance[] }) {
   return (
     <StockTrioScene
       palette={LILAC}
       eyebrow="Data centres"
-      title="Three ways to own the build-out"
+      title="Compare three data-centre stocks by market performance"
       badge="LIVE FIGURES"
       footnote="The servers, the power and the building — one listed company each · live exchange figures · not investment advice"
       stocks={DATA_CENTRE_TRIO}
+      periods={LONG_RETURN_TRIO_PERIODS}
+      initialPerformances={initialPerformances}
     />
   );
 }
@@ -735,6 +912,34 @@ export type DipLeaderBoard = {
   examined: number;
   fetchedAt: string;
 };
+
+const DIP_LEADERS_STORAGE_KEY = "stockers:hero-dip-leaders:v1";
+const DIP_LEADERS_LOCAL_STALE_MS = 15 * 60_000;
+
+function readStoredDipLeaders(): DipLeaderBoard | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(DIP_LEADERS_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { savedAt?: number; board?: DipLeaderBoard };
+    if (typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > DIP_LEADERS_LOCAL_STALE_MS) return null;
+    return Array.isArray(parsed.board?.leaders) ? parsed.board : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredDipLeaders(board: DipLeaderBoard): void {
+  if (typeof window === "undefined" || board.leaders.length === 0) return;
+
+  try {
+    window.localStorage.setItem(DIP_LEADERS_STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), board }));
+  } catch {
+    // Storage is an acceleration path only; the live endpoint remains the source of truth.
+  }
+}
 
 /** How the headline count reads, so a card never shows a bare number with no meaning. */
 export function tiltLabel(tilt: DipNewsTilt): string {
@@ -864,9 +1069,10 @@ function DipLeaderSkeleton() {
   );
 }
 
-export function DipBuysScene() {
-  const [board, setBoard] = useState<DipLeaderBoard | null>(null);
+export function DipBuysScene({ initialBoard = null }: { initialBoard?: DipLeaderBoard | null }) {
+  const [board, setBoard] = useState<DipLeaderBoard | null>(() => initialBoard ?? readStoredDipLeaders());
   const [failed, setFailed] = useState(false);
+  const hadInitialBoard = useRef(board !== null);
 
   useEffect(() => {
     let live = true;
@@ -877,10 +1083,13 @@ export function DipBuysScene() {
         return response.json();
       })
       .then((data: DipLeaderBoard) => {
-        if (live) setBoard(data);
+        if (!live) return;
+        setBoard(data);
+        setFailed(false);
+        writeStoredDipLeaders(data);
       })
       .catch(() => {
-        if (live) setFailed(true);
+        if (live && !hadInitialBoard.current) setFailed(true);
       });
 
     return () => {

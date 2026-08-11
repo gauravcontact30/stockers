@@ -1,4 +1,19 @@
 import "@testing-library/jest-dom";
+import os from "node:os";
+import path from "node:path";
+
+// The account store gets its own file per worker, before any suite imports it.
+//
+// `app/lib/store` resolves its path once at module scope, and two suites exercise it. Jest runs
+// suites in parallel workers, so pointed at the one real `app/data/users.json` they interleave:
+// one suite's `writeFile("[]")` lands in the middle of the other's test and both fail, on a
+// different assertion each run. Suites sharing a worker run one after another and are already
+// bracketed by their own setup, so per-worker is as much separation as is needed — and it keeps a
+// test run from being one truncation away from the developer's own accounts.
+process.env.STOCKERS_USERS_FILE = path.join(
+  os.tmpdir(),
+  `stockers-test-users-${process.env.JEST_WORKER_ID ?? "0"}.json`,
+);
 
 // jsdom doesn't implement matchMedia — several components/hooks probe it defensively.
 if (typeof window !== "undefined" && !window.matchMedia) {

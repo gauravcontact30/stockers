@@ -1,8 +1,9 @@
 // The account-verification half of the store: issuing a single-use token at sign-up, spending it,
 // re-issuing it, and the redacted view the admin dashboard is served.
 //
-// These touch the real users.json the app uses, so the file is snapshotted before the suite and
-// restored afterwards — a test run must not cost anyone their account.
+// These exercise the account store for real, against the per-worker file jest.setup.ts points it
+// at rather than the developer's own `app/data/users.json` — a test run must not cost anyone their
+// account, and two suites sharing one file raced each other across Jest's parallel workers.
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import {
@@ -13,7 +14,7 @@ import {
   verifyEmailToken,
 } from "../../app/lib/store";
 
-const usersPath = path.join(process.cwd(), "app", "data", "users.json");
+const usersPath = process.env.STOCKERS_USERS_FILE as string;
 let original: string | null = null;
 
 beforeAll(async () => {

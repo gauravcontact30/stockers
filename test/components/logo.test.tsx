@@ -4,7 +4,7 @@ import { Logo, LogoMark, Wordmark } from "../../app/components/logo";
 describe("LogoMark", () => {
   it("renders with default props", () => {
     render(<LogoMark />);
-    const svg = screen.getByRole("img", { name: "Stockers.AI" });
+    const svg = screen.getByRole("img", { name: "StockersAI" });
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute("width", "40");
     expect(svg).toHaveAttribute("height", "40");
@@ -12,7 +12,7 @@ describe("LogoMark", () => {
 
   it("renders with custom size, className and gradientId", () => {
     render(<LogoMark size={64} className="extra-class" gradientId="custom-gradient" />);
-    const svg = screen.getByRole("img", { name: "Stockers.AI" });
+    const svg = screen.getByRole("img", { name: "StockersAI" });
     expect(svg).toHaveAttribute("width", "64");
     expect(svg).toHaveClass("extra-class");
     expect(svg.querySelector("rect")).toHaveAttribute("fill", "url(#custom-gradient)");
@@ -23,7 +23,7 @@ describe("Wordmark", () => {
   it("renders with default className", () => {
     render(<Wordmark />);
     expect(screen.getByText("Stockers")).toBeInTheDocument();
-    expect(screen.getByText(".AI")).toBeInTheDocument();
+    expect(screen.getByText("AI")).toBeInTheDocument();
   });
 
   it("renders with a custom className", () => {

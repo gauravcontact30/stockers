@@ -200,9 +200,14 @@ export function featureTier(feature: string): PlanTier | null {
   return isFeatureKey(feature) ? FEATURE_BY_KEY[feature].tier : null;
 }
 
-/** Everything one tier includes outright, in the order it is listed above. */
-export function featuresForTier(tier: PlanTier): AiFeature[] {
+/** Features first introduced at one tier, in the order they are listed above. */
+export function featuresIntroducedAtTier(tier: PlanTier): AiFeature[] {
   return AI_FEATURES.filter((feature) => feature.tier === tier);
+}
+
+/** Everything one tier includes outright, including the lower tiers bundled into it. */
+export function featuresForTier(tier: PlanTier): AiFeature[] {
+  return AI_FEATURES.filter((feature) => tierAtLeast(tier, feature.tier));
 }
 
 /**

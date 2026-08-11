@@ -2,7 +2,13 @@ import { Suspense } from "react";
 import { listClientReviews } from "../lib/client-reviews";
 import { ClientReviewsCarousel } from "./client-reviews-carousel";
 
-function ClientReviewsFallback() {
+/**
+ * The chrome the section holds while the reviews are still being read off disk.
+ *
+ * Exported, like the fallbacks in ./streamed-boards, so a test can assert what sits behind the
+ * boundary without having to render the async half to get at it.
+ */
+export function ClientReviewsFallback() {
   return (
     <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white p-5 sm:p-7 dark:border-slate-800 dark:bg-slate-900">
       <div className="h-4 w-32 animate-pulse rounded-full bg-emerald-100 dark:bg-emerald-500/20" />
@@ -28,7 +34,7 @@ function ClientReviewsFallback() {
   );
 }
 
-async function ClientReviewsPayload() {
+export async function ClientReviewsPayload() {
   return <ClientReviewsCarousel reviews={await listClientReviews()} />;
 }
 

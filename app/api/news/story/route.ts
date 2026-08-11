@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { getNewsStory } from "../../../lib/market-news";
 
 export const dynamic = "force-dynamic";
@@ -19,5 +20,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "title and url are required" }, { status: 400 });
   }
 
-  return NextResponse.json(await getNewsStory({ title, url, symbol: params.get("symbol") }));
+  // A story is written once over coverage that has already been published, so it does not change
+  // underneath a reader. Ten minutes at the edge — the same window the IPO board uses — keeps a
+  // headline that several readers open in a row from being re-summarised for each of them.
+  return NextResponse.json(await getNewsStory({ title, url, symbol: params.get("symbol") }), {
+    headers: cacheHeaders(600),
+  });
 }

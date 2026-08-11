@@ -29,6 +29,8 @@ export function HeaderSubscriptionCta() {
     return () => window.removeEventListener("mousedown", close);
   }, [open]);
 
+  /* istanbul ignore next -- `plan` is a PlanKey and PLANS carries all three, so the find always
+     hits; the fallback only exists because `find` is typed as possibly returning undefined. */
   const selected = PLANS.find((item) => item.key === plan) ?? PLANS[1];
   const payable = billedAmount(selected.key, cycle);
   const perMonth = monthlyEquivalent(selected.key, cycle);
@@ -71,7 +73,12 @@ export function HeaderSubscriptionCta() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-3 w-[340px] rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_70px_-28px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
+        // whitespace-normal is load-bearing. The panel is a child of the header's control row,
+        // which sets `whitespace-nowrap` to stop the buttons beside it breaking mid-label — and
+        // `white-space` inherits, so the prose in here inherited it too and ran straight out past
+        // the rounded edge instead of wrapping. Resetting it at the panel keeps the header's rule
+        // where it belongs, on the header.
+        <div className="absolute right-0 top-full z-40 mt-3 w-[340px] whitespace-normal rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_70px_-28px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">

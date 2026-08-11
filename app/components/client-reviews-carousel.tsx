@@ -37,6 +37,12 @@ function Stars({ rating, className }: { rating: number; className: string }) {
  * leaves only the stroke; in dark mode the same file is inverted to white ink and screened, so it
  * reads on a dark card instead of turning into a grey block. The rule and the caption above it give
  * the mark somewhere to sit, which is what makes it look signed rather than pasted.
+ *
+ * The mark is not lazy-loaded, and cannot be. A signature is sized `h-9 w-auto`, so until the file
+ * arrives it has no intrinsic width and lays out as a zero-width box — and a box with no area never
+ * satisfies the intersection check that triggers a lazy load. The image waits for a load that waits
+ * for the image, and every review but the first one rendered as a bare rule with "Signed" under it.
+ * `fetchPriority="low"` keeps it off the critical path without making its arrival conditional.
  */
 function Signature({ review }: { review: ClientReview }) {
   return (
@@ -52,7 +58,7 @@ function Signature({ review }: { review: ClientReview }) {
           src={review.signatureImage}
           alt={`${review.name} signature`}
           className="h-9 w-auto max-w-full object-contain object-bottom mix-blend-multiply dark:mix-blend-screen dark:invert"
-          loading="lazy"
+          fetchPriority="low"
         />
       ) : (
         <svg viewBox="0 0 180 48" className="h-9 w-full text-slate-800 dark:text-slate-100" role="img" aria-label={`${review.signature} signature`} preserveAspectRatio="xMaxYMax meet">
@@ -77,7 +83,11 @@ function Slide({ review }: { review: ClientReview }) {
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${review.accent}`} />
 
       {/* The reviewer's column carries the credibility of the quote, so it is given real size:
-          a portrait you can actually recognise a face in, and a name at reading weight. */}
+          a portrait you can actually recognise a face in, and a name at reading weight. The
+          portrait is eager for the same reason the signature is: every slide but the current one is
+          translated out of the track and clipped away, so a lazy portrait is one the browser has no
+          reason to fetch until the carousel happens to reach it — and the face is the whole point of
+          the column. There are only ever a handful of reviews; low priority is enough. */}
       <div className="flex w-32 shrink-0 flex-col items-center pl-1 text-center sm:w-40">
         <span className={`inline-flex h-20 w-20 shrink-0 rounded-full bg-gradient-to-br p-[3px] sm:h-24 sm:w-24 ${review.accent}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- reviewer photos are uploaded files, not app-owned assets. */}
@@ -85,7 +95,7 @@ function Slide({ review }: { review: ClientReview }) {
             src={review.photo}
             alt={`${review.name} reviewer profile`}
             className="h-full w-full rounded-full object-cover ring-2 ring-white dark:ring-slate-900"
-            loading="lazy"
+            fetchPriority="low"
           />
         </span>
         <p className="mt-2.5 flex items-center justify-center gap-1 text-sm font-bold leading-tight text-slate-900 sm:text-base dark:text-white">

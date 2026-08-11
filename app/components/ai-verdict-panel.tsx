@@ -30,6 +30,44 @@ export function clearAiVerdictPanelCache(): void {
   panelCache.clear();
 }
 
+/** One frame of the verdicts stream. Mirrors `VerdictFrame` in ../lib/stock-verdicts. */
+type VerdictFrame =
+  | { type: "verdicts"; verdicts: StockVerdict[] }
+  | { type: "rationales"; rationales: { symbol: string; rationale: string }[] };
+
+/** One NDJSON line, if it is a frame we know what to do with. */
+export function parseVerdictFrame(line: string): VerdictFrame | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  try {
+    const frame = JSON.parse(trimmed) as VerdictFrame;
+    if (frame?.type === "verdicts" && Array.isArray(frame.verdicts)) return frame;
+    if (frame?.type === "rationales" && Array.isArray(frame.rationales)) return frame;
+    return null;
+  } catch {
+    // A line that isn't JSON is a truncated frame, not something to show the reader.
+    return null;
+  }
+}
+
+/**
+ * The verdicts so far, after applying one more frame.
+ *
+ * A rationales frame never adds or removes a row and never changes a call — it only replaces the
+ * computed sentence on rows the model actually wrote for, which is what lets the panel upgrade in
+ * place instead of re-rendering into a different set of stocks.
+ */
+export function applyVerdictFrame(current: StockVerdict[], frame: VerdictFrame): StockVerdict[] {
+  if (frame.type === "verdicts") return frame.verdicts;
+
+  const bySymbol = new Map(frame.rationales.map((entry) => [entry.symbol, entry.rationale]));
+  return current.map((verdict) => {
+    const rationale = bySymbol.get(verdict.symbol);
+    return rationale ? { ...verdict, rationale, source: "ai" as const } : verdict;
+  });
+}
+
 const symbolsOf = (rows: Payload[]): string[] =>
   rows.map((row) => (typeof row.symbol === "string" ? row.symbol : "")).filter(Boolean);
 
@@ -172,6 +210,9 @@ export function AiVerdictPanel({ section }: { section: string }) {
   const [verdicts, setVerdicts] = useState<StockVerdict[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // True once the calls are on screen but the model is still writing over them, so the panel can
+  // say the prose is coming rather than looking like a finished read of computed sentences.
+  const [writing, setWriting] = useState(false);
 
   const load = useCallback(async () => {
     if (!config) return;
@@ -182,6 +223,7 @@ export function AiVerdictPanel({ section }: { section: string }) {
       setVerdicts(cached.verdicts);
       setError(null);
       setLoading(false);
+      setWriting(false);
       return;
     }
 
@@ -208,17 +250,59 @@ export function AiVerdictPanel({ section }: { section: string }) {
       });
       if (!response.ok) throw new Error("Verdicts failed");
 
-      const data = await response.json();
-      const next = Array.isArray(data.verdicts) ? data.verdicts : [];
-      panelCache.set(cacheKey, { verdicts: next, expiresAt: Date.now() + PANEL_CACHE_TTL_MS });
-      setVerdicts(next);
+      let latest: StockVerdict[] = [];
+
+      const apply = (line: string) => {
+        const frame = parseVerdictFrame(line);
+        if (!frame) return;
+        latest = applyVerdictFrame(latest, frame);
+        setVerdicts(latest);
+        setError(null);
+        // The scored calls are the answer; the prose that follows is an improvement to it. So the
+        // skeleton comes down on the first frame rather than at the end of the stream.
+        setLoading(false);
+        setWriting(frame.type === "verdicts");
+      };
+
+      // A body stream is the normal path. Some environments — a proxy that buffers, a test
+      // double — hand back a whole body instead, and the same line parsing covers both.
+      if (!response.body) {
+        for (const line of (await response.text()).split("\n")) apply(line);
+      } else {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Everything up to the last newline is whole frames; what follows it is a frame still
+          // being written, which stays in the buffer until the next chunk completes it.
+          const boundary = buffer.lastIndexOf("\n");
+          if (boundary !== -1) {
+            for (const line of buffer.slice(0, boundary).split("\n")) apply(line);
+            buffer = buffer.slice(boundary + 1);
+          }
+        }
+
+        apply(buffer);
+      }
+
+      panelCache.set(cacheKey, { verdicts: latest, expiresAt: Date.now() + PANEL_CACHE_TTL_MS });
+      setVerdicts(latest);
       setError(null);
     } catch {
       setError("The AI desk couldn't score these stocks right now.");
     } finally {
       setLoading(false);
+      setWriting(false);
     }
-  }, [config]);
+    // `section` is what `cacheKey` is taken from, and `config` is only ever derived from it, so
+    // this reloads exactly when it already did — the name just stops being an implicit dependency.
+  }, [config, section]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch-on-mount; setState only ever runs after the async fetch resolves, not synchronously in this callback.
@@ -261,8 +345,14 @@ export function AiVerdictPanel({ section }: { section: string }) {
           <div className="mt-4">
             <VerdictStrip stocks={verdicts} />
           </div>
-          <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="mt-3 flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
             <SourceNote source={verdicts[0].source} />
+            {writing && (
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                Writing the analyst&apos;s note…
+              </span>
+            )}
           </p>
         </>
       )}

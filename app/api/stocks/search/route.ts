@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { ALL_SECTORS, findStock, searchStocks } from "../../../lib/stock-search";
 
 // The answer depends entirely on the query string, so this has to be rendered per request.
@@ -18,10 +19,16 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
 
+  // The catalogue is a generated module that only changes when the app is rebuilt, so a given
+  // query has the same answer for the life of the deployment. An hour at the edge turns the
+  // search box — which fires on nearly every keystroke — into a lookup that mostly never reaches
+  // this process at all. Public: the answer depends on the query and on nothing about the reader.
+  const headers = cacheHeaders(3600);
+
   const symbol = params.get("symbol");
   if (symbol) {
-    return NextResponse.json({ stock: findStock(symbol) });
+    return NextResponse.json({ stock: findStock(symbol) }, { headers });
   }
 
-  return NextResponse.json(searchStocks(params.get("q") ?? "", params.get("sector") ?? ALL_SECTORS));
+  return NextResponse.json(searchStocks(params.get("q") ?? "", params.get("sector") ?? ALL_SECTORS), { headers });
 }

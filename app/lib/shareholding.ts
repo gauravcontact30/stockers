@@ -7,9 +7,8 @@
 // shareholders — are the filing's own buckets, and the percentages are the ones the company
 // certified, not a split inferred from price or volume.
 //
-// Two calls per company: the index (which quarters exist, and the promoter/public headline for
-// each) and one XBRL file (~500 KB) for the quarter being shown. Filings change once a quarter, so
-// the answer is cached for a day.
+// One index call per company, plus the XBRL files needed for the visible quarterly history.
+// Filings change once a quarter, so the answer is cached for a day.
 
 import { revalidatingBy } from "./cache";
 import { CACHE_TAGS } from "./cache";
@@ -44,10 +43,14 @@ export type OwnerSlice = {
   detail: { label: string; percent: number; holders: number | null }[];
 };
 
+export type InvestorTypePoint = { key: OwnerGroup; label: string; percent: number };
+
 export type OwnershipQuarter = {
   quarter: string;
   promoter: number;
   publicHeld: number;
+  /** The filed owner buckets for this quarter, used by the trend chart. */
+  investorTypes?: InvestorTypePoint[];
 };
 
 export type Ownership = {
@@ -57,7 +60,7 @@ export type Ownership = {
   quarter: string;
   groups: OwnerSlice[];
   /** Retail / institutional / promoter and so on — disjoint, and summing to 100. */
-  investorTypes: { key: OwnerGroup; label: string; percent: number }[];
+  investorTypes: InvestorTypePoint[];
   /** Everything held from outside India: FPIs, FDI, NRIs and foreign nationals. */
   foreignPercent: number;
   /** Every shareholder on the register, which is dominated by individuals. */
@@ -260,6 +263,81 @@ function sliceFor(
   return { key, label: GROUP_LABEL[key], percent: round(total), holders: holderCount, detail };
 }
 
+function buildFilingBreakdown(percent: Map<string, number>, holders: Map<string, number>) {
+  const at = (member: string) => percent.get(member) ?? 0;
+
+  // Retail has no certified total of its own - "Non-institutions" also holds bodies corporate and
+  // the IEPF - so it is the one bucket summed from its leaves.
+  const retail = GROUP_MEMBERS.retail.reduce((sum, entry) => sum + at(entry.member), 0);
+  const fii = at(GROUP_TOTAL.fii!);
+  const dii = at(GROUP_TOTAL.dii!);
+  const government = at(GROUP_TOTAL.government!);
+  const promoters = at(GROUP_TOTAL.promoters!);
+  const bodies = Math.max(0, at("PublicShareholding") - fii - dii - government - retail);
+
+  const totals: Record<Exclude<OwnerGroup, "others">, number> = { promoters, fii, dii, government, retail, bodies };
+  const named = (Object.keys(GROUP_MEMBERS) as Exclude<OwnerGroup, "others">[]).map((key) =>
+    sliceFor(key, percent, holders, totals[key]),
+  );
+
+  const accounted = named.reduce((sum, slice) => sum + slice.percent, 0);
+  const remainder = round(100 - accounted);
+  const groups = [...named];
+  if (remainder >= 0.01) {
+    groups.push({ key: "others", label: GROUP_LABEL.others, percent: remainder, holders: null, detail: [] });
+  }
+
+  groups.sort((a, b) => b.percent - a.percent);
+
+  const by = (key: OwnerGroup) => groups.find((group) => group.key === key)?.percent ?? 0;
+  const chartInvestorTypes: InvestorTypePoint[] = ([
+    "promoters",
+    "fii",
+    "dii",
+    "government",
+    "retail",
+    "bodies",
+    "others",
+  ] as OwnerGroup[])
+    .map((key) => ({ key, label: GROUP_LABEL[key], percent: round(by(key)) }))
+    .filter((type) => type.percent > 0);
+
+  const investorTypeRows: InvestorTypePoint[] = [
+    { key: "retail", label: "Retail & individuals", percent: by("retail") },
+    { key: "dii", label: "Institutional (FII + DII)", percent: round(by("fii") + by("dii")) },
+    { key: "promoters", label: "Promoters & insiders", percent: by("promoters") },
+    { key: "government", label: "Government", percent: by("government") },
+    { key: "bodies", label: "Corporate bodies & other", percent: round(by("bodies") + by("others")) },
+  ];
+  const investorTypes = investorTypeRows.filter((type) => type.percent > 0);
+
+  const foreignPercent =
+    Math.round(FOREIGN_MEMBERS.reduce((sum, member) => sum + (percent.get(member) ?? 0), 0) * 100) / 100;
+
+  return {
+    groups,
+    investorTypes,
+    chartInvestorTypes,
+    foreignPercent,
+    totalHolders: holders.get("ShareholdingPattern") ?? holders.get("PublicShareholding") ?? null,
+  };
+}
+
+function breakdownFromXml(xml: string | null) {
+  const parsed = xml
+    ? parseShareholdingXbrl(xml)
+    : { percent: new Map<string, number>(), holders: new Map<string, number>() };
+  return buildFilingBreakdown(parsed.percent, parsed.holders);
+}
+
+function fallbackQuarterInvestorTypes(promoter: number, publicHeld: number): InvestorTypePoint[] {
+  const points: InvestorTypePoint[] = [
+    { key: "promoters", label: GROUP_LABEL.promoters, percent: round(promoter) },
+    { key: "others", label: "Public shareholders", percent: round(publicHeld) },
+  ];
+  return points.filter((type) => Number.isFinite(type.percent) && type.percent > 0);
+}
+
 async function fetchIndex(symbol: string): Promise<IndexRow[]> {
   const response = await fetch(INDEX_URL(symbol), {
     headers: HEADERS,
@@ -295,72 +373,47 @@ export function buildOwnership(
   symbol: string,
   rows: IndexRow[],
   xml: string | null,
+  xmlByQuarter: Map<string, string | null> = new Map(),
 ): Ownership | null {
   const latest = rows[0];
   if (!latest?.date) return null;
 
-  const { percent, holders } = xml ? parseShareholdingXbrl(xml) : { percent: new Map(), holders: new Map() };
-
-  const at = (member: string) => percent.get(member) ?? 0;
-
-  // Retail has no certified total of its own — "Non-institutions" also holds bodies corporate and
-  // the IEPF — so it is the one bucket summed from its leaves.
-  const retail = GROUP_MEMBERS.retail.reduce((sum, entry) => sum + at(entry.member), 0);
-  const fii = at(GROUP_TOTAL.fii!);
-  const dii = at(GROUP_TOTAL.dii!);
-  const government = at(GROUP_TOTAL.government!);
-  const promoters = at(GROUP_TOTAL.promoters!);
-  // Everything public that is not an institution, the government or an individual: corporate
-  // bodies, trusts, clearing members, the IEPF and anything else the filing lists there.
-  const bodies = Math.max(0, at("PublicShareholding") - fii - dii - government - retail);
-
-  const totals: Record<Exclude<OwnerGroup, "others">, number> = { promoters, fii, dii, government, retail, bodies };
-  const named = (Object.keys(GROUP_MEMBERS) as Exclude<OwnerGroup, "others">[]).map((key) =>
-    sliceFor(key, percent, holders, totals[key]),
-  );
-
-  // Whatever the named buckets do not account for — non-promoter non-public holdings, mostly
-  // custodian-held depository receipts. Shown honestly rather than hidden inside whichever bucket
-  // happens to be nearest.
-  const accounted = named.reduce((sum, slice) => sum + slice.percent, 0);
-  const remainder = round(100 - accounted);
-  const groups = [...named];
-  if (remainder >= 0.01) {
-    groups.push({ key: "others", label: GROUP_LABEL.others, percent: remainder, holders: null, detail: [] });
-  }
-
-  groups.sort((a, b) => b.percent - a.percent);
-
-  const by = (key: OwnerGroup) => groups.find((group) => group.key === key)?.percent ?? 0;
-  const foreignPercent =
-    Math.round(FOREIGN_MEMBERS.reduce((sum, member) => sum + (percent.get(member) ?? 0), 0) * 100) / 100;
+  const latestBreakdown = breakdownFromXml(xml);
 
   return {
     symbol: symbol.toUpperCase(),
     company: latest.name?.trim() || symbol.toUpperCase(),
     quarter: latest.date,
-    groups: groups.filter((group) => group.percent > 0),
+    groups: latestBreakdown.groups.filter((group) => group.percent > 0),
     // Disjoint by construction: every filing category lands in exactly one of these.
-    investorTypes: [
-      { key: "retail" as OwnerGroup, label: "Retail & individuals", percent: by("retail") },
-      { key: "dii" as OwnerGroup, label: "Institutional (FII + DII)", percent: round(by("fii") + by("dii")) },
-      { key: "promoters" as OwnerGroup, label: "Promoters & insiders", percent: by("promoters") },
-      { key: "government" as OwnerGroup, label: "Government", percent: by("government") },
-      { key: "bodies" as OwnerGroup, label: "Corporate bodies & other", percent: round(by("bodies") + by("others")) },
-    ].filter((type) => type.percent > 0),
-    foreignPercent,
-    totalHolders: holders.get("ShareholdingPattern") ?? holders.get("PublicShareholding") ?? null,
+    investorTypes: latestBreakdown.investorTypes,
+    foreignPercent: latestBreakdown.foreignPercent,
+    totalHolders: latestBreakdown.totalHolders,
     history: rows
       .slice(0, HISTORY_QUARTERS)
-      .map((row) => ({
-        quarter: row.date ?? "",
-        promoter: Number(row.pr_and_prgrp),
-        publicHeld: Number(row.public_val),
-      }))
+      .map((row) => {
+        const promoter = Number(row.pr_and_prgrp);
+        const publicHeld = Number(row.public_val);
+        const quarterXml = row.date
+          ? xmlByQuarter.has(row.date)
+            ? xmlByQuarter.get(row.date)!
+            : row.date === latest.date
+              ? xml
+              : null
+          : null;
+        const quarterTypes = quarterXml ? breakdownFromXml(quarterXml).chartInvestorTypes : [];
+
+        return {
+          quarter: row.date ?? "",
+          promoter,
+          publicHeld,
+          investorTypes: quarterTypes.length ? quarterTypes : fallbackQuarterInvestorTypes(promoter, publicHeld),
+        };
+      })
       .filter((entry) => entry.quarter && Number.isFinite(entry.promoter) && Number.isFinite(entry.publicHeld))
       .reverse(),
     filedOn: latest.submissionDate?.trim() || latest.broadcastDate?.trim() || null,
-    source: "NSE — quarterly shareholding pattern filed under SEBI LODR",
+    source: "NSE - quarterly shareholding pattern filed under SEBI LODR",
   };
 }
 
@@ -374,7 +427,7 @@ export const getOwnership = revalidatingBy<string, Ownership | null>({
   // Versioned: entries persist for a day and survive a deploy, so an answer written under an
   // older shape would otherwise keep being served to code that expects the newer one. Bump this
   // whenever the Ownership type changes rather than waiting a day for the old entries to lapse.
-  key: "shareholding:v2",
+  key: "shareholding:v3",
   ttlMs: TTL_MS,
   // A miss is retried sooner than a hit is refreshed: an empty answer is as likely to be a refused
   // request as a company with nothing filed.
@@ -387,7 +440,12 @@ export const getOwnership = revalidatingBy<string, Ownership | null>({
     const rows = await fetchIndex(symbol);
     if (!rows.length) return null;
 
-    const xml = rows[0]?.xbrl ? await fetchXbrl(rows[0].xbrl) : null;
-    return buildOwnership(symbol, rows, xml);
+    const historyRows = rows.slice(0, HISTORY_QUARTERS).filter((row) => row.date);
+    const xmlEntries = await Promise.all(
+      historyRows.map(async (row) => [row.date!, row.xbrl ? await fetchXbrl(row.xbrl) : null] as const),
+    );
+    const xmlByQuarter = new Map<string, string | null>(xmlEntries);
+    const xml = rows[0]?.date ? xmlByQuarter.get(rows[0].date) ?? null : null;
+    return buildOwnership(symbol, rows, xml, xmlByQuarter);
   },
 });

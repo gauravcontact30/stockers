@@ -362,9 +362,9 @@ describe("DashboardClient", () => {
     });
   });
 
-  it("renders the static watch-list of things Stockers.AI monitors and the supporting panels", async () => {
+  it("renders the static watch-list of things StockersAI monitors and the supporting panels", async () => {
     await renderDashboard();
-    expect(screen.getByText("What Stockers.AI watches")).toBeInTheDocument();
+    expect(screen.getByText("What StockersAI watches")).toBeInTheDocument();
     expect(screen.getByText(/Earnings momentum and guidance changes/)).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith("/api/news");
   });

@@ -71,8 +71,33 @@ const RELIANCE: Ownership = {
   foreignPercent: 17.76,
   totalHolders: 4651863,
   history: [
-    { quarter: "31-MAR-2026", promoter: 50, publicHeld: 50 },
-    { quarter: "30-JUN-2026", promoter: 50.48, publicHeld: 49.52 },
+    {
+      quarter: "31-MAR-2026",
+      promoter: 50,
+      publicHeld: 50,
+      investorTypes: [
+        { key: "promoters", label: "Promoters & insiders", percent: 50 },
+        { key: "fii", label: "Foreign institutional investors", percent: 17 },
+        { key: "dii", label: "Domestic institutional investors", percent: 21 },
+        { key: "government", label: "Government", percent: 0.1 },
+        { key: "retail", label: "Retail & individual investors", percent: 9.1 },
+        { key: "bodies", label: "Corporate bodies & trusts", percent: 2.8 },
+      ],
+    },
+    {
+      quarter: "30-JUN-2026",
+      promoter: 50.48,
+      publicHeld: 49.52,
+      investorTypes: [
+        { key: "promoters", label: "Promoters & insiders", percent: 50.48 },
+        { key: "fii", label: "Foreign institutional investors", percent: 17.19 },
+        { key: "dii", label: "Domestic institutional investors", percent: 21.18 },
+        { key: "government", label: "Government", percent: 0.09 },
+        { key: "retail", label: "Retail & individual investors", percent: 9.15 },
+        { key: "bodies", label: "Corporate bodies & trusts", percent: 1.9 },
+        { key: "others", label: "Unclassified in the filing", percent: 0.01 },
+      ],
+    },
   ],
   filedOn: "16-JUL-2026",
   source: "NSE — quarterly shareholding pattern filed under SEBI LODR",
@@ -131,11 +156,12 @@ describe("OwnershipBoard", () => {
 
     await screen.findByText("Reliance Industries Limited");
 
-    // Named twice on purpose: once as a class of the register, once in the investor-type split.
-    expect(screen.getAllByText("Promoters & insiders")).toHaveLength(2);
+    // Named in the register, the investor-type split, the trend chart's holdings legend, and the
+    // callout naming the largest holder of the selected quarter.
+    expect(screen.getAllByText("Promoters & insiders")).toHaveLength(4);
     expect(screen.getAllByText("50.48%").length).toBeGreaterThan(0);
-    expect(screen.getByText("Foreign institutional investors")).toBeInTheDocument();
-    expect(screen.getByText("17.19%")).toBeInTheDocument();
+    expect(screen.getAllByText("Foreign institutional investors").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("17.19%").length).toBeGreaterThan(0);
     // Retail is the one class measured in millions of people.
     expect(screen.getByText("45.69 lakh shareholders")).toBeInTheDocument();
     // A class the filing does not break holders out for says so rather than showing a zero.
@@ -171,9 +197,13 @@ describe("OwnershipBoard", () => {
     expect(screen.getByText("38.37%")).toBeInTheDocument();
 
     expect(screen.getByText("Promoter stake, quarter by quarter")).toBeInTheDocument();
-    // The trend chart carries the series; each filed quarter is its own labelled point.
-    expect(screen.getByRole("button", { name: "Jun '26: 50.48% promoter holding" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mar '26: 50.00% promoter holding" })).toBeInTheDocument();
+    // The trend chart carries the series: every filed quarter is its own button, and the pie
+    // beside them reports the promoter stake of whichever quarter is selected.
+    expect(screen.getByRole("button", { name: "Jun '26" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mar '26" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Jun '26 ownership pie chart, promoter holding 50\.48 percent/ }),
+    ).toBeInTheDocument();
   });
 
   it("names its source and says plainly that no state-wise split exists", async () => {
@@ -307,7 +337,7 @@ describe("OwnershipBoard", () => {
     render(<OwnershipBoard />);
 
     expect(await screen.findByText("Reliance Industries Limited")).toBeInTheDocument();
-    expect(screen.getAllByText("Promoters & insiders")).toHaveLength(2);
+    expect(screen.getAllByText("Promoters & insiders")).toHaveLength(4);
     expect(screen.getByText("By investor type")).toBeInTheDocument();
   });
 

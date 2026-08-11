@@ -1,5 +1,6 @@
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { indianETFs } from "./indian-etfs";
+import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { getQuotesFor, mapWithConcurrency } from "./market-data";
 
 export type PerformanceSummary = {
@@ -246,6 +247,24 @@ export async function getPerformanceSummary(symbolInput: string): Promise<Perfor
     asOf: quote?.asOf ?? null,
     source: SOURCE,
   };
+}
+
+export const getCachedPerformanceSummary = revalidatingBy<string, PerformanceSummary>({
+  key: "market:performance-summary",
+  ttlMs: 60_000,
+  // A complete row stands for a minute. A blank price usually means the upstream quote feed
+  // stumbled, so retry it quickly without making every hero card wait on that retry.
+  ttlFor: (summary) => (typeof summary.price === "number" ? 60_000 : 10_000),
+  maxStaleMs: 5 * 60_000,
+  tags: [CACHE_TAGS.quotes],
+  persist: true,
+  capacity: 700,
+  keyOf: (symbol) => symbol.trim().toUpperCase(),
+  load: getPerformanceSummary,
+});
+
+export async function getCachedPerformanceSummaries(symbols: string[]): Promise<PerformanceSummary[]> {
+  return mapWithConcurrency(symbols, HISTORY_CONCURRENCY, getCachedPerformanceSummary);
 }
 
 export async function getPerformanceSummaries(symbols: string[]): Promise<PerformanceSummary[]> {

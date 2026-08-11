@@ -1,18 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-export type PromoterQuarter = { quarter: string; promoter: number; publicHeld: number };
+type OwnerGroup = "promoters" | "fii" | "dii" | "government" | "retail" | "bodies" | "others";
+type InvestorSeriesKey = OwnerGroup | "public";
 
-// The drawing box. Fixed units, scaled to the card by CSS, so the geometry below is plain
-// arithmetic rather than anything that has to know how wide the card ended up.
+export type InvestorHoldingPoint = {
+  key?: InvestorSeriesKey | string;
+  label: string;
+  percent: number;
+};
+
+export type PromoterQuarter = {
+  quarter: string;
+  promoter: number;
+  publicHeld: number;
+  investorTypes?: InvestorHoldingPoint[];
+};
+
 const WIDTH = 400;
-const HEIGHT = 150;
-const PAD = { top: 14, right: 10, bottom: 26, left: 38 };
+const HEIGHT = 164;
+const PAD = { top: 14, right: 10, bottom: 26, left: 34 };
 const PLOT_W = WIDTH - PAD.left - PAD.right;
 const PLOT_H = HEIGHT - PAD.top - PAD.bottom;
+const PIE_SIZE = 220;
+const PIE_CENTER = PIE_SIZE / 2;
+const PIE_RADIUS = 82;
 
-/** "30-JUN-2026" as the exchange files it, shortened to something that fits under a tick. */
+const SERIES_ORDER: InvestorSeriesKey[] = ["promoters", "fii", "dii", "government", "retail", "bodies", "others", "public"];
+const SERIES_META: Record<InvestorSeriesKey, { label: string; color: string; text: string; pale: string }> = {
+  promoters: {
+    label: "Promoters & insiders",
+    color: "#8b5cf6",
+    text: "text-violet-700 dark:text-violet-300",
+    pale: "bg-violet-50 border-violet-200 dark:bg-violet-500/10 dark:border-violet-500/25",
+  },
+  fii: {
+    label: "Foreign institutional investors",
+    color: "#0ea5e9",
+    text: "text-sky-700 dark:text-sky-300",
+    pale: "bg-sky-50 border-sky-200 dark:bg-sky-500/10 dark:border-sky-500/25",
+  },
+  dii: {
+    label: "Domestic institutional investors",
+    color: "#10b981",
+    text: "text-emerald-700 dark:text-emerald-300",
+    pale: "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/25",
+  },
+  government: {
+    label: "Government",
+    color: "#f59e0b",
+    text: "text-amber-700 dark:text-amber-300",
+    pale: "bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/25",
+  },
+  retail: {
+    label: "Retail & individual investors",
+    color: "#f43f5e",
+    text: "text-rose-700 dark:text-rose-300",
+    pale: "bg-rose-50 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/25",
+  },
+  bodies: {
+    label: "Corporate bodies & trusts",
+    color: "#64748b",
+    text: "text-slate-700 dark:text-slate-300",
+    pale: "bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700",
+  },
+  others: {
+    label: "Unclassified in the filing",
+    color: "#94a3b8",
+    text: "text-slate-600 dark:text-slate-400",
+    pale: "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800",
+  },
+  public: {
+    label: "Public shareholders",
+    color: "#06b6d4",
+    text: "text-cyan-700 dark:text-cyan-300",
+    pale: "bg-cyan-50 border-cyan-200 dark:bg-cyan-500/10 dark:border-cyan-500/25",
+  },
+};
+
 export function shortQuarter(quarter: string): string {
   const parts = quarter.split("-");
   if (parts.length !== 3) return quarter;
@@ -21,29 +87,99 @@ export function shortQuarter(quarter: string): string {
   return `${title} '${year.slice(-2)}`;
 }
 
-/**
- * The vertical scale.
- *
- * Deliberately *not* anchored at zero. A promoter stake is a number that moves in tenths of a
- * percent between quarters, and against a 0–100 axis every series in the market is a flat line at
- * whatever height the stake happens to sit — which is exactly what the bar chart this replaced
- * showed. Fitting the axis to the data is what makes a 50.1 → 50.4 drift visible. The axis is
- * labelled at both ends so nobody mistakes the resulting slope for a bigger move than it is.
- */
 export function scaleFor(values: number[]): { min: number; max: number } {
+  if (values.length === 0) return { min: 0, max: 100 };
   const low = Math.min(...values);
   const high = Math.max(...values);
-  // A stake that never moved would otherwise divide by a zero range.
   if (high - low < 0.2) return { min: Math.max(0, low - 0.5), max: Math.min(100, high + 0.5) };
   const pad = (high - low) * 0.18;
   return { min: Math.max(0, low - pad), max: Math.min(100, high + pad) };
 }
 
-export function PromoterTrendChart({ history }: { history: PromoterQuarter[] }) {
-  /** Which quarter the reader has picked; null means "the most recent one". */
-  const [picked, setPicked] = useState<number | null>(null);
+function seriesKey(point: InvestorHoldingPoint): InvestorSeriesKey {
+  if (point.key && point.key in SERIES_META) return point.key as InvestorSeriesKey;
+  return point.label.toLowerCase().includes("public") ? "public" : "others";
+}
 
-  if (history.length === 0) {
+function holdingsFor(entry: PromoterQuarter) {
+  const filed = (entry.investorTypes ?? []).filter((point) => Number.isFinite(point.percent) && point.percent > 0);
+  if (filed.length === 0) {
+    return [
+      { key: "promoters" as const, label: SERIES_META.promoters.label, percent: entry.promoter },
+      { key: "public" as const, label: SERIES_META.public.label, percent: entry.publicHeld },
+    ].filter((point) => Number.isFinite(point.percent) && point.percent > 0);
+  }
+
+  const byKey = new Map<InvestorSeriesKey, { key: InvestorSeriesKey; label: string; percent: number }>();
+  for (const point of filed) {
+    const key = seriesKey(point);
+    const existing = byKey.get(key);
+    if (existing) existing.percent += point.percent;
+    else byKey.set(key, { key, label: point.label || SERIES_META[key].label, percent: point.percent });
+  }
+  return [...byKey.values()]
+    .map((point) => ({ ...point, percent: Math.round(point.percent * 100) / 100 }))
+    .sort((a, b) => SERIES_ORDER.indexOf(a.key) - SERIES_ORDER.indexOf(b.key));
+}
+
+function valueFor(entry: PromoterQuarter, key: InvestorSeriesKey): number {
+  const holding = holdingsFor(entry).find((point) => point.key === key);
+  if (holding) return holding.percent;
+  if ((entry.investorTypes ?? []).some((point) => Number.isFinite(point.percent) && point.percent > 0)) return 0;
+  if (key === "promoters" && Number.isFinite(entry.promoter)) return entry.promoter;
+  if (key === "public" && Number.isFinite(entry.publicHeld)) return entry.publicHeld;
+  return 0;
+}
+
+function pointOnPie(percent: number) {
+  const angle = (percent / 100) * 360 - 90;
+  const radians = (Math.PI / 180) * angle;
+  return {
+    x: PIE_CENTER + PIE_RADIUS * Math.cos(radians),
+    y: PIE_CENTER + PIE_RADIUS * Math.sin(radians),
+  };
+}
+
+function piePath(start: number, end: number) {
+  const clampedEnd = Math.min(end, 99.999);
+  const startPoint = pointOnPie(start);
+  const endPoint = pointOnPie(clampedEnd);
+  const largeArc = clampedEnd - start > 50 ? 1 : 0;
+  return [
+    `M ${PIE_CENTER} ${PIE_CENTER}`,
+    `L ${startPoint.x} ${startPoint.y}`,
+    `A ${PIE_RADIUS} ${PIE_RADIUS} 0 ${largeArc} 1 ${endPoint.x} ${endPoint.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function pieSlices(holdings: ReturnType<typeof holdingsFor>) {
+  const total = holdings.reduce((sum, holding) => sum + holding.percent, 0);
+  let cursor = 0;
+  if (total <= 0) return [];
+
+  return holdings.map((holding) => {
+    const share = (holding.percent / total) * 100;
+    const slice = { ...holding, start: cursor, end: cursor + share, share };
+    cursor += share;
+    return slice;
+  });
+}
+
+export function PromoterTrendChart({ history }: { history: PromoterQuarter[] }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const [highlighted, setHighlighted] = useState<InvestorSeriesKey | null>(null);
+
+  const normalized = useMemo(
+    () =>
+      history.map((entry) => ({
+        ...entry,
+        holdings: holdingsFor(entry),
+      })),
+    [history],
+  );
+
+  if (normalized.length === 0) {
     return (
       <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
         No earlier filings are available for this company yet.
@@ -51,180 +187,161 @@ export function PromoterTrendChart({ history }: { history: PromoterQuarter[] }) 
     );
   }
 
-  const last = history.length - 1;
-  // Clamped rather than trusted: the list can shrink under a picked index when the company changes.
+  const last = normalized.length - 1;
   const active = Math.min(picked ?? last, last);
-  const current = history[active];
+  const current = normalized[active];
+  const currentPromoter = valueFor(current, "promoters");
+  const stepChange = active > 0 ? currentPromoter - valueFor(normalized[active - 1], "promoters") : null;
 
-  const { min, max } = scaleFor(history.map((entry) => entry.promoter));
-  const x = (index: number) => (history.length === 1 ? PAD.left + PLOT_W / 2 : PAD.left + (index / last) * PLOT_W);
-  const y = (value: number) => PAD.top + (1 - (value - min) / (max - min)) * PLOT_H;
-
-  const points = history.map((entry, index) => `${x(index)},${y(entry.promoter)}`);
-  const line = `M${points.join("L")}`;
-  const area = `${line}L${x(last)},${PAD.top + PLOT_H}L${x(0)},${PAD.top + PLOT_H}Z`;
-
-  const first = history[0];
-  const netChange = history[last].promoter - first.promoter;
-  const stepChange = active > 0 ? current.promoter - history[active - 1].promoter : null;
-  const high = Math.max(...history.map((entry) => entry.promoter));
-  const low = Math.min(...history.map((entry) => entry.promoter));
-
-  const trendTone =
-    netChange > 0.005
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-      : netChange < -0.005
-        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
-  const arrow = netChange > 0.005 ? "▲" : netChange < -0.005 ? "▼" : "■";
+  const orderedHoldings = [...current.holdings].sort((a, b) => b.percent - a.percent);
+  const slices = pieSlices(orderedHoldings);
+  const topHolding = orderedHoldings[0];
+  const visibleHoldings = orderedHoldings.slice(0, 5);
+  const hiddenHoldings = Math.max(0, current.holdings.length - visibleHoldings.length);
+  const featuredHolding = orderedHoldings.find((holding) => holding.key === highlighted) ?? topHolding;
+  const stepTone =
+    stepChange === null
+      ? "text-slate-500 dark:text-slate-400"
+      : stepChange >= 0
+        ? "text-emerald-700 dark:text-emerald-300"
+        : "text-rose-700 dark:text-rose-300";
 
   return (
     <div className="mt-3">
-      {/* The headline reads as a figure, not as a chart annotation: the stake now, how it moved
-          across the filed window, and — once a reader picks a quarter — that quarter instead. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div>
-          <p className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
-              {current.promoter.toFixed(2)}
-            </span>
-            <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">%</span>
-          </p>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-            as of {shortQuarter(current.quarter)}
-            {stepChange !== null && (
-              <span className={stepChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-                {" "}
-                {stepChange >= 0 ? "+" : ""}
-                {stepChange.toFixed(2)} pp vs previous quarter
-              </span>
-            )}
-          </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-3 dark:border-violet-500/20 dark:bg-violet-500/10">
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">Promoter stake</p>
+          <p className="mt-1 text-2xl font-black leading-none tabular-nums text-slate-900 dark:text-white">{currentPromoter.toFixed(2)}%</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">{shortQuarter(current.quarter)} filing</p>
         </div>
-
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${trendTone}`}>
-          <span aria-hidden="true">{arrow}</span>
-          {netChange >= 0 ? "+" : ""}
-          {netChange.toFixed(2)} pp over {history.length} quarters
-        </span>
+        <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-sky-500/20 dark:bg-sky-500/10">
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300">QoQ change</p>
+          <p className={`mt-1 text-2xl font-black leading-none tabular-nums ${stepTone}`}>
+            {stepChange === null ? "First" : `${stepChange >= 0 ? "+" : ""}${stepChange.toFixed(2)} pp`}
+          </p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">{stepChange === null ? "No prior filing" : "vs previous quarter"}</p>
+        </div>
       </div>
 
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="mt-3 w-full"
-        role="img"
-        aria-label={`Promoter holding from ${shortQuarter(first.quarter)} to ${shortQuarter(history[last].quarter)}, ${history[last].promoter.toFixed(2)} percent at the latest filing`}
-      >
-        <defs>
-          <linearGradient id="promoter-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgb(139 92 246)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="rgb(139 92 246)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Three gridlines, labelled — the axis has to be readable for the zoomed scale to be honest. */}
-        {[max, (max + min) / 2, min].map((value) => (
-          <g key={value}>
-            <line
-              x1={PAD.left}
-              x2={WIDTH - PAD.right}
-              y1={y(value)}
-              y2={y(value)}
-              className="stroke-slate-200 dark:stroke-slate-700"
-              strokeWidth="1"
-              strokeDasharray="3 3"
-            />
-            <text
-              x={PAD.left - 6}
-              y={y(value) + 3}
-              textAnchor="end"
-              className="fill-slate-400 text-[9px] tabular-nums dark:fill-slate-500"
+      <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/50">
+        <div className="flex flex-wrap gap-1.5">
+          {normalized.map((entry, index) => (
+            <button
+              key={entry.quarter}
+              type="button"
+              onClick={() => {
+                setPicked(index);
+                setHighlighted(null);
+              }}
+              onFocus={() => {
+                setPicked(index);
+                setHighlighted(null);
+              }}
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-bold tabular-nums transition ${
+                index === active
+                  ? "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-200"
+                  : "border-slate-200 bg-slate-50 text-slate-500 hover:border-violet-200 hover:text-violet-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-violet-300"
+              }`}
             >
-              {value.toFixed(1)}
-            </text>
-          </g>
-        ))}
+              {shortQuarter(entry.quarter)}
+            </button>
+          ))}
+        </div>
 
-        <path d={area} fill="url(#promoter-area)" />
-        <path
-          d={line}
-          fill="none"
-          className="stroke-violet-500"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* A vertical marker on the selected quarter, so the tooltip has something to point at. */}
-        <line
-          x1={x(active)}
-          x2={x(active)}
-          y1={PAD.top}
-          y2={PAD.top + PLOT_H}
-          className="stroke-violet-400/60"
-          strokeWidth="1"
-          strokeDasharray="2 3"
-        />
-
-        {history.map((entry, index) => (
-          <circle
-            key={entry.quarter}
-            cx={x(index)}
-            cy={y(entry.promoter)}
-            r={index === active ? 5 : 3}
-            className={index === active ? "fill-violet-600 stroke-white dark:stroke-slate-900" : "fill-violet-500 stroke-white dark:stroke-slate-900"}
-            strokeWidth="1.5"
-          />
-        ))}
-
-        {history.map((entry, index) => (
-          <text
-            key={entry.quarter}
-            x={x(index)}
-            y={HEIGHT - 8}
-            textAnchor="middle"
-            className={`text-[9px] ${index === active ? "fill-slate-700 font-semibold dark:fill-slate-200" : "fill-slate-400 dark:fill-slate-500"}`}
-          >
-            {shortQuarter(entry.quarter)}
-          </text>
-        ))}
-
-        {/* Hit targets last so they sit above everything and cover the full column height.
-            Each is focusable, so the series can be stepped through from the keyboard too. */}
-        {history.map((entry, index) => (
-          <rect
-            key={entry.quarter}
-            x={x(index) - (history.length === 1 ? PLOT_W : PLOT_W / last) / 2}
-            y={PAD.top}
-            width={(history.length === 1 ? PLOT_W : PLOT_W / last)}
-            height={PLOT_H}
-            fill="transparent"
-            tabIndex={0}
-            role="button"
-            aria-label={`${shortQuarter(entry.quarter)}: ${entry.promoter.toFixed(2)}% promoter holding`}
-            className="cursor-pointer focus:outline-none"
-            onMouseEnter={() => setPicked(index)}
-            onFocus={() => setPicked(index)}
-            onClick={() => setPicked(index)}
-          />
-        ))}
-      </svg>
-
-      <div className="mt-2 grid grid-cols-3 gap-2 border-t border-slate-100 pt-2.5 dark:border-slate-800">
-        {[
-          { label: "High", value: high },
-          { label: "Low", value: low },
-          { label: "Public float", value: current.publicHeld },
-        ].map((stat) => (
-          <div key={stat.label}>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-              {stat.label}
-            </p>
-            <p className="text-xs font-semibold tabular-nums text-slate-900 dark:text-white">
-              {stat.value.toFixed(2)}%
+        <div className="mt-3">
+          <div className="mx-auto w-full max-w-[420px]">
+            <svg
+              viewBox={`0 0 ${PIE_SIZE} ${PIE_SIZE}`}
+              className="w-full"
+              role="img"
+              aria-label={`${shortQuarter(current.quarter)} ownership pie chart, promoter holding ${currentPromoter.toFixed(2)} percent`}
+            >
+              <circle cx={PIE_CENTER} cy={PIE_CENTER} r={PIE_RADIUS} className="fill-slate-100 dark:fill-slate-900" />
+              {slices.map((slice) => (
+                <path
+                  key={slice.key}
+                  d={piePath(slice.start, slice.end)}
+                  data-pie-slice={slice.key}
+                  fill={SERIES_META[slice.key].color}
+                  stroke="white"
+                  strokeWidth="2"
+                  opacity={!highlighted || highlighted === slice.key ? 1 : 0.38}
+                  className="cursor-pointer transition-opacity"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${slice.label}: ${slice.percent.toFixed(2)} percent`}
+                  onMouseEnter={() => setHighlighted(slice.key)}
+                  onFocus={() => setHighlighted(slice.key)}
+                  onClick={() => setHighlighted(slice.key)}
+                />
+              ))}
+              <circle cx={PIE_CENTER} cy={PIE_CENTER} r="48" className="fill-white drop-shadow-sm dark:fill-slate-950" />
+              <text x={PIE_CENTER} y={PIE_CENTER - 4} textAnchor="middle" className="fill-slate-900 text-xl font-black tabular-nums dark:fill-white">
+                {featuredHolding ? `${featuredHolding.percent.toFixed(1)}%` : "-"}
+              </text>
+              <text x={PIE_CENTER} y={PIE_CENTER + 16} textAnchor="middle" className="fill-slate-500 text-[10px] font-bold uppercase tracking-[0.12em] dark:fill-slate-400">
+                {featuredHolding ? SERIES_META[featuredHolding.key].label.split(" ")[0] : "Holding"}
+              </text>
+            </svg>
+            <p className="mt-2 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              Tap a slice or quarter to inspect the filing.
             </p>
           </div>
-        ))}
+
+          <div role="status" className="mt-4 w-full min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-bold text-slate-900 dark:text-white">
+                {shortQuarter(current.quarter)} holder split
+              </p>
+              {topHolding && (
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Largest <span className={SERIES_META[topHolding.key].text}>{topHolding.percent.toFixed(2)}%</span>
+                </p>
+              )}
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {visibleHoldings.map((holding) => (
+                <button
+                  key={`${holding.key}-${holding.label}`}
+                  type="button"
+                  onMouseEnter={() => setHighlighted(holding.key)}
+                  onFocus={() => setHighlighted(holding.key)}
+                  onClick={() => setHighlighted(holding.key)}
+                  className={`flex min-w-0 items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left transition ${
+                    highlighted === holding.key
+                      ? SERIES_META[holding.key].pale
+                      : "border-slate-100 bg-slate-50 hover:border-slate-200 dark:border-slate-800 dark:bg-slate-900"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: SERIES_META[holding.key].color }}
+                    />
+                    <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      {holding.label}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 text-xs font-bold tabular-nums ${SERIES_META[holding.key].text}`}>
+                    {holding.percent.toFixed(2)}%
+                  </span>
+                </button>
+              ))}
+              {hiddenHoldings > 0 && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
+                  +{hiddenHoldings} other holder type{hiddenHoldings === 1 ? "" : "s"}
+                </div>
+              )}
+            </div>
+            {featuredHolding && (
+              <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                <span className={`font-bold ${SERIES_META[featuredHolding.key].text}`}>{featuredHolding.label}</span>{" "}
+                holds {featuredHolding.percent.toFixed(2)}% in the selected quarter.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPerformanceSummaries, getPerformanceSummary } from "../../../lib/stock-performance";
+import { cacheHeaders } from "../../../lib/cache";
+import { getCachedPerformanceSummaries, getCachedPerformanceSummary } from "../../../lib/stock-performance";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 // The landing page renders dozens of stock cards, each needing the same eight return figures.
 // A batch form lets the client coalesce them into one round-trip instead of one request per
@@ -26,10 +27,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "symbols query param must list at least one symbol" }, { status: 400 });
     }
 
-    const results = await getPerformanceSummaries(symbols);
+    const results = await getCachedPerformanceSummaries(symbols);
     return NextResponse.json(
       { results },
-      { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+      { headers: cacheHeaders(60) }
     );
   }
 
@@ -38,8 +39,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "symbol query param is required" }, { status: 400 });
   }
 
-  const data = await getPerformanceSummary(symbol);
-  return NextResponse.json(data, {
-    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
-  });
+  const data = await getCachedPerformanceSummary(symbol);
+  return NextResponse.json(data, { headers: cacheHeaders(60) });
 }

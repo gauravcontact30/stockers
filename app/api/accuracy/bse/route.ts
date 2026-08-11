@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBseStockAccuracy, searchBseAccuracyMatches } from "../../../lib/accuracy-matrix";
+import { getBseStockAccuracy, searchPricedBseAccuracyMatches } from "../../../lib/accuracy-matrix";
 import { cacheHeaders } from "../../../lib/cache";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ matches: [], result: null }, { headers: cacheHeaders(60) });
   }
 
-  const matches = searchBseAccuracyMatches(query);
+  const matches = await searchPricedBseAccuracyMatches(query);
   const exactResult = await getBseStockAccuracy(query);
   const selected = select && !exactResult ? (matches[0] ?? null) : null;
   const result = exactResult ?? (selected ? await getBseStockAccuracy(selected.scripCode) : null);

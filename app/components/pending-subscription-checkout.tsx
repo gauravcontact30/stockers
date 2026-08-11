@@ -14,6 +14,8 @@ import {
 import { useSubscription } from "./subscription-provider";
 
 function intentFromLocation(): PendingSubscription | null {
+  /* istanbul ignore next -- the server pass of this client component has no window; jsdom always
+     does, so the guard is real but cannot be reached from a test. */
   if (typeof window === "undefined") return null;
 
   const params = new URLSearchParams(window.location.search);
@@ -27,6 +29,7 @@ function intentFromLocation(): PendingSubscription | null {
 }
 
 function initialIntent(): PendingSubscription | null {
+  /* istanbul ignore next -- as above: unreachable under jsdom, load-bearing on the server pass. */
   if (typeof window === "undefined") return null;
   return intentFromLocation() ?? readPendingSubscription();
 }
@@ -42,6 +45,9 @@ export function PendingSubscriptionCheckout() {
 
   if (!intent || loading || !status?.signedIn) return null;
 
+  /* istanbul ignore next -- `intent.plan` is validated to one of the three keys before it is ever
+     stored, and PLANS carries all three; the fallback exists only because `find` may return
+     undefined as far as the type system knows. */
   const selected = PLANS.find((plan) => plan.key === intent.plan) ?? PLANS[1];
   const payable = billedAmount(selected.key, intent.cycle);
   const perMonth = monthlyEquivalent(selected.key, intent.cycle);

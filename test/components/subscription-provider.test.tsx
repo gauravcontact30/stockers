@@ -31,8 +31,10 @@ function Probe() {
     <div>
       <span data-testid="loading">{String(loading)}</span>
       <span data-testid="state">{status?.state ?? "none"}</span>
+      <span data-testid="can-market-pulse">{String(canUse("market-pulse"))}</span>
       <span data-testid="can-research">{String(canUse("research"))}</span>
       <span data-testid="can-top-picks">{String(canUse("top-picks"))}</span>
+      <span data-testid="can-intel">{String(canUse("intel"))}</span>
       <span data-testid="locked-top-picks">{String(isLocked("top-picks"))}</span>
       <button onClick={() => refresh()}>refresh</button>
       <button onClick={() => renew()}>renew</button>
@@ -123,7 +125,33 @@ describe("SubscriptionProvider", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("active"));
+    expect(screen.getByTestId("can-market-pulse")).toHaveTextContent("true");
     expect(screen.getByTestId("can-research")).toHaveTextContent("false");
+    expect(screen.getByTestId("can-intel")).toHaveTextContent("false");
+  });
+
+  it("lets higher plans use the lower plan AI features they include", async () => {
+    mockStatus({ ...trialStatus, state: "active", allowed: true, tier: "pro", planName: "Pro", locks: {} });
+    const { unmount } = render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("active"));
+    expect(screen.getByTestId("can-market-pulse")).toHaveTextContent("true");
+    expect(screen.getByTestId("can-research")).toHaveTextContent("true");
+    expect(screen.getByTestId("can-intel")).toHaveTextContent("false");
+
+    unmount();
+    mockStatus({ ...trialStatus, state: "active", allowed: true, tier: "elite", planName: "Elite", locks: {} });
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("can-intel")).toHaveTextContent("true"));
   });
 
   // An admin must keep working even on features they have locked for everyone else.

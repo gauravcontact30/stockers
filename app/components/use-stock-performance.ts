@@ -32,6 +32,8 @@ export type StockPerformance = {
 // appearing in several sections (top picks and dip winners, say) is only ever fetched once.
 const FLUSH_DELAY_MS = 60;
 const MAX_BATCH = 60;
+const STORAGE_KEY = "stockers:performance-cache:v1";
+const LOCAL_STALE_MS = 5 * 60_000;
 
 const cache = new Map<string, StockPerformance>();
 const inFlight = new Map<string, Promise<StockPerformance | null>>();
@@ -39,6 +41,43 @@ const inFlight = new Map<string, Promise<StockPerformance | null>>();
 let queue: string[] = [];
 let resolvers = new Map<string, (value: StockPerformance | null) => void>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+type StoredPerformanceCache = {
+  savedAt: number;
+  values: Record<string, StockPerformance>;
+};
+
+function readStoredPerformance(symbol: string): StockPerformance | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<StoredPerformanceCache>;
+    if (typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > LOCAL_STALE_MS) return null;
+
+    const value = parsed.values?.[symbol];
+    return value?.symbol === symbol ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPerformance(symbol: string, value: StockPerformance): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<StoredPerformanceCache>) : {};
+    const values = parsed.values && typeof parsed.values === "object" ? parsed.values : {};
+    values[symbol] = value;
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), values }));
+  } catch {
+    // Private-mode storage failures must not blank the card.
+  }
+}
 
 async function flush() {
   flushTimer = null;
@@ -50,7 +89,10 @@ async function flush() {
   const settle = (symbol: string, value: StockPerformance | null) => {
     // A null result stays out of the cache so the symbol is retried rather than being stuck
     // showing dashes for the rest of the session after one bad response.
-    if (value) cache.set(symbol, value);
+    if (value) {
+      cache.set(symbol, value);
+      writeStoredPerformance(symbol, value);
+    }
     inFlight.delete(symbol);
     pending.get(symbol)?.(value);
   };
@@ -92,28 +134,43 @@ function requestPerformance(symbol: string): Promise<StockPerformance | null> {
 // setState left is the async one in the response handler. Tagging the resolved value with the
 // symbol it belongs to stops a slow response for the previous symbol from being shown against
 // the current one.
-export function useStockPerformance(symbol: string | null) {
-  const [resolved, setResolved] = useState<{ symbol: string; data: StockPerformance | null } | null>(null);
+export function useStockPerformance(symbol: string | null, initialPerformance: StockPerformance | null = null) {
+  const [resolved, setResolved] = useState<{ symbol: string; data: StockPerformance | null } | null>(() => {
+    if (!symbol) return null;
+    if (initialPerformance?.symbol === symbol) return { symbol, data: initialPerformance };
+    const stored = readStoredPerformance(symbol);
+    return stored ? { symbol, data: stored } : null;
+  });
 
   useEffect(() => {
     if (!symbol || cache.has(symbol)) return;
+    if (initialPerformance?.symbol === symbol) {
+      cache.set(symbol, initialPerformance);
+      writeStoredPerformance(symbol, initialPerformance);
+      return;
+    }
 
     let cancelled = false;
     requestPerformance(symbol).then((data) => {
-      if (!cancelled) setResolved({ symbol, data });
+      if (cancelled) return;
+      setResolved((current) => {
+        if (data) return { symbol, data };
+        if (current?.symbol === symbol && current.data) return current;
+        return { symbol, data: null };
+      });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [symbol]);
+  }, [symbol, initialPerformance]);
 
   if (!symbol) return { performance: null, loading: false };
 
+  if (resolved?.symbol === symbol) return { performance: resolved.data, loading: false };
+
   const cached = cache.get(symbol);
   if (cached) return { performance: cached, loading: false };
-
-  if (resolved?.symbol === symbol) return { performance: resolved.data, loading: false };
 
   return { performance: null, loading: true };
 }

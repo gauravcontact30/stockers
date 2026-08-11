@@ -179,7 +179,7 @@ const categoryHeaders = () => screen.getAllByRole("button").filter((button) => b
 const headerNames = () => categoryHeaders().map((header) => header.textContent);
 
 describe("BseSectorMovers", () => {
-  it("lists every category, A to Z, with its matrix on the row itself", async () => {
+  it("lists every category with top performers first and its matrix on the row itself", async () => {
     mockFeed();
     render(<BseSectorMovers />);
 
@@ -189,27 +189,30 @@ describe("BseSectorMovers", () => {
 
     // Every category the exchange publishes is listed, including the ones nothing is mapped into.
     expect(screen.getByText("Capital Goods")).toBeInTheDocument();
-    expect(screen.getByText("no company mapped here yet")).toBeInTheDocument();
+    expect(screen.getByText("No company mapped yet")).toBeInTheDocument();
 
     // Alphabetical, with the house category sitting in its place among the exchange's own.
     expect(headerNames()).toEqual([
-      expect.stringContaining("Capital Goods"),
-      expect.stringContaining("Data Centers"),
       expect.stringContaining("Financial Services"),
-      expect.stringContaining("Forest Materials"),
       expect.stringContaining("Information Technology"),
+      expect.stringContaining("Data Centers"),
+      expect.stringContaining("Capital Goods"),
+      expect.stringContaining("Forest Materials"),
     ]);
     expect(screen.getByText("our grouping")).toBeInTheDocument();
 
     // Financial Services: 612 stocks · 340 gainers · 260 losers · 85 leading · 52 lagging.
-    const financials = within(categoryHeaders()[2]);
+    const financials = within(categoryHeaders()[0]);
     expect(financials.getByText("612")).toBeInTheDocument();
     expect(financials.getByText("340")).toBeInTheDocument();
     expect(financials.getByText("260")).toBeInTheDocument();
     expect(financials.getByText("85")).toBeInTheDocument();
     expect(financials.getByText("52")).toBeInTheDocument();
-    expect(financials.getByText("★ leading")).toBeInTheDocument();
-    expect(financials.getByText("▼ lagging")).toBeInTheDocument();
+    expect(financials.getByText("leaders")).toBeInTheDocument();
+    expect(financials.getByText("laggards")).toBeInTheDocument();
+    expect(financials.getByLabelText("Rank 1")).toBeInTheDocument();
+    expect(financials.getByText("#1")).toBeInTheDocument();
+    expect(categoryHeaders()[0].querySelector("[data-rank-icon='trophy']")).toBeInTheDocument();
 
     expect(screen.getByText(/118 traded companies are not in a category yet/)).toBeInTheDocument();
     expect(screen.getByText(/★ leading counts the companies up 5% or more/)).toBeInTheDocument();
@@ -219,12 +222,12 @@ describe("BseSectorMovers", () => {
     mockFeed();
     render(<BseSectorMovers />);
 
-    // Capital Goods sorts first but has nothing in it yet, so the board opens Data Centers.
-    expect(await screen.findByText("E2E Networks Ltd")).toBeInTheDocument();
-    expect(screen.getByText("RailTel Corporation of India Ltd")).toBeInTheDocument();
-    expect(screen.getByText("2 in all")).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(buildSectorMoversUrl("Data Centers", "gainers", 1));
-    expect(global.fetch).toHaveBeenCalledWith(buildSectorMoversUrl("Data Centers", "losers", 1));
+    // The strongest category opens first.
+    expect(await screen.findByText("IDFC First Bank Ltd")).toBeInTheDocument();
+    expect(screen.getByText("Yes Bank Ltd")).toBeInTheDocument();
+    expect(screen.getByText("3 in all")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(buildSectorMoversUrl("Financial Services", "gainers", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildSectorMoversUrl("Financial Services", "losers", 1));
 
     // The category nobody opened has cost nothing.
     expect(global.fetch).not.toHaveBeenCalledWith(buildSectorMoversUrl("Information Technology", "gainers", 1));
@@ -234,12 +237,12 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     await user.click(screen.getByRole("button", { name: /Information Technology/ }));
 
     expect(await screen.findByText("Mastek Ltd")).toBeInTheDocument();
-    expect(screen.queryByText("E2E Networks Ltd")).not.toBeInTheDocument();
+    expect(screen.queryByText("IDFC First Bank Ltd")).not.toBeInTheDocument();
     expect(screen.getByText("Nothing in this category closed lower this session.")).toBeInTheDocument();
   });
 
@@ -248,7 +251,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     await user.click(screen.getByRole("button", { name: /Forest Materials/ }));
 
@@ -261,7 +264,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     await user.click(screen.getByRole("button", { name: /Capital Goods/ }));
 
@@ -273,30 +276,28 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
-    const header = screen.getByRole("button", { name: /Data Centers/ });
+    const header = screen.getByRole("button", { name: /Financial Services/ });
     expect(header).toHaveAttribute("aria-expanded", "true");
 
     await user.click(header);
 
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("E2E Networks Ltd")).not.toBeInTheDocument();
+    expect(screen.queryByText("IDFC First Bank Ltd")).not.toBeInTheDocument();
   });
 
   it("pages within a category, with the ranks running on", async () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
-    await user.click(screen.getByRole("button", { name: /Financial Services/ }));
     await screen.findByText("IDFC First Bank Ltd");
 
     const pager = screen.getByRole("navigation", { name: "gainers pages" });
     await user.click(within(pager).getByRole("button", { name: "Next →" }));
 
     const third = await screen.findByText("Punjab National Bank");
-    expect(screen.queryByText("E2E Networks Ltd")).not.toBeInTheDocument();
+    expect(screen.queryByText("IDFC First Bank Ltd")).not.toBeInTheDocument();
     expect(within(third.closest("li")!).getByText("3")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith(buildSectorMoversUrl("Financial Services", "gainers", 2));
   });
@@ -305,7 +306,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     await user.type(screen.getByPlaceholderText("Search categories"), "data");
 
@@ -317,7 +318,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     await user.selectOptions(screen.getByLabelText("Sort"), "stocks");
     expect(headerNames()).toEqual([
@@ -352,7 +353,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("E2E Networks Ltd");
+    await screen.findByText("IDFC First Bank Ltd");
 
     const clear = screen.getAllByRole("button", { name: "Clear filters" })[0];
     expect(clear).toBeDisabled();
@@ -364,7 +365,7 @@ describe("BseSectorMovers", () => {
     await user.click(clear);
 
     expect(screen.getByPlaceholderText("Search categories")).toHaveValue("");
-    expect(screen.getByLabelText("Sort")).toHaveValue("az");
+    expect(screen.getByLabelText("Sort")).toHaveValue("star");
     expect(screen.getByLabelText("Show")).toHaveValue("all");
     expect(headerNames()).toHaveLength(5);
   });

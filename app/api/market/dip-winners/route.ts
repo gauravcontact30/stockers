@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { indianStocks, sectors, type CapTier } from "../../../lib/indian-stocks";
 import { stockIcon } from "../../../lib/company-logos";
@@ -126,5 +127,11 @@ export async function GET(request: NextRequest) {
     },
     availableSectors: sectors.map(({ key, name }) => ({ key, name })),
     source: "Yahoo Finance (unofficial public feed)",
+  }, {
+    // Private, because the route is gated. A minute is as long as this board can honestly be
+    // held: the screen turns on today's move, so a stock that stops being down today has to stop
+    // appearing. It is enough to make paging and re-filtering feel instant, which is where the
+    // repeated requests actually come from.
+    headers: cacheHeaders(60, "private"),
   });
 }

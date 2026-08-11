@@ -11,6 +11,7 @@ import {
   DipBuysScene,
   dipPrice,
   dipRailPosition,
+  formatTrioAsOf,
   tiltLabel,
   tiltTone,
   MARKET_THEMES,
@@ -22,6 +23,7 @@ import {
   themeAverage,
   trioPrice,
   trioReturn,
+  trioStats,
 } from "../../app/components/hero-scenes";
 
 describe("signed", () => {
@@ -202,8 +204,30 @@ const SAMPLE_PERFORMANCE = {
   overallSince: "2018-03-28",
   live: true,
   asOf: "2026-08-07T10:00:00.000Z",
-  source: "test",
+  source: "Yahoo Finance",
 };
+
+describe("trioStats", () => {
+  it("summarises the three live stock cards without estimating missing values", () => {
+    const stats = trioStats(DEFENCE_TRIO, [
+      { ...SAMPLE_PERFORMANCE, symbol: "HAL", price: 4910, oneDay: 1.2, oneYear: 24, asOf: "2026-08-07T10:00:00.000Z" },
+      { ...SAMPLE_PERFORMANCE, symbol: "MAZDOCK", price: 2870, oneDay: -0.4, oneYear: 41, asOf: "2026-08-07T11:00:00.000Z" },
+      { ...SAMPLE_PERFORMANCE, symbol: "PARAS", price: null, oneDay: null, oneYear: null, asOf: null },
+    ]);
+
+    expect(stats.priced).toBe(2);
+    expect(stats.advancing).toBe(1);
+    expect(stats.bestOneYear).toEqual({ symbol: "MAZDOCK", value: 41 });
+    expect(stats.averageOneYear).toBe(32.5);
+    expect(stats.latestAsOf).toBe("2026-08-07T11:00:00.000Z");
+  });
+
+  it("formats the feed date and says when it is still loading", () => {
+    expect(formatTrioAsOf(null)).toBe("Awaiting feed");
+    expect(formatTrioAsOf("not a date")).toBe("Feed time filed");
+    expect(formatTrioAsOf("2026-08-07T10:00:00.000Z")).toContain("2026");
+  });
+});
 
 describe("TrioCard", () => {
   const stock = DEFENCE_TRIO[0];
@@ -219,13 +243,18 @@ describe("TrioCard", () => {
   it("shows the live price and the day's move", () => {
     render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
 
+    expect(screen.getByText("Last Price")).toBeInTheDocument();
     expect(screen.getByText("₹4,910.00")).toBeInTheDocument();
     expect(screen.getByText("+1.3%")).toBeInTheDocument();
+    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.getByText(/Yahoo Finance/)).toBeInTheDocument();
   });
 
   it("reports all five windows, not just the day", () => {
     render(<TrioCard stock={stock} performance={SAMPLE_PERFORMANCE} loading={false} />);
 
+    expect(screen.getByText("Performance Matrix")).toBeInTheDocument();
+    expect(screen.getByText("Latest feed")).toBeInTheDocument();
     for (const label of ["1W", "1M", "6M", "1Y", "3Y"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -242,6 +271,7 @@ describe("TrioCard", () => {
 
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
     expect(screen.getAllByText("…").length).toBeGreaterThan(0);
+    expect(screen.getByText("Updating from live feed")).toBeInTheDocument();
     expect(screen.queryByText("₹4,910.00")).not.toBeInTheDocument();
   });
 
@@ -250,6 +280,7 @@ describe("TrioCard", () => {
     render(<TrioCard stock={stock} performance={null} loading={false} />);
 
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    expect(screen.getByText("Feed timestamp pending")).toBeInTheDocument();
   });
 
 });
@@ -306,6 +337,11 @@ describe("DefenceStocksScene and DataCentreScene", () => {
     for (const stock of DEFENCE_TRIO) {
       expect(screen.getByText(stock.symbol)).toBeInTheDocument();
       expect(screen.getByText(stock.company)).toBeInTheDocument();
+      expect(screen.getByAltText(`${stock.symbol} logo`)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
+    for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {
+      expect(screen.getAllByText(label)).toHaveLength(3);
     }
   });
 
@@ -315,6 +351,11 @@ describe("DefenceStocksScene and DataCentreScene", () => {
     for (const stock of DATA_CENTRE_TRIO) {
       expect(screen.getByText(stock.symbol)).toBeInTheDocument();
       expect(screen.getByText(stock.company)).toBeInTheDocument();
+      expect(screen.getByAltText(`${stock.symbol} logo`)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
+    for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {
+      expect(screen.getAllByText(label)).toHaveLength(3);
     }
   });
 
@@ -330,6 +371,69 @@ describe("DefenceStocksScene and DataCentreScene", () => {
 
     render(<DataCentreScene />);
     expect(screen.getByText(/live exchange figures/)).toBeInTheDocument();
+  });
+
+  it("keeps the comparison slides focused on stock cards without the stock stats strip", () => {
+    const { unmount } = render(<DefenceStocksScene />);
+    expect(screen.queryByText("Stock stats")).not.toBeInTheDocument();
+    expect(screen.queryByText("BSE stocks")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Performance Matrix")).toHaveLength(3);
+    for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {
+      expect(screen.getAllByText(label)).toHaveLength(3);
+    }
+    unmount();
+
+    render(<DataCentreScene />);
+    expect(screen.queryByText("Stock stats")).not.toBeInTheDocument();
+    expect(screen.queryByText("BSE stocks")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Performance Matrix")).toHaveLength(3);
+    for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {
+      expect(screen.getAllByText(label)).toHaveLength(3);
+    }
+  });
+
+  it("renders cached server performance immediately on the comparison cards", () => {
+    const { unmount } = render(
+      <DefenceStocksScene
+        initialPerformances={DEFENCE_TRIO.map((stock, index) => ({
+          ...SAMPLE_PERFORMANCE,
+          symbol: stock.symbol,
+          price: 1000 + index,
+          oneMonth: 10 + index,
+          oneYear: 20 + index,
+          threeYear: 30 + index,
+          fiveYear: 40 + index,
+          overall: 50 + index,
+        }))}
+      />,
+    );
+
+    expect(screen.getByText("₹1,000.00")).toBeInTheDocument();
+    expect(screen.getByText("₹1,001.00")).toBeInTheDocument();
+    expect(screen.getByText("₹1,002.00")).toBeInTheDocument();
+    expect(screen.getAllByText("+50.0%")).toHaveLength(1);
+    expect(screen.queryByText("Updating from live feed")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <DataCentreScene
+        initialPerformances={DATA_CENTRE_TRIO.map((stock, index) => ({
+          ...SAMPLE_PERFORMANCE,
+          symbol: stock.symbol,
+          price: 2000 + index,
+          oneMonth: 11 + index,
+          oneYear: 21 + index,
+          threeYear: 31 + index,
+          fiveYear: 41 + index,
+          overall: 51 + index,
+        }))}
+      />,
+    );
+
+    expect(screen.getByText("₹2,000.00")).toBeInTheDocument();
+    expect(screen.getByText("₹2,001.00")).toBeInTheDocument();
+    expect(screen.getByText("₹2,002.00")).toBeInTheDocument();
+    expect(screen.queryByText("Updating from live feed")).not.toBeInTheDocument();
   });
 
   it("asks the performance endpoint for exactly the companies it shows, in one request", async () => {
@@ -430,11 +534,25 @@ describe("DipBuysScene", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok, json: async () => payload } as Response);
   };
 
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("shows the card's shape while the screen is still running", () => {
     global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
     const { container } = render(<DipBuysScene />);
 
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+
+  it("paints the last good board immediately while the public screen revalidates", async () => {
+    window.localStorage.setItem("stockers:hero-dip-leaders:v1", JSON.stringify({ savedAt: Date.now(), board }));
+    global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
+    const { container } = render(<DipBuysScene />);
+
+    expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/market/dip-leaders"));
   });
 
   it("asks the public screen endpoint, which needs no sign-in", async () => {

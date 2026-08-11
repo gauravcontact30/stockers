@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, clearMemoryCacheByPrefix, type CacheTag } from "../../../lib/cache";
 import { clearBoardReads } from "../../../lib/board-read";
+import { clearStockVerdictCache } from "../../../lib/stock-verdicts";
 import { userFromRequest } from "../../../lib/store";
 
 export const dynamic = "force-dynamic";
@@ -60,9 +61,14 @@ export async function POST(request: Request) {
     for (const prefix of PREFIXES[tag]) clearMemoryCacheByPrefix(prefix);
   }
 
-  // Board reads are held in their own bounded store rather than in the shared cache, because they
-  // are produced by a stream rather than by a loader that could be re-run for them.
-  if (tags.includes(CACHE_TAGS.ai)) clearBoardReads();
+  // Board reads and stock verdicts are held in their own bounded stores rather than in the shared
+  // cache, because both are produced by a stream rather than by a loader that could be re-run for
+  // them. Verdicts were previously missed here, so a call written over figures that had since been
+  // revised outlived the purge that was meant to drop it, by up to its full ten-minute window.
+  if (tags.includes(CACHE_TAGS.ai)) {
+    clearBoardReads();
+    clearStockVerdictCache();
+  }
 
   return NextResponse.json({
     revalidated: tags,

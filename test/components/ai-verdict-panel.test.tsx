@@ -1,5 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { AiVerdictPanel, VERDICT_SOURCES, clearAiVerdictPanelCache } from "../../app/components/ai-verdict-panel";
+import {
+  AiVerdictPanel,
+  VERDICT_SOURCES,
+  applyVerdictFrame,
+  clearAiVerdictPanelCache,
+  parseVerdictFrame,
+} from "../../app/components/ai-verdict-panel";
 import type { StockVerdict } from "../../app/components/verdict-view";
 
 function verdict(overrides: Partial<StockVerdict> = {}): StockVerdict {
@@ -22,22 +28,71 @@ function verdict(overrides: Partial<StockVerdict> = {}): StockVerdict {
   };
 }
 
-/** Answers the section feed and the verdicts endpoint, recording what was asked for. */
+/**
+ * A body that hands the frames over one chunk at a time, the way the route does.
+ *
+ * Split at the newline rather than delivered whole, so a test that asserts the calls are on screen
+ * before the rationales land is actually exercising the streaming path and not a buffered one.
+ */
+function ndjsonBody(frames: unknown[], gate?: Promise<void>) {
+  const encoder = new TextEncoder();
+  const chunks = frames.map((frame) => encoder.encode(`${JSON.stringify(frame)}\n`));
+  let index = 0;
+
+  return {
+    getReader: () => ({
+      read: async () => {
+        // Everything after the first chunk waits on the gate when the test supplied one. Without
+        // it both frames resolve in the same microtask, React batches the two renders into one,
+        // and a test asserting that the calls land *before* the prose can never observe it.
+        if (index > 0 && gate) await gate;
+        return index < chunks.length ? { done: false, value: chunks[index++] } : { done: true, value: undefined };
+      },
+    }),
+  };
+}
+
+/**
+ * Answers the section feed and the verdicts endpoint, recording what was asked for.
+ *
+ * `rationales` is the second frame the route sends once the model has written over the calls.
+ * `buffered` drops the body entirely, which is what a proxy that collects the whole response looks
+ * like from here — the panel is meant to parse the same lines either way.
+ */
 function mockDesk({
   feed = {},
   verdicts = [verdict()],
+  rationales,
   feedOk = true,
   verdictsOk = true,
-}: { feed?: unknown; verdicts?: StockVerdict[]; feedOk?: boolean; verdictsOk?: boolean } = {}) {
+  buffered = false,
+  gated = false,
+}: {
+  feed?: unknown;
+  verdicts?: StockVerdict[];
+  rationales?: { symbol: string; rationale: string }[];
+  feedOk?: boolean;
+  verdictsOk?: boolean;
+  buffered?: boolean;
+  gated?: boolean;
+} = {}) {
   const calls: { url: string; body?: unknown }[] = [];
+  const frames: unknown[] = [{ type: "verdicts", verdicts }];
+  if (rationales) frames.push({ type: "rationales", rationales });
+
+  let release = () => {};
+  const gate = gated ? new Promise<void>((resolve) => { release = resolve; }) : undefined;
+
   global.fetch = jest.fn((url: string, init?: RequestInit) => {
     calls.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : undefined });
     if (String(url) === "/api/ai/verdicts") {
-      return Promise.resolve({ ok: verdictsOk, json: () => Promise.resolve({ verdicts }) });
+      const text = () => Promise.resolve(frames.map((frame) => `${JSON.stringify(frame)}\n`).join(""));
+      return Promise.resolve({ ok: verdictsOk, body: buffered ? null : ndjsonBody(frames, gate), text });
     }
     return Promise.resolve({ ok: feedOk, json: () => Promise.resolve(feed) });
   }) as unknown as typeof fetch;
-  return calls;
+
+  return Object.assign(calls, { release: () => release() });
 }
 
 describe("VERDICT_SOURCES symbol extraction", () => {
@@ -182,9 +237,15 @@ describe("AiVerdictPanel", () => {
     expect(await screen.findByText(/The AI desk couldn't score these stocks/)).toBeInTheDocument();
   });
 
-  it("treats a malformed verdicts payload as nothing scored", async () => {
+  // A stream that carries nothing the panel recognises — a half-written frame, a line of prose,
+  // a frame whose payload is the wrong shape — leaves it with no stocks rather than an error.
+  it("treats a malformed verdicts stream as nothing scored", async () => {
     global.fetch = jest.fn(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ verdicts: "not-a-list" }) }),
+      Promise.resolve({
+        ok: true,
+        body: null,
+        text: () => Promise.resolve('{"type":"verdicts","verdicts":"not-a-list"}\nnot json at all\n{"type":"nope"}\n'),
+      }),
     ) as unknown as typeof fetch;
     render(<AiVerdictPanel section="overview" />);
 
@@ -208,5 +269,94 @@ describe("AiVerdictPanel", () => {
 
     expect(screen.getByText("TCS")).toBeInTheDocument();
     expect(calls).toHaveLength(1);
+  });
+
+  // The point of streaming this endpoint: the calls are decided by arithmetic and are on screen
+  // before the model has written a word, and the prose then replaces the computed sentence without
+  // the set of stocks changing underneath the reader.
+  it("shows the computed calls first and swaps in the model's note when it lands", async () => {
+    const desk = mockDesk({
+      gated: true,
+      verdicts: [verdict({ symbol: "TCS", rationale: "Holding its ground: +1.0% over a month.", source: "heuristic" })],
+      rationales: [{ symbol: "TCS", rationale: "Deal wins are holding up billing despite a soft discretionary quarter." }],
+    });
+
+    render(<AiVerdictPanel section="overview" />);
+
+    // The model has not written anything yet: the call, the score and the computed sentence are
+    // all already on screen, and the panel says the note is still coming.
+    expect(await screen.findByText(/Holding its ground/)).toBeInTheDocument();
+    expect(screen.getByText("TCS")).toBeInTheDocument();
+    expect(screen.getByText(/Writing the analyst/)).toBeInTheDocument();
+
+    desk.release();
+
+    expect(await screen.findByText(/Deal wins are holding up billing/)).toBeInTheDocument();
+    expect(screen.queryByText(/Holding its ground/)).not.toBeInTheDocument();
+    expect(screen.getByText("TCS")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Writing the analyst/)).not.toBeInTheDocument());
+  });
+
+  it("leaves the computed sentences standing when the model writes nothing", async () => {
+    mockDesk({
+      verdicts: [verdict({ symbol: "TCS", rationale: "Holding its ground: +1.0% over a month.", source: "heuristic" })],
+    });
+
+    render(<AiVerdictPanel section="overview" />);
+
+    expect(await screen.findByText(/Holding its ground/)).toBeInTheDocument();
+  });
+
+  // A rationale for a stock the stream never sent is dropped rather than added as a row of its own.
+  it("ignores a rationale for a stock that is not in the set", async () => {
+    mockDesk({
+      verdicts: [verdict({ symbol: "TCS" })],
+      rationales: [{ symbol: "WIPRO", rationale: "Not one of the stocks on screen." }],
+    });
+
+    render(<AiVerdictPanel section="overview" />);
+
+    await screen.findByText("TCS");
+    await waitFor(() => expect(screen.queryByText(/Not one of the stocks on screen/)).not.toBeInTheDocument());
+    expect(screen.queryByText("WIPRO")).not.toBeInTheDocument();
+  });
+
+  it("parses the same frames when a proxy buffers the whole response", async () => {
+    mockDesk({
+      buffered: true,
+      verdicts: [verdict({ symbol: "TCS", rationale: "Computed.", source: "heuristic" })],
+      rationales: [{ symbol: "TCS", rationale: "Written by the model." }],
+    });
+
+    render(<AiVerdictPanel section="overview" />);
+
+    expect(await screen.findByText(/Written by the model/)).toBeInTheDocument();
+  });
+});
+
+describe("verdict stream frames", () => {
+  it("keeps only the lines that are frames", () => {
+    expect(parseVerdictFrame("")).toBeNull();
+    expect(parseVerdictFrame("   ")).toBeNull();
+    expect(parseVerdictFrame("half a fr")).toBeNull();
+    expect(parseVerdictFrame('{"type":"verdicts","verdicts":"nope"}')).toBeNull();
+    expect(parseVerdictFrame('{"type":"rationales","rationales":{}}')).toBeNull();
+    expect(parseVerdictFrame('{"type":"other"}')).toBeNull();
+    expect(parseVerdictFrame('{"type":"verdicts","verdicts":[]}')).toEqual({ type: "verdicts", verdicts: [] });
+  });
+
+  it("replaces the set on a verdicts frame and only the prose on a rationales frame", () => {
+    const first = verdict({ symbol: "TCS", rationale: "Computed.", source: "heuristic" });
+    const applied = applyVerdictFrame([], { type: "verdicts", verdicts: [first] });
+    expect(applied).toEqual([first]);
+
+    const written = applyVerdictFrame(applied, {
+      type: "rationales",
+      rationales: [{ symbol: "TCS", rationale: "Written." }],
+    });
+
+    expect(written).toEqual([{ ...first, rationale: "Written.", source: "ai" }]);
+    // The frame is applied to a copy, so the set the panel already rendered is untouched.
+    expect(applied[0].rationale).toBe("Computed.");
   });
 });

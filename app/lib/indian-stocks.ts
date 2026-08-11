@@ -381,6 +381,7 @@ const raw: RawStock[] = [
   ["SKFINDIA", "SKF India", "capgoods", "skf.com", "Small"],
   ["CGPOWER", "CG Power and Industrial Solutions", "capgoods", "cgglobal.com", "Mid"],
   ["MAZDOCK", "Mazagon Dock Shipbuilders", "capgoods", "mazagondock.in", "Mid"],
+  ["PARAS", "Paras Defence and Space Technologies", "capgoods", "parasdefence.com", "Small"],
   ["COCHINSHIP", "Cochin Shipyard", "capgoods", "cochinshipyard.in", "Mid"],
   ["POLYCAB", "Polycab India", "capgoods", "polycab.com", "Large"],
 
@@ -446,7 +447,7 @@ const raw: RawStock[] = [
   ["NUVAMA", "Nuvama Wealth Management", "nbfc", "", "Small"],
   ["PNBHOUSING", "PNB Housing Finance", "nbfc", "", "Small"],
   ["ABSLAMC", "Aditya Birla Sun Life AMC", "nbfc", "", "Small"],
-  ["ANGELONE", "Angel One", "nbfc", "", "Small"],
+  ["ANGELONE", "Angel One", "nbfc", "angelone.in", "Small"],
 
   // Energy & Petrochemicals
   ["AEGISLOG", "Aegis Logistics", "energy", "", "Mid"],
@@ -552,7 +553,7 @@ const raw: RawStock[] = [
   ["ASTERDM", "Aster DM Quality Care", "healthcare", "", "Mid"],
 
   // Capital Goods & Industrials
-  ["POWERINDIA", "Hitachi Energy India", "capgoods", "", "Large"],
+  ["POWERINDIA", "Hitachi Energy India", "capgoods", "hitachienergy.com", "Large"],
   ["ENRIN", "Siemens Energy India", "capgoods", "", "Large"],
   ["GVT&D", "GE Vernova T&D India", "capgoods", "", "Mid"],
   ["WAAREEENER", "Waaree Energies", "capgoods", "", "Mid"],

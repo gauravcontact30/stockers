@@ -429,7 +429,11 @@ export function AdminClientReviews() {
         </div>
 
         {reviews.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No uploaded client reviews yet. The landing page is using the built-in fallback reviews.</p>
+          // There are no built-in fallback reviews any more — see the note in ../lib/client-review:
+          // the landing page used to pad the rotation with an invented testimonial, and now shows
+          // only what has actually been published. Telling an admin otherwise would have them
+          // believe the section is populated when it is not on the page at all.
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No client reviews published yet. The review section stays off the landing page until one is.</p>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
             {reviews.map((review) => (

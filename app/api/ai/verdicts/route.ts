@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { isFeatureKey } from "../../../lib/subscription";
-import { verdictsFor } from "../../../lib/stock-verdicts";
+import { streamVerdicts } from "../../../lib/stock-verdicts";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +30,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "symbols must list at least one stock" }, { status: 400 });
   }
 
-  return NextResponse.json({ verdicts: await verdictsFor(symbols) });
+  // Newline-delimited JSON, one frame per line, for the same reason the board-read route uses it:
+  // the calls are decided by arithmetic and are ready in the time it takes to read the returns,
+  // while the prose over them costs a model call that is allowed twenty-five seconds. Answering
+  // with a single object made every reader wait for the second thing to see the first. A cached
+  // set still arrives in one go — its one frame is written before the first flush.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for await (const frame of streamVerdicts(symbols)) {
+          controller.enqueue(encoder.encode(`${JSON.stringify(frame)}\n`));
+        }
+      } catch (error) {
+        // Usually the reader navigating away mid-stream. The connection closes below either way,
+        // and a set with no rationales yet is exactly what the panel already renders.
+        console.error(error);
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+      // Nginx and several hosting proxies buffer a response body by default, which would collect
+      // the whole stream and deliver it at once — undoing the point of streaming it.
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

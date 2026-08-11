@@ -17,7 +17,7 @@
 import { getBseDirectory, getBseMovers, type BseRow } from "./bse-market";
 import { getBaseline, HISTORY_PERIODS, periodReturn, type Baseline } from "./bse-history";
 
-/** How many peers the comparison shows. */
+/** How many peers the stock-detail modal shows by default. */
 export const PEER_COUNT = 3;
 /** The window the peer ranking is run over — long enough to mean something, short enough to be current. */
 export const PEER_PERIOD = "1y" as const;
@@ -171,22 +171,23 @@ async function rankedWithin(
   category: string,
   tier: "all" | "large" | "mid" | "small",
   excludeCode: string,
+  peerCount = PEER_COUNT,
 ): Promise<BseRow[]> {
-  const wanted = PEER_COUNT + 1; // one spare, since the company itself usually ranks in its own category
+  const wanted = peerCount + 1; // one spare, since the company itself usually ranks in its own category
   const shared = { category, tier, period: PEER_PERIOD } as const;
 
   const gainers = await getBseMovers({ ...shared, direction: "gainers", pageSize: wanted });
   const picked = gainers.rows.filter((peer) => peer.code !== excludeCode);
-  if (picked.length >= PEER_COUNT) return picked.slice(0, PEER_COUNT);
+  if (picked.length >= peerCount) return picked.slice(0, peerCount);
 
   // Ask for the losers board's final page, then reverse it: its tail is the least-bad performers.
   const probe = await getBseMovers({ ...shared, direction: "losers", pageSize: wanted });
-  if (probe.total === 0) return picked.slice(0, PEER_COUNT);
+  if (probe.total === 0) return picked.slice(0, peerCount);
 
   const tail = await getBseMovers({ ...shared, direction: "losers", pageSize: wanted, page: probe.pages });
   const shallowest = [...tail.rows].reverse().filter((peer) => peer.code !== excludeCode);
 
-  return [...picked, ...shallowest].slice(0, PEER_COUNT);
+  return [...picked, ...shallowest].slice(0, peerCount);
 }
 
 const TIER_KEY: Record<string, "large" | "mid" | "small"> = { Large: "large", Mid: "mid", Small: "small" };
@@ -204,15 +205,16 @@ async function topPerformersIn(
   category: string,
   capTier: string | null,
   excludeCode: string,
+  peerCount = PEER_COUNT,
 ): Promise<{ rows: BseRow[]; matchedTier: boolean }> {
   const tier = capTier ? TIER_KEY[capTier] : undefined;
 
   if (tier) {
-    const withinTier = await rankedWithin(category, tier, excludeCode);
-    if (withinTier.length >= PEER_COUNT) return { rows: withinTier, matchedTier: true };
+    const withinTier = await rankedWithin(category, tier, excludeCode, peerCount);
+    if (withinTier.length >= peerCount) return { rows: withinTier, matchedTier: true };
   }
 
-  return { rows: await rankedWithin(category, "all", excludeCode), matchedTier: false };
+  return { rows: await rankedWithin(category, "all", excludeCode, peerCount), matchedTier: false };
 }
 
 /**
@@ -221,7 +223,7 @@ async function topPerformersIn(
  * The seven Bhavcopy baselines are fetched once and reused for the company and all three peers —
  * they cover the whole exchange, so measuring four scrips costs the same as measuring one.
  */
-export async function getStockDetail(query: string): Promise<StockDetail | null> {
+export async function getStockDetail(query: string, peerCount = PEER_COUNT): Promise<StockDetail | null> {
   const trimmed = query.trim();
   if (!trimmed) return null;
 
@@ -249,7 +251,7 @@ export async function getStockDetail(query: string): Promise<StockDetail | null>
     };
   }
 
-  const ranked = await topPerformersIn(category, row.capTier, row.code);
+  const ranked = await topPerformersIn(category, row.capTier, row.code, peerCount);
   const peers = ranked.rows.map((peer) => toDetail(peer, baselines, measuredFrom));
 
   return {

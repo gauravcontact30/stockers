@@ -5,7 +5,9 @@ import path from "node:path";
 import { DELETE, SUPER_ADMIN_EMAIL } from "../../app/api/admin/users/route";
 import { createToken, type AppUser } from "../../app/lib/store";
 
-const usersPath = path.join(process.cwd(), "app", "data", "users.json");
+// The per-worker store jest.setup.ts points `app/lib/store` at, so this suite writes the same file
+// the code under test reads — and never the real `app/data/users.json`.
+const usersPath = process.env.STOCKERS_USERS_FILE as string;
 
 let original: string | null = null;
 

@@ -46,7 +46,16 @@ export type AppUser = {
   verificationSentAt?: string | null;
 };
 
-const filePath = path.join(process.cwd(), "app", "data", "users.json");
+/**
+ * Where the account store lives.
+ *
+ * Overridable because this is the one file in the app that holds real user records, and two things
+ * legitimately need it somewhere else: a deployment that keeps state off the application directory,
+ * and a test suite, which must never be one truncation away from taking out the developer's own
+ * accounts. It also has to be per-suite: Jest runs suites in parallel workers, so two suites
+ * pointed at one file interleave a `writeFile("[]")` from one into the middle of the other.
+ */
+const filePath = process.env.STOCKERS_USERS_FILE || path.join(process.cwd(), "app", "data", "users.json");
 const SCRYPT_KEY_LENGTH = 64;
 
 // Session tokens now gate paid features, so they carry an HMAC and can no longer be forged by

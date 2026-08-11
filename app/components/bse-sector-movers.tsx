@@ -36,11 +36,11 @@ type SortKey = "az" | "stocks" | "gainers" | "losers" | "star";
 type ShowKey = "all" | "mapped";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "az", label: "A to Z" },
+  { key: "star", label: "Top performing" },
   { key: "stocks", label: "Most stocks" },
   { key: "gainers", label: "Most gainers" },
   { key: "losers", label: "Most losers" },
-  { key: "star", label: "Most leading" },
+  { key: "az", label: "A to Z" },
 ];
 
 const SHOW_OPTIONS: { key: ShowKey; label: string }[] = [
@@ -77,6 +77,53 @@ function count(value: number): string {
   return value.toLocaleString("en-IN");
 }
 
+const RANK_STYLES = [
+  {
+    tone: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200",
+    icon: "trophy",
+  },
+  {
+    tone: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200",
+    icon: "medal",
+  },
+  {
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+    icon: "spark",
+  },
+  {
+    tone: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200",
+    icon: "trend",
+  },
+  {
+    tone: "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200",
+    icon: "target",
+  },
+  {
+    tone: "border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-200",
+    icon: "diamond",
+  },
+  {
+    tone: "border-lime-200 bg-lime-50 text-lime-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-lime-200",
+    icon: "bolt",
+  },
+  {
+    tone: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800 dark:border-fuchsia-500/30 dark:bg-fuchsia-500/10 dark:text-fuchsia-200",
+    icon: "compass",
+  },
+  {
+    tone: "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200",
+    icon: "flag",
+  },
+  {
+    tone: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
+    icon: "badge",
+  },
+] as const;
+
+function rankStyle(rank: number) {
+  return RANK_STYLES[(Math.max(1, rank) - 1) % RANK_STYLES.length];
+}
+
 /**
  * The category list as the reader asked to see it.
  *
@@ -98,6 +145,7 @@ function arrangeCategories(
   const ranked = [...visible];
   ranked.sort((a, b) => {
     if (sort === "az") return a.sector.localeCompare(b.sector);
+    if (sort === "star") return b.star - a.star || b.gainers - a.gainers || a.red - b.red || a.sector.localeCompare(b.sector);
     const by = sort === "stocks" ? "stocks" : sort === "gainers" ? "gainers" : sort === "losers" ? "losers" : "star";
     // Ties fall back to the name, so equal categories keep a stable, readable order.
     return b[by] - a[by] || a.sector.localeCompare(b.sector);
@@ -225,9 +273,9 @@ function Metric({ label, value, tone }: { label: string; value: number; tone: st
   const displayLabel = label.includes("leading") ? "leaders" : label.includes("lagging") ? "laggards" : label;
 
   return (
-    <span className="flex min-w-[62px] flex-col items-end gap-0.5 border-l border-slate-200 px-3 first:border-l-0 first:pl-0 dark:border-slate-800">
-      <span className={`text-base font-semibold tabular-nums ${tone}`}>{count(value)}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+    <span className="flex min-w-[50px] flex-col items-end gap-0.5 border-l border-slate-200 px-2 first:border-l-0 first:pl-0 dark:border-slate-800">
+      <span className={`text-sm font-bold tabular-nums ${tone}`}>{count(value)}</span>
+      <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
         {displayLabel}
       </span>
     </span>
@@ -270,17 +318,45 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
+function RankIcon({ icon }: { icon: (typeof RANK_STYLES)[number]["icon"] }) {
+  const stroke = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" data-rank-icon={icon} className="h-4 w-4">
+      {icon === "trophy" && <path d="M6 3.5h8v3.8c0 2.8-1.7 4.7-4 5.2-2.3-.5-4-2.4-4-5.2V3.5ZM7.5 16.5h5M10 12.5v4M6 5H3.5c.1 2.4 1 3.9 3 4.4M14 5h2.5c-.1 2.4-1 3.9-3 4.4" {...stroke} />}
+      {icon === "medal" && <path d="m7 3.5 3 4 3-4M6 3.5h8M10 7.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4ZM10 11l.7 1.4 1.5.2-1.1 1.1.3 1.5-1.4-.8-1.4.8.3-1.5-1.1-1.1 1.5-.2L10 11Z" {...stroke} />}
+      {icon === "spark" && <path d="M10 2.8 11.7 8l5.1 1.7-5.1 1.7L10 16.6l-1.7-5.2-5.1-1.7L8.3 8 10 2.8ZM15.6 3.8l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5Z" {...stroke} />}
+      {icon === "trend" && <path d="M3.5 14.5 7.4 10l3.1 2.7 5.8-7.2M12.8 5.5h3.5V9" {...stroke} />}
+      {icon === "target" && <path d="M10 3.2a6.8 6.8 0 1 1 0 13.6 6.8 6.8 0 0 1 0-13.6ZM10 6.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6ZM10 9.1a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8Z" {...stroke} />}
+      {icon === "diamond" && <path d="M10 2.8 17 10l-7 7.2L3 10l7-7.2ZM3 10h14M10 2.8 7.2 10l2.8 7.2 2.8-7.2L10 2.8Z" {...stroke} />}
+      {icon === "bolt" && <path d="M11.4 2.8 4.8 11h5l-1.2 6.2 6.6-8.2h-5l1.2-6.2Z" {...stroke} />}
+      {icon === "compass" && <path d="M10 3.1a6.9 6.9 0 1 1 0 13.8 6.9 6.9 0 0 1 0-13.8ZM12.9 7.1l-1.5 4.3-4.3 1.5 1.5-4.3 4.3-1.5Z" {...stroke} />}
+      {icon === "flag" && <path d="M5.2 16.8V3.5M5.2 4.2h8.9l-1.6 2.5 1.6 2.5H5.2" {...stroke} />}
+      {icon === "badge" && <path d="M10 2.8 12 5l3-.1.6 2.9 2.1 2.2-2.1 2.2-.6 2.9-3-.1-2 2.2-2-2.2-3 .1-.6-2.9L2.3 10l2.1-2.2.6-2.9 3 .1 2-2.2Z" {...stroke} />}
+    </svg>
+  );
+}
+
 /** A category, closed to its matrix and opened to both sides of its session. */
 function CategoryBlock({
   summary,
+  rank,
   open,
   onToggle,
 }: {
   summary: BseSectorSummary;
+  rank: number;
   open: boolean;
   onToggle: () => void;
 }) {
   const panelId = `sector-panel-${summary.sector.replace(/\W+/g, "-").toLowerCase()}`;
+  const rankVisual = rankStyle(rank);
 
   return (
     <div
@@ -295,33 +371,42 @@ function CategoryBlock({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className={`grid w-full grid-cols-1 gap-4 px-4 py-3.5 text-left transition md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
+        className={`grid w-full grid-cols-1 gap-3 px-3 py-2.5 text-left transition md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
           open ? "bg-violet-50/40 dark:bg-violet-500/5" : "hover:bg-slate-50/80 dark:hover:bg-slate-900/60"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-3">
+        <span className="flex min-w-0 items-center gap-2.5">
           <Chevron open={open} />
+          <span
+            aria-label={`Rank ${rank}`}
+            className={`flex h-9 w-10 shrink-0 items-center justify-center gap-0.5 rounded-xl border shadow-sm ${rankVisual.tone}`}
+          >
+            <RankIcon icon={rankVisual.icon} />
+            <span className="flex flex-col leading-none">
+              <span className="text-xs font-black tabular-nums">#{rank}</span>
+            </span>
+          </span>
           {/* The category's colour moves off its name and onto its own mark: twenty filled
               name-pills down the page compete with the figures they are meant to label, while a
               tile gives each row a fixed left edge for the eye to run down — and the glyph says
               which industry it is before the name is read. */}
           <span
             aria-hidden="true"
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${sectorTone(summary.sector)}`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${sectorTone(summary.sector)}`}
           >
-            <CategoryIcon category={summary.sector} className="h-[18px] w-[18px]" />
+            <CategoryIcon category={summary.sector} className="h-4 w-4" />
           </span>
           <span className="min-w-0">
-            <span className="flex flex-wrap items-center gap-2">
+            <span className="flex flex-wrap items-center gap-1.5">
               <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">{summary.sector}</span>
               {summary.house && (
                 // Said plainly: BSE publishes no data-centre industry, so this grouping is ours.
-                <span className="shrink-0 rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                <span className="shrink-0 rounded-full border border-slate-300 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500 dark:border-slate-600 dark:text-slate-400">
                   our grouping
                 </span>
               )}
             </span>
-            <span className="mt-1 flex items-center gap-2">
+            <span className="mt-0.5 flex items-center gap-2">
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 {summary.stocks === 0 ? "Classification pending" : `${count(summary.stocks)} mapped stocks`}
               </span>
@@ -331,7 +416,7 @@ function CategoryBlock({
         </span>
 
         {summary.stocks === 0 ? (
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             No company mapped yet
           </span>
         ) : (
@@ -339,7 +424,7 @@ function CategoryBlock({
           // unwrapped width, so on a phone the last two figures were cropped away by the card's
           // `overflow-hidden` with no way to scroll to them. Allowed to shrink, the figures wrap
           // onto a second row instead.
-          <span className="flex flex-wrap items-start justify-end gap-y-3">
+          <span className="flex flex-wrap items-start justify-end gap-y-2">
             <Metric label="stocks" value={summary.stocks} tone="text-slate-900 dark:text-white" />
             <Metric label="gainers" value={summary.gainers} tone="text-emerald-600 dark:text-emerald-400" />
             <Metric label="losers" value={summary.losers} tone="text-rose-600 dark:text-rose-400" />
@@ -350,7 +435,7 @@ function CategoryBlock({
       </button>
 
       {open && (
-        <div id={panelId} className="border-t border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+        <div id={panelId} className="border-t border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/60">
           {summary.stocks === 0 ? (
             // Nothing to ask the endpoint for yet, so it is not asked.
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -361,7 +446,7 @@ function CategoryBlock({
             // track is sized `auto`, so it grew to its rows' min-content (357px) and was then
             // cropped by the card's `overflow-hidden`. `grid-cols-1` is `minmax(0, 1fr)`, which
             // caps the track at the card's width and lets the rows truncate as they were built to.
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <CategoryList category={summary.sector} direction="gainers" />
               <CategoryList category={summary.sector} direction="losers" />
             </div>
@@ -390,7 +475,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
   );
 
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortKey>("az");
+  const [sort, setSort] = useState<SortKey>("star");
   const [show, setShow] = useState<ShowKey>("all");
 
   // Null means "not chosen yet"; "" means the reader closed the one that was open. Left to itself
@@ -410,11 +495,11 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
 
   const openSector = choice ?? paged.slice.find((summary) => summary.stocks > 0)?.sector ?? "";
   const progress = data?.classification;
-  const filtered = search.trim().length > 0 || sort !== "az" || show !== "all";
+  const filtered = search.trim().length > 0 || sort !== "star" || show !== "all";
 
   const resetFilters = () => {
     setSearch("");
-    setSort("az");
+    setSort("star");
     setShow("all");
     setChoice(null);
   };
@@ -425,9 +510,9 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
       eyebrow="Category wise"
       eyebrowClass="text-violet-600 dark:text-violet-400"
       title="Most gainers and most losers, category by category"
-      blurb="Every category the exchange publishes, listed A to Z with every classified company counted into it. Open one to page through all of it — every name in that category that closed higher, and every name that closed lower."
+      blurb="Every category the exchange publishes, ranked by top performers first with every classified company counted into it. Open one to page through all of it — every name in that category that closed higher, and every name that closed lower."
       aside={
-        <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400">
+        <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400">
           {data ? `${count(sectors.length)} categories` : "Loading BSE…"}
         </div>
       }
@@ -451,7 +536,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
 
       {/* The same toolbar shape the movers board uses, so the two sections are operated the same
           way — search, two filters, and a reset, on one line. */}
-      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/50">
+      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1.5 dark:border-slate-800 dark:bg-slate-950/50">
         <label className="min-w-56 flex-1">
           <span className="sr-only">Search categories</span>
           <input
@@ -479,7 +564,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
 
       {!loading && sectors.length > 0 && (
         <>
-          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
             Showing{" "}
             <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
               {count(paged.from)}–{count(paged.to)}
@@ -489,11 +574,12 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
             {search.trim() && <> matching &ldquo;{search.trim()}&rdquo;</>}
           </p>
 
-          <div className="mt-2 space-y-2">
-            {paged.slice.map((summary) => (
+          <div className="mt-2 space-y-1.5">
+            {paged.slice.map((summary, index) => (
               <CategoryBlock
                 key={summary.sector}
                 summary={summary}
+                rank={paged.from + index}
                 open={summary.sector === openSector}
                 onToggle={() => setChoice(summary.sector === openSector ? "" : summary.sector)}
               />
@@ -533,3 +619,4 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
     </MarketSection>
   );
 }
+

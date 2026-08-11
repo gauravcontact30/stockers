@@ -13,6 +13,8 @@ import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
+import { getDipLeaders } from "./lib/dip-leaders";
+import { getCachedPerformanceSummaries } from "./lib/stock-performance";
 
 export const revalidate = 60;
 
@@ -24,6 +26,17 @@ const navLinks = [
   { href: "#pricing", label: "Pricing" },
   { href: "/dashboard", label: "AI Dashboard" },
 ];
+
+const HERO_PERFORMANCE_SYMBOLS = ["HAL", "MAZDOCK", "PARAS", "NETWEB", "POWERINDIA", "LT"];
+
+async function getHeroInitialData() {
+  const [initialPerformance, initialDipLeaders] = await Promise.all([
+    getCachedPerformanceSummaries(HERO_PERFORMANCE_SYMBOLS).catch(() => []),
+    getDipLeaders().catch(() => null),
+  ]);
+
+  return { initialPerformance, initialDipLeaders };
+}
 
 /**
  * The divider between groups of sections.
@@ -44,7 +57,9 @@ function BandHeading({ eyebrow, title, blurb }: { eyebrow: string; title: string
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const { initialPerformance, initialDipLeaders } = await getHeroInitialData();
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
       {/* px-safe sits on the bar rather than on the row inside it, so it adds to that row's
@@ -94,7 +109,7 @@ export default function Home() {
       <div className="gutter pb-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <div className="bleed-gutter">
-          <HeroCarousel />
+          <HeroCarousel initialPerformance={initialPerformance} initialDipLeaders={initialDipLeaders} />
         </div>
 
         <BandHeading

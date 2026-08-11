@@ -253,6 +253,6 @@ describe("cacheHeaders", () => {
 
 describe("CACHE_TAGS", () => {
   it("names the families the app revalidates by", () => {
-    expect(Object.values(CACHE_TAGS).sort()).toEqual(["ai", "bse", "news", "nse"]);
+    expect(Object.values(CACHE_TAGS).sort()).toEqual(["ai", "bse", "news", "nse", "quotes"]);
   });
 });

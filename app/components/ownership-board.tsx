@@ -23,7 +23,12 @@ export type Ownership = {
   investorTypes: { key: OwnerGroup; label: string; percent: number }[];
   foreignPercent: number;
   totalHolders: number | null;
-  history: { quarter: string; promoter: number; publicHeld: number }[];
+  history: {
+    quarter: string;
+    promoter: number;
+    publicHeld: number;
+    investorTypes?: { key?: OwnerGroup | "public" | string; label: string; percent: number }[];
+  }[];
   filedOn: string | null;
   source: string;
 };

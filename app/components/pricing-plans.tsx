@@ -11,7 +11,7 @@ import {
   type BillingCycle,
   type PlanKey,
 } from "../lib/subscription-pricing";
-import { featuresForTier, PLAN_TIERS, starsFor, TIER_LABEL, type PlanTier } from "../lib/plan-tiers";
+import { featuresIntroducedAtTier, PLAN_TIERS, starsFor, TIER_LABEL, type PlanTier } from "../lib/plan-tiers";
 import { SubscribeButton } from "./razorpay-checkout";
 
 /**
@@ -108,22 +108,37 @@ const BILLING_OPTIONS: { key: Billing; label: string }[] = [
   { key: "yearly", label: "Yearly" },
 ];
 
-const FEATURE_CARD_TONE: Record<PlanTier, { card: string; pill: string; line: string }> = {
+const FEATURE_CARD_TONE: Record<PlanTier, { card: string; pill: string; line: string; dot: string; ribbon: string; count: string }> = {
   starter: {
     card: "border-sky-200 bg-sky-50/85 dark:border-sky-500/30 dark:bg-sky-500/10",
     pill: "border-sky-200 bg-white text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300",
     line: "border-sky-200/80 dark:border-sky-500/20",
+    dot: "bg-sky-500",
+    ribbon: "border-sky-200 bg-gradient-to-r from-white via-sky-50 to-sky-100 text-sky-900 dark:border-sky-500/30 dark:from-sky-950/80 dark:via-sky-950/60 dark:to-sky-900/50 dark:text-sky-100",
+    count: "text-sky-700 dark:text-sky-300",
   },
   pro: {
     card: "border-emerald-200 bg-emerald-50/85 dark:border-emerald-500/30 dark:bg-emerald-500/10",
     pill: "border-emerald-200 bg-white text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
     line: "border-emerald-200/80 dark:border-emerald-500/20",
+    dot: "bg-emerald-500",
+    ribbon: "border-emerald-200 bg-gradient-to-r from-white via-emerald-50 to-emerald-100 text-emerald-900 dark:border-emerald-500/30 dark:from-emerald-950/80 dark:via-emerald-950/60 dark:to-emerald-900/50 dark:text-emerald-100",
+    count: "text-emerald-700 dark:text-emerald-300",
   },
   elite: {
     card: "border-violet-200 bg-violet-50/85 dark:border-violet-500/30 dark:bg-violet-500/10",
     pill: "border-violet-200 bg-white text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300",
     line: "border-violet-200/80 dark:border-violet-500/20",
+    dot: "bg-violet-500",
+    ribbon: "border-violet-200 bg-gradient-to-r from-white via-violet-50 to-violet-100 text-violet-900 dark:border-violet-500/30 dark:from-violet-950/80 dark:via-violet-950/60 dark:to-violet-900/50 dark:text-violet-100",
+    count: "text-violet-700 dark:text-violet-300",
   },
+};
+
+const PLAN_INCLUDED_COPY: Record<PlanTier, string> = {
+  starter: "Starter AI features",
+  pro: "All Starter AI features included",
+  elite: "All Starter + Pro AI features included.",
 };
 
 function StarIcon({ className }: { className?: string }) {
@@ -165,31 +180,47 @@ export function PlanFeatureCards({ compact = false }: { compact?: boolean }) {
           </h3>
         </div>
         <p className="max-w-xl text-sm text-slate-600 dark:text-slate-400">
-          Each card shows the AI tools included in that plan. The starred ribbons mark the top three AI features on the landing page.
+          Pro includes every Starter AI tool. Elite includes every Starter and Pro AI tool, plus its own advanced features.
         </p>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {PLAN_TIERS.map((tier) => {
           const tone = FEATURE_CARD_TONE[tier];
-          const features = featuresForTier(tier);
+          const features = featuresIntroducedAtTier(tier);
           return (
             <article key={tier} className={`rounded-3xl border p-5 ${tone.card}`}>
               <div className="flex items-center justify-between gap-3">
                 <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${tone.pill}`}>
                   {TIER_LABEL[tier]}
                 </span>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{features.length} AI features</span>
+                <div
+                  aria-label={`${features.length} ${TIER_LABEL[tier]} AI features. ${PLAN_INCLUDED_COPY[tier]}`}
+                  className={`relative overflow-hidden rounded-2xl border px-3 py-2 text-right shadow-sm ${tone.ribbon}`}
+                >
+                  <span aria-hidden="true" className={`absolute inset-y-0 right-0 w-1.5 ${tone.dot}`} />
+                  <span className="block text-xs font-black uppercase tracking-wide">
+                    <strong className={`mr-1 text-xl font-black leading-none tabular-nums ${tone.count}`}>{features.length}</strong>{" "}
+                    {TIER_LABEL[tier]} AI features
+                  </span>
+                  <span className="mt-0.5 block text-[10px] font-semibold leading-snug text-slate-500 dark:text-slate-300">
+                    {PLAN_INCLUDED_COPY[tier]}
+                  </span>
+                </div>
               </div>
               <ul className="mt-4 divide-y text-sm text-slate-700 dark:text-slate-300">
                 {features.map((feature) => {
                   const stars = starsFor(tier, feature.key);
+                  const featureTone = FEATURE_CARD_TONE[feature.tier];
                   return (
                     <li key={feature.key} className={`flex gap-3 py-3 first:pt-0 last:pb-0 ${tone.line}`}>
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+                      <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${featureTone.dot}`} aria-hidden="true" />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-slate-900 dark:text-white">{feature.label}</span>
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${featureTone.pill}`}>
+                            {TIER_LABEL[feature.tier]}
+                          </span>
                           <StarRankBadge stars={stars} />
                         </span>
                         <span className="mt-1 block text-xs leading-relaxed text-slate-600 dark:text-slate-400">{feature.blurb}</span>

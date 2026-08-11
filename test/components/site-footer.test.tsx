@@ -13,7 +13,7 @@ describe("SiteFooter", () => {
     expect(screen.getByText("Legal")).toBeInTheDocument();
 
     const year = new Date().getFullYear();
-    expect(screen.getByText(new RegExp(`© ${year} Stockers.AI`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`© ${year} StockersAI`))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back to top/ })).toHaveAttribute("href", "#");
   });
 
