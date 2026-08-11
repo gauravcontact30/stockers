@@ -14,7 +14,7 @@ const forbidden = () => NextResponse.json({ error: "Admin access required." }, {
 
 export async function GET(request: Request) {
   if (!(await requireAdmin(request))) return forbidden();
-  return NextResponse.json({ reviews: await listClientReviews({ includeDefaults: false }) });
+  return NextResponse.json({ reviews: await listClientReviews() });
 }
 
 export async function POST(request: Request) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     const review = await createClientReview(await request.formData());
     revalidatePath("/");
-    return NextResponse.json({ ok: true, review, reviews: await listClientReviews({ includeDefaults: false }) });
+    return NextResponse.json({ ok: true, review, reviews: await listClientReviews() });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save client review." }, { status: 400 });
   }
@@ -47,5 +47,5 @@ export async function DELETE(request: Request) {
   if (!deleted) return NextResponse.json({ error: "No uploaded review matched that id." }, { status: 404 });
 
   revalidatePath("/");
-  return NextResponse.json({ ok: true, reviews: await listClientReviews({ includeDefaults: false }) });
+  return NextResponse.json({ ok: true, reviews: await listClientReviews() });
 }

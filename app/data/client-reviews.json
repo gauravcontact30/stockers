@@ -1,5 +1,18 @@
 [
   {
+    "id": "review_mso48mub_e44ba879",
+    "name": "Shivam Pandey",
+    "location": "Mainpuri - UP",
+    "role": "Research analyst",
+    "photo": "/uploads/client-reviews/review_mso48mub_e44ba879-profile.png",
+    "accent": "from-emerald-500 via-teal-300 to-sky-300",
+    "comment": "It is an excellent platform for AI-powered stock analysis. Its best feature is that it recommends which stocks you should buy and which ones you should hold.",
+    "signature": "Shivam",
+    "signatureImage": "/uploads/client-reviews/review_mso48mub_e44ba879-signature.png",
+    "rating": 5,
+    "createdAt": "2026-08-11T03:43:45.219Z"
+  },
+  {
     "id": "review_mslvx3bz_7ba22a9a",
     "name": "Gaurav Pandey",
     "location": "Gurgaon",

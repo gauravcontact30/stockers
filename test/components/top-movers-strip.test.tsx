@@ -23,26 +23,22 @@ describe("TopMoversStrip", () => {
       />,
     );
 
-    expect(screen.getByText("Top 3 gainers")).toBeInTheDocument();
-    expect(screen.getByText("Top 3 losers")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 Gainers - Today")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 Losers - Today")).toBeInTheDocument();
 
-    // Every detail is labelled and on its own line rather than paired across the card's width.
+    // One row per stock, carrying rank, identity, sector, cap tier, price and the move. The
+    // values are self-describing, so the row is not padded out with a label above each one.
     const winner = screen.getByText("HINDZINC").closest("li")!;
     expect(within(winner).getByText("1")).toBeInTheDocument();
     expect(within(winner).getByText("Hindustan Zinc Ltd")).toBeInTheDocument();
-    expect(within(winner).getAllByRole("term").map((label) => label.textContent)).toEqual([
-      "Sector",
-      "Market cap",
-      "Price",
-      "Day change",
-    ]);
+    expect(within(winner).queryAllByRole("term")).toHaveLength(0);
     expect(within(winner).getByText("Metals & Mining")).toBeInTheDocument();
     expect(within(winner).getByText("Large Cap")).toBeInTheDocument();
     expect(within(winner).getByText("₹595.30")).toBeInTheDocument();
-    expect(within(winner).getByText("+5.70%")).toBeInTheDocument();
+    expect(within(winner).getByText(/\+5\.70%/)).toBeInTheDocument();
 
     // A decliner is shown as a negative, never as an unsigned magnitude.
-    expect(within(screen.getByText("TCS").closest("li")!).getByText("-1.23%")).toBeInTheDocument();
+    expect(within(screen.getByText("TCS").closest("li")!).getByText(/-1\.23%/)).toBeInTheDocument();
   });
 
   it("says which side of the tape was empty", () => {

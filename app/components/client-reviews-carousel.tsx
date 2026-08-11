@@ -1,19 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DEFAULT_CLIENT_REVIEWS, type ClientReview } from "../lib/client-review-defaults";
+import { type ClientReview } from "../lib/client-review";
 
-const SLIDE_MS = 5200;
+const SLIDE_MS = 6000;
 
-function Stars({ rating }: { rating: number }) {
+/**
+ * The client reviews section: one review at a time, advancing on its own.
+ *
+ * Nothing here is invented. It renders what the admin has published and disappears when that is
+ * empty, rather than padding the rotation with a sample testimonial.
+ */
+
+function Stars({ rating, className }: { rating: number; className: string }) {
   return (
-    <div className="flex gap-1" aria-label={`${rating} out of 5 stars`}>
+    <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
       {Array.from({ length: 5 }, (_, index) => (
         <svg
           key={index}
           viewBox="0 0 20 20"
-          className={`h-4 w-4 ${index < rating ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700"}`}
           aria-hidden="true"
+          className={`${className} ${index < rating ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700"}`}
         >
           <path d="m10 1.7 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.6-5 2.6.9-5.5-4-3.9 5.6-.8Z" />
         </svg>
@@ -22,175 +29,210 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-function ProfileImage({ review }: { review: ClientReview }) {
-  return (
-    <div className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br ${review.accent} p-[3px] shadow-[0_20px_42px_-24px_rgba(15,23,42,0.9)]`}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- reviewer photos are external visual placeholders, not app-owned assets. */}
-      <img
-        src={review.photo}
-        alt={`${review.name} reviewer profile`}
-        className="h-full w-full rounded-[14px] object-cover"
-        loading="lazy"
-      />
-    </div>
-  );
-}
-
+/**
+ * The signature, treated as ink rather than as an image.
+ *
+ * Uploaded signatures are photographed or scanned on white, so dropped straight onto a card they
+ * arrive as a pale rectangle with a visible edge. `mix-blend-multiply` lets the white fall away and
+ * leaves only the stroke; in dark mode the same file is inverted to white ink and screened, so it
+ * reads on a dark card instead of turning into a grey block. The rule and the caption above it give
+ * the mark somewhere to sit, which is what makes it look signed rather than pasted.
+ */
 function Signature({ review }: { review: ClientReview }) {
-  if (review.signatureImage) {
-    return (
-      <div className="flex justify-end">
-        {/* eslint-disable-next-line @next/next/no-img-element -- uploaded signatures live in public/uploads and may be PNG/WebP/SVG. */}
-        <img src={review.signatureImage} alt={`${review.name} signature`} className="h-14 max-w-40 object-contain" loading="lazy" />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex justify-end">
-      <svg viewBox="0 0 172 58" className="h-14 w-40 text-slate-900 dark:text-white" role="img" aria-label={`${review.signature} signature`}>
-        <path d="M10 42c18-13 30-18 36-15 5 2 1 12-6 16 14-18 25-25 33-22 7 3 3 16-7 21 17-20 31-26 42-18 8 6 15 8 27-3 10-8 18-10 27-6" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" opacity="0.35" />
-        <path d="M82 45c18 5 42 5 72 0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.18" />
-        <text x="106" y="35" textAnchor="middle" className="fill-current text-[21px] italic tracking-wide">
-          {review.signature}
-        </text>
-      </svg>
+    // Set the way a signature actually sits on a document: the mark rests on a ruled line with its
+    // caption beneath, the whole block flush right. Laid out as a row it had nothing to align to —
+    // an uploaded scan and the drawn fallback have different intrinsic proportions, so one sat high
+    // and the other low against the caption beside it. Bottom-aligning both to a shared rule makes
+    // the two cases land identically whatever the source file looks like.
+    <div className="flex w-28 flex-col items-end">
+      {review.signatureImage ? (
+        /* eslint-disable-next-line @next/next/no-img-element -- uploaded signatures live in public/uploads and may be PNG/WebP/SVG. */
+        <img
+          src={review.signatureImage}
+          alt={`${review.name} signature`}
+          className="h-9 w-auto max-w-full object-contain object-bottom mix-blend-multiply dark:mix-blend-screen dark:invert"
+          loading="lazy"
+        />
+      ) : (
+        <svg viewBox="0 0 180 48" className="h-9 w-full text-slate-800 dark:text-slate-100" role="img" aria-label={`${review.signature} signature`} preserveAspectRatio="xMaxYMax meet">
+          <text x="176" y="36" textAnchor="end" className="fill-current text-[26px] italic tracking-wide" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            {review.signature}
+          </text>
+        </svg>
+      )}
+      <span aria-hidden="true" className="mt-0.5 h-px w-full bg-slate-300 dark:bg-slate-600" />
+      <span className="mt-1 text-[8px] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+        Signed
+      </span>
     </div>
   );
 }
 
-export function ClientReviewsCarousel({ initialReviews = DEFAULT_CLIENT_REVIEWS }: { initialReviews?: ClientReview[] }) {
-  const [reviews, setReviews] = useState<ClientReview[]>(initialReviews.length ? initialReviews : DEFAULT_CLIENT_REVIEWS);
+function Slide({ review }: { review: ClientReview }) {
+  return (
+    // One row rather than a stack: portrait and identity on the left, the quotation beside them.
+    // Stacked, a single testimonial ran taller than the boards above it for one paragraph of text.
+    <div className="relative flex h-full gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:gap-5 sm:p-5 dark:border-slate-800 dark:bg-slate-900">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${review.accent}`} />
+
+      {/* The reviewer's column carries the credibility of the quote, so it is given real size:
+          a portrait you can actually recognise a face in, and a name at reading weight. */}
+      <div className="flex w-32 shrink-0 flex-col items-center pl-1 text-center sm:w-40">
+        <span className={`inline-flex h-20 w-20 shrink-0 rounded-full bg-gradient-to-br p-[3px] sm:h-24 sm:w-24 ${review.accent}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- reviewer photos are uploaded files, not app-owned assets. */}
+          <img
+            src={review.photo}
+            alt={`${review.name} reviewer profile`}
+            className="h-full w-full rounded-full object-cover ring-2 ring-white dark:ring-slate-900"
+            loading="lazy"
+          />
+        </span>
+        <p className="mt-2.5 flex items-center justify-center gap-1 text-sm font-bold leading-tight text-slate-900 sm:text-base dark:text-white">
+          <span className="truncate">{review.name}</span>
+          <svg viewBox="0 0 20 20" aria-label="Verified reviewer" role="img" className="h-4 w-4 shrink-0 fill-emerald-500">
+            <path d="M10 1.5 12 4l3.3-.3.4 3.3 2.6 2-1.7 2.8 1 3.2-3.2.9-1.6 2.9-3-1.4-3 1.4-1.6-2.9-3.2-.9 1-3.2L0.3 9l2.6-2 .4-3.3L6.6 4 10 1.5Zm-1 10.9 4.6-4.6-1.2-1.2L9 10l-1.7-1.7-1.2 1.2 2.9 2.9Z" />
+          </svg>
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+          {review.role}, {review.location}
+        </p>
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Stars rating={review.rating} className="h-3.5 w-3.5" />
+        <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+          {review.comment}
+        </p>
+        <div className="mt-2 flex justify-end">
+          <Signature review={review} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ClientReviewsCarousel({ reviews }: { reviews: ClientReview[] }) {
   const [active, setActive] = useState(0);
+  /** Autoplay stops while someone is reading — hovering, or tabbed into the controls. */
+  const [paused, setPaused] = useState(false);
+
+  const count = reviews.length;
+  // Guards against the list shrinking under an index that has already advanced past the end.
+  const index = count > 0 ? Math.min(active, count - 1) : 0;
 
   useEffect(() => {
-    if (initialReviews.length) return;
+    // Nothing to rotate through, or the visitor is reading: leave the slide where it is.
+    if (paused || count <= 1) return;
 
-    let cancelled = false;
-    fetch("/api/client-reviews")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("failed");
-        return (await response.json()) as { reviews?: ClientReview[] };
-      })
-      .then((data) => {
-        if (!cancelled && data.reviews?.length) {
-          setReviews(data.reviews);
-          setActive(0);
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [initialReviews.length]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setActive((current) => (current + 1) % reviews.length);
-    }, SLIDE_MS);
-
+    const timer = window.setTimeout(() => setActive((current) => (current + 1) % count), SLIDE_MS);
     return () => window.clearTimeout(timer);
-  }, [active, reviews.length]);
+  }, [index, paused, count]);
 
-  const averageRating = reviews.length
-    ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length
-    : 0;
+  // Hooks run first so this early exit cannot change their order between renders.
+  if (count === 0) return null;
+
+  const average = reviews.reduce((total, review) => total + review.rating, 0) / count;
+  const fiveStar = reviews.filter((review) => review.rating === 5).length;
+  const step = (delta: number) => setActive((current) => (current + delta + count) % count);
 
   return (
-    <section className="scroll-mt-28 overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_80px_-38px_rgba(15,23,42,0.45)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <div className="grid gap-0 lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="border-b border-slate-200 bg-gradient-to-br from-rose-50 via-white to-emerald-50 p-6 sm:p-8 lg:border-r lg:border-b-0 dark:border-slate-800 dark:from-rose-500/10 dark:via-slate-900 dark:to-emerald-500/10">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-600 dark:text-rose-300">Client reviews</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Indian investors reading the market with StockersAI</h3>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-            Representative feedback from retail-investor workflows across research, screeners, ETFs, dividends and market pulse.
-          </p>
-          <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-2xl border border-rose-200 bg-white/80 p-3 dark:border-rose-500/30 dark:bg-slate-950/50">
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{reviews.length}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reviews</p>
-            </div>
-            <div className="rounded-2xl border border-amber-200 bg-white/80 p-3 dark:border-amber-500/30 dark:bg-slate-950/50">
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{averageRating.toFixed(1)}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Rating</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-500/30 dark:bg-slate-950/50">
-              <p className="text-xl font-bold text-slate-900 dark:text-white">IN</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Markets</p>
-            </div>
-          </div>
+    <section
+      id="reviews"
+      className="scroll-mt-28 overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-b from-white to-slate-50 shadow-[0_24px_80px_-38px_rgba(15,23,42,0.35)] transition-colors dark:border-slate-800 dark:from-slate-900 dark:to-slate-950"
+    >
+      {/* Header on one line: the label, the title and the score, with no bordered score box —
+          the figure reads perfectly well against the surface and saves a row of chrome. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 pt-4 pb-3 sm:px-7">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-2.5 w-2.5 fill-current">
+              <path d="m10 1.7 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.6-5 2.6.9-5.5-4-3.9 5.6-.8Z" />
+            </svg>
+            Client reviews
+          </span>
+          <h3 className="text-base font-semibold tracking-tight text-slate-900 sm:text-lg dark:text-white">
+            What investors say after using StockersAI
+          </h3>
         </div>
 
-        <div className="relative overflow-hidden p-6 sm:p-8" aria-roledescription="carousel" aria-label="Client review carousel">
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
+            {average.toFixed(1)}
+          </span>
+          <Stars rating={Math.round(average)} className="h-3.5 w-3.5" />
+          <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+            {count} verified {count === 1 ? "review" : "reviews"}
+            {fiveStar > 0 && ` · ${fiveStar} rated 5★`}
+          </span>
+        </div>
+      </div>
+
+      <div
+        className="px-5 pb-4 sm:px-7"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+      >
+        <div className="overflow-hidden" aria-roledescription="carousel" aria-label="Client review carousel">
           <div
             className="flex transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            style={{ transform: `translateX(-${active * 100}%)` }}
+            style={{ transform: `translateX(-${index * 100}%)` }}
           >
-            {reviews.map((review, index) => (
-              <article
-                key={review.id}
-                aria-hidden={index !== active}
-                className="min-w-full"
-              >
-                <div className="relative flex min-h-[390px] flex-col justify-between overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.55)] sm:p-6 dark:border-slate-800 dark:bg-slate-950/60">
-                  <div aria-hidden="true" className={`absolute -right-24 -top-24 h-56 w-56 rounded-full bg-gradient-to-br ${review.accent} opacity-20 blur-2xl`} />
-                  <div aria-hidden="true" className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-rose-500 via-amber-400 to-emerald-500" />
-
-                  <div className="relative">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex items-center gap-4">
-                        <ProfileImage review={review} />
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{review.name}</p>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            {review.role}, {review.location}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="rounded-full border border-amber-200 bg-white px-3 py-2 shadow-sm dark:border-amber-500/25 dark:bg-slate-900">
-                        <Stars rating={review.rating} />
-                      </div>
-                    </div>
-
-                    <div className="mt-8 flex gap-4">
-                      <span aria-hidden="true" className="font-serif text-6xl leading-none text-rose-200 dark:text-rose-500/25">
-                        &ldquo;
-                      </span>
-                      <p className="pt-2 text-lg leading-8 text-slate-700 dark:text-slate-200">{review.comment}</p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-end justify-between gap-4 pt-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-                      Reviewer note
-                    </p>
-                    <Signature review={review} />
-                  </div>
-                </div>
-              </article>
+            {reviews.map((review, position) => (
+              <div key={review.id} role="group" aria-hidden={position !== index} className="min-w-full px-0.5">
+                <Slide review={review} />
+              </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex justify-center border-t border-slate-200 bg-slate-50/80 py-2 dark:border-slate-800 dark:bg-slate-950/45">
-        {reviews.map((review, index) => (
+      {/* Controls are only worth drawing when there is somewhere to go. */}
+      {count > 1 && (
+        <div className="flex items-center justify-center gap-3 border-t border-slate-200 py-2.5 dark:border-slate-800">
           <button
-            key={review.name}
             type="button"
-            aria-label={`Go to review ${index + 1}: ${review.name}`}
-            aria-current={index === active}
-            className="flex h-10 items-center justify-center px-2 touch-manipulation"
-            onClick={() => setActive(index)}
+            aria-label="Previous review"
+            onClick={() => step(-1)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
           >
-            <span
-              aria-hidden="true"
-              className={`block h-2.5 rounded-full transition-all ${index === active ? "w-8 bg-rose-500" : "w-2.5 bg-slate-300 dark:bg-slate-600"}`}
-            />
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-2">
+              <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
-        ))}
-      </div>
+
+          <div className="flex items-center">
+            {reviews.map((review, position) => (
+              <button
+                key={review.id}
+                type="button"
+                aria-label={`Go to review ${position + 1}: ${review.name}`}
+                aria-current={position === index}
+                className="flex h-8 items-center justify-center px-1.5 touch-manipulation"
+                onClick={() => setActive(position)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block h-1.5 rounded-full transition-all ${position === index ? "w-6 bg-slate-800 dark:bg-white" : "w-1.5 bg-slate-300 dark:bg-slate-600"}`}
+                />
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            aria-label="Next review"
+            onClick={() => step(1)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-2">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      )}
     </section>
   );
 }

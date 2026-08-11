@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientReview } from "../lib/client-review-defaults";
+import type { ClientReview } from "../lib/client-review";
 import { authHeaders } from "./subscription-provider";
 
 const ROLE_OPTIONS = [

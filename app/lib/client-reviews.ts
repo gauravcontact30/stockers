@@ -1,13 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { DEFAULT_CLIENT_REVIEWS, type ClientReview } from "./client-review-defaults";
+import { type ClientReview } from "./client-review";
 
 const dataPath = path.join(process.cwd(), "app", "data", "client-reviews.json");
 const uploadDir = path.join(process.cwd(), "public", "uploads", "client-reviews");
 const publicPrefix = "/uploads/client-reviews";
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-let uploadedReviewCache: ClientReview[] | null = null;
 
 const ACCENTS = [
   "from-rose-500 via-orange-300 to-amber-300",
@@ -57,38 +56,41 @@ async function saveImage(file: File, id: string, kind: "profile" | "signature"):
   return `${publicPrefix}/${filename}`;
 }
 
+/**
+ * Reads the published reviews from disk, every time.
+ *
+ * There was a module-level cache here, and it was the reason a freshly published review did not
+ * appear on the site. It was populated on first read and never expired: the only thing that ever
+ * refreshed it was a write in the *same* process. A deployment runs more than one process — and
+ * serverless runs many — so an instance that had already served the landing page went on serving
+ * the old list indefinitely, and whether a visitor saw a new review came down to which instance
+ * answered them. Reading a small JSON file is cheap next to that, and freshness is now controlled
+ * where it belongs: Next caches the rendered page, and publishing revalidates it.
+ */
 async function readUploadedReviews(): Promise<ClientReview[]> {
-  if (uploadedReviewCache) return uploadedReviewCache;
-
   await ensureStore();
   const raw = await fs.readFile(dataPath, "utf8");
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      uploadedReviewCache = [];
-      return uploadedReviewCache;
-    }
-    uploadedReviewCache = parsed.filter((review): review is ClientReview => {
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((review): review is ClientReview => {
       if (!review || typeof review !== "object") return false;
       const item = review as Partial<ClientReview>;
       return Boolean(item.id && item.name && item.photo && item.comment && item.rating);
     });
-    return uploadedReviewCache;
   } catch {
-    uploadedReviewCache = [];
-    return uploadedReviewCache;
+    return [];
   }
 }
 
 async function writeUploadedReviews(reviews: ClientReview[]) {
   await ensureStore();
   await fs.writeFile(dataPath, JSON.stringify(reviews, null, 2), "utf8");
-  uploadedReviewCache = reviews;
 }
 
-export async function listClientReviews({ includeDefaults = true }: { includeDefaults?: boolean } = {}) {
-  const uploaded = await readUploadedReviews();
-  return includeDefaults ? [...uploaded, ...DEFAULT_CLIENT_REVIEWS] : uploaded;
+/** Every review the admin has published, newest first. Nothing is invented to pad the list. */
+export async function listClientReviews(): Promise<ClientReview[]> {
+  return readUploadedReviews();
 }
 
 export async function createClientReview(form: FormData): Promise<ClientReview> {

@@ -6,6 +6,7 @@ import { MarketClock, marketSession, useClockTick } from "./market-clock";
 import { MarketIndices, type IndexQuote } from "./market-indices";
 import { MarketMovers, type CapMovers, type Mover } from "./market-movers";
 import { MarketPulseBars } from "./market-pulse-bars";
+import { RestOfBse } from "./rest-of-bse";
 import { TopMoversStrip } from "./top-movers-strip";
 import type { CapTier } from "../lib/indian-stocks";
 
@@ -253,6 +254,12 @@ export function MarketPulse() {
           gainers={topMovers(breadth.movers, "gainers", 3)}
           losers={topMovers(breadth.movers, "losers", 3)}
         />
+      </div>
+
+      {/* Everything after the top three: the rest of the exchange both ways, its sectors, cap
+          tiers, funds and the metals complex. Each board loads only when its tab is opened. */}
+      <div className="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800">
+        <RestOfBse />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

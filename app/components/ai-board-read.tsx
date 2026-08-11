@@ -46,6 +46,28 @@ export function applyFrame(read: BoardRead | null, frame: ReadFrame): BoardRead 
   return { ...current, source: frame.source };
 }
 
+const CLIENT_CACHE_LIMIT = 100;
+const clientReadCache = new Map<string, BoardRead>();
+
+function rememberRead(key: string, read: BoardRead): void {
+  if (!read.headline) return;
+  if (clientReadCache.size >= CLIENT_CACHE_LIMIT) {
+    const oldest = clientReadCache.keys().next().value;
+    if (oldest !== undefined) clientReadCache.delete(oldest);
+  }
+  clientReadCache.set(key, read);
+}
+
+function instantRead(brief: BoardBrief): BoardRead {
+  const headline = brief.facts[0] ? `${brief.facts[0].label}: ${brief.facts[0].value}` : brief.highlights[0] || brief.subject;
+  const points = [...brief.highlights, ...brief.facts.slice(1).map((fact) => `${fact.label}: ${fact.value}`)].slice(0, 4);
+  return { headline, points, source: "heuristic" };
+}
+
+export function clearAiBoardReadClientCache(): void {
+  clientReadCache.clear();
+}
+
 export function AiBoardRead({ feature, brief }: { feature: string; brief: BoardBrief | null }) {
   const [read, setRead] = useState<BoardRead | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,10 +83,31 @@ export function AiBoardRead({ feature, brief }: { feature: string; brief: BoardB
 
     let cancelled = false;
     const controller = new AbortController();
+    const cached = clientReadCache.get(key);
+    let latest: BoardRead | null = cached ?? instantRead(JSON.parse(key) as BoardBrief);
+    let streamed = false;
+
+    setRead(latest);
+    setError(null);
+
+    if (cached) {
+      setWriting(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setWriting(true);
 
     const apply = (line: string) => {
       const frame = parseFrame(line);
-      if (frame && !cancelled) setRead((current) => applyFrame(current, frame));
+      if (!frame || cancelled) return;
+      if (!streamed) {
+        latest = null;
+        streamed = true;
+      }
+      latest = applyFrame(latest, frame);
+      setRead(latest);
     };
 
     (async () => {
@@ -77,16 +120,11 @@ export function AiBoardRead({ feature, brief }: { feature: string; brief: BoardB
         });
         if (!response.ok) throw new Error("Board read failed");
 
-        if (!cancelled) {
-          setRead(null);
-          setError(null);
-          setWriting(true);
-        }
-
         // A body stream is the normal path. Some environments — a proxy that buffers, a test
         // double — hand back a whole body instead, and the same line parsing covers both.
         if (!response.body) {
           for (const line of (await response.text()).split("\n")) apply(line);
+          if (latest?.headline) rememberRead(key, latest);
           return;
         }
 
@@ -110,6 +148,7 @@ export function AiBoardRead({ feature, brief }: { feature: string; brief: BoardB
         }
 
         apply(buffer);
+        if (latest?.headline) rememberRead(key, latest);
       } catch {
         if (!cancelled) setError("The AI desk couldn't read this board right now.");
       } finally {

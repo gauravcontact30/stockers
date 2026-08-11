@@ -161,11 +161,39 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
   }
 }
 
+const VERDICT_TTL_MS = 10 * 60_000;
+const verdictCache = new Map<string, { value: StockVerdict[]; expiresAt: number }>();
+const verdictInflight = new Map<string, Promise<StockVerdict[]>>();
+
+export function clearStockVerdictCache(): void {
+  verdictCache.clear();
+  verdictInflight.clear();
+}
+
 /** Outperform / hold / underperform calls for a list of symbols, in the order given. */
 export async function verdictsFor(symbols: string[]): Promise<StockVerdict[]> {
   const wanted = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean)));
   if (wanted.length === 0) return [];
 
+  const cacheKey = wanted.join("|");
+  const hit = verdictCache.get(cacheKey);
+  if (hit && hit.expiresAt > Date.now()) return hit.value;
+
+  const running = verdictInflight.get(cacheKey);
+  if (running) return running;
+
+  const promise = computeVerdicts(wanted).then((value) => {
+    verdictCache.set(cacheKey, { value, expiresAt: Date.now() + VERDICT_TTL_MS });
+    return value;
+  }).finally(() => {
+    verdictInflight.delete(cacheKey);
+  });
+
+  verdictInflight.set(cacheKey, promise);
+  return promise;
+}
+
+async function computeVerdicts(wanted: string[]): Promise<StockVerdict[]> {
   const summaries = await getPerformanceSummaries(wanted);
 
   const rows = summaries.map((summary) => {

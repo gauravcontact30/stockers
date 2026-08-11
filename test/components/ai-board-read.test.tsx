@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { AiBoardRead, applyFrame, parseFrame } from "../../app/components/ai-board-read";
+import { AiBoardRead, applyFrame, clearAiBoardReadClientCache, parseFrame } from "../../app/components/ai-board-read";
 import type { BoardBrief, BoardRead, ReadFrame } from "../../app/lib/board-read";
 
 const brief: BoardBrief = {
@@ -102,6 +102,10 @@ describe("applyFrame", () => {
 });
 
 describe("AiBoardRead", () => {
+  beforeEach(() => {
+    clearAiBoardReadClientCache();
+  });
+
   it("renders nothing until the board it reads has figures", () => {
     global.fetch = jest.fn();
     const { container } = render(<AiBoardRead feature="sectors" brief={null} />);
@@ -220,11 +224,14 @@ describe("AiBoardRead", () => {
     expect(await screen.findByText("Metals lagged.")).toBeInTheDocument();
   });
 
-  it("shows a placeholder while the desk is thinking", () => {
+  it("shows an instant measured read while the desk is thinking", () => {
     global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
     const { container } = render(<AiBoardRead feature="sectors" brief={brief} />);
 
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(2);
+    expect(screen.getByText("Sectors advancing: 9 of 15")).toBeInTheDocument();
+    expect(screen.getByText("NIFTY IT: +1.20% today")).toBeInTheDocument();
+    expect(screen.getByText(/Still writing/)).toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
   });
 
   it("shows an error when the desk refuses", async () => {
@@ -241,13 +248,14 @@ describe("AiBoardRead", () => {
     expect(await screen.findByText(/couldn't read this board right now/)).toBeInTheDocument();
   });
 
-  // A 200 carrying no usable frame should leave the placeholder up, not render an empty panel.
-  it("keeps waiting when the response carries no frames", async () => {
+  // A 200 carrying no usable frame should keep the instant read rather than blanking the panel.
+  it("keeps the instant read when the response carries no frames", async () => {
     global.fetch = jest.fn().mockResolvedValue(streamingResponse([""]));
     const { container } = render(<AiBoardRead feature="sectors" brief={brief} />);
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(2);
+    expect(screen.getByText("Sectors advancing: 9 of 15")).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0));
   });
 
   // Unmounting mid-flight must not push an error into a panel that is already gone.
@@ -274,5 +282,18 @@ describe("AiBoardRead", () => {
     mockRead({ headline: "Second read", points: ["b"], source: "ai" });
     rerender(<AiBoardRead feature="sectors" brief={{ ...brief, facts: [{ label: "Sectors advancing", value: "2 of 15" }] }} />);
     expect(await screen.findByText("Second read")).toBeInTheDocument();
+  });
+
+  it("serves a completed read from the client cache without another request", async () => {
+    mockRead({ headline: "Cached read", points: ["Already known."], source: "ai" });
+    const { unmount } = render(<AiBoardRead feature="sectors" brief={brief} />);
+    await screen.findByText("Cached read");
+    unmount();
+
+    render(<AiBoardRead feature="sectors" brief={brief} />);
+
+    expect(screen.getByText("Cached read")).toBeInTheDocument();
+    expect(screen.getByText("Already known.")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });

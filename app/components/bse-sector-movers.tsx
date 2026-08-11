@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { buildSectorMoversUrl, type MoverDirection } from "../lib/market-urls";
 import type { BseMoverRow } from "./bse-movers-board";
+import { CategoryIcon } from "./category-icon";
 import { CompanyLogo } from "./company-logo";
 import { StockDetailTrigger } from "./stock-detail-provider";
 import { chipFor, formatDayDate, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
@@ -212,15 +213,60 @@ function CategoryList({ category, direction }: { category: string; direction: Di
   );
 }
 
-/** One figure of a category's matrix — the same shape whichever number it is holding. */
+/**
+ * One figure of a category's matrix.
+ *
+ * A column of number over label rather than a bordered box: five boxes in a row read as five
+ * separate controls, and the eye has to enter each one to find its figure. Stacked and separated
+ * by a hairline, the five numbers line up on one baseline and can be compared at a glance — which
+ * is the only thing anyone does with them.
+ */
 function Metric({ label, value, tone }: { label: string; value: number; tone: string }) {
   const displayLabel = label.includes("leading") ? "leaders" : label.includes("lagging") ? "laggards" : label;
 
   return (
-    <span className={`flex min-w-[96px] items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2 ${tone}`}>
-      <span className="text-base font-semibold tabular-nums">{count(value)}</span>
-      <span className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-75">{displayLabel}</span>
+    <span className="flex min-w-[62px] flex-col items-end gap-0.5 border-l border-slate-200 px-3 first:border-l-0 first:pl-0 dark:border-slate-800">
+      <span className={`text-base font-semibold tabular-nums ${tone}`}>{count(value)}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+        {displayLabel}
+      </span>
     </span>
+  );
+}
+
+/**
+ * How the session split inside one category, as a proportion rather than two numbers.
+ *
+ * Two figures say 340 rose and 260 fell; the bar says at a glance that the category leaned green,
+ * which is what a reader scanning twenty rows is actually after.
+ */
+function BreadthBar({ gainers, losers }: { gainers: number; losers: number }) {
+  const traded = gainers + losers;
+  if (traded === 0) return null;
+
+  const advancing = (gainers / traded) * 100;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-1 w-full max-w-56 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+    >
+      <span className="h-full bg-emerald-500" style={{ width: `${advancing}%` }} />
+      <span className="h-full bg-rose-500" style={{ width: `${100 - advancing}%` }} />
+    </span>
+  );
+}
+
+/** The open/closed marker. An SVG rather than ▸/▾, which render at a different weight per platform. */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 dark:text-slate-500 ${open ? "rotate-90" : ""}`}
+    >
+      <path d="m8 5 5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -237,47 +283,68 @@ function CategoryBlock({
   const panelId = `sector-panel-${summary.sector.replace(/\W+/g, "-").toLowerCase()}`;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_14px_38px_-30px_rgba(15,23,42,0.55)] transition-colors hover:border-violet-200 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-violet-500/30">
+    <div
+      className={`overflow-hidden rounded-2xl border bg-white transition-colors dark:bg-slate-950/40 ${
+        open
+          ? "border-violet-300 shadow-[0_18px_44px_-30px_rgba(109,40,217,0.55)] dark:border-violet-500/40"
+          : "border-slate-200 shadow-[0_14px_38px_-30px_rgba(15,23,42,0.55)] hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700"
+      }`}
+    >
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className="grid w-full grid-cols-1 gap-4 px-4 py-4 text-left transition hover:bg-slate-50/80 md:grid-cols-[minmax(0,1fr)_auto] md:items-center dark:hover:bg-slate-900/60"
+        className={`grid w-full grid-cols-1 gap-4 px-4 py-3.5 text-left transition md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
+          open ? "bg-violet-50/40 dark:bg-violet-500/5" : "hover:bg-slate-50/80 dark:hover:bg-slate-900/60"
+        }`}
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span aria-hidden="true" className="text-xs text-slate-400 dark:text-slate-500">
-            {open ? "▾" : "▸"}
+          <Chevron open={open} />
+          {/* The category's colour moves off its name and onto its own mark: twenty filled
+              name-pills down the page compete with the figures they are meant to label, while a
+              tile gives each row a fixed left edge for the eye to run down — and the glyph says
+              which industry it is before the name is read. */}
+          <span
+            aria-hidden="true"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${sectorTone(summary.sector)}`}
+          >
+            <CategoryIcon category={summary.sector} className="h-[18px] w-[18px]" />
           </span>
-          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${sectorTone(summary.sector)}`}>
-            {summary.sector}
-          </span>
-          {summary.house && (
-            // Said plainly: BSE publishes no data-centre industry, so this grouping is ours.
-            <span className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-600 dark:text-slate-400">
-              our grouping
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">{summary.sector}</span>
+              {summary.house && (
+                // Said plainly: BSE publishes no data-centre industry, so this grouping is ours.
+                <span className="shrink-0 rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                  our grouping
+                </span>
+              )}
             </span>
-          )}
-          <span className="hidden text-[11px] font-medium text-slate-500 dark:text-slate-400 sm:inline">
-            {summary.stocks === 0 ? "Classification pending" : `${count(summary.stocks)} mapped stocks`}
+            <span className="mt-1 flex items-center gap-2">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                {summary.stocks === 0 ? "Classification pending" : `${count(summary.stocks)} mapped stocks`}
+              </span>
+              <BreadthBar gainers={summary.gainers} losers={summary.losers} />
+            </span>
           </span>
         </span>
 
         {summary.stocks === 0 ? (
-          <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             No company mapped yet
           </span>
         ) : (
           // No `shrink-0` here: it and `flex-wrap` pull against each other — the span kept its full
-          // unwrapped width (~460px), so on a phone the last two figures were cropped away by the
-          // card's `overflow-hidden` with no way to scroll to them. Allowed to shrink, the five
-          // pills wrap onto a second row instead.
-          <span className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-            <Metric label="stocks" value={summary.stocks} tone="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" />
-            <Metric label="gainers" value={summary.gainers} tone="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-400" />
-            <Metric label="losers" value={summary.losers} tone="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-400" />
-            <Metric label="★ leading" value={summary.star} tone="bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" />
-            <Metric label="▼ lagging" value={summary.red} tone="bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" />
+          // unwrapped width, so on a phone the last two figures were cropped away by the card's
+          // `overflow-hidden` with no way to scroll to them. Allowed to shrink, the figures wrap
+          // onto a second row instead.
+          <span className="flex flex-wrap items-start justify-end gap-y-3">
+            <Metric label="stocks" value={summary.stocks} tone="text-slate-900 dark:text-white" />
+            <Metric label="gainers" value={summary.gainers} tone="text-emerald-600 dark:text-emerald-400" />
+            <Metric label="losers" value={summary.losers} tone="text-rose-600 dark:text-rose-400" />
+            <Metric label="★ leading" value={summary.star} tone="text-amber-600 dark:text-amber-400" />
+            <Metric label="▼ lagging" value={summary.red} tone="text-red-600 dark:text-red-400" />
           </span>
         )}
       </button>

@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { AiVerdictPanel, VERDICT_SOURCES } from "../../app/components/ai-verdict-panel";
+import { AiVerdictPanel, VERDICT_SOURCES, clearAiVerdictPanelCache } from "../../app/components/ai-verdict-panel";
 import type { StockVerdict } from "../../app/components/verdict-view";
 
 function verdict(overrides: Partial<StockVerdict> = {}): StockVerdict {
@@ -123,6 +123,10 @@ describe("VERDICT_SOURCES symbol extraction", () => {
 });
 
 describe("AiVerdictPanel", () => {
+  beforeEach(() => {
+    clearAiVerdictPanelCache();
+  });
+
   it("scores a fixed set of stocks without reading any feed", async () => {
     const calls = mockDesk();
     render(<AiVerdictPanel section="overview" />);
@@ -192,5 +196,17 @@ describe("AiVerdictPanel", () => {
     mockDesk();
     const { container } = render(<AiVerdictPanel section="compare" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("serves a completed panel from cache without repeating the desk call", async () => {
+    const calls = mockDesk({ verdicts: [verdict({ symbol: "TCS" })] });
+    const { unmount } = render(<AiVerdictPanel section="overview" />);
+    await screen.findByText("TCS");
+    unmount();
+
+    render(<AiVerdictPanel section="overview" />);
+
+    expect(screen.getByText("TCS")).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
   });
 });

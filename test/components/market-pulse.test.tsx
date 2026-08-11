@@ -122,8 +122,8 @@ describe("MarketPulse", () => {
     // Each mover now appears twice: once in the Top 3 strip and once in its cap-tier list.
     expect(screen.getAllByText("LGAIN")).toHaveLength(2);
     expect(screen.getAllByText("LLOSE")).toHaveLength(2);
-    expect(screen.getByText("Top 3 gainers")).toBeInTheDocument();
-    expect(screen.getByText("Top 3 losers")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 Gainers - Today")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 Losers - Today")).toBeInTheDocument();
     expect(screen.getByText("Ranked within Large Cap · 60 stocks tracked")).toBeInTheDocument();
 
     // The three benchmarks, with their live level and today's move.
@@ -226,8 +226,9 @@ describe("MarketPulse", () => {
     });
     render(<MarketPulse />);
 
-    await screen.findByText("Top 3 gainers");
-    const strip = screen.getByText("Top 3 gainers").parentElement!;
+    await screen.findByText("Top 3 Gainers - Today");
+    // The list sits immediately after the heading row that titles it.
+    const strip = screen.getByText("Top 3 Gainers - Today").closest("div")!.nextElementSibling as HTMLElement;
     // The mid cap moved most, so it leads the merged ranking.
     expect(within(strip).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
       expect.stringContaining("MIDUP"),

@@ -52,11 +52,11 @@ describe("AuthForm", () => {
   describe("signin mode", () => {
     it("renders the sign-in heading and does not show signup-only fields", () => {
       render(<AuthForm mode="signin" />);
-      expect(screen.getByText("Sign in to Stockers.AI")).toBeInTheDocument();
+      expect(screen.getByText("Sign in to StockersAI")).toBeInTheDocument();
       expect(screen.queryByText("Full name")).not.toBeInTheDocument();
       expect(screen.queryByText("Confirm password")).not.toBeInTheDocument();
       expect(screen.queryByText("Subscription")).not.toBeInTheDocument();
-      expect(screen.getByText("New to Stockers.AI?")).toBeInTheDocument();
+      expect(screen.getByText("New to StockersAI?")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/signup");
     });
 
@@ -241,7 +241,7 @@ describe("AuthForm", () => {
 
     it("renders the signup heading and signup-only fields", () => {
       render(<AuthForm mode="signup" />);
-      expect(screen.getByText("Join Stockers.AI")).toBeInTheDocument();
+      expect(screen.getByText("Join StockersAI")).toBeInTheDocument();
       expect(screen.getByText("Full name")).toBeInTheDocument();
       expect(screen.getByText("Confirm password")).toBeInTheDocument();
       expect(screen.getByText("Mobile number")).toBeInTheDocument();

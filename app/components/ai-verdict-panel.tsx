@@ -23,6 +23,13 @@ type Payload = Record<string, unknown>;
 
 const list = (value: unknown): Payload[] => (Array.isArray(value) ? (value as Payload[]) : []);
 
+const PANEL_CACHE_TTL_MS = 5 * 60_000;
+const panelCache = new Map<string, { verdicts: StockVerdict[]; expiresAt: number }>();
+
+export function clearAiVerdictPanelCache(): void {
+  panelCache.clear();
+}
+
 const symbolsOf = (rows: Payload[]): string[] =>
   rows.map((row) => (typeof row.symbol === "string" ? row.symbol : "")).filter(Boolean);
 
@@ -169,6 +176,17 @@ export function AiVerdictPanel({ section }: { section: string }) {
   const load = useCallback(async () => {
     if (!config) return;
 
+    const cacheKey = section;
+    const cached = panelCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      setVerdicts(cached.verdicts);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
     try {
       let symbols = config.symbols(null);
 
@@ -191,7 +209,9 @@ export function AiVerdictPanel({ section }: { section: string }) {
       if (!response.ok) throw new Error("Verdicts failed");
 
       const data = await response.json();
-      setVerdicts(Array.isArray(data.verdicts) ? data.verdicts : []);
+      const next = Array.isArray(data.verdicts) ? data.verdicts : [];
+      panelCache.set(cacheKey, { verdicts: next, expiresAt: Date.now() + PANEL_CACHE_TTL_MS });
+      setVerdicts(next);
       setError(null);
     } catch {
       setError("The AI desk couldn't score these stocks right now.");
