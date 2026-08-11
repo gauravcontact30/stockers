@@ -15,6 +15,26 @@ process.env.STOCKERS_USERS_FILE = path.join(
   `stockers-test-users-${process.env.JEST_WORKER_ID ?? "0"}.json`,
 );
 
+// And the account store must not be pointed at a real Supabase project by a developer's .env.
+//
+// next/jest loads .env the same way `next dev` does, so the moment real credentials are put there
+// — which is the whole point of them — every suite that exercises the store would stop testing the
+// JSON file and start reading, writing and DELETING rows in a live database. That is a test run
+// that costs real accounts, and it fails or passes depending on the network.
+//
+// Cleared here, once, before any suite imports `app/lib/store`. The two suites that do test the
+// Supabase backend set these themselves and restore them afterwards, so they are unaffected.
+delete process.env.SUPABASE_URL;
+delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+delete process.env.SUPABASE_SERVICE_KEY;
+
+// Same reasoning for the app's own origin. Suites assert on the links the mailer builds, and a
+// developer who points APP_URL at the live domain to reproduce something would otherwise find the
+// mailer tests failing for reasons that have nothing to do with their change.
+delete process.env.APP_URL;
+delete process.env.NEXT_PUBLIC_APP_URL;
+
 // jsdom doesn't implement matchMedia — several components/hooks probe it defensively.
 if (typeof window !== "undefined" && !window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {

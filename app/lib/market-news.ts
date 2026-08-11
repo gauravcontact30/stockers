@@ -1,6 +1,7 @@
 import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { indianStocks } from "./indian-stocks";
 import { searchIndex } from "./stock-search";
+import { appOrigin } from "./app-origin";
 
 export type Sentiment = "Positive" | "Negative" | "Neutral";
 
@@ -172,7 +173,7 @@ async function classifyWithAi(items: NewsItem[]): Promise<Sentiment[] | null> {
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers",
       },
       body: JSON.stringify({
@@ -352,7 +353,7 @@ async function briefWithAi(title: string, related: NewsItem[]): Promise<string[]
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers",
       },
       body: JSON.stringify({

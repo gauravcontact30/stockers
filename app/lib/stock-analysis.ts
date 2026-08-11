@@ -1,4 +1,5 @@
 import { getPerformanceSummary, type PerformanceSummary } from "./stock-performance";
+import { appOrigin } from "./app-origin";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
@@ -153,7 +154,7 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers",
       },
       body: JSON.stringify({

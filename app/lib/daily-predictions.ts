@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { indianStocks } from "./indian-stocks";
 import { indianETFs } from "./indian-etfs";
+import { appOrigin } from "./app-origin";
 
 export type Outlook = "Bullish" | "Bearish" | "Neutral";
 
@@ -63,7 +64,7 @@ async function generateChunkWithAI(chunk: ChangeInput[], entityLabel: string): P
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-daily-predictions-agent",
       },
       body: JSON.stringify({

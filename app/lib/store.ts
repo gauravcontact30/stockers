@@ -1,8 +1,31 @@
+// The account store.
+//
+// One module, two backends. Which one is used is decided by configuration alone:
+//
+//   * Supabase (Postgres, over PostgREST) when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.
+//   * A JSON file on disk when they are not.
+//
+// The file backend is what a fresh checkout runs on, and it is what the test suite exercises, so
+// this repo still clones and works with no credentials. It is not suitable for production: on a
+// serverless host the application directory is read-only, so every write fails, and on any host it
+// is wiped by the next deploy because it lives inside the deployed tree. That is the whole reason
+// the Supabase backend exists — see `supabase/README.md`.
+//
+// Everything above the backend split is shared: password hashing, session tokens, the admin-email
+// promotion rule, and the shape of every record. The two backends differ only in where rows are
+// kept, so an account created against one is the same object as an account created against the
+// other, field for field. That is what makes it safe to develop on the file and deploy on Supabase.
+//
+// A configured-but-failing Supabase does NOT fall back to the file. `app/lib/supabase.ts` explains
+// why at length; the short version is that a silent fallback forks the source of truth and loses
+// the account, and a 500 the visitor can retry is the better failure.
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { adminEmails } from "./admin-access";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { normaliseMobile, type PlanName } from "./auth-validation";
+import { eq, isUniqueViolation, supabaseConfigured, supabaseRequest } from "./supabase";
 
 export type UserRole = "admin" | "user";
 
@@ -47,7 +70,7 @@ export type AppUser = {
 };
 
 /**
- * Where the account store lives.
+ * Where the JSON account store lives, when the JSON backend is the one in use.
  *
  * Overridable because this is the one file in the app that holds real user records, and two things
  * legitimately need it somewhere else: a deployment that keeps state off the application directory,
@@ -85,6 +108,44 @@ function verifyPassword(password: string, storedHash: string) {
   return timingSafeEqual(derivedKey, keyBuffer);
 }
 
+// ---------------------------------------------------------------------------
+// The backend contract
+// ---------------------------------------------------------------------------
+
+/**
+ * The only operations either backend has to provide.
+ *
+ * Deliberately row-at-a-time rather than "read everything, write everything back". The JSON file
+ * has no choice but to rewrite the whole array, but expressing the interface that way would have
+ * forced the Postgres backend to do the same — turning every verification into a full table read
+ * and a full table write, and making two concurrent sign-ups silently drop one of the accounts.
+ */
+type StoreBackend = {
+  all(): Promise<AppUser[]>;
+  byId(id: string): Promise<AppUser | null>;
+  byEmail(email: string): Promise<AppUser | null>;
+  byVerificationToken(token: string): Promise<AppUser | null>;
+  /** Returns null when the email is already registered. */
+  insert(user: AppUser): Promise<AppUser | null>;
+  /** Returns null when the id is unknown. */
+  patch(id: string, patch: Partial<AppUser>): Promise<AppUser | null>;
+  remove(id: string): Promise<boolean>;
+  /**
+   * Spends a verification token: confirms the address and clears the token, in one step.
+   *
+   * Part of the contract rather than composed from `byVerificationToken` + `patch` because on
+   * Postgres it is a single conditional UPDATE, and that atomicity is the thing that makes a
+   * verification link work exactly once even if it is clicked twice in the same instant.
+   */
+  spendVerificationToken(token: string): Promise<AppUser | null>;
+  /** Issues a new token, but only for an account that exists and is not yet verified. */
+  reissueVerificationToken(id: string, token: string): Promise<AppUser | null>;
+};
+
+// ---------------------------------------------------------------------------
+// Backend: JSON file
+// ---------------------------------------------------------------------------
+
 async function ensureStore() {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   try {
@@ -109,6 +170,247 @@ async function writeUsers(users: AppUser[]) {
   await fs.writeFile(filePath, JSON.stringify(users, null, 2), "utf8");
 }
 
+const fileBackend: StoreBackend = {
+  all: readUsers,
+
+  async byId(id) {
+    return (await readUsers()).find((user) => user.id === id) ?? null;
+  },
+
+  async byEmail(email) {
+    return (await readUsers()).find((user) => user.email === email) ?? null;
+  },
+
+  async byVerificationToken(token) {
+    return (await readUsers()).find((user) => user.verificationToken === token) ?? null;
+  },
+
+  async insert(user) {
+    const users = await readUsers();
+    if (users.some((entry) => entry.email === user.email)) return null;
+
+    users.push(user);
+    await writeUsers(users);
+    return user;
+  },
+
+  async patch(id, patch) {
+    const users = await readUsers();
+    const index = users.findIndex((user) => user.id === id);
+    if (index === -1) return null;
+
+    users[index] = { ...users[index], ...patch };
+    await writeUsers(users);
+    return users[index];
+  },
+
+  async remove(id) {
+    const users = await readUsers();
+    const next = users.filter((user) => user.id !== id);
+    if (next.length === users.length) return false;
+
+    await writeUsers(next);
+    return true;
+  },
+
+  async spendVerificationToken(token) {
+    const users = await readUsers();
+    const index = users.findIndex((user) => user.verificationToken === token);
+    if (index === -1) return null;
+
+    users[index] = { ...users[index], emailVerifiedAt: new Date().toISOString(), verificationToken: null };
+    await writeUsers(users);
+    return users[index];
+  },
+
+  async reissueVerificationToken(id, token) {
+    const users = await readUsers();
+    const index = users.findIndex((user) => user.id === id);
+    if (index === -1 || users[index].emailVerifiedAt) return null;
+
+    users[index] = { ...users[index], verificationToken: token };
+    await writeUsers(users);
+    return users[index];
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Backend: Supabase / Postgres
+// ---------------------------------------------------------------------------
+
+/**
+ * One row of `public.users`, in the column names Postgres actually has.
+ *
+ * snake_case in the database and camelCase in the app, mapped explicitly below, because those are
+ * the conventions of the two places and neither should have to read like the other.
+ */
+type UserRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  plan: string;
+  created_at: string;
+  mobile: string | null;
+  role: string | null;
+  trial_started_at: string | null;
+  subscribed_until: string | null;
+  last_payment_id: string | null;
+  email_verified_at: string | null;
+  verification_token: string | null;
+  verification_sent_at: string | null;
+};
+
+const COLUMN: Record<keyof AppUser, keyof UserRow> = {
+  id: "id",
+  name: "name",
+  email: "email",
+  passwordHash: "password_hash",
+  plan: "plan",
+  createdAt: "created_at",
+  mobile: "mobile",
+  role: "role",
+  trialStartedAt: "trial_started_at",
+  subscribedUntil: "subscribed_until",
+  lastPaymentId: "last_payment_id",
+  emailVerifiedAt: "email_verified_at",
+  verificationToken: "verification_token",
+  verificationSentAt: "verification_sent_at",
+};
+
+function fromRow(row: UserRow): AppUser {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    plan: row.plan as PlanName,
+    createdAt: row.created_at,
+    mobile: row.mobile,
+    role: (row.role as UserRole | null) ?? "user",
+    // `undefined` rather than null: the field is optional-but-string on AppUser, and a record must
+    // describe what is there. An account predating trials has no start date, not a null one.
+    trialStartedAt: row.trial_started_at ?? undefined,
+    subscribedUntil: row.subscribed_until,
+    lastPaymentId: row.last_payment_id,
+    emailVerifiedAt: row.email_verified_at,
+    verificationToken: row.verification_token,
+    verificationSentAt: row.verification_sent_at,
+  };
+}
+
+function toRow(patch: Partial<AppUser>): Partial<UserRow> {
+  const row: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    const column = COLUMN[key as keyof AppUser];
+    // `undefined` means "not being set" and must not travel as an explicit null, which would erase
+    // the stored value. Postgres nulls are written by passing null, which does survive this check.
+    if (column && value !== undefined) row[column] = value;
+  }
+  return row as Partial<UserRow>;
+}
+
+async function selectOne(filter: string): Promise<AppUser | null> {
+  const rows = await supabaseRequest<UserRow>({ method: "GET", path: `users?${filter}&select=*&limit=1` });
+  return rows.length > 0 ? fromRow(rows[0]) : null;
+}
+
+const supabaseBackend: StoreBackend = {
+  async all() {
+    const rows = await supabaseRequest<UserRow>({ method: "GET", path: "users?select=*" });
+    return rows.map(fromRow);
+  },
+
+  byId: (id) => selectOne(`id=${eq(id)}`),
+  byEmail: (email) => selectOne(`email=${eq(email)}`),
+  byVerificationToken: (token) => selectOne(`verification_token=${eq(token)}`),
+
+  async insert(user) {
+    try {
+      const rows = await supabaseRequest<UserRow>({
+        method: "POST",
+        path: "users",
+        body: toRow(user),
+        returnRepresentation: true,
+      });
+      return rows.length > 0 ? fromRow(rows[0]) : null;
+    } catch (error) {
+      // The unique index on `email` is what decides whether an address is taken — not a read
+      // beforehand, which two simultaneous sign-ups for the same address would both pass.
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
+  },
+
+  async patch(id, patch) {
+    const row = toRow(patch);
+    if (Object.keys(row).length === 0) return this.byId(id);
+
+    const rows = await supabaseRequest<UserRow>({
+      method: "PATCH",
+      path: `users?id=${eq(id)}`,
+      body: row,
+      returnRepresentation: true,
+    });
+    return rows.length > 0 ? fromRow(rows[0]) : null;
+  },
+
+  async remove(id) {
+    const rows = await supabaseRequest<UserRow>({
+      method: "DELETE",
+      path: `users?id=${eq(id)}`,
+      returnRepresentation: true,
+    });
+    return rows.length > 0;
+  },
+
+  async spendVerificationToken(token) {
+    // Filtered on the token, not the id: the row is found and cleared in one statement, so a link
+    // clicked twice at once verifies once. The second UPDATE matches nothing, because the first
+    // has already set the token to null.
+    const rows = await supabaseRequest<UserRow>({
+      method: "PATCH",
+      path: `users?verification_token=${eq(token)}`,
+      body: { email_verified_at: new Date().toISOString(), verification_token: null },
+      returnRepresentation: true,
+    });
+    return rows.length > 0 ? fromRow(rows[0]) : null;
+  },
+
+  async reissueVerificationToken(id, token) {
+    // `email_verified_at=is.null` carries the "not already verified" rule into the statement, so an
+    // unknown id and a confirmed address both come back as zero rows — which is what the caller
+    // has to treat as "nothing to do" anyway.
+    const rows = await supabaseRequest<UserRow>({
+      method: "PATCH",
+      path: `users?id=${eq(id)}&email_verified_at=is.null`,
+      body: { verification_token: token },
+      returnRepresentation: true,
+    });
+    return rows.length > 0 ? fromRow(rows[0]) : null;
+  },
+};
+
+/**
+ * The backend in force, resolved per call rather than once at import.
+ *
+ * Route handlers are long-lived, and reading the environment at module scope means the first
+ * import of this file for the process fixes the answer forever — which is exactly the bug where
+ * setting the Supabase variables appears to do nothing until the whole server restarts.
+ */
+function backend(): StoreBackend {
+  return supabaseConfigured() ? supabaseBackend : fileBackend;
+}
+
+/** Which store is in use. Reported by the admin dashboard and `scripts/check-supabase.mjs`. */
+export function storeBackendName(): "supabase" | "file" {
+  return supabaseConfigured() ? "supabase" : "file";
+}
+
+// ---------------------------------------------------------------------------
+// The store itself — backend-independent from here down
+// ---------------------------------------------------------------------------
+
 export async function createUser(user: {
   name: string;
   email: string;
@@ -116,14 +418,9 @@ export async function createUser(user: {
   plan: PlanName;
   mobile?: string | null;
 }) {
-  const users = await readUsers();
   const normalizedEmail = user.email.trim().toLowerCase();
-  const emailTaken = users.some((entry) => entry.email === normalizedEmail);
-  if (emailTaken) {
-    return null;
-  }
-
   const now = new Date().toISOString();
+
   const newUser: AppUser = {
     id: `user_${Date.now().toString(36)}_${randomBytes(4).toString("hex")}`,
     name: user.name.trim(),
@@ -144,9 +441,7 @@ export async function createUser(user: {
     verificationSentAt: null,
   };
 
-  users.push(newUser);
-  await writeUsers(users);
-  return newUser;
+  return backend().insert(newUser);
 }
 
 /** A fresh single-use secret for a verification link. */
@@ -164,18 +459,7 @@ export function newVerificationToken(): string {
  */
 export async function verifyEmailToken(token: string): Promise<AppUser | null> {
   if (!token) return null;
-
-  const users = await readUsers();
-  const index = users.findIndex((user) => user.verificationToken === token);
-  if (index === -1) return null;
-
-  users[index] = {
-    ...users[index],
-    emailVerifiedAt: new Date().toISOString(),
-    verificationToken: null,
-  };
-  await writeUsers(users);
-  return users[index];
+  return backend().spendVerificationToken(token);
 }
 
 /**
@@ -185,14 +469,9 @@ export async function verifyEmailToken(token: string): Promise<AppUser | null> {
  * confirm in either case.
  */
 export async function refreshVerificationToken(id: string): Promise<{ user: AppUser; token: string } | null> {
-  const users = await readUsers();
-  const index = users.findIndex((user) => user.id === id);
-  if (index === -1 || users[index].emailVerifiedAt) return null;
-
   const token = newVerificationToken();
-  users[index] = { ...users[index], verificationToken: token };
-  await writeUsers(users);
-  return { user: users[index], token };
+  const user = await backend().reissueVerificationToken(id, token);
+  return user ? { user, token } : null;
 }
 
 /**
@@ -207,8 +486,10 @@ export type AdminUserView = Omit<AppUser, "passwordHash" | "verificationToken"> 
 };
 
 export async function listUsers(): Promise<AdminUserView[]> {
-  const users = await readUsers();
+  const users = await backend().all();
 
+  // Sorted here rather than in the query, so both backends produce the same order from the same
+  // records — Postgres would otherwise sort by its collation and the file by JavaScript's.
   return users
     .map(({ passwordHash: _passwordHash, verificationToken: _verificationToken, ...rest }) => ({
       ...rest,
@@ -219,35 +500,22 @@ export async function listUsers(): Promise<AdminUserView[]> {
 
 /** Persists changes to one user, matched by id. Returns null when the id is unknown. */
 export async function updateUser(id: string, patch: Partial<AppUser>): Promise<AppUser | null> {
-  const users = await readUsers();
-  const index = users.findIndex((user) => user.id === id);
-  if (index === -1) return null;
-
   // id and passwordHash are never patchable through this path — changing either here would let a
   // caller reassign an account or overwrite a credential without going through sign-up.
   const safe = { ...patch };
   delete safe.id;
   delete safe.passwordHash;
 
-  users[index] = { ...users[index], ...safe };
-  await writeUsers(users);
-  return users[index];
+  return backend().patch(id, safe);
 }
 
 /** Deletes one user by id. Returns false when the account is not present. */
 export async function deleteUser(id: string): Promise<boolean> {
-  const users = await readUsers();
-  const next = users.filter((user) => user.id !== id);
-  if (next.length === users.length) return false;
-
-  await writeUsers(next);
-  return true;
+  return backend().remove(id);
 }
 
 export async function findUserByEmail(email: string) {
-  const users = await readUsers();
-  const normalizedEmail = email.trim().toLowerCase();
-  return users.find((user) => user.email === normalizedEmail) ?? null;
+  return backend().byEmail(email.trim().toLowerCase());
 }
 
 export async function authenticateUser(email: string, password: string) {
@@ -290,8 +558,7 @@ export function verifyToken(token: string | null | undefined): string | null {
 }
 
 export async function findUserById(id: string): Promise<AppUser | null> {
-  const users = await readUsers();
-  return users.find((user) => user.id === id) ?? null;
+  return backend().byId(id);
 }
 
 /** The cookie the client mirrors its session token into. */

@@ -1,3 +1,5 @@
+import { appOrigin } from "./app-origin";
+
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 function toStringArray(value: unknown, fallback: string[]): string[] {
@@ -95,7 +97,7 @@ export async function generateComparison(stockAInput: string, stockBInput: strin
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-compare",
       },
       body: JSON.stringify({

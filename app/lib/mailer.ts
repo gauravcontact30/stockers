@@ -47,12 +47,11 @@ export function mailConfigured(): boolean {
 /**
  * The site's own origin, used to build links that land back here.
  *
- * Falls back to localhost so a development sign-up produces a link that actually works rather than
- * one pointing at a domain that does not exist yet.
+ * Re-exported rather than defined here: the OpenRouter clients need the same value and importing
+ * the mailer for it would drag `node:fs` and an outbox into nine modules that have no business
+ * with either. `./app-origin` explains why the variable is `APP_URL` and not `NEXT_PUBLIC_APP_URL`.
  */
-export function appOrigin(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
-}
+export { appOrigin } from "./app-origin";
 
 async function recordToOutbox(message: MailMessage, reason: string): Promise<MailResult> {
   try {

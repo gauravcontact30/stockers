@@ -8,6 +8,8 @@
 // model only writes prose over figures it is handed, and it is told in as many words not to invent
 // any. With no key configured the read is composed from those same figures directly, and says so.
 
+import { appOrigin } from "./app-origin";
+
 export type BoardFact = { label: string; value: string };
 
 export type BoardBrief = {
@@ -195,7 +197,7 @@ async function openRouterStream(brief: BoardBrief): Promise<Response | null> {
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-board-read",
       },
       body: JSON.stringify({

@@ -31,6 +31,7 @@ import { categoryOf } from "./bse-sectors";
 import { fetchNewsQuery, matchCompany, type NewsItem } from "./market-news";
 import { findStock, searchStocks } from "./stock-search";
 import { buildOutlook, type StockOutlook, type TrailingReturns } from "./stock-outlook";
+import { appOrigin } from "./app-origin";
 
 // ---------------------------------------------------------------------------
 // The query, and the filters over it
@@ -627,7 +628,7 @@ async function answerWithAi(
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-intel-search",
       },
       body: JSON.stringify({

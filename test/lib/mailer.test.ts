@@ -42,11 +42,13 @@ describe("mailer", () => {
       expect(mailConfigured()).toBe(true);
     });
 
+    // The rules themselves live in app-origin.test.ts; this only pins that the mailer still
+    // re-exports it, since the routes import it from here.
     it("builds links against the configured origin, without a trailing slash", () => {
-      process.env.NEXT_PUBLIC_APP_URL = "https://stockers.example.com/";
+      process.env.APP_URL = "https://stockers.example.com/";
       expect(appOrigin()).toBe("https://stockers.example.com");
 
-      delete process.env.NEXT_PUBLIC_APP_URL;
+      delete process.env.APP_URL;
       expect(appOrigin()).toBe("http://localhost:3000");
     });
   });

@@ -2,6 +2,7 @@ import { CACHE_TAGS, revalidating } from "./cache";
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getAllQuotes, type LiveQuote } from "./market-data";
 import { getBenchmarkIndices, type IndexQuote } from "./market-indices";
+import { appOrigin } from "./app-origin";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 // Market breadth shifts through the trading session, so this is cached far shorter than the
@@ -224,7 +225,7 @@ async function generateNarrativeWithAI(breadth: MarketBreadth): Promise<Narrativ
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-market-pulse",
       },
       body: JSON.stringify({

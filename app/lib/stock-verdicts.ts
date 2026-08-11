@@ -12,6 +12,7 @@
 
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
+import { appOrigin } from "./app-origin";
 
 export type Stance = "Buy" | "Hold" | "Sell";
 
@@ -121,7 +122,7 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer": appOrigin(),
         "X-Title": "stockers-verdicts",
       },
       body: JSON.stringify({
