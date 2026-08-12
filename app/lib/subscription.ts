@@ -36,8 +36,10 @@ export {
 } from "./plan-tiers";
 export type { AiFeature, FeatureKey, PlanTier } from "./plan-tiers";
 
-/** Length of the free trial, counted in open market days rather than calendar days. */
-export const TRIAL_MARKET_DAYS = 5;
+/** Length of the free trial, counted in IST calendar days from signup. */
+export const TRIAL_DAYS = 3;
+/** Backward-compatible policy/status name; the trial now uses calendar days, not market days. */
+export const TRIAL_MARKET_DAYS = TRIAL_DAYS;
 /** How long a renewal buys, in calendar days. */
 export const SUBSCRIPTION_DAYS = 30;
 
@@ -55,17 +57,18 @@ export type AccessStatus = {
   /**
    * The highest tier this account may use, or null when it may use none.
    *
-   * Null for a lapsed account and for one still inside its free trial: the trial exists to show a
-   * visitor what is here, not to hand out the AI layer for five days. See `accessStatusFor`.
+   * Null for a lapsed account. A live free trial reports the Pro tier because it unlocks Starter
+   * and Pro AI features for three calendar days. See `accessStatusFor`.
    */
   tier: PlanTier | null;
   /** The plan the account is on, for the client to name it back to them. Null when unsubscribed. */
   planName: PlanName | null;
   isAdmin: boolean;
-  /** Open market days consumed out of the trial allowance. */
+  /** Calendar days consumed out of the trial allowance. */
   marketDaysUsed: number;
   marketDaysLeft: number;
   trialStartedAt: string | null;
+  trialEndsAt: string | null;
   subscribedUntil: string | null;
   today: string;
 };
@@ -145,6 +148,21 @@ export function countMarketDays(fromIso: string, toIso: string, holidays: Set<st
   return count;
 }
 
+export function countTrialDays(fromIso: string, toIso: string): number {
+  const start = Date.parse(`${fromIso}T00:00:00Z`);
+  const end = Date.parse(`${toIso}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+  return Math.floor((end - start) / 86_400_000);
+}
+
+export function addTrialDays(fromIso: string, days = TRIAL_DAYS): string | null {
+  const start = Date.parse(`${fromIso}T00:00:00Z`);
+  if (Number.isNaN(start)) return null;
+  const date = new Date(start);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 /** The IST calendar date embedded in an ISO timestamp. */
 export function istDateOf(iso: string): string | null {
   const parsed = new Date(iso);
@@ -155,16 +173,10 @@ export function istDateOf(iso: string): string | null {
 /**
  * Works out what a user may currently access.
  *
- * A paid plan is the only thing that grants AI access, and the tier of that plan is what decides
- * how much. Admins are unconditional and sit above the top tier.
- *
- * The trial no longer unlocks anything. It is still measured and reported — `state` and
- * `marketDaysLeft` stay honest so the reminder can say where someone is — but a trial user sees
- * every AI feature behind its plan's pill rather than getting five days of Elite. The alternative,
- * a trial that hands over the whole product, meant the pills and the upsell only ever appeared to
- * someone who had already stopped looking.
+ * A live trial grants Starter and Pro AI features for three IST calendar days. Paid plans use the
+ * stored plan tier, Elite remains paid, and admins are unconditional above the top tier.
  */
-export function accessStatusFor(user: AppUser | null, today: string, holidays: Set<string>): AccessStatus {
+export function accessStatusFor(user: AppUser | null, today: string, _holidays: Set<string> = new Set()): AccessStatus {
   const base = {
     isAdmin: false,
     tier: null as PlanTier | null,
@@ -172,6 +184,7 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
     marketDaysUsed: 0,
     marketDaysLeft: 0,
     trialStartedAt: null as string | null,
+    trialEndsAt: null as string | null,
     subscribedUntil: null as string | null,
     today,
   };
@@ -187,7 +200,7 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
       isAdmin: true,
       tier: "elite",
       planName: "Elite",
-      marketDaysLeft: TRIAL_MARKET_DAYS,
+      marketDaysLeft: TRIAL_DAYS,
     };
   }
 
@@ -195,8 +208,10 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
   // a trial they never had the chance to use. An unparseable date reads as a spent trial.
   const trialStartedAt = user.trialStartedAt ?? user.createdAt;
   const startDate = istDateOf(trialStartedAt);
-  const marketDaysUsed = startDate ? countMarketDays(startDate, today, holidays) : TRIAL_MARKET_DAYS;
-  const marketDaysLeft = Math.max(0, TRIAL_MARKET_DAYS - marketDaysUsed);
+  const elapsedTrialDays = startDate ? countTrialDays(startDate, today) : TRIAL_DAYS;
+  const marketDaysUsed = Math.min(TRIAL_DAYS, elapsedTrialDays);
+  const marketDaysLeft = Math.max(0, TRIAL_DAYS - elapsedTrialDays);
+  const trialEndsAt = startDate ? addTrialDays(startDate) : null;
 
   const subscribedUntil = user.subscribedUntil ?? null;
   if (subscribedUntil && today <= subscribedUntil) {
@@ -213,23 +228,39 @@ export function accessStatusFor(user: AppUser | null, today: string, holidays: S
       marketDaysUsed,
       marketDaysLeft,
       trialStartedAt,
+      trialEndsAt,
+    };
+  }
+
+  if (marketDaysLeft > 0) {
+    return {
+      ...base,
+      state: "trial",
+      allowed: true,
+      tier: "pro",
+      planName: "Pro",
+      marketDaysUsed,
+      marketDaysLeft,
+      trialStartedAt,
+      trialEndsAt,
+      subscribedUntil,
     };
   }
 
   return {
     ...base,
-    state: marketDaysLeft > 0 ? "trial" : "expired",
+    state: "expired",
     allowed: false,
     marketDaysUsed,
     marketDaysLeft,
     trialStartedAt,
+    trialEndsAt,
     subscribedUntil,
   };
 }
 
 export async function getAccessStatus(user: AppUser | null): Promise<AccessStatus> {
-  const holidays = await getTradingHolidays();
-  return accessStatusFor(user, todayIST(), holidays);
+  return accessStatusFor(user, todayIST());
 }
 
 /**

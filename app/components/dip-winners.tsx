@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { CapTierPill, LiveIndicator } from "./market-badges";
+import { fetchResearch } from "./research-cache";
 import { LiveMarketValue, StockReturns } from "./stock-returns";
 import { sectors, type CapTier } from "../lib/indian-stocks";
 
@@ -156,12 +157,7 @@ export function DipWinners() {
     setAnalysisLoading(true);
     setAnalysis(null);
 
-    const response = await fetch("/api/research", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock: symbol }),
-    });
-    const data = await response.json();
+    const data = await fetchResearch(symbol);
     setAnalysisLoading(false);
     setAnalysis(data);
   };

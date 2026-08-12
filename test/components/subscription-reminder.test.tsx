@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+﻿import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubscriptionProvider } from "../../app/components/subscription-provider";
 import {
@@ -34,6 +34,18 @@ jest.mock("next/link", () => ({
   ),
 }));
 
+jest.mock("../../app/components/subscribe-modal", () => ({
+  SubscribeModal: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
+    open ? (
+      <div role="dialog" aria-label="Buy Plan">
+        <p>Choose a plan and billing.</p>
+        <button type="button" onClick={onClose}>
+          Close buy plan
+        </button>
+      </div>
+    ) : null,
+}));
+
 jest.mock("../../app/components/reminder-sound", () => ({ playCall: jest.fn(() => true) }));
 jest.mock("../../app/components/reminder-voice", () => ({
   speak: jest.fn(() => true),
@@ -47,9 +59,12 @@ const baseStatus = {
   allowed: true,
   enforced: false,
   isAdmin: false,
+  tier: "pro",
+  planName: "Pro",
   marketDaysUsed: 4,
   marketDaysLeft: 1,
   trialStartedAt: "2026-08-01T04:00:00.000Z",
+  trialEndsAt: "2026-08-04",
   subscribedUntil: null,
   today: "2026-08-05",
   locks: {},
@@ -120,7 +135,7 @@ describe("daysUntil", () => {
 describe("shouldRemind", () => {
   /**
    * One day, and one day only. The old rule fired from two trial days out and then on every page
-   * for anyone expired — including signed-out visitors, for whom it was a conversion prompt rather
+   * for anyone expired â€” including signed-out visitors, for whom it was a conversion prompt rather
    * than a reminder about anything.
    */
   it("warns a subscriber exactly one day before their access lapses", () => {
@@ -135,19 +150,22 @@ describe("shouldRemind", () => {
     expect(shouldRemind({ ...active, subscribedUntil: null } as never, TODAY)).toBe(false);
   });
 
-  it("warns a trial user on their last market day only", () => {
+  it("warns a trial user on their last calendar day only", () => {
     const trial = { ...baseStatus, state: "trial", signedIn: true };
     expect(shouldRemind({ ...trial, marketDaysLeft: 1 } as never, TODAY)).toBe(true);
     expect(shouldRemind({ ...trial, marketDaysLeft: 2 } as never, TODAY)).toBe(false);
     expect(shouldRemind({ ...trial, marketDaysLeft: 0 } as never, TODAY)).toBe(false);
   });
 
-  // An expired account cannot be warned about something that has already happened, and a stranger
-  // has no subscription to renew.
-  it("stays quiet for admins, expired accounts and signed-out visitors", () => {
+  it("opens for an expired signed-in trial so the user can subscribe", () => {
+    expect(shouldRemind({ ...baseStatus, state: "expired", signedIn: true, marketDaysLeft: 0 } as never, TODAY)).toBe(true);
+  });
+
+  // Admins and strangers are not trial-expiration subscription prompts.
+  it("stays quiet for admins and signed-out visitors", () => {
     expect(shouldRemind(null, TODAY)).toBe(false);
     expect(shouldRemind({ ...baseStatus, isAdmin: true, state: "admin" } as never, TODAY)).toBe(false);
-    expect(shouldRemind({ ...baseStatus, state: "expired", signedIn: true } as never, TODAY)).toBe(false);
+    expect(shouldRemind({ ...baseStatus, state: "expired", signedIn: false, marketDaysLeft: 0 } as never, TODAY)).toBe(false);
     expect(shouldRemind({ ...baseStatus, state: "trial", marketDaysLeft: 1, signedIn: false } as never, TODAY)).toBe(false);
   });
 });
@@ -177,7 +195,7 @@ describe("reminderKey", () => {
   });
 
   it("keys a trial user's count by the days they have left", () => {
-    expect(reminderKey({ ...baseStatus, state: "trial", marketDaysLeft: 1 } as never)).toBe("trial:1");
+    expect(reminderKey({ ...baseStatus, state: "trial", marketDaysLeft: 1 } as never)).toBe("trial:2026-08-04");
   });
 
   it("has no key at all before the status arrives", () => {
@@ -188,10 +206,10 @@ describe("reminderKey", () => {
 describe("reminderCopy", () => {
   it("pluralises the remaining days", () => {
     expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toBe(
-      "You have 2 open market days left on your trial.",
+      "You have 2 calendar days left on your trial.",
     );
     expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never).body).toBe(
-      "You have 1 open market day left on your trial.",
+      "You have 1 calendar day left on your trial.",
     );
   });
 
@@ -199,18 +217,18 @@ describe("reminderCopy", () => {
   it("counts down the trial, with correct pluralisation", () => {
     expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never)).toEqual({
       headline: "Your free trial is nearly up",
-      body: "You have 1 open market day left on your trial.",
+      body: "You have 1 calendar day left on your trial.",
     });
 
     expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toBe(
-      "You have 2 open market days left on your trial.",
+      "You have 2 calendar days left on your trial.",
     );
   });
 
   it("switches to the expired wording, which never claims anything is blocked", () => {
     const copy = reminderCopy({ ...baseStatus, state: "expired", marketDaysLeft: 0 } as never);
     expect(copy.headline).toBe("Your free trial has ended");
-    expect(copy.body).toContain("Everything still works");
+    expect(copy.body).toContain("Subscribe to Starter, Pro or Elite");
   });
 });
 
@@ -240,7 +258,7 @@ describe("SubscriptionReminder", () => {
   });
 
   // The regression this guards: the reminder is `fixed inset-0`, so on the sign-up page it covered
-  // the form and swallowed the click on "Create account" — a new visitor could not sign up at all.
+  // the form and swallowed the click on "Create account" â€” a new visitor could not sign up at all.
   it.each(["/signup", "/signin"])("never appears on %s, however lapsed the visitor is", async (route) => {
     mockPathname = route;
     mockStatus({ state: "expired", marketDaysLeft: 0 });
@@ -268,9 +286,9 @@ describe("SubscriptionReminder", () => {
 
     await advanceToFirstShow();
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Your free trial is nearly up");
-    expect(screen.getByText("You have 1 open market day left on your trial.")).toBeInTheDocument();
-    // The reminder is a nudge, not a wall — nothing is actually locked.
-    expect(screen.getByText(/Nothing is locked right now/)).toBeInTheDocument();
+    expect(screen.getByText("You have 1 calendar day left on your trial.")).toBeInTheDocument();
+    // The reminder is a nudge, not a wall â€” nothing is actually locked.
+    expect(screen.getByText(/Starter and Pro AI features are unlocked/)).toBeInTheDocument();
     expect(playCall).toHaveBeenCalled();
   });
 
@@ -298,7 +316,7 @@ describe("SubscriptionReminder", () => {
    * The brief asked for a modal that looks different every time it opens, so the chrome, the
    * pattern and the animations rotate on their own cycle alongside the cast.
    *
-   * Three appearances is the whole allowance now, so three distinct looks is the whole claim —
+   * Three appearances is the whole allowance now, so three distinct looks is the whole claim â€”
    * the six-character, five-theme rotation still guarantees they differ.
    */
   it("opens in a different look each time, not just with a different character", async () => {
@@ -344,11 +362,12 @@ describe("SubscriptionReminder", () => {
 
   // Nothing can be done about an expiry that has already happened, so the interruption has no
   // purpose. The reminder's whole job is the day of notice before it.
-  it("never interrupts an account that has already lapsed", async () => {
+  it("interrupts an expired signed-in trial with a subscription alert", async () => {
     mockStatus({ state: "expired", marketDaysLeft: 0 });
-    const { container } = renderWithProvider(<SubscriptionReminder />);
+    renderWithProvider(<SubscriptionReminder />);
     await advanceToFirstShow();
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Your free trial has ended");
+    expect(screen.getByText(/Starter and Pro AI features are locked now/)).toBeInTheDocument();
   });
 
   it("never interrupts an admin", async () => {
@@ -365,7 +384,7 @@ describe("SubscriptionReminder", () => {
     await advanceToFirstShow();
 
     (playCall as jest.Mock).mockClear();
-    await user.click(screen.getByText("🔊 Hear it"));
+    await user.click(screen.getByText("ðŸ”Š Hear it"));
     expect(playCall).toHaveBeenCalledTimes(1);
 
     const mute = screen.getByRole("button", { name: /Voice on/ });
@@ -390,7 +409,7 @@ describe("SubscriptionReminder", () => {
     const [line, profile] = (speak as jest.Mock).mock.calls[0];
     expect(line).toContain("With great charts comes great responsibility!");
     expect(line).toContain("Your free trial is nearly up");
-    expect(line).toContain("1 open market day");
+    expect(line).toContain("1 calendar day");
     expect(profile).toEqual({ gender: "male", pitch: 0.6, rate: 0.88 });
   });
 
@@ -427,7 +446,7 @@ describe("SubscriptionReminder", () => {
     await advanceToFirstShow();
     (speak as jest.Mock).mockClear();
 
-    await user.click(screen.getByText("🔊 Hear it"));
+    await user.click(screen.getByText("ðŸ”Š Hear it"));
     await act(async () => {
       jest.advanceTimersByTime(700);
     });
@@ -446,34 +465,15 @@ describe("SubscriptionReminder", () => {
     expect(stopSpeaking).toHaveBeenCalled();
   });
 
-  it("renews from the popup and closes on success", async () => {
+  it("opens the buy plan modal from the popup", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseStatus } as Response)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) } as Response)
-      .mockResolvedValue({ ok: true, json: async () => ({ ...baseStatus, state: "active" }) } as Response) as unknown as typeof fetch;
+    mockStatus({ state: "expired", marketDaysLeft: 0 });
 
     renderWithProvider(<SubscriptionReminder />);
     await advanceToFirstShow();
 
-    await user.click(screen.getByText("Renew for 30 days"));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  });
-
-  it("keeps the popup open and explains why when renewal fails", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseStatus } as Response)
-      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: "Please sign in." }) } as Response) as unknown as typeof fetch;
-
-    renderWithProvider(<SubscriptionReminder />);
-    await advanceToFirstShow();
-
-    await user.click(screen.getByText("Renew for 30 days"));
-    expect(await screen.findByText("Please sign in.")).toBeInTheDocument();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.click(screen.getByText("Subscribe now"));
+    expect(screen.getByRole("dialog", { name: "Buy Plan" })).toBeInTheDocument();
   });
 
   // A stranger has no subscription to be reminded about. This was a conversion prompt wearing a
@@ -486,7 +486,7 @@ describe("SubscriptionReminder", () => {
   });
 
   /**
-   * Three appearances, then silence — counted across reloads rather than per page view, because a
+   * Three appearances, then silence â€” counted across reloads rather than per page view, because a
    * reader who opens the dashboard five times has not agreed to be interrupted five times.
    *
    * The third appearance has to survive being counted. An earlier version wrote the count as the
@@ -511,7 +511,7 @@ describe("SubscriptionReminder", () => {
   });
 
   it("remembers the spent allowance across a reload", async () => {
-    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:1", count: MAX_REMINDERS }));
+    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:2026-08-04", count: MAX_REMINDERS }));
     mockStatus();
 
     const { container } = renderWithProvider(<SubscriptionReminder />);
@@ -522,7 +522,7 @@ describe("SubscriptionReminder", () => {
 
   // A new subscription period is a new allowance, not an inherited one.
   it("starts a fresh three when the expiry it is counting toward changes", async () => {
-    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:4", count: MAX_REMINDERS }));
+    window.localStorage.setItem(REMINDER_COUNT_KEY, JSON.stringify({ key: "trial:2026-08-01", count: MAX_REMINDERS }));
     mockStatus();
 
     renderWithProvider(<SubscriptionReminder />);
@@ -531,7 +531,7 @@ describe("SubscriptionReminder", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("closes from the ✕ button", async () => {
+  it("closes from the âœ• button", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     mockStatus();
     renderWithProvider(<SubscriptionReminder />);
@@ -567,8 +567,8 @@ describe("SubscriptionReminder", () => {
 
 describe("SubscriptionBadge", () => {
   it.each([
-    [{}, "Trial · 1 market day left"],
-    [{ marketDaysLeft: 3 }, "Trial · 3 market days left"],
+    [{}, "Trial - 1 calendar day left"],
+    [{ marketDaysLeft: 3 }, "Trial - 3 calendar days left"],
     [{ state: "active" }, "Subscribed"],
     [{ state: "expired" }, "Trial ended"],
     [{ state: "expired", signedIn: false }, "Free preview"],
@@ -619,7 +619,7 @@ describe("reminderKicker", () => {
   it("calls a subscription ending a subscription, and a trial a trial", () => {
     expect(reminderKicker({ ...baseStatus, state: "active" } as never)).toBe("Subscription ending");
     expect(reminderKicker({ ...baseStatus, state: "trial" } as never)).toBe("Trial ending");
-    expect(reminderKicker({ ...baseStatus, state: "expired" } as never)).toBe("Trial ending");
+    expect(reminderKicker({ ...baseStatus, state: "expired" } as never)).toBe("Trial expired");
   });
 });
 
@@ -638,3 +638,4 @@ describe("todayIST", () => {
     expect(todayIST()).toBe(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
   });
 });
+

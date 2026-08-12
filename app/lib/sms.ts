@@ -122,7 +122,7 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
  * both a phishing signal to the recipient and a reason for a carrier to filter it.
  */
 export function welcomeSms(name: string): string {
-  return `Welcome to StockersAI, ${name}. Your account is active and your 5-day free trial has started. Check your email to confirm your address.`;
+  return `Welcome to StockersAI, ${name}. Your 3-day Starter and Pro AI free trial has started. Check your email to confirm your address.`;
 }
 
 /** The message sent once a subscription payment has been captured. */

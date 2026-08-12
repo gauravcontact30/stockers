@@ -136,7 +136,8 @@ describe("MoverTableRow", () => {
       </table>,
     );
 
-    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rank 4 in this segment")).toBeInTheDocument();
+    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
     expect(screen.getByText("RELIANCE")).toBeInTheDocument();
     expect(screen.getByText("Reliance Industries Ltd · 500325")).toBeInTheDocument();
     expect(screen.getByText("Energy")).toBeInTheDocument();
@@ -165,7 +166,8 @@ describe("MoverTableRow", () => {
 
     expect(screen.queryByText("Energy")).not.toBeInTheDocument();
     expect(screen.getByText("RELIANCE")).toBeInTheDocument();
-    // Tier, turnover and market cap; the sector pill is simply absent when unclassified.
+    expect(screen.getByText("Unclassified")).toBeInTheDocument();
+    // Tier, turnover and market cap.
     expect(screen.getAllByText("—")).toHaveLength(3);
   });
 });
@@ -243,7 +245,7 @@ describe("BseMoversBoard", () => {
     const third = await screen.findByText("THIRD");
     expect(screen.queryByText("CHLOGIST")).not.toBeInTheDocument();
     // Row one of page two is the third sharpest move, not the first.
-    expect(within(third.closest("tr")!).getByText("3")).toBeInTheDocument();
+    expect(within(third.closest("tr")!).getByLabelText("Rank 3 in this segment")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "", "0", 2));
 
     await user.click(within(pager).getByRole("button", { name: "← Prev" }));
@@ -375,6 +377,10 @@ describe("BseMoversBoard", () => {
 
     const option = await screen.findByRole("option", { name: /SECOND/ });
     expect(search).toHaveAttribute("aria-expanded", "true");
+    expect(within(option).getByAltText("SECOND logo")).toBeInTheDocument();
+    expect(within(option).getByText("Second Best Ltd")).toBeInTheDocument();
+    expect(within(option).getByLabelText("Rank 1 in this segment")).toBeInTheDocument();
+    expect(within(option).getByText("Energy")).toBeInTheDocument();
     expect(within(option).getByText("+18.00%")).toBeInTheDocument();
 
     // Picking a suggestion pins the list to that ticker without waiting for the settle.

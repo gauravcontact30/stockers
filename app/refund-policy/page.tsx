@@ -18,8 +18,8 @@ export default function RefundPolicyPage() {
       updated={POLICY_UPDATED.refunds}
     >
       <PolicyCallout>
-        Try before you pay. Every account gets {TERMS.trialMarketDays} market days of full access with no card required, so
-        you can decide whether the product is worth paying for before any money changes hands.
+        Try before you pay. Every account gets {TERMS.trialDays} calendar days of Starter and Pro AI access with no card
+        required, so you can decide whether the product is worth paying for before any money changes hands.
       </PolicyCallout>
 
       <PolicySection title="The short version">

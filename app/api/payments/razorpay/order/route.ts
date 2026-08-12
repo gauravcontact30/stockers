@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { subscriptionQuote } from "../../../../lib/checkout-discounts";
 import { CHECKOUT_BRAND_NAME, CHECKOUT_LOGO_URL, CHECKOUT_WEBSITE_URL } from "../../../../lib/checkout-brand";
 import { userFromRequest } from "../../../../lib/store";
 import {
@@ -8,7 +9,7 @@ import {
   isPlanKey,
   razorpayKeys,
 } from "../../../../lib/razorpay";
-import { billedAmount, billingSummary, monthlyEquivalent } from "../../../../lib/subscription-pricing";
+import { billingSummary, monthlyEquivalent } from "../../../../lib/subscription-pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +37,31 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const plan = body?.plan;
   const cycle = body?.cycle;
+  const promoCode = typeof body?.promoCode === "string" ? body.promoCode : "";
+  const referralCode = typeof body?.referralCode === "string" ? body.referralCode : "";
 
   if (!isPlanKey(plan) || !isBillingCycle(cycle)) {
     return NextResponse.json({ error: "Choose a plan and a billing cycle." }, { status: 400 });
   }
 
-  const order = await createOrder({ plan, cycle, userId: user.id, email: user.email });
+  const quote = await subscriptionQuote({ plan, cycle, promoCode, referralCode, currentUserId: user.id });
+  if ((quote.promoCode || quote.referralCode) && !quote.appliedCode) {
+    return NextResponse.json({ error: quote.message ?? "That discount code could not be applied." }, { status: 400 });
+  }
+
+  const discount = quote.appliedCode
+    ? { kind: quote.appliedKind!, code: quote.appliedCode, percent: quote.discountPercent as 5 | 10 | 20, label: quote.discountLabel! }
+    : null;
+
+  const order = await createOrder({
+    plan,
+    cycle,
+    userId: user.id,
+    email: user.email,
+    discount,
+    promoCode: quote.promoCode,
+    referralCode: quote.referralCode,
+  });
   if (!order.ok) {
     return NextResponse.json(
       {
@@ -60,7 +80,13 @@ export async function POST(request: Request) {
     keyId: keys.keyId,
     plan,
     cycle,
-    amountRupees: billedAmount(plan, cycle),
+    amountRupees: quote.amountRupees,
+    baseAmountRupees: quote.baseAmountRupees,
+    discountRupees: quote.discountRupees,
+    discountPercent: quote.discountPercent,
+    discountLabel: quote.discountLabel,
+    appliedCode: quote.appliedCode,
+    appliedKind: quote.appliedKind,
     monthlyEquivalentRupees: monthlyEquivalent(plan, cycle),
     billingSummary: billingSummary(plan, cycle),
     name: user.name,

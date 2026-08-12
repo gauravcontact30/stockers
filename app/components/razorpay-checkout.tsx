@@ -33,7 +33,7 @@ import { authHeaders, useSubscription } from "./subscription-provider";
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 export type { BillingCycle, PlanKey } from "../lib/subscription-pricing";
-export type PendingSubscription = { plan: PlanKey; cycle: BillingCycle };
+export type PendingSubscription = { plan: PlanKey; cycle: BillingCycle; promoCode?: string; referralCode?: string };
 
 const PENDING_SUBSCRIPTION_KEY = "stockers-pending-subscription";
 
@@ -50,6 +50,12 @@ export type OrderResponse = {
   websiteUrl?: string;
   logoUrl?: string;
   amountRupees?: number;
+  baseAmountRupees?: number;
+  discountRupees?: number;
+  discountPercent?: number;
+  discountLabel?: string | null;
+  appliedCode?: string | null;
+  appliedKind?: "promo" | "referral" | null;
   monthlyEquivalentRupees?: number;
   billingSummary?: string;
 };
@@ -95,13 +101,16 @@ export function loadCheckoutScript(): Promise<boolean> {
   });
 }
 
-export function subscriptionSignupHref(plan: PlanKey, cycle: BillingCycle): string {
-  return `/signup?subscribe=1&plan=${encodeURIComponent(plan)}&cycle=${encodeURIComponent(cycle)}`;
+export function subscriptionSignupHref(plan: PlanKey, cycle: BillingCycle, promoCode = "", referralCode = ""): string {
+  const params = new URLSearchParams({ subscribe: "1", plan, cycle });
+  if (promoCode.trim()) params.set("promo", promoCode.trim());
+  if (referralCode.trim()) params.set("ref", referralCode.trim());
+  return `/signup?${params.toString()}`;
 }
 
-export function savePendingSubscription(plan: PlanKey, cycle: BillingCycle) {
+export function savePendingSubscription(plan: PlanKey, cycle: BillingCycle, promoCode = "", referralCode = "") {
   try {
-    window.localStorage.setItem(PENDING_SUBSCRIPTION_KEY, JSON.stringify({ plan, cycle }));
+    window.localStorage.setItem(PENDING_SUBSCRIPTION_KEY, JSON.stringify({ plan, cycle, promoCode, referralCode }));
   } catch {}
 }
 
@@ -113,7 +122,12 @@ export function readPendingSubscription(): PendingSubscription | null {
     const plan = parsed.plan;
     const cycle = parsed.cycle;
     return (plan === "starter" || plan === "pro" || plan === "elite") && (cycle === "monthly" || cycle === "yearly")
-      ? { plan, cycle }
+      ? {
+          plan,
+          cycle,
+          promoCode: typeof parsed.promoCode === "string" ? parsed.promoCode : "",
+          referralCode: typeof parsed.referralCode === "string" ? parsed.referralCode : "",
+        }
       : null;
   } catch {
     return null;
@@ -134,6 +148,7 @@ export function checkoutOptions(
   const brandName = order.brandName ?? CHECKOUT_BRAND_NAME;
   const websiteUrl = order.websiteUrl ?? CHECKOUT_WEBSITE_URL;
   const summary = order.billingSummary ?? billingSummary(order.plan, order.cycle);
+  const discount = order.discountLabel && order.discountRupees ? ` after ${order.discountLabel}` : "";
 
   return {
     key: order.keyId,
@@ -141,7 +156,7 @@ export function checkoutOptions(
     currency: order.currency,
     name: brandName,
     image: order.logoUrl ?? CHECKOUT_LOGO_URL,
-    description: `${PLAN_LABEL[order.plan]} plan - ${summary}`,
+    description: `${PLAN_LABEL[order.plan]} plan - ${summary}${discount}`,
     order_id: order.orderId,
     prefill: { name: order.name, email: order.email },
     notes: {
@@ -150,6 +165,8 @@ export function checkoutOptions(
       brand: brandName,
       website: websiteUrl,
       product: "StockersAI subscription",
+      discountCode: order.appliedCode ?? "",
+      discountKind: order.appliedKind ?? "",
     },
     theme: { color: "#059669" },
     handler: handlers.onSuccess,
@@ -164,11 +181,15 @@ export function SubscribeButton({
   cycle,
   label,
   className = "",
+  promoCode = "",
+  referralCode = "",
 }: {
   plan: PlanKey;
   cycle: BillingCycle;
   label: string;
   className?: string;
+  promoCode?: string;
+  referralCode?: string;
 }) {
   const { status, refresh } = useSubscription();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -178,7 +199,11 @@ export function SubscribeButton({
   // has to exist before a subscription can be attached to it.
   if (status && !status.signedIn) {
     return (
-      <Link href={subscriptionSignupHref(plan, cycle)} onClick={() => savePendingSubscription(plan, cycle)} className={className}>
+      <Link
+        href={subscriptionSignupHref(plan, cycle, promoCode, referralCode)}
+        onClick={() => savePendingSubscription(plan, cycle, promoCode, referralCode)}
+        className={className}
+      >
         {label}
       </Link>
     );
@@ -192,7 +217,7 @@ export function SubscribeButton({
       const created = await fetch("/api/payments/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ plan, cycle }),
+        body: JSON.stringify({ plan, cycle, promoCode, referralCode }),
       });
 
       const order = (await created.json()) as OrderResponse & { error?: string };
@@ -210,7 +235,7 @@ export function SubscribeButton({
               const confirmed = await fetch("/api/payments/razorpay/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders() },
-                body: JSON.stringify({ ...result, plan, cycle }),
+                body: JSON.stringify({ ...result, plan, cycle, promoCode, referralCode }),
               });
 
               const payload = await confirmed.json();

@@ -149,15 +149,15 @@ type StoreBackend = {
 async function ensureStore() {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   try {
-    await fs.access(filePath);
+    await fs.access(/* turbopackIgnore: true */ filePath);
   } catch {
-    await fs.writeFile(filePath, "[]", "utf8");
+    await fs.writeFile(/* turbopackIgnore: true */ filePath, "[]", "utf8");
   }
 }
 
 async function readUsers(): Promise<AppUser[]> {
   await ensureStore();
-  const raw = await fs.readFile(filePath, "utf8");
+  const raw = await fs.readFile(/* turbopackIgnore: true */ filePath, "utf8");
   try {
     return JSON.parse(raw) as AppUser[];
   } catch {
@@ -167,7 +167,7 @@ async function readUsers(): Promise<AppUser[]> {
 
 async function writeUsers(users: AppUser[]) {
   await ensureStore();
-  await fs.writeFile(filePath, JSON.stringify(users, null, 2), "utf8");
+  await fs.writeFile(/* turbopackIgnore: true */ filePath, JSON.stringify(users, null, 2), "utf8");
 }
 
 const fileBackend: StoreBackend = {
@@ -431,7 +431,7 @@ export async function createUser(user: {
     // Normalised on the way in, so every stored number has the same shape whatever was typed.
     mobile: user.mobile ? normaliseMobile(user.mobile) : null,
     role: ADMIN_EMAILS.has(normalizedEmail) ? "admin" : "user",
-    // The trial clock starts at sign-up and is measured in open market days, not calendar days.
+    // The trial clock starts at sign-up and is measured in IST calendar days.
     trialStartedAt: now,
     subscribedUntil: null,
     // Unverified until the link in the welcome mail is followed. Nothing is gated on this yet —
@@ -491,10 +491,15 @@ export async function listUsers(): Promise<AdminUserView[]> {
   // Sorted here rather than in the query, so both backends produce the same order from the same
   // records — Postgres would otherwise sort by its collation and the file by JavaScript's.
   return users
-    .map(({ passwordHash: _passwordHash, verificationToken: _verificationToken, ...rest }) => ({
-      ...rest,
-      emailVerified: Boolean(rest.emailVerifiedAt),
-    }))
+    .map((user) => {
+      const { passwordHash, verificationToken, ...rest } = user;
+      void passwordHash;
+      void verificationToken;
+      return {
+        ...rest,
+        emailVerified: Boolean(rest.emailVerifiedAt),
+      };
+    })
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 

@@ -160,8 +160,8 @@ describe("AiReportModal", () => {
   describe("footer stats: best/weakest/overall periods", () => {
     it("renders skeletons for performance- and competitor-dependent stats while loading", () => {
       setInsights({ performance: null, perfLoading: true, competitors: null, competitorsLoading: true });
-      const { container } = render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} />);
-      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+      const { baseElement } = render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} />);
+      expect(baseElement.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
       // AI score is never gated by loading.
       expect(screen.getByText("81/100")).toBeInTheDocument();
     });
@@ -343,11 +343,11 @@ describe("AiReportModal", () => {
         />
       );
 
-      const clearbitImg = container.querySelector('img[src="https://logo.clearbit.com/tcs.com?size=128"]');
+      const clearbitImg = baseElement.querySelector('img[src="https://logo.clearbit.com/tcs.com?size=128"]');
       expect(clearbitImg).not.toBeNull();
       fireEvent.error(clearbitImg as HTMLImageElement);
 
-      const googleImg = container.querySelector('img[src="https://www.google.com/s2/favicons?domain=tcs.com&sz=64"]');
+      const googleImg = baseElement.querySelector('img[src="https://www.google.com/s2/favicons?domain=tcs.com&sz=64"]');
       expect(googleImg).not.toBeNull();
       fireEvent.error(googleImg as HTMLImageElement);
 
@@ -365,7 +365,7 @@ describe("AiReportModal", () => {
         />
       );
 
-      const img = container.querySelector('img[src="https://www.google.com/s2/favicons?sz=64"]');
+      const img = baseElement.querySelector('img[src="https://www.google.com/s2/favicons?sz=64"]');
       expect(img).not.toBeNull();
       fireEvent.error(img as HTMLImageElement);
 
@@ -377,7 +377,7 @@ describe("AiReportModal", () => {
         <AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} logoUrl="not-a-valid-url" />
       );
 
-      const img = container.querySelector('img[src="not-a-valid-url"]');
+      const img = baseElement.querySelector('img[src="not-a-valid-url"]');
       expect(img).not.toBeNull();
       fireEvent.error(img as HTMLImageElement);
 

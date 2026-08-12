@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  MOVERS_PAGE_SIZE,
   buildMoversUrl,
   type MoverDirection as MoverDirectionType,
   type MoverMoveKey,
@@ -130,11 +129,64 @@ const MOVE_OPTIONS: { key: MoveKey; label: string }[] = [
   { key: "500", label: "500% or more" },
 ];
 
-const PAGE_SIZE = MOVERS_PAGE_SIZE;
-
 // Long enough that typing a company name is one request rather than one per keystroke — the same
 // settle the company directory uses.
 const SEARCH_DEBOUNCE_MS = 350;
+
+function sectorIconKind(sector: string | null): "bank" | "bolt" | "chip" | "bag" | "cross" | "diamond" | "nodes" | "grid" {
+  const text = (sector ?? "").toLowerCase();
+  if (text.includes("financial") || text.includes("bank")) return "bank";
+  if (text.includes("energy") || text.includes("oil") || text.includes("power")) return "bolt";
+  if (text.includes("technology") || text.includes("telecom")) return "chip";
+  if (text.includes("consumer") || text.includes("retail")) return "bag";
+  if (text.includes("health") || text.includes("pharma")) return "cross";
+  if (text.includes("commodit") || text.includes("metal") || text.includes("chemical")) return "diamond";
+  if (text.includes("services") || text.includes("logistics")) return "nodes";
+  return "grid";
+}
+
+function SectorIcon({ sector }: { sector: string | null }) {
+  const kind = sectorIconKind(sector);
+  const paths = {
+    bank: <path d="M3 8h14M5 8v7m4-7v7m4-7v7M4 15h12M10 3l7 4H3l7-4Z" />,
+    bolt: <path d="M11 2 4 11h5l-1 7 8-10h-5l0-6Z" />,
+    chip: <path d="M6 6h8v8H6zM4 8H2m2 4H2m16-4h-2m2 4h-2M8 4V2m4 2V2M8 18v-2m4 2v-2" />,
+    bag: <path d="M5 7h10l1 10H4L5 7Zm3 0a2 2 0 0 1 4 0" />,
+    cross: <path d="M8 3h4v5h5v4h-5v5H8v-5H3V8h5V3Z" />,
+    diamond: <path d="m10 2 7 8-7 8-7-8 7-8Z" />,
+    nodes: <path d="M5 7a3 3 0 1 0 0.01 0ZM15 4a2 2 0 1 0 0.01 0ZM15 14a2 2 0 1 0 0.01 0ZM7.5 8.2l5.5-3M7.5 11.8l5.5 3" />,
+    grid: <path d="M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" />,
+  } satisfies Record<ReturnType<typeof sectorIconKind>, ReactNode>;
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+      {paths[kind]}
+    </svg>
+  );
+}
+
+function CategoryPill({ sector }: { sector: string | null }) {
+  const label = sector ?? "Unclassified";
+
+  return (
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${sector ? sectorTone(sector) : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"}`}>
+      <SectorIcon sector={sector} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function SegmentRankPill({ rank }: { rank: number }) {
+  return (
+    <span
+      aria-label={`Rank ${rank} in this segment`}
+      title={`Rank ${rank} in this segment`}
+      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-black tabular-nums text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+    >
+      #{rank}
+    </span>
+  );
+}
 
 
 /** Everything each tab says about itself, so the two differ in copy and colour, not in code. */
@@ -236,11 +288,13 @@ function MoverSearch({
   onInput,
   onPick,
   suggestions,
+  rankOffset,
 }: {
   input: string;
   onInput: (next: string) => void;
   onPick: (ticker: string) => void;
   suggestions: RankedMoverRow[];
+  rankOffset: number;
 }) {
   const [open, setOpen] = useState(false);
   const showList = open && input.trim().length > 0 && suggestions.length > 0;
@@ -287,7 +341,7 @@ function MoverSearch({
           aria-label="Matching stocks"
           className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
-          {suggestions.map((row) => (
+          {suggestions.map((row, index) => (
             <li key={row.code} role="presentation">
               <button
                 type="button"
@@ -299,12 +353,24 @@ function MoverSearch({
                 }}
                 className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">{row.ticker}</span>
-                  <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{row.name}</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <CompanyLogo symbol={row.ticker} size={30} />
+                  <span className="min-w-0">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">{row.ticker}</span>
+                      <SegmentRankPill rank={rankOffset + index + 1} />
+                    </span>
+                    <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{row.name}</span>
+                    <span className="mt-1 block max-w-44">
+                      <CategoryPill sector={row.sector} />
+                    </span>
+                  </span>
                 </span>
-                <span className={`shrink-0 text-xs font-bold tabular-nums ${toneFor(row.changePercent)}`}>
-                  {formatSignedPercent(row.changePercent)}
+                <span className="shrink-0 text-right">
+                  <span className={`block text-xs font-bold tabular-nums ${toneFor(row.changePercent)}`}>
+                    {formatSignedPercent(row.changePercent)}
+                  </span>
+                  {row.capTier && <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-500">{row.capTier} cap</span>}
                 </span>
               </button>
             </li>
@@ -373,7 +439,9 @@ function columnsFor(period: PeriodKey): { label: string; align: string }[] {
 export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number }) {
   return (
     <tr className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-800/70 dark:hover:bg-slate-950/50">
-      <td className="py-2.5 pr-3 text-[11px] font-bold tabular-nums text-slate-400 dark:text-slate-500">{rank}</td>
+      <td className="py-2.5 pr-3">
+        <SegmentRankPill rank={rank} />
+      </td>
 
       {/* The sector belongs to the company, so it sits with the company's name rather than in a
           column of its own — one less column to scroll past, and the pill reads as a label on the
@@ -388,11 +456,9 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
                 {row.name} · {row.code}
               </p>
             </StockDetailTrigger>
-            {row.sector && (
-              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(row.sector)}`}>
-                {row.sector}
-              </span>
-            )}
+            <span className="mt-1 block max-w-52">
+              <CategoryPill sector={row.sector} />
+            </span>
           </div>
         </div>
       </td>
@@ -535,7 +601,16 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
         {/* Search, both filters and the reset on one line — the controls are a toolbar, not a
             second section competing with the table for the reader's attention. */}
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/50">
-          <MoverSearch input={input} onInput={setInput} onPick={(ticker) => { setInput(ticker); setTerm(ticker); }} suggestions={rows} />
+          <MoverSearch
+            input={input}
+            onInput={setInput}
+            onPick={(ticker) => {
+              setInput(ticker);
+              setTerm(ticker);
+            }}
+            suggestions={rows}
+            rankOffset={paged.from > 0 ? paged.from - 1 : 0}
+          />
           <FilterSelect label="Return" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
           <FilterSelect label="Tier" value={tier} options={TIER_OPTIONS} onChange={setTier} />
           <FilterSelect label="Move" value={move} options={MOVE_OPTIONS} onChange={setMove} />

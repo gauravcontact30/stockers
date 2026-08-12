@@ -11,7 +11,7 @@
 // obvious rather than plausible-looking: a policy page carrying an invented company address or a
 // made-up registration number is worse than one that visibly still needs completing.
 
-import { TRIAL_MARKET_DAYS } from "./subscription";
+import { TRIAL_DAYS } from "./subscription";
 import { CYCLE_DAYS } from "./razorpay";
 
 /**
@@ -57,7 +57,8 @@ export const POLICY_UPDATED = {
 
 /** The subscription terms the refund policy is written against, taken from the code that enforces them. */
 export const TERMS = {
-  trialMarketDays: TRIAL_MARKET_DAYS,
+  trialDays: TRIAL_DAYS,
+  trialMarketDays: TRIAL_DAYS,
   monthlyDays: CYCLE_DAYS.monthly,
   yearlyDays: CYCLE_DAYS.yearly,
   /** How long after a charge a full refund is available, no reason required. */

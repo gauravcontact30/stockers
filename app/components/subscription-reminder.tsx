@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -7,6 +7,7 @@ import { CharacterArt, characterFor, speechScript } from "./reminder-characters"
 import { playCall } from "./reminder-sound";
 import { patternStyle, themeFor } from "./reminder-themes";
 import { speak, stopSpeaking } from "./reminder-voice";
+import { SubscribeModal } from "./subscribe-modal";
 import { useSubscription, type SubscriptionStatus } from "./subscription-provider";
 
 /** How often the reminder comes back after being dismissed. */
@@ -15,7 +16,7 @@ export const REMIND_EVERY_MS = 15 * 60_000;
 /**
  * The reminder now fires on one day only: the last day before access lapses.
  *
- * It used to appear from two trial days out and then on every page for anyone expired — including
+ * It used to appear from two trial days out and then on every page for anyone expired â€” including
  * signed-out visitors, for whom it was really a conversion prompt. That is a lot of interrupting
  * for a message whose entire useful content is "this is about to stop working". One day's notice
  * is when a reader can still act on it, and it is the only day the message is urgent.
@@ -40,7 +41,7 @@ export const REMINDER_COUNT_KEY = "stockers-reminder-count";
  * Defined here rather than imported from the server's copy in `../lib/nse-client`: that module now
  * reaches the shared cache and so pulls `next/cache` with it, which has no business in a browser
  * bundle. The subscription dates it is compared against are IST dates, so the reader's own
- * timezone must not enter into it — a subscriber in London does not lose a day.
+ * timezone must not enter into it â€” a subscriber in London does not lose a day.
  */
 export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -59,27 +60,28 @@ export function reminderCopy(status: SubscriptionStatus): { headline: string; bo
   if (status.state === "active") {
     return {
       headline: "Your subscription ends tomorrow",
-      body: "Renew today and nothing changes — the boards, the screeners and the AI desk carry straight on.",
+      body: "Renew today and nothing changes - the boards, the screeners and the AI desk carry straight on.",
     };
   }
 
   if (status.state === "expired") {
     return {
       headline: "Your free trial has ended",
-      body: "You've used all five open market days. Everything still works — subscribe to keep it that way and support the AI running behind it.",
+      body: "Your three-day Starter and Pro AI trial is over. Subscribe to Starter, Pro or Elite to unlock AI features again.",
     };
   }
 
-  const days = `${status.marketDaysLeft} open market ${status.marketDaysLeft === 1 ? "day" : "days"}`;
+  const days = `${status.marketDaysLeft} calendar ${status.marketDaysLeft === 1 ? "day" : "days"}`;
   return {
     headline: "Your free trial is nearly up",
     body: `You have ${days} left on your trial.`,
   };
 }
 
-/** What the eyebrow over the headline calls this — a trial ending is not a subscription ending. */
+/** What the eyebrow over the headline calls this â€” a trial ending is not a subscription ending. */
 export function reminderKicker(status: SubscriptionStatus): string {
-  return status.state === "active" ? "Subscription ending" : "Trial ending";
+  if (status.state === "active") return "Subscription ending";
+  return status.state === "expired" ? "Trial expired" : "Trial ending";
 }
 
 /** Radiating wedges only read as a spotlight if they turn; the other patterns are still. */
@@ -93,7 +95,7 @@ export function patternSpinClass(pattern: string): string {
  * A signed-out visitor is reported as `expired` (see accessStatusFor), which is what makes the
  * reminder a conversion prompt on the marketing pages. On the auth routes that same rule was
  * actively harmful: the modal is `fixed inset-0`, so two seconds after the sign-up page loaded it
- * covered the form and swallowed the click on "Create account" — a new visitor could not sign up
+ * covered the form and swallowed the click on "Create account" â€” a new visitor could not sign up
  * at all without first finding the dismiss button. Nagging someone to subscribe while they are
  * part-way through creating the account is also simply the wrong moment to do it.
  */
@@ -108,7 +110,7 @@ export function isReminderFreeRoute(pathname: string | null): boolean {
  * Whole days from `today` until `until`, both as YYYY-MM-DD in IST.
  *
  * Null when either date is missing or unparseable, which is treated as "no warning to give" rather
- * than as zero — zero would mean "expires today" and interrupt someone on no evidence at all.
+ * than as zero â€” zero would mean "expires today" and interrupt someone on no evidence at all.
  */
 export function daysUntil(until: string | null | undefined, today: string): number | null {
   if (!until || !today) return null;
@@ -124,10 +126,8 @@ export function daysUntil(until: string | null | undefined, today: string): numb
  * Whether this status warrants interrupting the user at all.
  *
  * One day, and one day only. A paid subscriber is warned when their last covered day is tomorrow;
- * a trial user when they have a single market day left. Everyone else — admins, subscribers with
- * time on the clock, people who already lapsed, and signed-out visitors who never subscribed — is
- * left alone. An expired account cannot be warned about something that has already happened, and
- * nagging a stranger to renew a subscription they never had was never a reminder at all.
+ * a trial user when they have a single calendar day left. Expired signed-in trials are alerted so
+ * they can subscribe. Admins and signed-out visitors are left alone.
  */
 export function shouldRemind(status: SubscriptionStatus | null, today: string): boolean {
   if (!status) return false;
@@ -138,6 +138,7 @@ export function shouldRemind(status: SubscriptionStatus | null, today: string): 
     return daysUntil(status.subscribedUntil, today) === WARN_AT_DAYS_LEFT;
   }
 
+  if (status.state === "expired") return true;
   return status.state === "trial" && status.marketDaysLeft === WARN_AT_DAYS_LEFT;
 }
 
@@ -145,7 +146,7 @@ export function shouldRemind(status: SubscriptionStatus | null, today: string): 
  * How many times the reminder has already been shown for this expiry, from the browser.
  *
  * Keyed by the date it is counting toward, so the next subscription period starts a fresh three
- * rather than inheriting a spent count. Unreadable or hand-edited storage counts as zero — the
+ * rather than inheriting a spent count. Unreadable or hand-edited storage counts as zero â€” the
  * failure mode of showing the reminder is far milder than that of suppressing it forever.
  */
 export function remindersShown(raw: string | null, key: string): number {
@@ -162,17 +163,18 @@ export function remindersShown(raw: string | null, key: string): number {
 /** What the count is keyed by: the day access lapses, or the trial's last day. */
 export function reminderKey(status: SubscriptionStatus | null): string {
   if (!status) return "";
-  return status.state === "active" ? (status.subscribedUntil ?? "") : `trial:${status.marketDaysLeft}`;
+  if (status.state === "active") return status.subscribedUntil ?? "";
+  if (status.state === "expired") return `expired:${status.trialEndsAt ?? status.trialStartedAt ?? status.today}`;
+  return `trial:${status.trialEndsAt ?? status.marketDaysLeft}`;
 }
 
 export function SubscriptionReminder() {
-  const { status, renew } = useSubscription();
+  const { status } = useSubscription();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [round, setRound] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
 
   // How many appearances this expiry has already had, read once on mount. Held in state rather
   // than read during render so the server and the first client render agree.
@@ -181,13 +183,15 @@ export function SubscriptionReminder() {
 
   useEffect(() => {
     if (!countKey) return;
-    setAlreadyShown(remindersShown(window.localStorage.getItem(REMINDER_COUNT_KEY), countKey));
+    const shown = remindersShown(window.localStorage.getItem(REMINDER_COUNT_KEY), countKey);
+    setAlreadyShown(shown);
+    setRound(shown);
   }, [countKey]);
 
   /**
    * Two separate questions, and conflating them cost the reader the third reminder.
    *
-   * `eligible` asks whether this reader should ever be interrupted — the right day, the right
+   * `eligible` asks whether this reader should ever be interrupted â€” the right day, the right
    * account, not an auth page. `allowanceLeft` asks whether another appearance may be *scheduled*.
    * The appearance currently on screen must not be judged by the second: the count is written the
    * moment the modal opens, so a single test would hide the third reminder in the same render that
@@ -195,7 +199,7 @@ export function SubscriptionReminder() {
    */
   const eligible = shouldRemind(status, todayIST()) && !isReminderFreeRoute(pathname);
   const allowanceLeft = alreadyShown !== null && alreadyShown < MAX_REMINDERS;
-  const relevant = eligible && allowanceLeft;
+  const relevant = eligible && allowanceLeft && !buyOpen;
 
   // Six characters against five themes: the pair only repeats every thirtieth appearance, so a
   // returning reminder is a different character *and* a different-looking panel.
@@ -204,7 +208,7 @@ export function SubscriptionReminder() {
 
   /**
    * Records one appearance, and does it the moment the modal is shown rather than when it is
-   * dismissed — someone who closes the tab on the third reminder has still been reminded three
+   * dismissed â€” someone who closes the tab on the third reminder has still been reminded three
    * times, and should not meet a fourth tomorrow morning.
    */
   const countOne = useCallback(() => {
@@ -261,29 +265,18 @@ export function SubscriptionReminder() {
   const close = useCallback(() => {
     stopSpeaking();
     setVisible(false);
-    setError(null);
   }, []);
 
-  if (!eligible || !status || !visible) return null;
+  if (!status || (!visible && !buyOpen)) return null;
 
   // Recomputed here rather than reusing the pre-guard value so it narrows to non-null; it's a
   // pure function of the status, so both calls always agree.
   const { headline, body } = reminderCopy(status);
 
-  const handleRenew = async () => {
-    setBusy(true);
-    setError(null);
-    const result = await renew();
-    setBusy(false);
-    if (result.ok) {
-      setVisible(false);
-      return;
-    }
-    setError(result.error);
-  };
-
   return (
-    <div
+    <>
+      {eligible && visible && (
+        <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="renewal-title"
@@ -311,7 +304,7 @@ export function SubscriptionReminder() {
             // be comfortably tappable rather than the 8x8 square it was.
             className={`absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-sm font-black transition hover:rotate-90 ${theme.control}`}
           >
-            ✕
+            âœ•
           </button>
 
           <div className="relative flex items-end gap-3">
@@ -345,7 +338,7 @@ export function SubscriptionReminder() {
               }}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold transition ${theme.control}`}
             >
-              🔊 Hear it
+              ðŸ”Š Hear it
             </button>
             <button
               type="button"
@@ -356,7 +349,7 @@ export function SubscriptionReminder() {
               aria-pressed={muted}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold transition ${theme.control}`}
             >
-              {muted ? "🔇 Muted" : "🔔 Voice on"}
+              {muted ? "ðŸ”‡ Muted" : "ðŸ”” Voice on"}
             </button>
           </div>
         </div>
@@ -365,7 +358,7 @@ export function SubscriptionReminder() {
           <p className={`text-xs font-black uppercase tracking-[0.3em] ${theme.eyebrow}`}>
             {reminderKicker(status)}
           </p>
-          {/* Headline and body come from reminderCopy, which is also what gets read aloud — so
+          {/* Headline and body come from reminderCopy, which is also what gets read aloud â€” so
               the voiceover can never say something different from what is on screen. */}
           <h2 id="renewal-title" className={`mt-1.5 text-2xl font-extrabold ${theme.heading}`}>
             {headline}
@@ -374,26 +367,23 @@ export function SubscriptionReminder() {
           <p className={`mt-2 text-sm ${theme.text}`}>{body}</p>
 
           <p className={`mt-2 text-xs ${theme.muted}`}>
-            Nothing is locked right now — this is a reminder, not a wall. It reappears every 15 minutes.
+            {status.state === "expired"
+              ? "Starter and Pro AI features are locked now. Choose any plan below to continue."
+              : "Starter and Pro AI features are unlocked during this trial. Elite remains a paid plan."}
           </p>
-
-          {/* Fixed light amber rather than a per-theme colour: an error has to stay legible, and a
-              pale box reads on every panel above. */}
-          {error && (
-            <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {error}
-            </p>
-          )}
 
           <div className="mt-5 flex flex-wrap gap-2">
             {status.signedIn ? (
               <button
                 type="button"
-                onClick={handleRenew}
-                disabled={busy}
+                onClick={() => {
+                  stopSpeaking();
+                  setVisible(false);
+                  setBuyOpen(true);
+                }}
                 className={`rounded-full px-5 py-2 text-sm font-black transition hover:-translate-y-0.5 disabled:opacity-60 ${theme.primary}`}
               >
-                {busy ? "Renewing…" : "Renew for 30 days"}
+                {status.state === "expired" ? "Subscribe now" : "Choose a plan"}
               </button>
             ) : (
               <Link href="/signup" className={`rounded-full px-5 py-2 text-sm font-black transition hover:-translate-y-0.5 ${theme.primary}`}>
@@ -409,7 +399,10 @@ export function SubscriptionReminder() {
           </div>
         </div>
       </div>
-    </div>
+        </div>
+      )}
+      <SubscribeModal open={buyOpen} onClose={() => setBuyOpen(false)} feature="research" />
+    </>
   );
 }
 
@@ -417,7 +410,7 @@ export function SubscriptionReminder() {
  * A compact trial/subscription state chip for the header.
  *
  * Nothing is shown to an admin. The chip exists to tell a reader where they stand with the paywall
- * — days left, subscribed, expired — and an administrator stands outside it entirely, so the chip
+ * â€” days left, subscribed, expired â€” and an administrator stands outside it entirely, so the chip
  * had nothing useful to say to them and simply announced the role in the public header.
  */
 export function SubscriptionBadge() {
@@ -432,7 +425,7 @@ export function SubscriptionBadge() {
 
   const labels: Record<string, string> = {
     active: "Subscribed",
-    trial: `Trial · ${status.marketDaysLeft} market ${status.marketDaysLeft === 1 ? "day" : "days"} left`,
+    trial: `Trial - ${status.marketDaysLeft} calendar ${status.marketDaysLeft === 1 ? "day" : "days"} left`,
     expired: status.signedIn ? "Trial ended" : "Free preview",
   };
 
@@ -444,3 +437,4 @@ export function SubscriptionBadge() {
     </span>
   );
 }
+

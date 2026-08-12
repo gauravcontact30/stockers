@@ -72,6 +72,7 @@ describe("PromoterTrendChart", () => {
 
     expect(container.querySelectorAll("[data-bar-segment]")).toHaveLength(0);
     expect(container.querySelectorAll("[data-pie-slice]")).toHaveLength(6);
+    expect(screen.getByTestId("promoter-pie-frame")).toHaveClass("max-w-[240px]");
     expect(screen.getByRole("img", { name: /Dec '24 ownership pie chart/ })).toBeInTheDocument();
     expect(screen.getByText("Mar '24")).toBeInTheDocument();
     expect(screen.getAllByText("Dec '24").length).toBeGreaterThan(0);

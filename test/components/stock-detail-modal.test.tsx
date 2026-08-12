@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import {
   ComparisonTable,
   DETAIL_PERIODS,
+  RETURN_PIE_PERIODS,
   StockDetailModal,
   plotPoints,
+  returnPieReadings,
   type DetailStock,
   type StockDetail,
 } from "../../app/components/stock-detail-modal";
@@ -82,6 +84,16 @@ describe("plotPoints", () => {
   });
 });
 
+describe("returnPieReadings", () => {
+  it("uses the requested return windows and derives Overall from the available price path", () => {
+    const readings = returnPieReadings(stock({ returns: { "1w": 4, "1m": 8, "6m": null, "1y": 12, "3y": -5, "5y": 20 } }));
+
+    expect(readings.map((reading) => reading.label)).toEqual(["1W", "1M", "6M", "1Y", "3Y", "5Y", "Overall"]);
+    expect(readings.map((reading) => reading.period)).toEqual([...RETURN_PIE_PERIODS]);
+    expect(readings.find((reading) => reading.label === "Overall")?.value).toBeCloseTo(-50.99, 1);
+  });
+});
+
 describe("ComparisonTable", () => {
   it("puts one metric per row and one company per column, the subject first", () => {
     render(<ComparisonTable stock={stock()} peers={[PEER]} />);
@@ -136,7 +148,7 @@ describe("StockDetailModal", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/market/stock-detail?q=M%26M"));
   });
 
-  it("shows the quote, both charts, the session facts and the comparison", async () => {
+  it("shows the quote, both charts and the comparison", async () => {
     mockDetail(detail());
     render(<StockDetailModal symbol="HDFCBANK" onClose={jest.fn()} />);
 
@@ -148,8 +160,10 @@ describe("StockDetailModal", () => {
     expect(screen.getByText("BSE session 2026-08-07")).toBeInTheDocument();
 
     expect(screen.getByRole("img", { name: /Closing price/ })).toBeInTheDocument();
-    expect(screen.getByText("Return by window")).toBeInTheDocument();
+    expect(screen.getByText("Return mix")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Pie chart of returns/ })).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.queryByText("The session, as the exchange published it")).not.toBeInTheDocument();
   });
 
   it("says which population the three were ranked out of", async () => {
@@ -178,16 +192,6 @@ describe("StockDetailModal", () => {
 
     expect(await screen.findByText(/does not reach far enough back/)).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /Closing price/ })).not.toBeInTheDocument();
-  });
-
-  it("drops a fact the feed did not carry rather than printing a dash", async () => {
-    mockDetail(detail({ stock: stock({ isin: "", trades: null }) }));
-    render(<StockDetailModal symbol="HDFCBANK" onClose={jest.fn()} />);
-
-    await screen.findByText("HDFC Bank Ltd");
-    expect(screen.queryByText("ISIN")).not.toBeInTheDocument();
-    expect(screen.queryByText("Trades")).not.toBeInTheDocument();
-    expect(screen.getByText("Open")).toBeInTheDocument();
   });
 
   it("draws a rising path in green and states its start and end", async () => {
@@ -230,22 +234,37 @@ describe("StockDetailModal", () => {
     expect(await screen.findByText(/Price path · earliest/)).toBeInTheDocument();
   });
 
-  it("shows gains and losses on opposite sides of the centre line, and a dash for a missing window", async () => {
+  it("shows gains, losses, missing windows and Overall in the return pie chart", async () => {
     mockDetail(detail({ stock: stock({ returns: { "1w": 12, "1m": -8, "3m": null } }) }));
     render(<StockDetailModal symbol="MIXED" onClose={jest.fn()} />);
 
-    await screen.findByText("Return by window");
-    const chart = screen.getByText("Return by window").closest("figure")!;
+    await screen.findByText("Return mix");
+    const chart = screen.getByText("Return mix").closest("figure")!;
     expect(within(chart).getByText("+12.00%")).toBeInTheDocument();
     expect(within(chart).getByText("-8.00%")).toBeInTheDocument();
-    // Five of the seven windows have no reading in this fixture.
-    expect(within(chart).getAllByText("—")).toHaveLength(5);
+    expect(within(chart).getAllByText("Overall")).toHaveLength(2);
+    expect(within(chart).getAllByText("-50.99%")).toHaveLength(2);
+    expect(within(chart).getAllByText("—")).toHaveLength(4);
   });
 
-  it("names the reference session generically when the one-year baseline is unknown", async () => {
+  it("updates the pie chart center when a return window is selected", async () => {
+    const user = userEvent.setup();
+    mockDetail(detail({ stock: stock({ returns: { "1w": 12, "1m": -8, "6m": 4, "1y": 18, "3y": -3, "5y": 20 } }) }));
+    render(<StockDetailModal symbol="MIXED" onClose={jest.fn()} />);
+
+    await screen.findByText("Return mix");
+    const chart = screen.getByText("Return mix").closest("figure")!;
+    expect(within(chart).getAllByText("Overall")).toHaveLength(2);
+
+    await user.click(within(chart).getByRole("button", { name: "1M -8.00%" }));
+    expect(within(chart).getAllByText("1M")).toHaveLength(2);
+    expect(within(chart).getAllByText("-8.00%")).toHaveLength(2);
+  });
+
+  it("explains how the Overall return is measured", async () => {
     mockDetail(detail({ stock: stock({ measuredFrom: {} }) }));
     render(<StockDetailModal symbol="HDFCBANK" onClose={jest.fn()} />);
-    expect(await screen.findByText(/the reference session/)).toBeInTheDocument();
+    expect(await screen.findByText(/oldest available archive close/)).toBeInTheDocument();
   });
 
   it("omits the tier and session chips when neither is known", async () => {
@@ -255,32 +274,6 @@ describe("StockDetailModal", () => {
     await screen.findByText("HDFC Bank Ltd");
     expect(screen.queryByText("Large cap")).not.toBeInTheDocument();
     expect(screen.queryByText(/BSE session/)).not.toBeInTheDocument();
-  });
-
-  it("drops every session fact the feed left empty", async () => {
-    mockDetail(
-      detail({
-        stock: stock({
-          open: null,
-          dayHigh: null,
-          dayLow: null,
-          previousClose: null,
-          volume: null,
-          turnoverCr: null,
-          marketCapCr: null,
-          rank: null,
-          group: "",
-        }),
-      }),
-    );
-    render(<StockDetailModal symbol="THIN" onClose={jest.fn()} />);
-
-    await screen.findByText("HDFC Bank Ltd");
-    for (const label of ["Open", "Day high", "Day low", "Prev close", "Volume", "Turnover", "Mcap rank", "Group"]) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument();
-    }
-    // The identifiers that survive are still shown, so the panel is not left blank.
-    expect(screen.getByText("Scrip code")).toBeInTheDocument();
   });
 
   it("surfaces the server's reason for a refusal", async () => {

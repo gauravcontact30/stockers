@@ -11,7 +11,14 @@ import {
   type PendingSubscription,
   type PlanKey,
 } from "./razorpay-checkout";
-import { useSubscription } from "./subscription-provider";
+import { authHeaders, useSubscription } from "./subscription-provider";
+
+type DiscountQuote = {
+  amountRupees: number;
+  discountRupees: number;
+  discountLabel: string | null;
+  message: string | null;
+};
 
 function intentFromLocation(): PendingSubscription | null {
   /* istanbul ignore next -- the server pass of this client component has no window; jsdom always
@@ -21,10 +28,12 @@ function intentFromLocation(): PendingSubscription | null {
   const params = new URLSearchParams(window.location.search);
   const plan = params.get("plan");
   const cycle = params.get("cycle");
+  const promoCode = params.get("promo") ?? "";
+  const referralCode = params.get("ref") ?? "";
   return params.get("subscribe") === "1" &&
     (plan === "starter" || plan === "pro" || plan === "elite") &&
     (cycle === "monthly" || cycle === "yearly")
-    ? { plan, cycle }
+    ? { plan, cycle, promoCode, referralCode }
     : null;
 }
 
@@ -36,12 +45,50 @@ function initialIntent(): PendingSubscription | null {
 
 export function PendingSubscriptionCheckout() {
   const [intent, setIntent] = useState<PendingSubscription | null>(() => initialIntent());
+  const [quote, setQuote] = useState<DiscountQuote | null>(null);
   const { status, loading } = useSubscription();
 
   useEffect(() => {
     const fromUrl = intentFromLocation();
-    if (fromUrl) savePendingSubscription(fromUrl.plan, fromUrl.cycle);
+    if (fromUrl) savePendingSubscription(fromUrl.plan, fromUrl.cycle, fromUrl.promoCode, fromUrl.referralCode);
   }, []);
+
+  const hasDiscountInput = Boolean(intent?.promoCode?.trim() || intent?.referralCode?.trim());
+
+  useEffect(() => {
+    if (!intent || !hasDiscountInput) return;
+
+    const current = intent;
+    let live = true;
+    const controller = new AbortController();
+
+    async function loadQuote() {
+      try {
+        const response = await fetch("/api/payments/razorpay/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            plan: current.plan,
+            cycle: current.cycle,
+            promoCode: current.promoCode ?? "",
+            referralCode: current.referralCode ?? "",
+          }),
+          signal: controller.signal,
+        });
+        const payload = await response.json();
+        if (live && response.ok) setQuote(payload as DiscountQuote);
+      } catch {
+        if (live) setQuote(null);
+      }
+    }
+
+    const timer = window.setTimeout(() => void loadQuote(), 180);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [hasDiscountInput, intent]);
 
   if (!intent || loading || !status?.signedIn) return null;
 
@@ -49,7 +96,8 @@ export function PendingSubscriptionCheckout() {
      stored, and PLANS carries all three; the fallback exists only because `find` may return
      undefined as far as the type system knows. */
   const selected = PLANS.find((plan) => plan.key === intent.plan) ?? PLANS[1];
-  const payable = billedAmount(selected.key, intent.cycle);
+  const activeQuote = hasDiscountInput ? quote : null;
+  const payable = activeQuote?.amountRupees ?? billedAmount(selected.key, intent.cycle);
   const perMonth = monthlyEquivalent(selected.key, intent.cycle);
 
   const close = () => {
@@ -60,13 +108,25 @@ export function PendingSubscriptionCheckout() {
 
   const setCycle = (cycle: Billing) => {
     const next = { ...intent, cycle };
-    savePendingSubscription(next.plan, next.cycle);
+    savePendingSubscription(next.plan, next.cycle, next.promoCode, next.referralCode);
     setIntent(next);
   };
 
   const setPlan = (plan: PlanKey) => {
     const next = { ...intent, plan };
-    savePendingSubscription(next.plan, next.cycle);
+    savePendingSubscription(next.plan, next.cycle, next.promoCode, next.referralCode);
+    setIntent(next);
+  };
+
+  const setPromoCode = (promoCode: string) => {
+    const next = { ...intent, promoCode: promoCode.toUpperCase() };
+    savePendingSubscription(next.plan, next.cycle, next.promoCode, next.referralCode);
+    setIntent(next);
+  };
+
+  const setReferralCode = (referralCode: string) => {
+    const next = { ...intent, referralCode: referralCode.toUpperCase() };
+    savePendingSubscription(next.plan, next.cycle, next.promoCode, next.referralCode);
     setIntent(next);
   };
 
@@ -84,6 +144,13 @@ export function PendingSubscriptionCheckout() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {rupees(payable)} payable now, {rupees(perMonth)}/month effective on {intent.cycle} billing.
             </p>
+            {activeQuote?.discountRupees ? (
+              <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                {activeQuote.discountLabel} saved {rupees(activeQuote.discountRupees)}.
+              </p>
+            ) : hasDiscountInput && activeQuote?.message ? (
+              <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{activeQuote.message}</p>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -111,6 +178,8 @@ export function PendingSubscriptionCheckout() {
             <SubscribeButton
               plan={intent.plan}
               cycle={intent.cycle}
+              promoCode={intent.promoCode ?? ""}
+              referralCode={intent.referralCode ?? ""}
               label="Pay now"
               className="inline-flex h-10 items-center justify-center rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-500"
             />
@@ -122,6 +191,22 @@ export function PendingSubscriptionCheckout() {
               Later
             </button>
           </div>
+        </div>
+        <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2 dark:border-slate-800">
+          <input
+            value={intent.promoCode ?? ""}
+            onChange={(event) => setPromoCode(event.target.value)}
+            placeholder="Promo code"
+            aria-label="Promo code"
+            className="h-10 rounded-full border border-slate-200 bg-slate-50 px-3 text-sm font-semibold uppercase text-slate-700 outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          />
+          <input
+            value={intent.referralCode ?? ""}
+            onChange={(event) => setReferralCode(event.target.value)}
+            placeholder="Referral code"
+            aria-label="Referral code"
+            className="h-10 rounded-full border border-slate-200 bg-slate-50 px-3 text-sm font-semibold uppercase text-slate-700 outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          />
         </div>
       </div>
     </div>

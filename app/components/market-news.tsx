@@ -471,6 +471,16 @@ export function MarketNews({ symbol, compact = false }: { symbol?: string; compa
     try {
       const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
       const response = await fetch(`/api/news${query}`);
+
+      // 402 is the paywall answering, not the feed being down. The route says which plan is
+      // missing, and reporting it as an outage instead sends a reader — or whoever they email —
+      // looking for a broken publisher that is working fine.
+      if (response.status === 402) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Subscribe to read the market news feed.");
+        return;
+      }
+
       if (!response.ok) throw new Error("Failed to load news");
       setFeed(await response.json());
       setError(null);

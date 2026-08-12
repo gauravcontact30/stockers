@@ -1,5 +1,4 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { readJsonCache, writeJsonCache } from "./data-cache";
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { stockIcon } from "./company-logos";
 import { mapWithConcurrency } from "./market-data";
@@ -26,6 +25,7 @@ export type TopPicksCache = {
   picks: TopPick[];
 };
 
+const CACHE_FILE = "top-picks.json";
 const PICK_COUNT = 6;
 const ANALYSIS_CONCURRENCY = 3;
 
@@ -33,27 +33,12 @@ function todayIST() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
-async function readCache(filePath: string): Promise<TopPicksCache | null> {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as TopPicksCache;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(filePath: string, cache: TopPicksCache) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(cache, null, 2), "utf8");
-}
-
 export async function getTopPicksToday(
   currentQuotes: { symbol: string; price: number | null; changePercent: number | null }[],
   predictions: PredictionsCache
 ): Promise<TopPicksCache> {
-  const filePath = path.join(process.cwd(), "app", "data", "top-picks.json");
   const today = todayIST();
-  const cached = await readCache(filePath);
+  const cached = await readJsonCache<TopPicksCache>(CACHE_FILE);
   if (cached && cached.date === today) return cached;
 
   const quoteMap = new Map(currentQuotes.map((quote) => [quote.symbol, quote]));
@@ -97,6 +82,6 @@ export async function getTopPicksToday(
     picks,
   };
 
-  await writeCache(filePath, cache);
+  await writeJsonCache(CACHE_FILE, cache);
   return cache;
 }

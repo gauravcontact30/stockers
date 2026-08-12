@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { FEATURE_BY_KEY, featureTier, starsFor, TIER_LABEL, type FeatureKey, type PlanTier } from "../lib/plan-tiers";
 import { LockIcon, PlanPill, PlanRibbon } from "./plan-pill";
+import { SubscribeModal } from "./subscribe-modal";
 import { useSubscription } from "./subscription-provider";
 
 /**
@@ -67,6 +68,9 @@ function StarRibbon({ tier, feature }: { tier: PlanTier; feature: string }) {
 
 export function LockPanel({ feature, label }: { feature: string; label: string }) {
   const { status, isLocked } = useSubscription();
+  // The plans open over the panel rather than at the end of a link to /#pricing. Being refused and
+  // being able to do something about it are one step now, and the reader keeps their place.
+  const [plansOpen, setPlansOpen] = useState(false);
   const lockedByAdmin = isLocked(feature);
   const signedIn = status?.signedIn ?? false;
   const requiredTier = featureTier(feature);
@@ -100,31 +104,54 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
 
       {!lockedByAdmin && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          {signedIn ? (
+          <button
+            type="button"
+            onClick={() => setPlansOpen(true)}
+            className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
+          >
+            {heldPlan ? "Upgrade plan" : "Choose a plan"}
+          </button>
+          {!signedIn && (
             <Link
-              href="/#pricing"
-              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
+              href="/signin"
+              className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              {heldPlan ? "Upgrade plan" : "See plans"}
+              Sign in
             </Link>
-          ) : (
-            <>
-              <Link
-                href="/signup"
-                className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
-              >
-                Start free trial
-              </Link>
-              <Link
-                href="/signin"
-                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                Sign in
-              </Link>
-            </>
           )}
         </div>
       )}
+
+      {/* Mounted unconditionally: the modal renders nothing until it is opened, and keeping it
+          here means the plan the reader was refused is the one the dialog opens on. */}
+      <SubscribeModal open={plansOpen} onClose={() => setPlansOpen(false)} feature={feature} />
+    </div>
+  );
+}
+
+/**
+ * The shape a gated feature leaves behind when it is not the thing being rendered.
+ *
+ * The gate used to mount the real children behind a blur, and to mount them optimistically while
+ * the subscription status was still in flight. Both meant a panel nobody was entitled to still ran
+ * every fetch inside it: a visitor's console filled with 402s from the endpoints that had just
+ * refused them, and what the blur actually covered was each panel's "couldn't reach the feed"
+ * error rather than any data. Nothing was lost by stopping — the server refuses those calls
+ * anyway, so a locked panel never had real figures under it to tease.
+ */
+function GatePlaceholder() {
+  return (
+    <div
+      aria-hidden="true"
+      className="animate-pulse rounded-[32px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <div className="h-3 w-28 rounded-full bg-slate-200 dark:bg-slate-800" />
+      <div className="mt-3 h-6 w-2/3 rounded-full bg-slate-200 dark:bg-slate-800" />
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={index} className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -134,15 +161,23 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
  *
  * This is presentation only. Every gated endpoint refuses on the server too, so a user who
  * removes this from the DOM still gets a 402 from the API.
+ *
+ * The children are mounted only once the status says they may be — a panel is a live component
+ * that fetches the moment it appears, so rendering one to a caller who is about to be refused is
+ * a request that can only ever come back 402. `canUse` still answers optimistically when the
+ * status request itself failed, so an outage on /api/subscription leaves a subscriber with their
+ * features rather than a wall of locks.
  */
 export function AiGate({ feature, label, children }: { feature: string; label: string; children: ReactNode }) {
-  const { canUse } = useSubscription();
+  const { canUse, loading } = useSubscription();
 
+  if (loading) return <GatePlaceholder />;
   if (canUse(feature)) return <>{children}</>;
+
   return (
     <div className="relative overflow-hidden rounded-[32px]">
       <div aria-hidden="true" className="pointer-events-none select-none opacity-35 blur-[2px]">
-        {children}
+        <GatePlaceholder />
       </div>
       <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 p-4 dark:bg-slate-950/55">
         <LockPanel feature={feature} label={label} />

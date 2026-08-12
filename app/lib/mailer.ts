@@ -1,8 +1,8 @@
-// Sending mail.
+﻿// Sending mail.
 //
 // There is deliberately no SMTP client and no new dependency here. This app ships with three
-// production dependencies (next, react, react-dom) and reaches every other service — OpenRouter,
-// NSE, Razorpay — over plain `fetch`. Mail is no different: Resend's HTTP API takes a JSON POST,
+// production dependencies (next, react, react-dom) and reaches every other service â€” OpenRouter,
+// NSE, Razorpay â€” over plain `fetch`. Mail is no different: Resend's HTTP API takes a JSON POST,
 // which is the whole transport.
 //
 // Required environment to actually deliver:
@@ -16,7 +16,7 @@
 //
 // Sending must never be able to fail a sign-up. Every entry point here resolves to a result object
 // rather than throwing, and the caller treats a failure as "the account still exists, the mail
-// didn't go" — which is recoverable by resending, whereas a rejected sign-up is not.
+// didn't go" â€” which is recoverable by resending, whereas a rejected sign-up is not.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -63,7 +63,7 @@ async function recordToOutbox(message: MailMessage, reason: string): Promise<Mai
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) existing = parsed;
     } catch {
-      // No outbox yet, or it is unreadable — start a fresh one rather than losing the message.
+      // No outbox yet, or it is unreadable â€” start a fresh one rather than losing the message.
     }
 
     // Newest first, and capped: this is a development aid, not a mail archive.
@@ -149,7 +149,7 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
     "Confirm your email address to finish setting up your account:",
     params.verifyUrl,
     "",
-    "Your free trial runs for five open market days — weekends and NSE holidays don't count against it.",
+    "Your free trial runs for three calendar days and includes Starter and Pro AI features.",
     "",
     "If you didn't create this account, you can ignore this message.",
   ].join("\n");
@@ -172,7 +172,7 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
             Verify my email
           </a>
           <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b">
-            Your free trial runs for five open market days — weekends and NSE holidays don't count against it.
+            Your free trial runs for three calendar days and includes Starter and Pro AI features.
           </p>
           <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;word-break:break-all">
             If the button doesn't work, paste this into your browser:<br />${url}
@@ -186,7 +186,7 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
   </body>
 </html>`;
 
-  return { subject: `Confirm your email · ${BRAND}`, html, text };
+  return { subject: `Confirm your email Â· ${BRAND}`, html, text };
 }
 
 /**
@@ -225,7 +225,7 @@ export function enquiryEmail(params: {
       </tr>
       <tr>
         <td style="padding:32px">
-          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#059669">${BRAND} · ${topic}</p>
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#059669">${BRAND} Â· ${topic}</p>
           <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3">Enquiry from ${name}</h1>
           <p style="margin:0 0 20px;font-size:14px;color:#475569">
             Reply to <a href="mailto:${email}" style="color:#059669">${email}</a>
@@ -239,3 +239,4 @@ export function enquiryEmail(params: {
 
   return { subject: `[${params.topic}] Enquiry from ${params.name}`, html, text };
 }
+

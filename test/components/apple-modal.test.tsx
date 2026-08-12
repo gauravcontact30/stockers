@@ -47,13 +47,13 @@ describe("AppleModal", () => {
 
   it("calls onClose when the backdrop is clicked", () => {
     const onClose = jest.fn();
-    const { container } = render(
+    const { baseElement } = render(
       <AppleModal open={true} onClose={onClose} label="Backdrop close">
         <p>content</p>
       </AppleModal>
     );
 
-    const backdrop = container.querySelector("[aria-hidden]");
+    const backdrop = baseElement.querySelector("[aria-hidden]");
     expect(backdrop).not.toBeNull();
     fireEvent.click(backdrop as Element);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -106,13 +106,13 @@ describe("AppleModal", () => {
   });
 
   it("does not render a footer section when footer is omitted", () => {
-    const { container } = render(
+    const { baseElement } = render(
       <AppleModal open={true} onClose={jest.fn()} label="No footer">
         <p>body content</p>
       </AppleModal>
     );
 
-    expect(container.querySelector(".border-t.border-slate-200\\/70.bg-slate-50\\/70")).toBeNull();
+    expect(baseElement.querySelector(".border-t.border-slate-200\\/70.bg-slate-50\\/70")).toBeNull();
   });
 
   it("unmounts (removes from DOM) ~220ms after closing, and restores body overflow", async () => {

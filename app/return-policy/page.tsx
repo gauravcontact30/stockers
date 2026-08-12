@@ -60,8 +60,8 @@ export default function ReturnPolicyPage() {
               unlocked your account is refunded in full whenever it comes to light. There is no time limit on those.
             </>,
             <>
-              <strong>Not sure yet?</strong> Do not pay at all. Every account gets {TERMS.trialMarketDays} market days of
-              full access without a card.
+              <strong>Not sure yet?</strong> Do not pay at all. Every account gets {TERMS.trialDays} calendar days of
+              Starter and Pro AI access without a card.
             </>,
           ]}
         />

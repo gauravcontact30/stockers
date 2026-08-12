@@ -35,6 +35,7 @@ import { MostTraded } from "./most-traded";
 import { MtfTraded } from "./mtf-traded";
 import { PlanPill } from "./plan-pill";
 import { PredictionPanel } from "./prediction-panel";
+import { fetchResearch } from "./research-cache";
 import { SectorShowdowns } from "./sector-showdowns";
 import { SectorTrends } from "./sector-trends";
 import { StockExplorer } from "./stock-explorer";
@@ -160,13 +161,7 @@ export function DashboardClient() {
     setModalOpen(true);
     setSelectedSymbol(symbol.toUpperCase());
 
-    const response = await fetch("/api/research", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock: symbol }),
-    });
-
-    const data = await response.json();
+    const data = await fetchResearch(symbol);
     setLoading(false);
     setAnalysis(data);
     setMessage(`Analysis ready for ${data.stock}.`);

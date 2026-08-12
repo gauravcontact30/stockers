@@ -248,6 +248,15 @@ export function AiVerdictPanel({ section }: { section: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feature: config.feature, symbols }),
       });
+      // The paywall, not a failure of the desk — see the same branch in ./market-news. The panel
+      // is normally never mounted for a caller who would be refused; this covers the case where
+      // the gate had to fail open because the status request itself did not come back.
+      if (response.status === 402) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Subscribe to see the AI desk's calls on these stocks.");
+        return;
+      }
+
       if (!response.ok) throw new Error("Verdicts failed");
 
       let latest: StockVerdict[] = [];

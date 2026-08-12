@@ -162,7 +162,10 @@ describe("SubscribeButton", () => {
     await user.click(screen.getByRole("button", { name: "Choose Pro" }));
 
     await waitFor(() => expect(opened).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: "/api/payments/razorpay/order", body: { plan: "pro", cycle: "yearly" } });
+    expect(calls[0]).toEqual({
+      url: "/api/payments/razorpay/order",
+      body: { plan: "pro", cycle: "yearly", promoCode: "", referralCode: "" },
+    });
 
     // Razorpay reports back through the handler it was given.
     handlersOf(opened[0].options).handler({
@@ -180,6 +183,43 @@ describe("SubscribeButton", () => {
         razorpay_signature: "sig",
         plan: "pro",
         cycle: "yearly",
+        promoCode: "",
+        referralCode: "",
+      },
+    });
+  });
+
+  it("passes promo and referral codes through order creation and verification", async () => {
+    const user = userEvent.setup();
+    const calls = mockApi();
+    const opened = mockCheckout();
+    render(button({ promoCode: "SAVE20", referralCode: "STKABC1234" }));
+
+    await user.click(screen.getByRole("button", { name: "Choose Pro" }));
+    await waitFor(() => expect(opened).toHaveLength(1));
+
+    expect(calls[0]).toEqual({
+      url: "/api/payments/razorpay/order",
+      body: { plan: "pro", cycle: "monthly", promoCode: "SAVE20", referralCode: "STKABC1234" },
+    });
+
+    handlersOf(opened[0].options).handler({
+      razorpay_order_id: "order_test123",
+      razorpay_payment_id: "pay_test456",
+      razorpay_signature: "sig",
+    });
+
+    await screen.findByText(/Subscribed/);
+    expect(calls.at(-1)).toEqual({
+      url: "/api/payments/razorpay/verify",
+      body: {
+        razorpay_order_id: "order_test123",
+        razorpay_payment_id: "pay_test456",
+        razorpay_signature: "sig",
+        plan: "pro",
+        cycle: "monthly",
+        promoCode: "SAVE20",
+        referralCode: "STKABC1234",
       },
     });
   });
@@ -321,13 +361,13 @@ describe("SubscribeButton", () => {
 
     render(
       <SubscriptionProvider>
-        <SubscribeButton plan="elite" cycle="monthly" label="Choose Elite" className="btn" />
+        <SubscribeButton plan="elite" cycle="monthly" promoCode="SAVE10" referralCode="STKABC1234" label="Choose Elite" className="btn" />
       </SubscriptionProvider>,
     );
 
     expect(await screen.findByRole("link", { name: "Choose Elite" })).toHaveAttribute(
       "href",
-      "/signup?subscribe=1&plan=elite&cycle=monthly",
+      "/signup?subscribe=1&plan=elite&cycle=monthly&promo=SAVE10&ref=STKABC1234",
     );
   });
 });

@@ -11,8 +11,20 @@ jest.mock("../../app/components/razorpay-checkout", () => {
   const actual = jest.requireActual("../../app/components/razorpay-checkout");
   return {
     ...actual,
-    SubscribeButton: ({ plan, cycle, label }: { plan: string; cycle: string; label: string }) => (
-      <button type="button" data-plan={plan} data-cycle={cycle}>
+    SubscribeButton: ({
+      plan,
+      cycle,
+      promoCode,
+      referralCode,
+      label,
+    }: {
+      plan: string;
+      cycle: string;
+      promoCode?: string;
+      referralCode?: string;
+      label: string;
+    }) => (
+      <button type="button" data-plan={plan} data-cycle={cycle} data-promo={promoCode} data-referral={referralCode}>
         {label}
       </button>
     ),
@@ -86,6 +98,8 @@ describe("PendingSubscriptionCheckout", () => {
     expect(readPendingSubscription()).toEqual({
       plan: "pro",
       cycle: "yearly",
+      promoCode: "",
+      referralCode: "",
     });
   });
 
@@ -147,6 +161,8 @@ describe("PendingSubscriptionCheckout", () => {
     expect(readPendingSubscription()).toEqual({
       plan: "starter",
       cycle: "monthly",
+      promoCode: "",
+      referralCode: "",
     });
   });
 
@@ -163,7 +179,24 @@ describe("PendingSubscriptionCheckout", () => {
     expect(readPendingSubscription()).toEqual({
       plan: "pro",
       cycle: "yearly",
+      promoCode: "",
+      referralCode: "",
     });
+  });
+
+  it("preserves promo and referral codes from the signup redirect", async () => {
+    atUrl("?subscribe=1&plan=pro&cycle=yearly&promo=save20&ref=stkabc1234");
+    renderBar();
+    await screen.findByText("Pro plan ready for checkout");
+
+    expect(readPendingSubscription()).toEqual({
+      plan: "pro",
+      cycle: "yearly",
+      promoCode: "save20",
+      referralCode: "stkabc1234",
+    });
+    expect(screen.getByLabelText("Promo code")).toHaveValue("save20");
+    expect(screen.getByLabelText("Referral code")).toHaveValue("stkabc1234");
   });
 
   it("hands the current plan and cycle to the pay button", async () => {
@@ -177,6 +210,8 @@ describe("PendingSubscriptionCheckout", () => {
     const pay = screen.getByRole("button", { name: "Pay now" });
     expect(pay).toHaveAttribute("data-plan", "elite");
     expect(pay).toHaveAttribute("data-cycle", "monthly");
+    expect(pay).toHaveAttribute("data-promo", "");
+    expect(pay).toHaveAttribute("data-referral", "");
   });
 
   // "Later" has to actually mean later: the bar goes, the stored intent goes, and the query string

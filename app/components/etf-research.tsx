@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal";
 import { IndianEtfsMarket } from "./indian-etfs-market";
+import { fetchResearch } from "./research-cache";
 import { stockIcon } from "../lib/company-logos";
 import { indianETFs } from "../lib/indian-etfs";
 
@@ -19,13 +20,7 @@ export function EtfResearch() {
     setMessage(null);
     setModalOpen(true);
 
-    const response = await fetch("/api/research", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock: etfSymbol }),
-    });
-
-    const data = await response.json();
+    const data = await fetchResearch(etfSymbol);
     setLoading(false);
     setAnalysis(data);
     setMessage(`AI market scan generated for ${data.stock}.`);

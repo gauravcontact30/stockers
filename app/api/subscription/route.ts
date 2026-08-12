@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { referralCodeForUser, referralShareUrl } from "../../lib/checkout-discounts";
 import { userFromRequest } from "../../lib/store";
 import { AI_FEATURES, getAccessStatus, readFeatureLocks } from "../../lib/subscription";
 
@@ -19,5 +20,7 @@ export async function GET(request: Request) {
     signedIn: user !== null,
     name: user?.name ?? null,
     email: user?.email ?? null,
+    referralCode: user ? referralCodeForUser(user) : null,
+    referralUrl: user ? referralShareUrl(user) : null,
   });
 }

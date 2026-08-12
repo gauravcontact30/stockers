@@ -27,7 +27,7 @@ function checkoutTargetFromLocation(): PendingSubscription | null {
     (plan === "starter" || plan === "pro" || plan === "elite") &&
     (cycle === "monthly" || cycle === "yearly")
   ) {
-    return { plan, cycle };
+    return { plan, cycle, promoCode: params.get("promo") ?? "", referralCode: params.get("ref") ?? "" };
   }
 
   return readPendingSubscription();
@@ -123,7 +123,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   }, [router]);
 
   useEffect(() => {
-    if (checkoutTarget) savePendingSubscription(checkoutTarget.plan, checkoutTarget.cycle);
+    if (checkoutTarget) {
+      savePendingSubscription(
+        checkoutTarget.plan,
+        checkoutTarget.cycle,
+        checkoutTarget.promoCode,
+        checkoutTarget.referralCode,
+      );
+    }
   }, [checkoutTarget]);
 
   const localErrors: FieldErrors =
@@ -235,7 +242,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       );
       router.push(
         checkoutTarget
-          ? `/?subscribe=1&plan=${encodeURIComponent(checkoutTarget.plan)}&cycle=${encodeURIComponent(checkoutTarget.cycle)}#pricing`
+          ? `/?${new URLSearchParams({
+              subscribe: "1",
+              plan: checkoutTarget.plan,
+              cycle: checkoutTarget.cycle,
+              ...(checkoutTarget.promoCode ? { promo: checkoutTarget.promoCode } : {}),
+              ...(checkoutTarget.referralCode ? { ref: checkoutTarget.referralCode } : {}),
+            }).toString()}#pricing`
           : "/dashboard",
       );
     } catch {

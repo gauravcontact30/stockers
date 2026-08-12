@@ -284,6 +284,27 @@ describe("MarketNews", () => {
     expect(await screen.findByText(/Couldn't reach the news feed/)).toBeInTheDocument();
   });
 
+  // 402 is the paywall, not the publisher. Reporting it as an outage sent readers looking for a
+  // broken feed that was working perfectly.
+  it("shows the plan the route asks for when the feed is behind the paywall", async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 402,
+      json: async () => ({ error: "Starter is needed for this feature. Subscribe to unlock it." }),
+    })) as unknown as typeof fetch;
+
+    render(<MarketNews />);
+    expect(await screen.findByText(/Starter is needed for this feature/)).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't reach the news feed/)).not.toBeInTheDocument();
+  });
+
+  it("says something useful when the paywall sends no message of its own", async () => {
+    global.fetch = jest.fn(async () => ({ ok: false, status: 402, json: async () => { throw new Error("no body"); } })) as unknown as typeof fetch;
+
+    render(<MarketNews />);
+    expect(await screen.findByText("Subscribe to read the market news feed.")).toBeInTheDocument();
+  });
+
   it("shows an error banner when the fetch rejects", async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
     render(<MarketNews />);

@@ -15,7 +15,7 @@
 //   same way, so the comparison is like for like.
 
 import { getBseDirectory, getBseMovers, type BseRow } from "./bse-market";
-import { getBaseline, HISTORY_PERIODS, periodReturn, type Baseline } from "./bse-history";
+import { getBaseline, HISTORY_PERIODS, overallReturn, periodReturn, type Baseline } from "./bse-history";
 
 /** How many peers the stock-detail modal shows by default. */
 export const PEER_COUNT = 3;
@@ -82,6 +82,7 @@ function returnsFor(code: string, price: number | null, baselines: Baseline[]): 
   HISTORY_PERIODS.forEach((period, index) => {
     returns[period] = price === null ? null : periodReturn(code, price, baselines[index]);
   });
+  returns.overall = price === null ? null : overallReturn(code, price, baselines);
   return returns;
 }
 

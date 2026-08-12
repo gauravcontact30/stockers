@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { creditPayment } from "../../../../lib/razorpay-credit";
-import { isBillingCycle, isPlanKey, verifyWebhookSignature, type RazorpayPayment } from "../../../../lib/razorpay";
+import { isBillingCycle, isPlanKey, paymentCovers, verifyWebhookSignature, type RazorpayPayment } from "../../../../lib/razorpay";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +45,10 @@ export async function POST(request: Request) {
   // payment taken through some other flow, and this endpoint has no business crediting it.
   if (!payment?.id || !notes.userId || !isPlanKey(plan) || !isBillingCycle(cycle)) {
     return NextResponse.json({ ignored: "payment carries no subscription notes" });
+  }
+
+  if (!paymentCovers(payment, plan, cycle)) {
+    return NextResponse.json({ ignored: "payment does not cover subscription amount" });
   }
 
   const credited = await creditPayment({ userId: notes.userId, paymentId: payment.id, plan, cycle });

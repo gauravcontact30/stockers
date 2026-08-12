@@ -96,8 +96,8 @@ describe("speechScript", () => {
   // The spoken line is built from what is rendered, so the voiceover can never say something the
   // modal does not show.
   it("reads the shout, the headline and the body as one line", () => {
-    expect(speechScript(CHARACTERS[0], "Your free trial is nearly up", "You have 1 open market day left.")).toBe(
-      "With great charts comes great responsibility! Your free trial is nearly up. You have 1 open market day left.",
+    expect(speechScript(CHARACTERS[0], "Your free trial is nearly up", "You have 1 calendar day left.")).toBe(
+      "With great charts comes great responsibility! Your free trial is nearly up. You have 1 calendar day left.",
     );
   });
 

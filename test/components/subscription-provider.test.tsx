@@ -17,6 +17,7 @@ const trialStatus = {
   marketDaysUsed: 2,
   marketDaysLeft: 3,
   trialStartedAt: "2026-08-01T04:00:00.000Z",
+  trialEndsAt: "2026-08-04",
   subscribedUntil: null,
   today: "2026-08-05",
   locks: { "top-picks": true },
@@ -102,6 +103,79 @@ describe("SubscriptionProvider", () => {
     // Locked by an admin, so unusable even though the trial is still live.
     expect(screen.getByTestId("can-top-picks")).toHaveTextContent("false");
     expect(screen.getByTestId("locked-top-picks")).toHaveTextContent("true");
+  });
+
+  // A token the server cannot resolve — one minted before the account store moved, or for an
+  // account since deleted — used to leave a signed-in-looking header over a wall of 402s.
+  it("drops a stored session the server no longer recognises", async () => {
+    window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok-dead", user: { name: "Aarav" } }));
+    mockStatus({ ...trialStatus, signedIn: false, state: "expired", allowed: false, tier: null, planName: null });
+
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("expired"));
+    expect(window.localStorage.getItem("stockers-auth")).toBeNull();
+    expect(document.cookie).not.toContain("tok-dead");
+  });
+
+  it("keeps a session the server does recognise", async () => {
+    window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok-live", user: { name: "Aarav" } }));
+    mockStatus(trialStatus);
+
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("trial"));
+    expect(window.localStorage.getItem("stockers-auth")).toContain("tok-live");
+  });
+
+  // The status call carries the session it was sent with. One already in flight when the visitor
+  // signs in answers about the old session, and must not clear the new one it knows nothing about.
+  it("leaves a session that was created while the status call was in flight", async () => {
+    let release: (value: unknown) => void = () => {};
+    global.fetch = jest.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    ) as unknown as typeof fetch;
+
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok-new", user: { name: "Aarav" } }));
+    release({ ok: true, json: async () => ({ ...trialStatus, signedIn: false }) });
+
+    await waitFor(() => expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+    expect(window.localStorage.getItem("stockers-auth")).toContain("tok-new");
+  });
+
+  it("survives a browser that refuses localStorage while clearing a dead session", async () => {
+    window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok-dead", user: { name: "Aarav" } }));
+    mockStatus({ ...trialStatus, signedIn: false });
+
+    const removeItem = jest.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("private mode");
+    });
+
+    render(
+      <SubscriptionProvider>
+        <Probe />
+      </SubscriptionProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+    expect(removeItem).toHaveBeenCalledWith("stockers-auth");
+    removeItem.mockRestore();
   });
 
   it("locks every AI feature once the trial has expired", async () => {

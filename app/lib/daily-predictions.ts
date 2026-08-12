@@ -1,5 +1,4 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { readJsonCache, writeJsonCache } from "./data-cache";
 import { indianStocks } from "./indian-stocks";
 import { indianETFs } from "./indian-etfs";
 import { appOrigin } from "./app-origin";
@@ -28,20 +27,6 @@ const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 function todayIST() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-}
-
-async function readCache(filePath: string): Promise<PredictionsCache | null> {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as PredictionsCache;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(filePath: string, cache: PredictionsCache) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(cache, null, 2), "utf8");
 }
 
 function heuristicPrediction(symbol: string, changePercent: number | null): Prediction {
@@ -126,9 +111,8 @@ async function getDailyPredictionsFor(
   entityLabel: string,
   currentQuotes: { symbol: string; changePercent: number | null }[]
 ): Promise<PredictionsCache> {
-  const filePath = path.join(process.cwd(), "app", "data", cacheFileName);
   const today = todayIST();
-  const cached = await readCache(filePath);
+  const cached = await readJsonCache<PredictionsCache>(cacheFileName);
   if (cached && cached.date === today) return cached;
 
   const changeMap = new Map(currentQuotes.map((quote) => [quote.symbol, quote.changePercent]));
@@ -151,7 +135,7 @@ async function getDailyPredictionsFor(
     predictions,
   };
 
-  await writeCache(filePath, cache);
+  await writeJsonCache(cacheFileName, cache);
   return cache;
 }
 

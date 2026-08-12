@@ -249,10 +249,10 @@ export function PromoterTrendChart({ history }: { history: PromoterQuarter[] }) 
         </div>
 
         <div className="mt-3">
-          <div className="mx-auto w-full max-w-[420px]">
+          <div data-testid="promoter-pie-frame" className="mx-auto w-full max-w-[240px]">
             <svg
               viewBox={`0 0 ${PIE_SIZE} ${PIE_SIZE}`}
-              className="w-full"
+              className="mx-auto w-full"
               role="img"
               aria-label={`${shortQuarter(current.quarter)} ownership pie chart, promoter holding ${currentPromoter.toFixed(2)} percent`}
             >

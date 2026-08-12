@@ -76,7 +76,7 @@ export default function AboutPage() {
             </p>
             <p>
               Whether that is worth paying for is a question you should answer before paying. Every account gets{" "}
-              {TERMS.trialMarketDays} open market days of full access with no card, which is enough sessions to find out.
+              {TERMS.trialDays} calendar days of Starter and Pro AI access with no card, which is enough time to find out.
             </p>
           </div>
         </section>

@@ -1,5 +1,4 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { readJsonCache, writeJsonCache } from "./data-cache";
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { stockIcon } from "./company-logos";
 import type { PredictionsCache } from "./daily-predictions";
@@ -46,22 +45,10 @@ const GOVERNMENT_LINKED = new Set([
   "BHEL", "HAL", "BEL", "MAZDOCK", "COCHINSHIP",
 ]);
 
+const CACHE_FILE = "buy-tomorrow.json";
+
 function todayIST() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-}
-
-async function readCache(filePath: string): Promise<BuyTomorrowCache | null> {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as BuyTomorrowCache;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(filePath: string, cache: BuyTomorrowCache) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(cache, null, 2), "utf8");
 }
 
 function priceSignalFor(changePercent: number | null, oneMonthReturn: number | null) {
@@ -101,9 +88,8 @@ export async function getBuyTomorrowPicks(
   predictions: PredictionsCache,
   oneMonthReturns: PeriodReturnsCache
 ): Promise<BuyTomorrowCache> {
-  const filePath = path.join(process.cwd(), "app", "data", "buy-tomorrow.json");
   const today = todayIST();
-  const cached = await readCache(filePath);
+  const cached = await readJsonCache<BuyTomorrowCache>(CACHE_FILE);
   if (cached && cached.date === today) return cached;
 
   const quoteMap = new Map(currentQuotes.map((quote) => [quote.symbol, quote]));
@@ -154,6 +140,6 @@ export async function getBuyTomorrowPicks(
     picks,
   };
 
-  await writeCache(filePath, cache);
+  await writeJsonCache(CACHE_FILE, cache);
   return cache;
 }

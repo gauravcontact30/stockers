@@ -1,5 +1,4 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { readJsonCache, writeJsonCache } from "./data-cache";
 import { indianStocks } from "./indian-stocks";
 import { mapWithConcurrency, type QuoteSubject } from "./market-data";
 
@@ -31,20 +30,6 @@ const PERIOD_CONFIG: Record<ReturnPeriod, PeriodConfigEntry> = {
 
 function todayIST() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-}
-
-async function readCache(filePath: string): Promise<PeriodReturnsCache | null> {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as PeriodReturnsCache;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(filePath: string, cache: PeriodReturnsCache) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(cache, null, 2), "utf8");
 }
 
 function rangeParamsFor(config: PeriodConfigEntry): string {
@@ -86,9 +71,8 @@ async function fetchPeriodReturn(subject: QuoteSubject, config: PeriodConfigEntr
 // price history for 150 stocks on every request.
 async function getPeriodReturns(period: ReturnPeriod): Promise<PeriodReturnsCache> {
   const config = PERIOD_CONFIG[period];
-  const filePath = path.join(process.cwd(), "app", "data", config.cacheFile);
   const today = todayIST();
-  const cached = await readCache(filePath);
+  const cached = await readJsonCache<PeriodReturnsCache>(config.cacheFile);
   if (cached?.date === today) return cached;
 
   const values = await mapWithConcurrency(indianStocks, CONCURRENCY, (subject) => fetchPeriodReturn(subject, config));
@@ -98,13 +82,20 @@ async function getPeriodReturns(period: ReturnPeriod): Promise<PeriodReturnsCach
     returns[stock.symbol] = values[i];
   });
 
+  // Yesterday's figures beat none at all. A refresh where every single name came back null is not
+  // a day with no movement, it is the price feed being unreachable — and answering with a board of
+  // blanks would be reporting an outage as a market that did nothing.
+  if (cached && Object.values(returns).every((value) => value === null)) return cached;
+
   const cache: PeriodReturnsCache = {
     date: today,
     generatedAt: new Date().toISOString(),
     returns,
   };
 
-  await writeCache(filePath, cache);
+  // Deliberately not awaited into the failure path: see ./data-cache. Whether the refreshed
+  // figures could be kept has no bearing on whether they can be returned.
+  await writeJsonCache(config.cacheFile, cache);
   return cache;
 }
 

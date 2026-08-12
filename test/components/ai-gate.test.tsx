@@ -1,11 +1,17 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { AiGate, FeatureLockToggle, GatedSection, LockPanel } from "../../app/components/ai-gate";
 import { SubscriptionProvider } from "../../app/components/subscription-provider";
 
+type MockLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  children: ReactNode;
+};
+
 jest.mock("next/link", () => ({
   __esModule: true,
-  default: ({ href, children, ...rest }: any) => (
+  default: ({ href, children, ...rest }: MockLinkProps) => (
     <a href={href} {...rest}>
       {children}
     </a>
@@ -21,6 +27,7 @@ const baseStatus = {
   marketDaysUsed: 1,
   marketDaysLeft: 4,
   trialStartedAt: "2026-08-01T04:00:00.000Z",
+  trialEndsAt: "2026-08-04",
   subscribedUntil: null,
   today: "2026-08-05",
   locks: {},
@@ -62,11 +69,37 @@ describe("AiGate", () => {
     expect(screen.getByText(/Pro is required for AI stock research/)).toBeInTheDocument();
     expect(screen.getAllByText("Pro").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("2 star Rank 2")).toBeInTheDocument();
-    expect(screen.getByText("See plans")).toHaveAttribute("href", "/#pricing");
-    expect(screen.getByText("the feature")).toBeInTheDocument();
+    expect(screen.getByText("Choose a plan")).toBeInTheDocument();
+    // The children are no longer mounted behind the blur. A panel fetches the moment it renders,
+    // and every one of those calls is a 402 the reader never asked for — the console filled with
+    // them and the blur only ever covered the resulting error state.
+    expect(screen.queryByText("the feature")).not.toBeInTheDocument();
   });
 
-  it("offers sign-up and sign-in to a visitor who has no account", async () => {
+  // The status decides whether a panel may run at all, so nothing runs until it has landed.
+  it("holds the feature back until the status says it is allowed", async () => {
+    let release: (value: unknown) => void = () => {};
+    global.fetch = jest.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    ) as unknown as typeof fetch;
+
+    renderGated(
+      <AiGate feature="research" label="AI stock research">
+        <p>the feature</p>
+      </AiGate>,
+    );
+
+    expect(screen.queryByText("the feature")).not.toBeInTheDocument();
+
+    release({ ok: true, json: async () => baseStatus });
+    expect(await screen.findByText("the feature")).toBeInTheDocument();
+  });
+
+  // The plans open in place rather than at the end of a link: a visitor who has no account still
+  // picks a plan here, and the sign-up form is what the chosen plan carries them into.
+  it("offers the plans and sign-in to a visitor who has no account", async () => {
     mockStatus({ state: "expired", allowed: false, tier: null, planName: null, signedIn: false });
     renderGated(
       <AiGate feature="research" label="AI stock research">
@@ -74,8 +107,36 @@ describe("AiGate", () => {
       </AiGate>,
     );
 
-    expect(await screen.findByText("Start free trial")).toHaveAttribute("href", "/signup");
+    expect(await screen.findByRole("button", { name: "Choose a plan" })).toBeInTheDocument();
     expect(screen.getByText("Sign in")).toHaveAttribute("href", "/signin");
+  });
+
+  it("opens a compact buy modal from the lock with the plan that unlocks the feature", async () => {
+    const user = userEvent.setup();
+    mockStatus({ state: "expired", allowed: false, tier: null, planName: null });
+    renderGated(
+      <AiGate feature="research" label="AI stock research">
+        <p>the feature</p>
+      </AiGate>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Choose a plan" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Buy Plan");
+    expect(dialog).toHaveTextContent("Pro");
+    expect(dialog).toHaveTextContent("AI stock research is available on Pro; choose any plan.");
+    expect(within(dialog).getByRole("combobox", { name: "Subscription plan" })).toHaveTextContent("Pro");
+    expect(within(dialog).getByRole("combobox", { name: "Billing cycle" })).toHaveTextContent("Yearly");
+    expect(dialog).toHaveTextContent("Payable now");
+    expect(dialog).not.toHaveTextContent("For an active investor running their own screens");
+    expect(dialog).not.toHaveTextContent("Starter");
+    expect(screen.getByRole("button", { name: "Buy Pro" })).toBeInTheDocument();
+
+    // Closing it puts the reader back on the locked panel rather than on another page.
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("AI stock research is locked")).toBeInTheDocument();
   });
 
   // An admin lock is a different situation from an expired trial, and must not ask for money.
@@ -100,7 +161,7 @@ describe("LockPanel", () => {
     render(<LockPanel feature="research" label="AI stock research" />);
 
     expect(screen.getByText("AI stock research is locked")).toBeInTheDocument();
-    expect(screen.getByText("Start free trial")).toHaveAttribute("href", "/signup");
+    expect(screen.getByRole("button", { name: "Choose a plan" })).toBeInTheDocument();
     expect(screen.getByText("Sign in")).toHaveAttribute("href", "/signin");
   });
 });

@@ -108,6 +108,24 @@ describe("razorpay plan amounts", () => {
     expect(paymentCovers({ ...payment, status: "authorized" }, "pro", "yearly")).toBe(false);
     expect(paymentCovers({ ...payment, currency: "USD" }, "pro", "yearly")).toBe(false);
   });
+
+  it("accepts captured payments that cover the server-written discount notes", () => {
+    const payment: RazorpayPayment = {
+      id: "pay_123",
+      order_id: "order_123",
+      status: "captured",
+      amount: 323200,
+      currency: "INR",
+      notes: {
+        discountKind: "promo",
+        discountCode: "SAVE10",
+        discountPercent: "10",
+      },
+    };
+
+    expect(paymentCovers(payment, "pro", "yearly")).toBe(true);
+    expect(paymentCovers({ ...payment, amount: 323100 }, "pro", "yearly")).toBe(false);
+  });
 });
 
 describe("razorpay order creation", () => {
@@ -146,6 +164,48 @@ describe("razorpay order creation", () => {
         cycle: "yearly",
         brand: "StockersAI",
         website: "https://www.stockersai.com",
+      },
+    });
+  });
+
+  it("creates a discounted order and records the discount in notes", async () => {
+    configureKeys();
+    const fetchMock = jest.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ id: "order_123", amount: 323200, currency: "INR", status: "created" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await createOrder({
+      plan: "pro",
+      cycle: "yearly",
+      userId: "user_1",
+      email: "asha@example.com",
+      discount: { kind: "promo", code: "SAVE10", percent: 10, label: "10% promo discount" },
+      promoCode: "SAVE10",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: { id: "order_123", amount: 323200, currency: "INR", status: "created" },
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      amount: 323200,
+      currency: "INR",
+      notes: {
+        plan: "pro",
+        cycle: "yearly",
+        baseAmountRupees: "3591",
+        finalAmountRupees: "3232",
+        discountKind: "promo",
+        discountCode: "SAVE10",
+        discountPercent: "10",
+        promoCode: "SAVE10",
       },
     });
   });

@@ -22,6 +22,7 @@
 // existing unpaid renewal flow, so a checkout misconfiguration cannot take the site down.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { discountedAmount, discountFromPaymentNotes, type AppliedDiscount } from "./checkout-discounts";
 import type { PlanName } from "./auth-validation";
 import { CHECKOUT_BRAND_NAME, CHECKOUT_WEBSITE_URL } from "./checkout-brand";
 import {
@@ -55,13 +56,13 @@ export const PLAN_NAMES: Record<PlanKey, PlanName> = { starter: "Starter", pro: 
 export const CYCLE_DAYS: Record<BillingCycle, number> = { monthly: 30, yearly: 365 };
 
 /** What a plan and cycle costs, in whole rupees. */
-export function priceFor(plan: PlanKey, cycle: BillingCycle): number {
-  return billedAmount(plan, cycle);
+export function priceFor(plan: PlanKey, cycle: BillingCycle, discount?: AppliedDiscount | null): number {
+  return discountedAmount(billedAmount(plan, cycle), discount?.percent ?? 0);
 }
 
 /** Razorpay works in the smallest currency unit, so every amount crosses the wire in paise. */
-export function amountInPaise(plan: PlanKey, cycle: BillingCycle): number {
-  return priceFor(plan, cycle) * 100;
+export function amountInPaise(plan: PlanKey, cycle: BillingCycle, discount?: AppliedDiscount | null): number {
+  return priceFor(plan, cycle, discount) * 100;
 }
 
 export type RazorpayKeys = { keyId: string; keySecret: string };
@@ -122,6 +123,9 @@ export type OrderRequest = {
   cycle: BillingCycle;
   userId: string;
   email: string;
+  discount?: AppliedDiscount | null;
+  promoCode?: string;
+  referralCode?: string;
 };
 
 function messageForStatus(status: number): string {
@@ -163,13 +167,15 @@ export async function createOrder(request: OrderRequest): Promise<RazorpayGatewa
   if (!keys) {
     return { ok: false, error: "Razorpay API key id and secret are not configured." };
   }
+  const baseAmountRupees = billedAmount(request.plan, request.cycle);
+  const finalAmountRupees = priceFor(request.plan, request.cycle, request.discount);
 
   try {
     const response = await fetch(`${API}/orders`, {
       method: "POST",
       headers: { Authorization: authHeader(keys), "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: amountInPaise(request.plan, request.cycle),
+        amount: finalAmountRupees * 100,
         currency: "INR",
         // Razorpay caps receipts at 40 characters, and a user id plus a timestamp fits.
         receipt: `sub_${request.userId}_${Date.now().toString(36)}`.slice(0, 40),
@@ -178,6 +184,13 @@ export async function createOrder(request: OrderRequest): Promise<RazorpayGatewa
           email: request.email,
           plan: request.plan,
           cycle: request.cycle,
+          baseAmountRupees: String(baseAmountRupees),
+          finalAmountRupees: String(finalAmountRupees),
+          discountKind: request.discount?.kind ?? "",
+          discountCode: request.discount?.code ?? "",
+          discountPercent: request.discount ? String(request.discount.percent) : "0",
+          promoCode: request.promoCode ?? "",
+          referralCode: request.referralCode ?? "",
           brand: CHECKOUT_BRAND_NAME,
           website: CHECKOUT_WEBSITE_URL,
           product: "StockersAI subscription",
@@ -278,9 +291,10 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
  * cannot be redeemed as a year of Elite.
  */
 export function paymentCovers(payment: RazorpayPayment, plan: PlanKey, cycle: BillingCycle): boolean {
+  const discount = discountFromPaymentNotes(payment.notes);
   return (
     payment.status === "captured" &&
     payment.currency === "INR" &&
-    payment.amount >= amountInPaise(plan, cycle)
+    payment.amount >= amountInPaise(plan, cycle, discount)
   );
 }

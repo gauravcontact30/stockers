@@ -7,6 +7,7 @@ import { IndianStocksMarket } from "./indian-stocks-market";
 import { StockCombobox } from "./stock-combobox";
 import { indianStocks } from "../lib/indian-stocks";
 import { stockIcon } from "../lib/company-logos";
+import { fetchResearch } from "./research-cache";
 
 export function LandingResearch() {
   const [stock, setStock] = useState("RELIANCE");
@@ -20,13 +21,7 @@ export function LandingResearch() {
     setMessage(null);
     setModalOpen(true);
 
-    const response = await fetch("/api/research", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stock: symbol }),
-    });
-
-    const data = await response.json();
+    const data = await fetchResearch(symbol);
     setLoading(false);
     setAnalysis(data);
     setMessage(`AI market scan generated for ${data.stock}.`);

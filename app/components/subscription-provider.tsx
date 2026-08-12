@@ -14,6 +14,7 @@ export type SubscriptionStatus = {
   marketDaysUsed: number;
   marketDaysLeft: number;
   trialStartedAt: string | null;
+  trialEndsAt: string | null;
   subscribedUntil: string | null;
   today: string;
   locks: Record<string, boolean>;
@@ -21,6 +22,8 @@ export type SubscriptionStatus = {
   signedIn: boolean;
   name: string | null;
   email?: string | null;
+  referralCode?: string | null;
+  referralUrl?: string | null;
 };
 
 type SubscriptionValue = {
@@ -80,6 +83,24 @@ export function syncSessionCookie() {
   }
 }
 
+/**
+ * Drops a session the server no longer accepts.
+ *
+ * A stored token whose account the server cannot resolve — one minted before the account store
+ * moved, or for an account since deleted — leaves the client in the worst of both states: the
+ * header renders a signed-in name out of localStorage while every gated endpoint answers 402,
+ * which reads as the paywall being broken rather than as a session that has ended.
+ */
+function clearStaleSession() {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Private-mode browsers throw on localStorage; the cookie below is what the server reads.
+  }
+  // With the token gone this writes the expiry rather than the value.
+  syncSessionCookie();
+}
+
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,10 +109,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     // Kept in step on every refresh so a sign-in or sign-out in another tab is picked up.
     syncSessionCookie();
 
+    // Read before the request, and compared with what is stored when it comes back: a status call
+    // that was already in flight when the visitor signed in answers `signedIn: false` about the
+    // session it was sent with, and must not be allowed to clear the newer one it knows nothing of.
+    const tokenSent = readToken();
+
     try {
       const response = await fetch("/api/subscription", { headers: authHeaders() });
       if (!response.ok) throw new Error("Failed");
-      setStatus(await response.json());
+
+      const data = (await response.json()) as SubscriptionStatus;
+      // A 200 saying `signedIn: false` is the server's considered answer, not a network blip — it
+      // resolved the request and found no account behind the token.
+      if (data?.signedIn === false && tokenSent && readToken() === tokenSent) clearStaleSession();
+
+      setStatus(data);
     } catch {
       // A failed status check must not lock a paying user out of the UI; the server-side guard
       // on each endpoint is what actually enforces access, so the client fails open.

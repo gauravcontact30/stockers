@@ -182,6 +182,32 @@ describe("AiVerdictPanel", () => {
     clearAiVerdictPanelCache();
   });
 
+  // The panel is not normally mounted for a caller the route would refuse — the gate holds it back
+  // — so this is the path where the status call itself failed and the gate had to fail open.
+  it("reports the paywall's own message instead of blaming the desk", async () => {
+    global.fetch = jest.fn(async (url: string) =>
+      String(url) === "/api/ai/verdicts"
+        ? { ok: false, status: 402, json: async () => ({ error: "Pro is needed for this feature. Upgrade your plan to unlock it." }) }
+        : { ok: true, json: async () => ({}) },
+    ) as unknown as typeof fetch;
+
+    render(<AiVerdictPanel section="overview" />);
+
+    expect(await screen.findByText(/Pro is needed for this feature/)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't score these stocks/)).not.toBeInTheDocument();
+  });
+
+  it("has a line of its own when the paywall sends no message", async () => {
+    global.fetch = jest.fn(async (url: string) =>
+      String(url) === "/api/ai/verdicts"
+        ? { ok: false, status: 402, json: async () => { throw new Error("no body"); } }
+        : { ok: true, json: async () => ({}) },
+    ) as unknown as typeof fetch;
+
+    render(<AiVerdictPanel section="overview" />);
+    expect(await screen.findByText("Subscribe to see the AI desk's calls on these stocks.")).toBeInTheDocument();
+  });
+
   it("scores a fixed set of stocks without reading any feed", async () => {
     const calls = mockDesk();
     render(<AiVerdictPanel section="overview" />);
