@@ -333,7 +333,7 @@ describe("AiReportModal", () => {
     });
 
     it("cycles clearbit -> google favicon -> initial letter on repeated image errors", () => {
-      const { container } = render(
+      const { baseElement } = render(
         <AiReportModal
           open={true}
           onClose={jest.fn()}
@@ -355,7 +355,7 @@ describe("AiReportModal", () => {
     });
 
     it("falls straight to the initial letter after one error when there is no clearbit candidate", () => {
-      const { container } = render(
+      const { baseElement } = render(
         <AiReportModal
           open={true}
           onClose={jest.fn()}
@@ -373,7 +373,7 @@ describe("AiReportModal", () => {
     });
 
     it("treats an unparseable logoUrl as having no clearbit candidate (catch branch)", () => {
-      const { container } = render(
+      const { baseElement } = render(
         <AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} logoUrl="not-a-valid-url" />
       );
 
