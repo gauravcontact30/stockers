@@ -299,10 +299,11 @@ async function stockProfile(hit: ResolvedStock): Promise<IntelStock> {
  * left null rather than filled in — the outlook then says it has no reading for that window.
  */
 async function measuredReturns(
-  code: string | null,
+  identifiers: readonly (string | null)[],
   price: number | null,
 ): Promise<{ returns: TrailingReturns; from: Record<string, string | null> }> {
-  if (!code || price === null) return { returns: {}, from: {} };
+  const keys = identifiers.filter((value): value is string => Boolean(value));
+  if (!keys.length || price === null) return { returns: {}, from: {} };
 
   try {
     const baselines = await Promise.all(HISTORY_PERIODS.map((period) => getBaseline(period)));
@@ -314,17 +315,17 @@ async function measuredReturns(
       from[period] = baselines[index].date;
     });
 
-    return { returns: returnsFrom(code, price, baselines), from };
+    return { returns: returnsFrom(keys, price, baselines), from };
   } catch {
     return { returns: {}, from: {} };
   }
 }
 
 /** Every window at once for one scrip, from baselines already in hand. */
-function returnsFrom(code: string, price: number, baselines: Baseline[]): TrailingReturns {
+function returnsFrom(identifiers: string | readonly string[], price: number, baselines: Baseline[]): TrailingReturns {
   const returns: TrailingReturns = {};
   HISTORY_PERIODS.forEach((period, index) => {
-    returns[period] = periodReturn(code, price, baselines[index]);
+    returns[period] = periodReturn(identifiers, price, baselines[index]);
   });
   return returns;
 }
@@ -396,8 +397,8 @@ async function peersFor(stock: IntelStock): Promise<IntelPeers | null> {
       price: row.price,
       changePercent: row.changePercent,
       returns: {
-        ...(row.price === null ? {} : returnsFrom(row.code, row.price, baselines)),
-        overall: row.price === null ? null : overallReturn(row.code, row.price, baselines),
+        ...(row.price === null ? {} : returnsFrom([row.code, row.ticker, row.isin], row.price, baselines)),
+        overall: row.price === null ? null : overallReturn([row.code, row.ticker, row.isin], row.price, baselines),
       },
     });
 
@@ -756,7 +757,7 @@ async function loadIntel(intel: IntelQuery): Promise<IntelAnswer> {
   // the second costs little once the first has warmed them.
   const [measured, peers] = await Promise.all([
     stock
-      ? measuredReturns(stock.code, stock.price)
+      ? measuredReturns([stock.code, stock.symbol, stock.isin], stock.price)
       : Promise.resolve({ returns: {} as TrailingReturns, from: {} as Record<string, string | null> }),
     stock ? peersFor(stock) : Promise.resolve(null),
   ]);

@@ -147,7 +147,7 @@ const PERF_KEYS = [
   ["1Y", "oneYear", "1y"],
   ["3Y", "threeYear", "3y"],
   ["5Y", "fiveYear", "5y"],
-  ["Overall", "overall", null],
+  ["Overall", "overall", "overall"],
 ] as const;
 
 function performanceFor(stock: DetailStock | null, summary: PerformanceSummary | null | undefined, sessionDate: string | null): AccuracyPerformancePoint[] {
@@ -157,7 +157,12 @@ function performanceFor(stock: DetailStock | null, summary: PerformanceSummary |
     return {
       key,
       value: key === "1D" ? (stock?.changePercent ?? summaryValue) : bseValue ?? summaryValue,
-      measuredFrom: key === "1D" ? sessionDate : key === "Overall" ? (summary?.overallSince ?? null) : bseKey ? (stock?.measuredFrom[bseKey] ?? null) : null,
+      measuredFrom:
+        key === "1D"
+          ? sessionDate
+          : bseKey
+            ? (stock?.measuredFrom[bseKey] ?? (key === "Overall" ? (summary?.overallSince ?? null) : null))
+            : null,
     };
   });
 }

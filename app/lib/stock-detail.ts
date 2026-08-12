@@ -76,13 +76,18 @@ export type StockDetail = {
   note: string | null;
 };
 
+function stockIdentifiers(row: BseRow): string[] {
+  return [row.code, row.ticker, row.isin].filter((value) => value.length > 0);
+}
+
 /** Returns for one scrip across every window, from baselines already in hand. */
-function returnsFor(code: string, price: number | null, baselines: Baseline[]): Record<string, number | null> {
+function returnsFor(row: BseRow, price: number | null, baselines: Baseline[]): Record<string, number | null> {
+  const identifiers = stockIdentifiers(row);
   const returns: Record<string, number | null> = {};
   HISTORY_PERIODS.forEach((period, index) => {
-    returns[period] = price === null ? null : periodReturn(code, price, baselines[index]);
+    returns[period] = price === null ? null : periodReturn(identifiers, price, baselines[index]);
   });
-  returns.overall = price === null ? null : overallReturn(code, price, baselines);
+  returns.overall = price === null ? null : overallReturn(identifiers, price, baselines);
   return returns;
 }
 
@@ -94,12 +99,13 @@ function returnsFor(code: string, price: number | null, baselines: Baseline[]): 
  * interpolated: a company listed two years ago genuinely has no five-year point, and inventing one
  * would draw a line through a price that never existed.
  */
-function trajectoryFor(code: string, price: number | null, baselines: Baseline[]): TrajectoryPoint[] {
+function trajectoryFor(row: BseRow, price: number | null, baselines: Baseline[]): TrajectoryPoint[] {
   const points: TrajectoryPoint[] = [];
+  const identifiers = stockIdentifiers(row);
 
   // HISTORY_PERIODS is longest-window-first ("5y" … "1w"), which is already oldest close first.
   HISTORY_PERIODS.forEach((period, index) => {
-    const close = baselines[index].prices.get(code);
+    const close = identifiers.map((identifier) => baselines[index].prices.get(identifier)).find((value) => value !== undefined && value > 0);
     if (close !== undefined && close > 0) {
       points.push({ period, date: baselines[index].date, close });
     }
@@ -110,6 +116,11 @@ function trajectoryFor(code: string, price: number | null, baselines: Baseline[]
   }
 
   return points;
+}
+
+function overallMeasuredFrom(row: BseRow, baselines: Baseline[]): string | null {
+  const identifiers = stockIdentifiers(row);
+  return baselines.find((baseline) => identifiers.some((identifier) => baseline.prices.has(identifier)))?.date ?? null;
 }
 
 function toDetail(row: BseRow, baselines: Baseline[], measuredFrom: Record<string, string | null>): DetailStock {
@@ -134,9 +145,9 @@ function toDetail(row: BseRow, baselines: Baseline[], measuredFrom: Record<strin
     volume: row.volume,
     turnoverCr: row.turnoverCr,
     trades: row.trades,
-    returns: returnsFor(row.code, row.price, baselines),
-    measuredFrom,
-    trajectory: trajectoryFor(row.code, row.price, baselines),
+    returns: returnsFor(row, row.price, baselines),
+    measuredFrom: { ...measuredFrom, overall: overallMeasuredFrom(row, baselines) },
+    trajectory: trajectoryFor(row, row.price, baselines),
   };
 }
 

@@ -83,7 +83,20 @@ export function unzipSingleEntry(archive: Buffer): string | null {
   return null;
 }
 
-/** Closes keyed by scrip code, from either Bhavcopy layout. Returns null when the file is a stub. */
+function identifiersFor(cells: string[], indexes: number[]): string[] {
+  return [...new Set(indexes.map((index) => cells[index]?.trim()).filter((value): value is string => Boolean(value)))];
+}
+
+function closeFor(prices: Map<string, number>, identifiers: string | readonly string[]): number | null {
+  const keys = Array.isArray(identifiers) ? identifiers : [identifiers];
+  for (const key of keys) {
+    const then = prices.get(key);
+    if (then !== undefined && then > 0) return then;
+  }
+  return null;
+}
+
+/** Closes keyed by every exchange identifier the Bhavcopy row carries. Returns null when the file is a stub. */
 export function parseBhavcopyCloses(csv: string): Map<string, number> | null {
   const lines = csv.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length <= MIN_ROWS) return null;
@@ -92,18 +105,24 @@ export function parseBhavcopyCloses(csv: string): Map<string, number> | null {
   // Current layout: FinInstrmId / ClsPric, with non-equity instruments mixed in. Legacy: SC_CODE /
   // CLOSE, equities only.
   const codeAt = header.indexOf("FININSTRMID") !== -1 ? header.indexOf("FININSTRMID") : header.indexOf("SC_CODE");
+  const symbolAt = header.indexOf("TCKRSYMB");
+  const isinAt = header.indexOf("ISIN");
   const closeAt = header.indexOf("CLSPRIC") !== -1 ? header.indexOf("CLSPRIC") : header.indexOf("CLOSE");
   const typeAt = header.indexOf("FININSTRMTP");
   if (codeAt === -1 || closeAt === -1) return null;
 
+  const identifierIndexes = [codeAt, symbolAt, isinAt].filter((index) => index !== -1);
   const prices = new Map<string, number>();
   for (const line of lines.slice(1)) {
     const cells = line.split(",");
     if (typeAt !== -1 && cells[typeAt]?.trim() !== "STK") continue;
 
-    const code = cells[codeAt]?.trim();
     const close = toNumber(cells[closeAt]);
-    if (code && close !== null && close > 0) prices.set(code, close);
+    if (close !== null && close > 0) {
+      for (const identifier of identifiersFor(cells, identifierIndexes)) {
+        prices.set(identifier, close);
+      }
+    }
   }
 
   return prices.size > 0 ? prices : null;
@@ -179,17 +198,17 @@ export function getBaseline(period: Exclude<ReturnPeriod, "1d" | "overall">): Pr
  * covers — so it means the longest window this company can be measured over: five years for one
  * listed then, and its first appearance in the archive for anything newer.
  */
-export function overallReturn(code: string, price: number, ordered: Baseline[]): number | null {
+export function overallReturn(identifiers: string | readonly string[], price: number, ordered: Baseline[]): number | null {
   for (const baseline of ordered) {
-    const then = baseline.prices.get(code);
-    if (then !== undefined && then > 0) return ((price - then) / then) * 100;
+    const then = closeFor(baseline.prices, identifiers);
+    if (then !== null) return ((price - then) / then) * 100;
   }
 
   return null;
 }
 
-export function periodReturn(code: string, price: number, baseline: Baseline): number | null {
-  const then = baseline.prices.get(code);
-  if (then === undefined || then <= 0) return null;
+export function periodReturn(identifiers: string | readonly string[], price: number, baseline: Baseline): number | null {
+  const then = closeFor(baseline.prices, identifiers);
+  if (then === null) return null;
   return ((price - then) / then) * 100;
 }

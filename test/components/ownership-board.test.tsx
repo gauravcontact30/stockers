@@ -27,6 +27,28 @@ const RELIANCE: Ownership = {
   symbol: "RELIANCE",
   company: "Reliance Industries Limited",
   quarter: "30-JUN-2026",
+  market: {
+    symbol: "RELIANCE",
+    name: "Reliance Industries Limited",
+    scripCode: "500325",
+    price: 1431.25,
+    previousClose: 1400,
+    change: 31.25,
+    changePercent: 2.23,
+    sessionDate: "2026-08-11",
+    source: "BSE Bhavcopy",
+    returns: [
+      { key: "1D", value: 2.23, measuredFrom: "2026-08-11" },
+      { key: "1W", value: 3.11, measuredFrom: "2026-08-04" },
+      { key: "1M", value: 5.49, measuredFrom: "2026-07-11" },
+      { key: "3M", value: -2.12, measuredFrom: "2026-05-11" },
+      { key: "6M", value: 8.08, measuredFrom: "2026-02-11" },
+      { key: "1Y", value: 14.5, measuredFrom: "2025-08-11" },
+      { key: "3Y", value: 42.9, measuredFrom: "2023-08-11" },
+      { key: "5Y", value: 90.25, measuredFrom: "2021-08-11" },
+      { key: "Overall", value: 90.25, measuredFrom: "2021-08-11" },
+    ],
+  },
   groups: [
     {
       key: "promoters",
@@ -171,6 +193,19 @@ describe("OwnershipBoard", () => {
     expect(screen.getByText("17.76%")).toBeInTheDocument();
   });
 
+  it("shows the BSE-sourced price and measured return windows beside the filing", async () => {
+    mockRouted(() => ({ ok: true, body: RELIANCE }));
+    render(<OwnershipBoard />);
+
+    await screen.findByText("Reliance Industries Limited");
+
+    expect(screen.getByText("BSE market snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Rs 1,431.25")).toBeInTheDocument();
+    expect(screen.getAllByText("+2.23%").length).toBeGreaterThan(0);
+    expect(screen.getByText("RELIANCE / BSE 500325 - session 2026-08-11")).toBeInTheDocument();
+    expect(screen.getByTitle("1Y measured from 2025-08-11")).toHaveTextContent("+14.50%");
+  });
+
   it("opens and closes a class's sub-categories", async () => {
     const user = userEvent.setup();
     mockRouted(() => ({ ok: true, body: RELIANCE }));
@@ -271,6 +306,18 @@ describe("OwnershipBoard", () => {
 
     expect(await screen.findByText(/No shareholding pattern is published for RELIANCE/)).toBeInTheDocument();
     expect(screen.getByText(/a scrip that trades only on the BSE/)).toBeInTheDocument();
+  });
+
+  it("still shows exact BSE market data when a shareholding filing is unavailable", async () => {
+    mockRouted(() => ({
+      ok: false,
+      body: { error: "No shareholding pattern is published for 500325.", market: RELIANCE.market },
+    }));
+    render(<OwnershipBoard />);
+
+    expect(await screen.findByText(/No shareholding pattern is published for 500325/)).toBeInTheDocument();
+    expect(screen.getByText("BSE market snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Rs 1,431.25")).toBeInTheDocument();
   });
 
   it("falls back to its own wording when the failure carries none", async () => {

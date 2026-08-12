@@ -212,6 +212,21 @@ function csvRows(text: string): Record<string, string>[] {
   });
 }
 
+function tapeIdentifiers(row: BseTapeRow & { isin?: string }): string[] {
+  return [...new Set([row.code, row.ticker, row.isin].filter((value): value is string => Boolean(value)))];
+}
+
+export function findBseTapeRow(tape: BseTape | null | undefined, identifiers: readonly (string | null | undefined)[]) {
+  if (!tape) return null;
+  for (const identifier of identifiers) {
+    const key = identifier?.trim();
+    if (!key) continue;
+    const row = tape.rows.get(key) ?? tape.rows.get(key.toUpperCase());
+    if (row) return row;
+  }
+  return null;
+}
+
 /** Dates to try, newest first: today in IST, then the days before it. */
 function recentSessionStamps(now = new Date()): string[] {
   const stamps: string[] = [];
@@ -248,10 +263,11 @@ export const getBseTape = cached<BseTape>(TAPE_TTL_MS, async () => {
       const previousClose = toNumber(row.PrvsClsgPric);
       const change = price !== null && previousClose !== null ? price - previousClose : null;
 
-      parsed.set(code, {
+      const parsedRow = {
         code,
         ticker: row.TckrSymb || code,
         name: row.FinInstrmNm || "",
+        isin: row.ISIN || "",
         series: row.SctySrs || "",
         quote: {
           price,
@@ -266,7 +282,11 @@ export const getBseTape = cached<BseTape>(TAPE_TTL_MS, async () => {
           turnoverCr: (toNumber(row.TtlTrfVal) ?? 0) / 1e7,
           trades: toNumber(row.TtlNbOfTxsExctd),
         },
-      });
+      };
+
+      for (const identifier of tapeIdentifiers(parsedRow)) {
+        parsed.set(identifier, parsedRow);
+      }
     }
 
     return { rows: parsed, sessionDate: rows[0]?.TradDt || null };
@@ -317,7 +337,7 @@ function average(values: number[]): number | null {
  * fund or a rights entitlement can never surface as a top mover.
  */
 function join(stock: BseStock, tape: BseTape): (BseStock & BseQuote) | null {
-  const row = tape.rows.get(stock.code);
+  const row = findBseTapeRow(tape, [stock.code, stock.ticker, stock.isin]);
   if (row && !EQUITY_SERIES.has(row.series)) return null;
 
   return { ...stock, ticker: row?.ticker ?? stock.ticker, ...(row?.quote ?? emptyQuote()) };
@@ -617,9 +637,10 @@ function returnFor(row: BseStock & BseQuote, period: ReturnPeriod, history: Base
   if (period === "1d") return row.changePercent;
   if (row.price === null) return null;
 
+  const identifiers = [row.code, row.ticker, row.isin];
   return period === "overall"
-    ? overallReturn(row.code, row.price, history)
-    : periodReturn(row.code, row.price, history[0]);
+    ? overallReturn(identifiers, row.price, history)
+    : periodReturn(identifiers, row.price, history[0]);
 }
 
 export type DirectoryQuery = {

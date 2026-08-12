@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBseTape } from "../../../lib/bse-market";
+import { findBseTapeRow, getBseTape } from "../../../lib/bse-market";
 import { cacheHeaders } from "../../../lib/cache";
 import { suggestStocks } from "../../../lib/stock-search";
 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   const tape = await getBseTape().catch(() => null);
 
   const suggestions: StockSuggestion[] = hits.map((hit) => {
-    const quote = hit.scripCode ? tape?.rows.get(hit.scripCode)?.quote : undefined;
+    const quote = findBseTapeRow(tape, [hit.scripCode, hit.symbol])?.quote;
     return {
       symbol: hit.symbol,
       name: hit.name,

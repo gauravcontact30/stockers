@@ -57,8 +57,8 @@ jest.mock("../../app/lib/stock-detail", () => ({
       volume: 100000,
       turnoverCr: 89,
       trades: 12345,
-      returns: { "1w": 2, "1m": 3, "3m": 4, "6m": 5, "1y": 6, "3y": 7, "5y": 8 },
-      measuredFrom: { "1w": "2026-08-04", "1m": "2026-07-11", "3m": "2026-05-11", "6m": "2026-02-11", "1y": "2025-08-11", "3y": "2023-08-11", "5y": "2021-08-11" },
+      returns: { "1w": 2, "1m": 3, "3m": 4, "6m": 5, "1y": 6, "3y": 7, "5y": 8, overall: 8 },
+      measuredFrom: { "1w": "2026-08-04", "1m": "2026-07-11", "3m": "2026-05-11", "6m": "2026-02-11", "1y": "2025-08-11", "3y": "2023-08-11", "5y": "2021-08-11", overall: "2021-08-11" },
       trajectory: [],
     },
     peers: [
@@ -83,8 +83,8 @@ jest.mock("../../app/lib/stock-detail", () => ({
         volume: 1000000,
         turnoverCr: 200,
         trades: 22222,
-        returns: { "1w": 1, "1m": 2, "3m": 3, "6m": 4, "1y": 9, "3y": 10, "5y": 11 },
-        measuredFrom: { "1w": "2026-08-04", "1m": "2026-07-11", "3m": "2026-05-11", "6m": "2026-02-11", "1y": "2025-08-11", "3y": "2023-08-11", "5y": "2021-08-11" },
+        returns: { "1w": 1, "1m": 2, "3m": 3, "6m": 4, "1y": 9, "3y": 10, "5y": 11, overall: 11 },
+        measuredFrom: { "1w": "2026-08-04", "1m": "2026-07-11", "3m": "2026-05-11", "6m": "2026-02-11", "1y": "2025-08-11", "3y": "2023-08-11", "5y": "2021-08-11", overall: "2021-08-11" },
         trajectory: [],
       },
     ],
@@ -129,7 +129,7 @@ describe("getBseStockAccuracy", () => {
 
     expect(result).toEqual(expect.objectContaining({ symbol: "AUBANK", scripCode: "540611", name: "AU Small Finance Bank Ltd" }));
     expect(result?.performance.map((item) => item.key)).toEqual(["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "Overall"]);
-    expect(result?.performance.find((item) => item.key === "Overall")?.value).toBe(256.7);
+    expect(result?.performance.find((item) => item.key === "Overall")?.value).toBe(8);
     expect(result?.comparisonBasis).toEqual({ category: "Financial Services", capTier: "Mid", period: "1y", rank: 2, total: 2 });
     expect(result?.comparison[0]).toEqual(expect.objectContaining({ symbol: "AUBANK", isTarget: true, price: 890 }));
     expect(result?.matrixAccuracy).toBe(100);

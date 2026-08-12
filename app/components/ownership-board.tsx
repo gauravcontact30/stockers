@@ -19,6 +19,18 @@ export type Ownership = {
   symbol: string;
   company: string;
   quarter: string;
+  market?: {
+    symbol: string;
+    name: string;
+    scripCode: string;
+    price: number | null;
+    previousClose: number | null;
+    change: number | null;
+    changePercent: number | null;
+    sessionDate: string | null;
+    source: string;
+    returns: { key: string; value: number | null; measuredFrom: string | null }[];
+  } | null;
   groups: OwnerSlice[];
   investorTypes: { key: OwnerGroup; label: string; percent: number }[];
   foreignPercent: number;
@@ -168,6 +180,69 @@ export function formatHolders(value: number | null): string {
   return value.toLocaleString("en-IN");
 }
 
+function formatRupees(value: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return `Rs ${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatSignedPercent(value: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function returnTone(value: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "text-slate-500 dark:text-slate-400";
+  return value >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300";
+}
+
+function MarketSnapshot({ market }: { market: NonNullable<Ownership["market"]> }) {
+  const returnItems = market.returns.filter((item) => item.key !== "1D");
+
+  return (
+    <div className="mt-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 shadow-sm dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-slate-900 dark:to-sky-500/10">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+            BSE market snapshot
+          </p>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+              {formatRupees(market.price)}
+            </span>
+            <span className={`text-sm font-bold tabular-nums ${returnTone(market.changePercent)}`}>
+              {formatSignedPercent(market.changePercent)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {market.symbol} / BSE {market.scripCode}
+            {market.sessionDate ? ` - session ${market.sessionDate}` : ""}
+          </p>
+        </div>
+
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-4 lg:max-w-3xl">
+          {returnItems.map((item) => (
+            <span
+              key={item.key}
+              className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 shadow-sm dark:border-slate-700/70 dark:bg-slate-950/40"
+              title={item.measuredFrom ? `${item.key} measured from ${item.measuredFrom}` : `${item.key} return`}
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                {item.key}
+              </span>
+              <span className={`mt-0.5 block text-sm font-bold tabular-nums ${returnTone(item.value)}`}>
+                {formatSignedPercent(item.value)}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="mt-3 border-t border-emerald-100 pt-2 text-[11px] leading-relaxed text-slate-500 dark:border-emerald-500/20 dark:text-slate-400">
+        Price and returns are measured from {market.source}; missing windows are left blank instead of estimated.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Who owns a listed company, from the company's own quarterly filing.
  *
@@ -179,7 +254,7 @@ export function OwnershipBoard() {
   const [symbol, setSymbol] = useState("RELIANCE");
   const [query, setQuery] = useState("RELIANCE");
   const [data, setData] = useState<Ownership | null>(null);
-  const [state, setState] = useState<{ symbol: string; error: string | null } | null>(null);
+  const [state, setState] = useState<{ symbol: string; error: string | null; market?: Ownership["market"] } | null>(null);
   const [openGroup, setOpenGroup] = useState<OwnerGroup | null>(null);
 
   useEffect(() => {
@@ -188,10 +263,19 @@ export function OwnershipBoard() {
     fetch(`/api/market/shareholding?symbol=${encodeURIComponent(symbol)}`, { signal: controller.signal })
       .then(async (response) => {
         const body = (await response.json()) as Ownership & { error?: string };
-        if (!response.ok) throw new Error(body.error || "No filing could be read for this company.");
+        if (!response.ok) {
+          setData(null);
+          setState({
+            symbol,
+            error: body.error || "No filing could be read for this company.",
+            market: body.market ?? null,
+          });
+          return null;
+        }
         return body;
       })
       .then((body) => {
+        if (!body) return;
         setData(body);
         setState({ symbol, error: null });
       })
@@ -279,6 +363,8 @@ export function OwnershipBoard() {
           </p>
         )}
 
+        {!loading && error && settled?.market && <MarketSnapshot market={settled.market} />}
+
         {shown && (
           <>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -311,11 +397,13 @@ export function OwnershipBoard() {
               </div>
             </div>
 
+            {shown.market && <MarketSnapshot market={shown.market} />}
+
             {/* One bar for the whole register: the quickest read of who holds the company. */}
             <div className="mt-5 flex h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               {shown.groups.map((group) => (
                 <span
-                  key={group.key}
+                  key={`${group.key ?? group.label}-bar`}
                   className={toneFor(group.key).bar}
                   style={{ width: `${group.percent}%` }}
                   title={`${group.label} — ${formatPercent(group.percent)}`}
@@ -327,7 +415,7 @@ export function OwnershipBoard() {
               {shown.groups.map((group) => {
                 const open = openGroup === group.key;
                 return (
-                  <div key={group.key} className={`rounded-2xl border p-4 ${toneFor(group.key).card}`}>
+                  <div key={`${group.key ?? group.label}-card`} className={`rounded-2xl border p-4 ${toneFor(group.key).card}`}>
                     <div className="flex items-start justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
                         <span
