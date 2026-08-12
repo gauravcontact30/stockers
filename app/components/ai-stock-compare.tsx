@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { StockPicker } from "./stock-picker";
+import { CompanyLogo } from "./company-logo";
+import { formatRupee, formatSignedPercent, toneFor } from "./market-format";
+import { StockCombobox, type Suggestion } from "./stock-combobox";
 import type { CustomComparison } from "./triple-compare";
-import { VerdictCards } from "./verdict-view";
+import { VerdictCards, type StockVerdict } from "./verdict-view";
 
 type Winner = "A" | "B" | "Tie";
 
@@ -24,6 +26,27 @@ type ComparisonResult = {
 // Three a side. The model will happily return eight lukewarm observations per stock, and a wall
 // of them is exactly what stops a reader telling the two apart — which is the whole job here.
 const KEY_POINTS = 3;
+
+const DEFAULT_STOCK_DETAILS: Record<string, Suggestion> = {
+  TCS: {
+    symbol: "TCS",
+    name: "Tata Consultancy Services",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "532540",
+    price: null,
+    changePercent: null,
+  },
+  INFY: {
+    symbol: "INFY",
+    name: "Infosys",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "500209",
+    price: null,
+    changePercent: null,
+  },
+};
 
 /**
  * One side's key points, pros over cons.
@@ -88,12 +111,14 @@ function SidePanel({
   pros,
   cons,
   won,
+  stock,
 }: {
   symbol: string;
   score: number;
   pros: string[];
   cons: string[];
   won: boolean;
+  stock?: StockVerdict | null;
 }) {
   return (
     <div
@@ -103,14 +128,35 @@ function SidePanel({
           : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60"
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{symbol}</h4>
-          {won && (
-            <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-              Stronger pick
-            </span>
-          )}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <CompanyLogo symbol={symbol} size={40} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{symbol}</h4>
+              {won && (
+                <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Stronger pick
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+              {stock?.name ?? DEFAULT_STOCK_DETAILS[symbol]?.name ?? "Listed stock"}
+            </p>
+            {stock && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-bold tabular-nums text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  {formatRupee(stock.price)}
+                </span>
+                <span className={`rounded-full bg-white px-2 py-0.5 text-[11px] font-bold tabular-nums dark:bg-slate-900 ${toneFor(stock.oneDay)}`}>
+                  1D {formatSignedPercent(stock.oneDay)}
+                </span>
+                <span className={`rounded-full bg-white px-2 py-0.5 text-[11px] font-bold tabular-nums dark:bg-slate-900 ${toneFor(stock.oneMonth)}`}>
+                  1M {formatSignedPercent(stock.oneMonth)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold tabular-nums text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
           Score {score}/100
@@ -172,6 +218,8 @@ export function AiStockCompare() {
 
   const winnerLabel =
     result?.winner === "A" ? result.stockA : result?.winner === "B" ? result.stockB : "Too close to call";
+  const stockAPerformance = result ? performance?.stocks.find((stock) => stock.symbol === result.stockA) ?? null : null;
+  const stockBPerformance = result ? performance?.stocks.find((stock) => stock.symbol === result.stockB) ?? null : null;
 
   return (
     <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900">
@@ -190,22 +238,30 @@ export function AiStockCompare() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6">
-        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <StockPicker
-            label="Stock A"
-            value={stockA}
-            onChange={setStockA}
-            exclude={stockB ? [stockB] : []}
-            placeholder="Pick the first stock"
-          />
+        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <div className="min-w-0">
+            <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Stock A</span>
+            <StockCombobox
+              value={stockA ?? ""}
+              onChange={(symbol) => setStockA(symbol.trim() ? symbol.trim().toUpperCase() : null)}
+              onSelect={setStockA}
+              exclude={stockB ? [stockB] : []}
+              selectedSuggestion={stockA ? DEFAULT_STOCK_DETAILS[stockA] ?? null : null}
+              placeholder="Pick the first stock"
+            />
+          </div>
           <span className="hidden pt-8 text-sm font-bold uppercase tracking-wide text-slate-400 md:block">vs</span>
-          <StockPicker
-            label="Stock B"
-            value={stockB}
-            onChange={setStockB}
-            exclude={stockA ? [stockA] : []}
-            placeholder="Pick the second stock"
-          />
+          <div className="min-w-0">
+            <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Stock B</span>
+            <StockCombobox
+              value={stockB ?? ""}
+              onChange={(symbol) => setStockB(symbol.trim() ? symbol.trim().toUpperCase() : null)}
+              onSelect={setStockB}
+              exclude={stockA ? [stockA] : []}
+              selectedSuggestion={stockB ? DEFAULT_STOCK_DETAILS[stockB] ?? null : null}
+              placeholder="Pick the second stock"
+            />
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -261,6 +317,7 @@ export function AiStockCompare() {
                 pros={result.stockAPros}
                 cons={result.stockACons}
                 won={result.winner === "A"}
+                stock={stockAPerformance}
               />
               <SidePanel
                 symbol={result.stockB}
@@ -268,6 +325,7 @@ export function AiStockCompare() {
                 pros={result.stockBPros}
                 cons={result.stockBCons}
                 won={result.winner === "B"}
+                stock={stockBPerformance}
               />
             </div>
           </div>

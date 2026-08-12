@@ -328,7 +328,7 @@ function StockFilterBar({
             <div
               role="listbox"
               aria-label="Stock suggestions"
-              className="absolute left-0 right-0 top-10 z-20 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900"
+              className="absolute left-0 right-0 top-10 z-[70] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900"
             >
               {suggestions.map((suggestion) => (
                 <button
@@ -343,12 +343,19 @@ function StockFilterBar({
                   }}
                   className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
                 >
-                  <span className="min-w-0">
-                    <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{suggestion.symbol}</span>
-                    <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{suggestion.name}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <CompanyLogo symbol={suggestion.symbol} size={30} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{suggestion.name}</span>
+                      <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {suggestion.symbol} · {suggestion.sector}
+                      </span>
+                    </span>
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{suggestion.capTier}</span>
+                    <span className="block text-xs font-bold tabular-nums text-slate-900 dark:text-white">
+                      {suggestion.price === null ? "—" : `₹${suggestion.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </span>
                     <span className={`block text-[10px] font-bold tabular-nums ${toneFor(suggestion.changePercent)}`}>
                       {formatPercentSigned(suggestion.changePercent)}
                     </span>

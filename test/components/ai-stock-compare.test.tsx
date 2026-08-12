@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AiStockCompare } from "../../app/components/ai-stock-compare";
+import type { Suggestion } from "../../app/components/stock-combobox";
 
 // Driving a 270-name picker keystroke by keystroke is slow; under a loaded CI machine these
 // interactions genuinely need longer than the 5s default.
@@ -10,12 +11,64 @@ jest.setTimeout(30000);
  * The section makes two calls per comparison: the AI head-to-head and the performance cards it
  * shares with the three-stock comparison. Both are answered here, by URL.
  */
-function mockFetchOnce(ok: boolean, data?: unknown, cards: { ok: boolean; body?: unknown } = { ok: true, body: cardsPayload }) {
-  (global.fetch as jest.Mock).mockImplementation((url: string) =>
-    String(url).startsWith("/api/compare/custom")
-      ? Promise.resolve({ ok: cards.ok, json: () => Promise.resolve(cards.body) })
-      : Promise.resolve({ ok, json: () => Promise.resolve(data) }),
+const SUGGESTIONS: Suggestion[] = [
+  {
+    symbol: "TCS",
+    name: "Tata Consultancy Services",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "532540",
+    price: 2399.4,
+    changePercent: -0.56,
+  },
+  {
+    symbol: "INFY",
+    name: "Infosys",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "500209",
+    price: 1491.35,
+    changePercent: 0.42,
+  },
+  {
+    symbol: "RELIANCE",
+    name: "Reliance Industries",
+    sector: "Energy",
+    capTier: "Large",
+    scripCode: "500325",
+    price: 1487.6,
+    changePercent: 1.24,
+  },
+  {
+    symbol: "ONGC",
+    name: "Oil and Natural Gas Corporation",
+    sector: "Energy",
+    capTier: "Large",
+    scripCode: "500312",
+    price: 267.25,
+    changePercent: -0.31,
+  },
+];
+
+function suggestionPayload(url: string) {
+  const params = new URL(url, "http://stockers.test").searchParams;
+  const query = (params.get("q") ?? "").toLowerCase();
+  const suggestions = SUGGESTIONS.filter(
+    (stock) => !query || stock.symbol.toLowerCase().includes(query) || stock.name.toLowerCase().includes(query),
   );
+  return { suggestions, total: suggestions.length };
+}
+
+function mockFetchOnce(ok: boolean, data?: unknown, cards: { ok: boolean; body?: unknown } = { ok: true, body: cardsPayload }) {
+  (global.fetch as jest.Mock).mockImplementation((url: string) => {
+    const href = String(url);
+    if (href.startsWith("/api/stocks/suggest")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(suggestionPayload(href)) });
+    }
+    return href.startsWith("/api/compare/custom")
+      ? Promise.resolve({ ok: cards.ok, json: () => Promise.resolve(cards.body) })
+      : Promise.resolve({ ok, json: () => Promise.resolve(data) });
+  });
 }
 
 const cardsPayload = {
@@ -66,9 +119,10 @@ describe("AiStockCompare", () => {
     render(<AiStockCompare />);
 
     expect(screen.getByText("Stock A")).toBeInTheDocument();
-    expect(screen.getByText("TCS")).toBeInTheDocument();
-    expect(screen.getByText(/Tata Consultancy Services · Information Technology · Large cap/)).toBeInTheDocument();
-    expect(screen.getByText("INFY")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("TCS")).toBeInTheDocument();
+    expect(screen.getByText(/Tata Consultancy Services/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Information Technology/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByDisplayValue("INFY")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Compare with AI" })).toBeEnabled();
   });
 
@@ -77,13 +131,13 @@ describe("AiStockCompare", () => {
     render(<AiStockCompare />);
 
     // Each picker exposes its own Clear; the first belongs to stock A.
-    await user.click(screen.getAllByRole("button", { name: "Clear" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Clear search" })[0]);
 
     expect(screen.getByRole("button", { name: "Compare with AI" })).toBeDisabled();
     expect(screen.getByText("Pick both sides to run the head-to-head.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Compare with AI" }));
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalledWith("/api/compare", expect.anything());
   });
 
   // The pickers live inside the form, so Enter in a search box can submit it even while the
@@ -92,10 +146,10 @@ describe("AiStockCompare", () => {
     const user = userEvent.setup();
     const { container } = render(<AiStockCompare />);
 
-    await user.click(screen.getAllByRole("button", { name: "Clear" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Clear search" })[0]);
     fireEvent.submit(container.querySelector("form") as HTMLFormElement);
 
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalledWith("/api/compare", expect.anything());
   });
 
   it("resets both sides", async () => {
@@ -104,7 +158,8 @@ describe("AiStockCompare", () => {
 
     await user.click(screen.getByRole("button", { name: "Reset" }));
 
-    expect(screen.getAllByText(/Pick the (first|second) stock/)).toHaveLength(2);
+    expect(screen.getByRole("combobox", { name: "Pick the first stock" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Pick the second stock" })).toHaveValue("");
     expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
   });
 
@@ -112,19 +167,28 @@ describe("AiStockCompare", () => {
     const user = userEvent.setup();
     render(<AiStockCompare />);
 
-    await user.click(screen.getByRole("button", { name: /Tata Consultancy Services/ }));
-    await user.type(screen.getByLabelText("Search stocks for Stock A"), "INFY");
+    const firstField = screen.getByRole("combobox", { name: "Pick the first stock" });
+    await user.click(firstField);
+    await user.clear(firstField);
+    await user.type(firstField, "INFY");
 
-    expect(screen.getByText(/No stock matches “INFY”/)).toBeInTheDocument();
+    expect(await screen.findByText('Nothing listed matches "INFY".')).toBeInTheDocument();
   });
 
   it("shows a loading label and posts the two symbols on submit", async () => {
     let resolveFetch: (value: unknown) => void = () => {};
-    (global.fetch as jest.Mock).mockReturnValueOnce(
-      new Promise((resolve) => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      const href = String(url);
+      if (href.startsWith("/api/stocks/suggest")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(suggestionPayload(href)) });
+      }
+      if (href.startsWith("/api/compare/custom")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(cardsPayload) });
+      }
+      return new Promise((resolve) => {
         resolveFetch = resolve;
-      })
-    );
+      });
+    });
     const user = userEvent.setup();
     render(<AiStockCompare />);
 
@@ -258,13 +322,17 @@ describe("AiStockCompare", () => {
     const user = userEvent.setup();
     render(<AiStockCompare />);
 
-    await user.click(screen.getByRole("button", { name: /Tata Consultancy Services/ }));
-    await user.type(screen.getByLabelText("Search stocks for Stock A"), "RELIANCE");
-    await user.click(screen.getByRole("option", { name: /^RELIANCE/ }));
+    const firstField = screen.getByRole("combobox", { name: "Pick the first stock" });
+    await user.click(firstField);
+    await user.clear(firstField);
+    await user.type(firstField, "RELIANCE");
+    await user.click(await screen.findByRole("option", { name: /RELIANCE/ }));
 
-    await user.click(screen.getByRole("button", { name: /Infosys/ }));
-    await user.type(screen.getByLabelText("Search stocks for Stock B"), "ONGC");
-    await user.click(screen.getByRole("option", { name: /^ONGC/ }));
+    const secondField = screen.getByRole("combobox", { name: "Pick the second stock" });
+    await user.click(secondField);
+    await user.clear(secondField);
+    await user.type(secondField, "ONGC");
+    await user.click(await screen.findByRole("option", { name: /ONGC/ }));
 
     await user.click(screen.getByRole("button", { name: "Compare with AI" }));
 
@@ -285,7 +353,7 @@ describe("AiStockCompare", () => {
 
     // One card per stock, carrying the same figures and call as the other compare section. The
     // pros/cons lists are list items too, so the card is found by its price.
-    const card = (await screen.findByText("₹2,399.40")).closest("li")!;
+    const card = (await screen.findAllByText("₹2,399.40"))[0].closest("li")!;
     expect(within(card).getByText("Large cap")).toBeInTheDocument();
     expect(within(card).getByText("+16.61%")).toBeInTheDocument();
     expect(within(card).getByText("UNDERPERFORM")).toBeInTheDocument();

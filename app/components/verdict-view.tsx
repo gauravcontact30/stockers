@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyLogo } from "./company-logo";
 import { chipFor, formatRupee, formatSignedPercent, sectorTone, toneFor } from "./market-format";
 
 export type Stance = "Buy" | "Hold" | "Sell";
@@ -48,7 +49,7 @@ export function StanceBadge({ stance, size = "md" }: { stance: Stance; size?: "s
 export function CapBadge({ tier }: { tier: StockVerdict["capTier"] }) {
   if (!tier) return null;
   return (
-    <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+    <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
       {tier} cap
     </span>
   );
@@ -78,6 +79,18 @@ const PERIODS: { key: keyof Pick<StockVerdict, "oneDay" | "oneWeek" | "oneMonth"
   { key: "oneYear", label: "1Y" },
 ];
 
+const RANK_TONES = [
+  "border-sky-200 bg-sky-50 text-sky-700 shadow-sky-200/60 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300",
+  "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-emerald-200/60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+  "border-amber-200 bg-amber-50 text-amber-700 shadow-amber-200/60 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
+  "border-violet-200 bg-violet-50 text-violet-700 shadow-violet-200/60 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300",
+  "border-rose-200 bg-rose-50 text-rose-700 shadow-rose-200/60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300",
+];
+
+function rankTone(rank: number): string {
+  return RANK_TONES[(rank - 1) % RANK_TONES.length];
+}
+
 /**
  * One stock per card, full width.
  *
@@ -86,6 +99,11 @@ const PERIODS: { key: keyof Pick<StockVerdict, "oneDay" | "oneWeek" | "oneMonth"
  * As cards, every company reads as one self-contained brief.
  */
 function VerdictCard({ stock, rank, note }: { stock: StockVerdict; rank: number; note?: string | null }) {
+  const noteTone =
+    note === "Leads the group"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+      : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
+
   return (
     <li
       className={`overflow-hidden rounded-2xl border bg-white transition dark:bg-slate-950/40 ${
@@ -94,27 +112,32 @@ function VerdictCard({ stock, rank, note }: { stock: StockVerdict; rank: number;
           : "border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700"
       }`}
     >
-      {/* One row on a wide screen, stacked below it. Every figure is nowrap and every column is
-          free to size to its content, so a four-digit price can never run into the move beside it. */}
-      <div className="flex flex-col gap-x-5 gap-y-4 p-4 xl:flex-row xl:items-center">
-        <div className="flex min-w-0 items-start gap-3 xl:w-52 xl:shrink-0">
-          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold tabular-nums text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            {rank}
-          </span>
-          <div className="min-w-0">
+      {/* Flexible columns prevent long company names or sector chips from pushing into metrics. */}
+      <div className="grid gap-4 p-4 xl:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.35fr)_minmax(160px,auto)] xl:items-center">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <CompanyLogo symbol={stock.symbol} size={48} className="shadow-sm ring-4 ring-white dark:ring-slate-950" />
+            <span
+              aria-label={`Rank ${rank}`}
+              className={`flex h-7 min-w-9 items-center justify-center rounded-full border px-2 text-xs font-bold tabular-nums shadow-sm ${rankTone(rank)}`}
+            >
+              {rank}
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="text-base font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
+              <p className="min-w-0 break-words text-lg font-bold tracking-tight text-slate-950 dark:text-white">{stock.symbol}</p>
               <CapBadge tier={stock.capTier} />
             </div>
-            <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{stock.name}</p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <p className="mt-0.5 break-words text-sm text-slate-500 dark:text-slate-400">{stock.name}</p>
+            <div className="mt-2 flex max-w-full flex-wrap items-center gap-1.5">
               {stock.sector && (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(stock.sector)}`}>
+                <span className={`max-w-full whitespace-normal break-words rounded-full px-2.5 py-1 text-[11px] font-semibold ${sectorTone(stock.sector)}`}>
                   {stock.sector}
                 </span>
               )}
               {note && (
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${noteTone}`}>
                   {note}
                 </span>
               )}
@@ -122,29 +145,27 @@ function VerdictCard({ stock, rank, note }: { stock: StockVerdict; rank: number;
           </div>
         </div>
 
-        {/* The figures are the point of the card, so they take the widest share of the row: price
-            and the five windows sit in one six-column grid that grows with the card. */}
-        <dl className="grid flex-1 grid-cols-3 gap-x-6 gap-y-3 border-slate-100 sm:grid-cols-6 xl:border-l xl:pl-5 dark:border-slate-800">
-          <div className="min-w-0">
-            <dt className="text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Price</dt>
-            <dd className="mt-0.5 whitespace-nowrap text-base font-bold tabular-nums text-slate-900 dark:text-white">
+        <dl className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(112px,1fr))] gap-2">
+          <div className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Price</dt>
+            <dd className="mt-0.5 whitespace-nowrap text-sm font-bold tabular-nums text-slate-900 dark:text-white">
               {formatRupee(stock.price)}
             </dd>
           </div>
 
           {PERIODS.map((period) => (
-            <div key={period.key} className="min-w-0 sm:text-right">
-              <dt className="text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            <div key={period.key} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 {period.label}
               </dt>
-              <dd className={`mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums ${toneFor(stock[period.key])}`}>
+              <dd className={`mt-0.5 whitespace-nowrap text-sm font-bold tabular-nums ${toneFor(stock[period.key])}`}>
                 {formatSignedPercent(stock[period.key])}
               </dd>
             </div>
           ))}
         </dl>
 
-        <div className="flex shrink-0 items-center justify-between gap-4 border-slate-100 xl:w-36 xl:flex-col xl:items-end xl:gap-2 xl:border-l xl:pl-5 dark:border-slate-800">
+        <div className="flex min-w-0 items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 xl:flex-col xl:items-end xl:gap-2 dark:border-slate-800 dark:bg-slate-900/60">
           <StanceBadge stance={stock.stance} />
           <ScoreBar score={stock.score} />
         </div>
@@ -186,8 +207,14 @@ export function VerdictStrip({ stocks }: { stocks: StockVerdict[] }) {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
-              <CapBadge tier={stock.capTier} />
+              <CompanyLogo symbol={stock.symbol} size={28} />
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{stock.symbol}</p>
+                  <CapBadge tier={stock.capTier} />
+                </div>
+                <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{stock.name}</span>
+              </div>
             </div>
             <StanceBadge stance={stock.stance} size="sm" />
           </div>
@@ -207,8 +234,8 @@ export function VerdictStrip({ stocks }: { stocks: StockVerdict[] }) {
 export function SourceNote({ source }: { source: "ai" | "heuristic" }) {
   return (
     <>
-      {source === "ai" ? "Rationale written by AI agent" : "Rationale composed from the returns (no AI key configured)"} · calls
-      are derived from measured performance, not opinion · not investment advice.
+      {source === "ai" ? "Rationale written by AI agent" : "Rationale composed from the returns (no AI key configured)"} - calls
+      are derived from measured performance, not opinion - not investment advice.
     </>
   );
 }

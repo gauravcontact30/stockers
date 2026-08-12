@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MarketSection, SectionError, SectionFootnote } from "./market-section";
-import { StockPicker } from "./stock-picker";
+import { StockCombobox } from "./stock-combobox";
 import { SourceNote, VerdictCards, type StockVerdict } from "./verdict-view";
 
 export type CustomComparison = {
@@ -62,7 +62,7 @@ export function TripleCompare() {
       eyebrow="Build your own"
       eyebrowClass="text-violet-600 dark:text-violet-400"
       title="Compare any three stocks"
-      blurb="Pick up to three companies — same sector for a like-for-like contest, or across sectors to see which is carrying its weight. Each dropdown is grouped by sector and searchable."
+      blurb="Pick up to three companies. Each dropdown searches BSE-listed stocks with logo, company name, latest price and daily performance."
       aside={
         <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400">
           {chosen.length} of 3 selected
@@ -71,13 +71,18 @@ export function TripleCompare() {
     >
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         {SLOTS.map((slot) => (
-          <StockPicker
-            key={slot}
-            label={SLOT_LABELS[slot]}
-            value={picks[slot]}
-            onChange={(symbol) => setSlot(slot, symbol)}
-            exclude={picks.filter((symbol, index): symbol is string => symbol !== null && index !== slot)}
-          />
+          <div key={slot} className="min-w-0">
+            <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {SLOT_LABELS[slot]}
+            </span>
+            <StockCombobox
+              value={picks[slot] ?? ""}
+              onChange={(symbol) => setSlot(slot, symbol.trim() ? symbol.trim().toUpperCase() : null)}
+              onSelect={(symbol) => setSlot(slot, symbol)}
+              exclude={picks.filter((symbol, index): symbol is string => symbol !== null && index !== slot)}
+              placeholder="Search any listed stock"
+            />
+          </div>
         ))}
       </div>
 
@@ -88,7 +93,7 @@ export function TripleCompare() {
           disabled={!canCompare || loading}
           className="rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading ? "Comparing…" : "Compare"}
+          {loading ? "Comparing..." : "Compare"}
         </button>
         <button
           type="button"
@@ -109,7 +114,7 @@ export function TripleCompare() {
         <div className="mt-6">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {result.sameSector ? "Like-for-like · same sector" : "Across sectors"}
+              {result.sameSector ? "Like-for-like same sector" : "Across sectors"}
             </p>
             <p className="mt-1.5 text-sm font-semibold text-slate-900 dark:text-white">{result.takeaway}</p>
           </div>
@@ -126,3 +131,4 @@ export function TripleCompare() {
     </MarketSection>
   );
 }
+

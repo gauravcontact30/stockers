@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TripleCompare, type CustomComparison } from "../../app/components/triple-compare";
+import type { Suggestion } from "../../app/components/stock-combobox";
 import type { StockVerdict } from "../../app/components/verdict-view";
 
 // Driving a 270-name picker keystroke by keystroke is slow; under a loaded CI machine these
@@ -27,10 +28,53 @@ function stock(overrides: Partial<StockVerdict> = {}): StockVerdict {
   };
 }
 
+const SUGGESTIONS: Suggestion[] = [
+  {
+    symbol: "TCS",
+    name: "Tata Consultancy Services",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "532540",
+    price: 2407.9,
+    changePercent: -0.5,
+  },
+  {
+    symbol: "HDFCBANK",
+    name: "HDFC Bank",
+    sector: "Banking",
+    capTier: "Large",
+    scripCode: "500180",
+    price: 1678.9,
+    changePercent: 1.2,
+  },
+  {
+    symbol: "INFY",
+    name: "Infosys",
+    sector: "Information Technology",
+    capTier: "Large",
+    scripCode: "500209",
+    price: 1491.35,
+    changePercent: 0.8,
+  },
+];
+
+function suggestionPayload(url: string) {
+  const params = new URL(url, "http://stockers.test").searchParams;
+  const query = (params.get("q") ?? "").toLowerCase();
+  const suggestions = SUGGESTIONS.filter(
+    (stock) => !query || stock.symbol.toLowerCase().includes(query) || stock.name.toLowerCase().includes(query),
+  );
+  return { suggestions, total: suggestions.length };
+}
+
 function mockCompare(payload: CustomComparison, ok = true) {
   const urls: string[] = [];
   global.fetch = jest.fn((url: string) => {
-    urls.push(String(url));
+    const href = String(url);
+    urls.push(href);
+    if (href.startsWith("/api/stocks/suggest")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(suggestionPayload(href)) });
+    }
     return Promise.resolve({ ok, json: () => Promise.resolve(payload) });
   }) as unknown as typeof fetch;
   return urls;
@@ -47,10 +91,10 @@ const acrossSectors: CustomComparison = {
 /** Opens the picker in the given slot and chooses a stock from it. */
 async function pick(user: ReturnType<typeof userEvent.setup>, slot: string, symbol: string) {
   const label = screen.getByText(slot);
-  const toggle = label.parentElement!.parentElement!.querySelector("button[aria-haspopup='listbox']") as HTMLElement;
-  await user.click(toggle);
-  await user.type(screen.getByLabelText(`Search stocks for ${slot}`), symbol);
-  await user.click(screen.getByRole("option", { name: new RegExp(`^${symbol}`) }));
+  const field = within(label.parentElement as HTMLElement).getByRole("combobox");
+  await user.click(field);
+  await user.type(field, symbol);
+  await user.click(await screen.findByRole("option", { name: new RegExp(symbol) }));
 }
 
 describe("TripleCompare", () => {
@@ -102,7 +146,7 @@ describe("TripleCompare", () => {
     await pick(user, "Stock 2", "INFY");
     await user.click(screen.getByRole("button", { name: "Compare" }));
 
-    await waitFor(() => expect(screen.getByText("Like-for-like · same sector")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Like-for-like/)).toBeInTheDocument());
   });
 
   it("keeps a stock chosen in one slot out of the others", async () => {
@@ -112,13 +156,11 @@ describe("TripleCompare", () => {
 
     await pick(user, "Stock 1", "TCS");
 
-    const secondToggle = screen
-      .getByText("Stock 2")
-      .parentElement!.parentElement!.querySelector("button[aria-haspopup='listbox']") as HTMLElement;
-    await user.click(secondToggle);
-    await user.type(screen.getByLabelText("Search stocks for Stock 2"), "TCS");
+    const secondField = within(screen.getByText("Stock 2").parentElement as HTMLElement).getByRole("combobox");
+    await user.click(secondField);
+    await user.type(secondField, "TCS");
 
-    expect(screen.getByText(/No stock matches “TCS”/)).toBeInTheDocument();
+    expect(await screen.findByText('Nothing listed matches "TCS".')).toBeInTheDocument();
   });
 
   it("resets every slot and the result", async () => {
@@ -137,7 +179,9 @@ describe("TripleCompare", () => {
 
     expect(screen.getByText("0 of 3 selected")).toBeInTheDocument();
     expect(screen.queryByText("Across sectors")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Search or pick a stock")).toHaveLength(3);
+    screen.getAllByRole("combobox", { name: "Search any listed stock" }).forEach((field) => {
+      expect(field).toHaveValue("");
+    });
   });
 
   it("reports a failed comparison without losing the picks", async () => {

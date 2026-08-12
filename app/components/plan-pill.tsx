@@ -92,25 +92,35 @@ export function PlanRibbon({ tier, locked = false }: { tier: PlanTier; locked?: 
   const label = TIER_LABEL[tier];
 
   return (
-    <span
-      className={`pointer-events-none absolute right-0 top-0 z-30 block h-28 w-28 overflow-hidden rounded-tr-[28px] ${TIER_CHROME[tier].ribbonFrame}`}
-      aria-label={`${label} plan`}
-      title={`${label} plan`}
-    >
+    <>
       <span
-        className={`absolute left-1 top-7 flex w-36 rotate-45 items-center justify-center gap-1 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] shadow-[0_10px_22px_-12px_rgba(15,23,42,0.9)] ${TIER_CHROME[tier].ribbon}`}
-        aria-hidden="true"
+        className={`pointer-events-none absolute right-3 top-3 z-30 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] shadow-sm sm:hidden ${TIER_CHROME[tier].ribbon}`}
+        aria-label={`${label} plan`}
+        title={`${label} plan`}
       >
-        {locked ? (
-          <LockIcon className="h-3 w-3" />
-        ) : (
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
-            <path d="m10 1.6 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8L10 1.6Z" />
-          </svg>
-        )}
+        {locked && <LockIcon className="h-3 w-3" />}
         {label}
       </span>
-    </span>
+      <span
+        className={`pointer-events-none absolute right-0 top-0 z-30 hidden h-28 w-28 overflow-hidden rounded-tr-[28px] sm:block ${TIER_CHROME[tier].ribbonFrame}`}
+        aria-label={`${label} plan`}
+        title={`${label} plan`}
+      >
+        <span
+          className={`absolute left-1 top-7 flex w-36 rotate-45 items-center justify-center gap-1 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] shadow-[0_10px_22px_-12px_rgba(15,23,42,0.9)] ${TIER_CHROME[tier].ribbon}`}
+          aria-hidden="true"
+        >
+          {locked ? (
+            <LockIcon className="h-3 w-3" />
+          ) : (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+              <path d="m10 1.6 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8L10 1.6Z" />
+            </svg>
+          )}
+          {label}
+        </span>
+      </span>
+    </>
   );
 }
 
