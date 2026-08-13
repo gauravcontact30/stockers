@@ -16,6 +16,7 @@ describe("plan tier feature bundles", () => {
       "dip-winners",
       "research",
       "compare",
+      "portfolio",
     ]);
     expect(featuresIntroducedAtTier("elite").map((feature) => feature.key)).toEqual([
       "intel",
@@ -33,7 +34,7 @@ describe("plan tier feature bundles", () => {
     const elite = featuresForTier("elite").map((feature) => feature.key);
 
     expect(starter).toHaveLength(6);
-    expect(pro).toEqual([...starter, "top-picks", "buy-tomorrow", "dip-winners", "research", "compare"]);
+    expect(pro).toEqual([...starter, "top-picks", "buy-tomorrow", "dip-winners", "research", "compare", "portfolio"]);
     expect(elite).toEqual([...pro, "intel", "etf-research", "directory", "most-traded", "mtf", "stock-news"]);
   });
 });

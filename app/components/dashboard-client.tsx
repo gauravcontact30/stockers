@@ -34,6 +34,7 @@ import { MarketPulse } from "./market-pulse";
 import { MostTraded } from "./most-traded";
 import { MtfTraded } from "./mtf-traded";
 import { PlanPill } from "./plan-pill";
+import { PortfolioWorkspace } from "./portfolio-workspace";
 import { PredictionPanel } from "./prediction-panel";
 import { fetchResearch } from "./research-cache";
 import { SectorShowdowns } from "./sector-showdowns";
@@ -46,6 +47,7 @@ import { TripleCompare } from "./triple-compare";
 import { WatchlistCard } from "./watchlist-card";
 import { indianStocks } from "../lib/indian-stocks";
 import { tierForPlan } from "../lib/plan-tiers";
+import { track } from "../lib/track";
 import { stockIcon } from "../lib/company-logos";
 
 type UserData = {
@@ -101,6 +103,10 @@ function readSectionFromHash(): DashboardSectionId {
 const overviewOnServer = (): DashboardSectionId => "overview";
 
 function openSection(id: DashboardSectionId) {
+  // Which sections people actually open is what the dashboard's own shape should be argued from,
+  // and a hash change is not a page view — without this the admin's traffic report would show one
+  // visit to /dashboard and nothing about what happened inside it.
+  track("nav.section", id);
   // pushState would make every sidebar click a history entry to walk back through; the hash is a
   // bookmark for the open section, so it replaces instead. That means no hashchange event fires,
   // hence the manual notify.
@@ -160,6 +166,9 @@ export function DashboardClient() {
     setMessage(null);
     setModalOpen(true);
     setSelectedSymbol(symbol.toUpperCase());
+    // The deep read is the most expensive thing the desk does, so which names people spend it on
+    // is worth knowing separately from which ones they merely glanced at.
+    track("ai.report", symbol.toUpperCase());
 
     const data = await fetchResearch(symbol);
     setLoading(false);
@@ -173,6 +182,8 @@ export function DashboardClient() {
   };
 
   const logout = () => {
+    // Reported before the session is torn down, while the server can still tell whose it was.
+    track("auth.logout");
     window.localStorage.removeItem("stockers-auth");
     // The token is mirrored into a cookie that the server reads on every gated request, so
     // clearing only localStorage left the session live: the browser kept sending the cookie and
@@ -278,6 +289,7 @@ export function DashboardClient() {
   // Only the open section is mounted: each AI panel fetches its own live data, so rendering all
   // of them at once would fire every market endpoint on page load.
   const aiPanels: Record<AiSectionId, ReactElement> = {
+    portfolio: <PortfolioWorkspace />,
     intel: <AiIntelSearch />,
     "market-pulse": <MarketPulse />,
     "top-picks": <TopPicksToday />,

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FEATURE_BY_KEY, featureTier, starsFor, TIER_LABEL, type FeatureKey, type PlanTier } from "../lib/plan-tiers";
+import { track } from "../lib/track";
 import { LockIcon, PlanPill, PlanRibbon } from "./plan-pill";
 import { SubscribeModal } from "./subscribe-modal";
 import { useSubscription } from "./subscription-provider";
@@ -77,6 +78,13 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
   const featureMeta = requiredTier && feature in FEATURE_BY_KEY ? FEATURE_BY_KEY[feature as FeatureKey] : null;
   const heldPlan = status?.planName ?? null;
 
+  // Recorded where the refusal is actually seen, which is not the same as the server's count of
+  // refused API calls: a panel that never fetches because the gate closed in front of it is still
+  // a reader who walked into a wall, and the admin dashboard should be able to see them.
+  useEffect(() => {
+    track("paywall.hit", feature);
+  }, [feature]);
+
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-white/95 p-6 text-center shadow-[0_20px_50px_-30px_rgba(15,23,42,0.6)] backdrop-blur dark:border-slate-700 dark:bg-slate-950/95">
       <p className="text-2xl" aria-hidden="true">
@@ -106,7 +114,12 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
-            onClick={() => setPlansOpen(true)}
+            onClick={() => {
+              // Which lock a reader was standing in front of when they went to look at the plans
+              // is the closest thing the product has to a statement of intent to buy.
+              track("paywall.plans", feature);
+              setPlansOpen(true);
+            }}
             className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
           >
             {heldPlan ? "Upgrade plan" : "Choose a plan"}

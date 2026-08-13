@@ -115,6 +115,32 @@ export function isUniqueViolation(error: unknown): boolean {
   return error instanceof SupabaseError && (error.code === "23505" || error.status === 409);
 }
 
+/**
+ * True when the table itself is not in the project — the schema has not been applied.
+ *
+ * Worth telling apart from every other failure because it is not transient and retrying will never
+ * fix it: somebody has to run `supabase/schema.sql`. PostgREST reports it as PGRST205 ("could not
+ * find the table in the schema cache") or PGRST106 for a schema that is not exposed, and answers
+ * 404 for both. Without this check the route returns a bare 500 and the reader is told to try
+ * again, which is advice that cannot work.
+ */
+export function isMissingTable(error: unknown): boolean {
+  return (
+    error instanceof SupabaseError &&
+    (error.code === "PGRST205" || error.code === "PGRST106" || (error.status === 404 && error.code === null))
+  );
+}
+
+/**
+ * The message to show when a table is missing, naming the table and the fix.
+ *
+ * Kept here rather than written out at each call site so every surface says the same thing, and so
+ * the instruction stays correct if the schema file is ever renamed.
+ */
+export function missingTableMessage(table: string): string {
+  return `The \`${table}\` table has not been created in Supabase yet. Apply supabase/schema.sql in the SQL editor — it is safe to run more than once — then reload.`;
+}
+
 type RequestOptions = {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   /** Path and query below /rest/v1, e.g. `users?id=eq.user_1&select=*`. */
@@ -125,6 +151,16 @@ type RequestOptions = {
    * for writes, so a caller gets the stored record rather than the one it hoped it wrote.
    */
   returnRepresentation?: boolean;
+  /**
+   * Turn a POST into an upsert: a row that collides with a unique constraint updates it instead of
+   * being refused.
+   *
+   * Postgres decides the winner, which is the point. The alternative — read, then insert or update
+   * — has a gap between the two statements that two simultaneous writes from the same account (two
+   * tabs, a double-tap) both fit through. Pair it with `?on_conflict=<columns>` in the path so
+   * PostgREST knows which constraint it is resolving against.
+   */
+  merge?: boolean;
 };
 
 /**
@@ -145,7 +181,14 @@ export async function supabaseRequest<T>(options: RequestOptions): Promise<T[]> 
   };
 
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  if (options.returnRepresentation) headers.Prefer = "return=representation";
+
+  // Both travel in one `Prefer` header, comma-separated, because a second assignment would replace
+  // the first rather than add to it.
+  const prefer = [
+    options.returnRepresentation ? "return=representation" : "",
+    options.merge ? "resolution=merge-duplicates" : "",
+  ].filter(Boolean);
+  if (prefer.length > 0) headers.Prefer = prefer.join(",");
 
   let response: Response;
   try {

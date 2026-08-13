@@ -15,6 +15,7 @@ import {
   type PlanTier,
 } from "./plan-tiers";
 import type { AppUser } from "./store";
+import { eq, supabaseConfigured, supabaseRequest } from "./supabase";
 
 // The feature table itself lives in ./plan-tiers, which imports nothing from Node — the browser
 // needs the same tiers to decide what to blur. Re-exported here so the routes and pages that have
@@ -286,9 +287,42 @@ export function renewedUntil(current: string | null | undefined, today: string, 
 
 export type FeatureLocks = Record<string, boolean>;
 
-const locksPath = path.join(process.cwd(), "app", "data", "feature-locks.json");
+const locksPath = process.env.STOCKERS_LOCKS_FILE || path.join(process.cwd(), "app", "data", "feature-locks.json");
 
+/**
+ * One row of `public.feature_locks`. Only locked features are stored — an absent row is open,
+ * which is what a feature added to AI_FEATURES tomorrow should be without anybody writing a row.
+ */
+type LockRow = { feature: string; locked: boolean | null };
+
+/**
+ * The locks, from whichever store is configured.
+ *
+ * This used to be the JSON file alone, and that could not work in production: a serverless host's
+ * application directory is read-only, so the admin's toggle failed silently, and anywhere else the
+ * next deploy wiped it. An admin turning a feature off and finding it back on an hour later was
+ * that bug. Supabase now holds them wherever it is configured, on the same rule as the account
+ * store — configuration alone decides, and the two backends produce the same object.
+ *
+ * A failure reads as "nothing is locked" rather than throwing. That direction is deliberate: the
+ * alternative is a database blip taking every AI surface off the site at once, which is a far
+ * worse outcome than a lock that takes a moment longer to apply.
+ */
 export async function readFeatureLocks(): Promise<FeatureLocks> {
+  if (supabaseConfigured()) {
+    try {
+      const rows = await supabaseRequest<LockRow>({ method: "GET", path: "feature_locks?select=feature,locked" });
+      const locks: FeatureLocks = {};
+      for (const row of rows) {
+        if (isFeatureKey(row.feature) && row.locked !== false) locks[row.feature] = true;
+      }
+      return locks;
+    } catch (error) {
+      console.error("feature locks: could not be read", error);
+      return {};
+    }
+  }
+
   try {
     const raw = await fs.readFile(locksPath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
@@ -310,7 +344,30 @@ export async function writeFeatureLocks(locks: FeatureLocks): Promise<void> {
   await fs.writeFile(locksPath, JSON.stringify(locks, null, 2), "utf8");
 }
 
+/**
+ * Locks or unlocks one feature.
+ *
+ * Against Postgres this is one statement per change rather than a read of every lock followed by a
+ * write of every lock: two admins toggling different features at the same moment would otherwise
+ * each write the whole set, and the second would undo the first.
+ */
 export async function setFeatureLock(feature: FeatureKey, locked: boolean): Promise<FeatureLocks> {
+  if (supabaseConfigured()) {
+    if (locked) {
+      await supabaseRequest({
+        method: "POST",
+        path: "feature_locks?on_conflict=feature",
+        body: { feature, locked: true, updated_at: new Date().toISOString() },
+        merge: true,
+      });
+    } else {
+      // Unlocking removes the row rather than storing `false`: absent and open are the same state,
+      // and keeping only one representation of it is what stops the two disagreeing.
+      await supabaseRequest({ method: "DELETE", path: `feature_locks?feature=${eq(feature)}` });
+    }
+    return readFeatureLocks();
+  }
+
   const locks = await readFeatureLocks();
   locks[feature] = locked;
   await writeFeatureLocks(locks);

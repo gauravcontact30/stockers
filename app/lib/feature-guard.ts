@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { FEATURE_THROTTLE_MS, recordEvent, visitorIdFromRequest } from "./analytics";
 import { userFromRequest } from "./store";
 import {
   canUseFeature,
@@ -29,9 +30,32 @@ export async function guardFeature(request: Request, feature: FeatureKey): Promi
   const [status, locks] = await Promise.all([getAccessStatus(user), readFeatureLocks()]);
 
   const locked = locks[feature] === true && !status.isAdmin;
+  const allowed = canUseFeature(status, locks, feature);
+
+  /**
+   * Every AI route funnels through here, which makes this the one place that sees the whole of
+   * what the audience reaches for — and it sees it on the server, so the "most explored feature"
+   * ranking in the admin dashboard cannot be moved by anyone posting at an endpoint.
+   *
+   * Refusals are recorded as well as opens: the features people are turned away from are the
+   * clearest signal of what the paywall is holding back, and a count of successful opens alone
+   * cannot show it. Not awaited — the visitor is waiting on the feature, not on the bookkeeping,
+   * and `recordEvent` swallows its own failures rather than surfacing an unhandled rejection.
+   */
+  void recordEvent({
+    type: "feature",
+    feature,
+    userId: user?.id ?? null,
+    visitorId: visitorIdFromRequest(request),
+    userAgent: request.headers.get("user-agent"),
+    blocked: !allowed,
+    // Several panels refresh themselves on a timer. Without this the ranking would measure poll
+    // intervals rather than interest — see the throttle note in ./analytics.
+    throttleMs: FEATURE_THROTTLE_MS,
+  });
 
   return {
-    allowed: canUseFeature(status, locks, feature),
+    allowed,
     status,
     locked,
     requiredPlan: locked ? null : requiredPlanFor(feature, locks),

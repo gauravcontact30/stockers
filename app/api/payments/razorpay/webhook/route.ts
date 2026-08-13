@@ -51,7 +51,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ignored: "payment does not cover subscription amount" });
   }
 
-  const credited = await creditPayment({ userId: notes.userId, paymentId: payment.id, plan, cycle });
+  const credited = await creditPayment({
+    userId: notes.userId,
+    paymentId: payment.id,
+    plan,
+    cycle,
+    orderId: typeof payment.order_id === "string" ? payment.order_id : null,
+    amountPaise: typeof payment.amount === "number" ? payment.amount : null,
+    promoCode: typeof notes.promoCode === "string" ? notes.promoCode : null,
+    referralCode: typeof notes.referralCode === "string" ? notes.referralCode : null,
+  });
   if (!credited.ok) {
     // The signature was good and the event was ours, so this is our problem to fix — a 500 has
     // Razorpay retry it, which is what we want while, say, the user store is briefly unwritable.

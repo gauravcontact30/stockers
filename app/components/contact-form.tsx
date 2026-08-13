@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LIMITS, TOPICS, type Topic } from "../lib/contact";
+import { track } from "../lib/track";
 
 /**
  * The contact form.
@@ -43,6 +44,9 @@ export function ContactForm() {
       const data = await response.json();
 
       if (!response.ok) throw new Error(data?.error || "That didn't go through.");
+      // The topic, never the message: what people write here is theirs, and the admin dashboard
+      // only needs to know which kind of enquiry is arriving.
+      track("contact.submit", topic);
       setSent(true);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "That didn't go through.");

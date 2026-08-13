@@ -12,6 +12,7 @@ type IconProps = { className?: string };
  * and still renders, but each now carries an AI layer, and that layer is what the feature gates.
  */
 export type AiSectionId =
+  | "portfolio"
   | "intel"
   | "market-pulse"
   | "top-picks"
@@ -219,6 +220,16 @@ function BasketIcon({ className }: IconProps) {
   );
 }
 
+function PortfolioIcon({ className }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="3" y="7" width="18" height="13" rx="2.5" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M3 12h18M11 12v2.5h2V12" />
+    </svg>
+  );
+}
+
 function LifebuoyIcon({ className }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -253,6 +264,17 @@ const SUPPORT_SECTION: PlainSection = {
 
 /** Keyed by id so the dashboard can look one up without a runtime "not found" fallback. */
 export const AI_SECTIONS: Record<AiSectionId, AiSection> = {
+  portfolio: {
+    id: "portfolio",
+    label: "My Portfolio",
+    description: "Track what you actually hold against the live market, with an AI read on the mix.",
+    icon: PortfolioIcon,
+    feature: "portfolio",
+    featureLabel: "AI portfolio review",
+    // The holdings are the reader's own record: managing them is never paywalled, and the lock
+    // lands on the AI panels inside the section instead.
+    gate: false,
+  },
   intel: {
     id: "intel",
     label: "Intelligence Search",
@@ -402,7 +424,7 @@ export type SectionGroup = { key: string; label: string; sections: DashboardSect
  * is short enough to scan.
  */
 export const DASHBOARD_GROUPS: SectionGroup[] = [
-  { key: "workspace", label: "Workspace", sections: [OVERVIEW_SECTION] },
+  { key: "workspace", label: "Workspace", sections: [OVERVIEW_SECTION, AI_SECTIONS.portfolio] },
   {
     key: "screeners",
     label: "AI screeners",

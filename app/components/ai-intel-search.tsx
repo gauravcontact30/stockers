@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { track } from "../lib/track";
 import { CompanyLogo } from "./company-logo";
 import {
   bookmarkId,
@@ -1126,6 +1127,9 @@ export function AiIntelSearch() {
     // Counts against this search's bookmark if it has one, which is what floats a reader's
     // morning routine to the front of the shelf over time.
     recordAsk(term, next);
+    // The topic it was filed under, never the question itself: what somebody asks the desk is
+    // theirs, and the admin dashboard needs the volume and the shape, not the words.
+    track("ai.ask", next.topic);
     setOpen(false);
     setLoading(true);
     setError(null);

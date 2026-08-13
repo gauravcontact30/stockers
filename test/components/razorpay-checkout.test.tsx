@@ -54,7 +54,11 @@ function mockApi({
   const calls: { url: string; body: unknown }[] = [];
 
   global.fetch = jest.fn((url: string, init?: RequestInit) => {
-    calls.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null });
+    // The analytics ping the button fires alongside the payment is somebody else's test. It is
+    // deliberately kept out of this list so these assertions stay about the checkout itself.
+    if (!String(url).includes("/api/analytics/track")) {
+      calls.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null });
+    }
 
     if (String(url).endsWith("/order")) {
       return Promise.resolve({ ok: orderStatus === 200, status: orderStatus, json: () => Promise.resolve(orderBody) });

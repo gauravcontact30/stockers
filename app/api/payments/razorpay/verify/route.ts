@@ -68,7 +68,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That payment has not been captured for this plan." }, { status: 400 });
   }
 
-  const credited = await creditPayment({ userId: user.id, paymentId, plan, cycle });
+  const credited = await creditPayment({
+    userId: user.id,
+    paymentId,
+    plan,
+    cycle,
+    orderId,
+    // Razorpay's own figure for what was captured, not the one this request asked for — the ledger
+    // records what was actually taken.
+    amountPaise: typeof payment.amount === "number" ? payment.amount : null,
+    promoCode: typeof body?.promoCode === "string" ? body.promoCode : null,
+    referralCode: typeof body?.referralCode === "string" ? body.referralCode : null,
+  });
   if (!credited.ok) {
     return NextResponse.json({ error: credited.error }, { status: 500 });
   }

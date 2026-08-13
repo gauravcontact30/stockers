@@ -65,9 +65,9 @@ export type AiFeature = {
 /**
  * Every AI-backed surface, grouped by the plan that buys it.
  *
- * The split is even by design — six, five and six — so no tier looks like an afterthought on the
- * pricing page. Within a tier the grouping is by the kind of question the feature answers:
- * Starter reports what the market did, Pro makes a call on it, Elite goes looking.
+ * The split is even by design — six each — so no tier looks like an afterthought on the pricing
+ * page. Within a tier the grouping is by the kind of question the feature answers: Starter reports
+ * what the market did, Pro makes a call on it, Elite goes looking.
  *
  * The exchange data under a board is not what a tier buys. Every board's public figures stay
  * visible to everyone (see the `gate: false` sections in ../components/dashboard-sidebar); what a
@@ -142,6 +142,12 @@ export const AI_FEATURES = [
     label: "AI stock compare",
     tier: "pro",
     blurb: "Two or three stocks head to head, with a call on each.",
+  },
+  {
+    key: "portfolio",
+    label: "AI portfolio review",
+    tier: "pro",
+    blurb: "Your own holdings, tracked live, with an AI read on the mix and a call on each name.",
   },
 
   // Elite — ask-anything, the full directory, and the flow, margin and filings reads.

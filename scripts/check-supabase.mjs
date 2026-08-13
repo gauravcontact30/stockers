@@ -149,27 +149,72 @@ try {
   fail("could not reach Supabase", String(error));
 }
 
+// --- analytics -------------------------------------------------------------
+
+// Checked separately because it is applied separately: a project created before this table existed
+// has a perfectly good `users` and no `analytics_events`, and the symptom is an admin dashboard
+// with no figures on it rather than anything that looks like a missing table.
+try {
+  const columns = "id,type,at,day,user_id,visitor_id,session_id,feature,action,label,path,referrer,device,blocked";
+  const response = await rest(`analytics_events?select=${columns}&limit=1`, serviceKey);
+
+  if (response.status === 404 || response.status === 400) {
+    fail(
+      "the `analytics_events` table is not there (or is missing columns)",
+      `Re-run supabase/schema.sql — it is safe to apply twice. Supabase said: ${(await response.text()).slice(0, 180)}`,
+    );
+  } else if (!response.ok) {
+    fail(`Supabase responded ${response.status} for analytics_events`, (await response.text()).slice(0, 180));
+  } else {
+    pass("the `analytics_events` table is reachable and has every column");
+  }
+} catch (error) {
+  fail("could not check analytics_events", String(error));
+}
+
+// --- portfolios ------------------------------------------------------------
+
+try {
+  const columns = "id,user_id,symbol,quantity,avg_price,target_price,note,added_at,updated_at";
+  const response = await rest(`portfolio_holdings?select=${columns}&limit=1`, serviceKey);
+
+  if (response.status === 404 || response.status === 400) {
+    fail(
+      "the `portfolio_holdings` table is not there (or is missing columns)",
+      `Re-run supabase/schema.sql — it is safe to apply twice. Supabase said: ${(await response.text()).slice(0, 180)}`,
+    );
+  } else if (!response.ok) {
+    fail(`Supabase responded ${response.status} for portfolio_holdings`, (await response.text()).slice(0, 180));
+  } else {
+    pass("the `portfolio_holdings` table is reachable and has every column");
+  }
+} catch (error) {
+  fail("could not check portfolio_holdings", String(error));
+}
+
 // --- the part that would be a breach ---------------------------------------
 
 // RLS is the only thing standing between a public key and a table of password hashes, so it is
 // checked rather than assumed. Skipped silently when no anon key is configured, since this app
 // never needs one.
 if (anonKey) {
-  try {
-    const response = await rest("users?select=id&limit=1", anonKey);
-    const body = await response.text();
+  for (const table of ["users", "analytics_events", "portfolio_holdings"]) {
+    try {
+      const response = await rest(`${table}?select=id&limit=1`, anonKey);
+      const body = await response.text();
 
-    if (response.ok && body.trim() !== "[]") {
-      fail(
-        "the anon key can READ the users table",
-        "Password hashes are public. Run: alter table public.users enable row level security;\n" +
-          "        and drop any policy granting anon select.",
-      );
-    } else {
-      pass("the anon key cannot read the users table (RLS is doing its job)");
+      if (response.ok && body.trim() !== "[]") {
+        fail(
+          `the anon key can READ the ${table} table`,
+          `Run: alter table public.${table} enable row level security;\n` +
+            "        and drop any policy granting anon select.",
+        );
+      } else {
+        pass(`the anon key cannot read the ${table} table (RLS is doing its job)`);
+      }
+    } catch {
+      console.log(`  warn  could not test the anon key against ${table}`);
     }
-  } catch {
-    console.log("  warn  could not test the anon key");
   }
 }
 

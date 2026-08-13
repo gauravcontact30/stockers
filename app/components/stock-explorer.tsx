@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CompanyLogo } from "./company-logo";
 import { indianStocks, sectors, type CapTier, type StockMeta } from "../lib/indian-stocks";
+import { track } from "../lib/track";
 
 /**
  * A searchable, category-grouped picker over every company listed on the exchange.
@@ -155,6 +156,9 @@ export function StockExplorer({ onSelect, selected }: { onSelect: (symbol: strin
   const total = countMatches(groups);
 
   const choose = (stock: StockMeta) => {
+    // Recorded on the choice rather than on the typing: a keystroke is not a search, and what
+    // somebody was halfway through spelling is not something worth keeping.
+    track("stock.search", stock.symbol);
     onSelect(stock.symbol);
     setQuery(stock.symbol);
     setOpen(false);

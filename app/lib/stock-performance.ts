@@ -57,7 +57,7 @@ type ResolvedMeta = { yahooSymbol: string; name: string | null; assetType: Perfo
 // The AI report can be opened for any symbol in our curated universe (stock or ETF); fall
 // back to the standard NSE suffix — with an unknown asset type and no cap tier — so an
 // unrecognized symbol still resolves to something instead of failing outright.
-function resolveMeta(symbol: string): ResolvedMeta {
+export function resolveMeta(symbol: string): ResolvedMeta {
   const stock = indianStocks.find((s) => s.symbol === symbol);
   if (stock) return { yahooSymbol: stock.yahooSymbol, name: stock.name, assetType: "stock", capTier: stock.capTier };
 

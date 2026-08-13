@@ -728,3 +728,25 @@ export async function getBseDirectory(query: DirectoryQuery): Promise<BseDirecto
     sessionDate: tape.sessionDate,
   };
 }
+
+/**
+ * Every listed scrip joined to this session's tape, unpaged and unsorted.
+ *
+ * The directory above pages because it renders; a screener filters on several numeric criteria at
+ * once and cannot know how many rows will survive them, so it needs the whole universe in hand.
+ * This is the same join the directory does, exposed without the slicing.
+ *
+ * Sectors are deliberately not attached. Resolving them is a per-scrip lookup and there are ~4,900
+ * of these; the directory does it for the twenty rows it is about to draw, which is affordable,
+ * and doing it for all of them to support a filter nobody has applied yet is not.
+ */
+export async function getBseRows(): Promise<{ rows: (BseStock & BseQuote)[]; sessionDate: string | null }> {
+  const [universe, tape] = await Promise.all([getBseUniverse(), getBseTape()]);
+
+  return {
+    rows: universe.stocks
+      .map((stock) => join(stock, tape))
+      .filter((row): row is BseStock & BseQuote => row !== null),
+    sessionDate: tape.sessionDate,
+  };
+}

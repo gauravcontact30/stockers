@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "../lib/theme-provider";
+import { track } from "../lib/track";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
@@ -9,7 +10,11 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={() => {
+        // The theme they are switching *to*, which is the half of the pair worth counting.
+        track("theme.set", theme === "dark" ? "light" : "dark");
+        toggleTheme();
+      }}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-400"

@@ -9,6 +9,7 @@ import {
   type BillingCycle,
   type PlanKey,
 } from "../lib/subscription-pricing";
+import { track } from "../lib/track";
 import { authHeaders, useSubscription } from "./subscription-provider";
 
 /**
@@ -212,6 +213,9 @@ export function SubscribeButton({
   const pay = async () => {
     setError(null);
     setPhase("opening");
+    // The plan they set out to buy, recorded before the gateway can drop them — the gap between
+    // this and `checkout.paid` is the checkout abandonment the admin dashboard reports.
+    track("checkout.open", plan);
 
     try {
       const created = await fetch("/api/payments/razorpay/order", {
@@ -241,6 +245,7 @@ export function SubscribeButton({
               const payload = await confirmed.json();
               if (!confirmed.ok) throw new Error(payload?.error || "We couldn't confirm that payment.");
 
+              track("checkout.paid", plan);
               setPhase("done");
               await refresh();
             } catch (failure) {

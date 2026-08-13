@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { track } from "../lib/track";
 import { StockDetailModal } from "./stock-detail-modal";
 
 /**
@@ -65,7 +66,12 @@ export function StockDetailTrigger({
   return (
     <button
       type="button"
-      onClick={() => openStock(symbol)}
+      onClick={() => {
+        // Which companies people actually look into is the single most useful thing the admin
+        // dashboard can know about a stock app, and this is the one door every board opens it by.
+        track("stock.open", symbol);
+        openStock(symbol);
+      }}
       aria-label={`Open details for ${symbol}`}
       className={`min-w-0 text-left transition hover:text-emerald-600 dark:hover:text-emerald-400 ${className}`}
     >

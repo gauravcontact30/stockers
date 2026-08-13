@@ -6,6 +6,7 @@ import { StockDetailTrigger } from "./stock-detail-provider";
 import { StockExplorer } from "./stock-explorer";
 import { useStockPerformance } from "./use-stock-performance";
 import { indianStocks } from "../lib/indian-stocks";
+import { track } from "../lib/track";
 
 /**
  * A watchlist the reader actually owns.
@@ -85,6 +86,19 @@ const readWatchlistOnServer = (): string | null => null;
 
 function notifyWatchlist() {
   watchers.forEach((listener) => listener());
+}
+
+/**
+ * The watched symbols, live.
+ *
+ * Exposed because the Portfolio page's movers board reads the same list: a stock the reader is
+ * watching is one of the two categories it splits on, and a second copy of this store would drift
+ * from this one the first time somebody removed a row. Null until the client has read storage,
+ * which is what keeps the server render and the first client render in agreement.
+ */
+export function useWatchlist(): string[] | null {
+  const raw = useSyncExternalStore(subscribeToWatchlist, readWatchlist, readWatchlistOnServer);
+  return raw === null ? null : parseWatchlist(raw);
 }
 
 function formatPercent(value: number | null): string {
@@ -192,6 +206,7 @@ export function WatchlistCard() {
       setAdding(false);
       const list = parseWatchlist(window.localStorage.getItem(STORAGE_KEY));
       if (list.includes(symbol) || list.length >= MAX_WATCHED) return;
+      track("watchlist.add", symbol);
       save([symbol, ...list]);
     },
     [save],
@@ -202,7 +217,13 @@ export function WatchlistCard() {
   // Memoised so `remove` keeps its identity between renders instead of being rebuilt every time.
   const list = useMemo(() => watched ?? [], [watched]);
 
-  const remove = useCallback((symbol: string) => save(list.filter((entry) => entry !== symbol)), [save, list]);
+  const remove = useCallback(
+    (symbol: string) => {
+      track("watchlist.remove", symbol);
+      save(list.filter((entry) => entry !== symbol));
+    },
+    [save, list],
+  );
   const full = list.length >= MAX_WATCHED;
 
   return (

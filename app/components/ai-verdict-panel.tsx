@@ -75,6 +75,16 @@ const symbolsOf = (rows: Payload[]): string[] =>
 const HEAVYWEIGHTS = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN"];
 
 export const VERDICT_SOURCES: Record<string, VerdictSource> = {
+  portfolio: {
+    // The reader's own holdings, read back from the same endpoint the cards above are drawn from —
+    // so the desk is scoring the stocks they actually own rather than a list of our choosing. The
+    // request is same-origin, so the session cookie identifies whose portfolio to answer with.
+    feed: "/api/portfolio",
+    feature: "portfolio",
+    heading: "AI desk: a call on what you hold",
+    blurb: "Each of your positions scored on measured performance, not on what you paid for it.",
+    symbols: (payload) => symbolsOf(list((payload as Payload)?.holdings)).slice(0, 6),
+  },
   overview: {
     feature: "research",
     heading: "AI desk: today's heavyweights",

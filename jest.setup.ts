@@ -15,6 +15,26 @@ process.env.STOCKERS_USERS_FILE = path.join(
   `stockers-test-users-${process.env.JEST_WORKER_ID ?? "0"}.json`,
 );
 
+// The analytics event log gets the same treatment, and for the same reason: `app/lib/analytics`
+// resolves its path once at module scope, and the paywall guard writes to it from any suite that
+// exercises a gated route.
+process.env.STOCKERS_ANALYTICS_FILE = path.join(
+  os.tmpdir(),
+  `stockers-test-analytics-${process.env.JEST_WORKER_ID ?? "0"}.json`,
+);
+
+// And the portfolio store, which the same suites reach through the dashboard's Portfolio section.
+process.env.STOCKERS_PORTFOLIO_FILE = path.join(
+  os.tmpdir(),
+  `stockers-test-portfolio-${process.env.JEST_WORKER_ID ?? "0"}.json`,
+);
+
+// And the admin's feature locks, which the paywall guard reads on every gated request.
+process.env.STOCKERS_LOCKS_FILE = path.join(
+  os.tmpdir(),
+  `stockers-test-locks-${process.env.JEST_WORKER_ID ?? "0"}.json`,
+);
+
 // And the account store must not be pointed at a real Supabase project by a developer's .env.
 //
 // next/jest loads .env the same way `next dev` does, so the moment real credentials are put there

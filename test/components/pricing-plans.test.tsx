@@ -95,7 +95,7 @@ describe("PricingPlans", () => {
     expect(screen.getByText("All Starter AI features included")).toBeInTheDocument();
     expect(screen.getByText("All Starter + Pro AI features included.")).toBeInTheDocument();
     expect(screen.getByLabelText("6 Starter AI features. Starter AI features")).toBeInTheDocument();
-    expect(screen.getByLabelText("5 Pro AI features. All Starter AI features included")).toBeInTheDocument();
+    expect(screen.getByLabelText("6 Pro AI features. All Starter AI features included")).toBeInTheDocument();
     expect(screen.getByLabelText("6 Elite AI features. All Starter + Pro AI features included.")).toBeInTheDocument();
     expect(screen.getAllByText("AI market pulse")).toHaveLength(1);
     expect(screen.getAllByText("Today's AI picks")).toHaveLength(1);

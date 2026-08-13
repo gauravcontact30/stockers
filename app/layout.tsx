@@ -5,6 +5,7 @@ import { ThemeProvider } from "./lib/theme-provider";
 import { StockDetailProvider } from "./components/stock-detail-provider";
 import { SubscriptionProvider } from "./components/subscription-provider";
 import { SubscriptionReminder } from "./components/subscription-reminder";
+import { VisitTracker } from "./components/visit-tracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,6 +68,9 @@ export default function RootLayout({
             <StockDetailProvider>
               {children}
               <SubscriptionReminder />
+              {/* Renders nothing — reports one page view per page per tab, so the admin dashboard
+                  can say how many people arrived today rather than how many accounts exist. */}
+              <VisitTracker />
             </StockDetailProvider>
           </SubscriptionProvider>
         </ThemeProvider>

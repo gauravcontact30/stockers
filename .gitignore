@@ -52,3 +52,10 @@ app/data/sms-outbox.json
 # The account store: real email addresses and password hashes. Each deployment keeps its own, so
 # there is nothing here worth sharing and a committed copy would publish credentials.
 app/data/users.json
+
+# The analytics event log when no Supabase project is configured: real visitor ids and the pages
+# real people opened. Per-deployment data, and not ours to publish.
+app/data/analytics-events.json
+
+# Portfolios when no Supabase project is configured: what real people own and what they paid.
+app/data/portfolio-holdings.json

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordEvent, visitorIdFromRequest } from "../../../lib/analytics";
 import { firstError, normaliseMobile, validateSignup, type SignupFields } from "../../../lib/auth-validation";
 import { appOrigin, sendMail, verificationEmail } from "../../../lib/mailer";
 import { sendSms, welcomeSms } from "../../../lib/sms";
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+
+    // Recorded before the mail goes out, because the account exists from this point on and the
+    // sign-up figure should not depend on whether a provider was reachable.
+    await recordEvent({ type: "signup", userId: user.id, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
 
     // The account exists and the session below is valid whether or not this mail goes out. A
     // provider outage must not turn a successful sign-up into an error the visitor has to retry —
