@@ -48,7 +48,8 @@ export type AnalyticsUserRow = {
   name: string;
   email: string;
   mobile: string | null;
-  plan: string;
+  /** The plan they have bought, or null when they are on the trial or lapsed without buying. */
+  plan: string | null;
   role: string;
   emailVerified: boolean;
   subscribedUntil: string | null;

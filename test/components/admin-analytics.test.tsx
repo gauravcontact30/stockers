@@ -11,6 +11,7 @@ import {
   RankedTable,
   activityDetail,
   activityLabel,
+  activityTier,
   deltaOf,
   formatDayShort,
   formatHour,
@@ -158,6 +159,42 @@ const ACTIVITY: ActivityRow[] = [
     mobile: null,
     plan: "Starter",
   },
+];
+
+/** One feed row, with only the columns a test actually cares about spelled out. */
+function activity(overrides: Partial<ActivityRow> & { id: string }): ActivityRow {
+  return {
+    at: "2026-08-12T10:00:00.000Z",
+    type: "feature",
+    feature: null,
+    action: null,
+    label: null,
+    path: null,
+    referrer: null,
+    device: "desktop",
+    blocked: false,
+    name: "Asha Rao",
+    email: "asha@example.com",
+    mobile: "9876543210",
+    plan: "Pro",
+    ...overrides,
+  };
+}
+
+/**
+ * One row per pill the feed can paint: the three tiers, a refusal, a feature key this build no
+ * longer knows, the two account events, and a signed-out arrival. Eight rows, so the same fixture
+ * also proves the table pages after five.
+ */
+const TIERED: ActivityRow[] = [
+  activity({ id: "t1", feature: "AI market pulse", plan: "Starter" }),
+  activity({ id: "t2", feature: "AI stock research", plan: "Pro" }),
+  activity({ id: "t3", feature: "AI intelligence search", plan: "Elite" }),
+  activity({ id: "t4", feature: "AI ETF research", blocked: true, plan: "Starter" }),
+  activity({ id: "t5", feature: "A feature this build retired", plan: "Pro" }),
+  activity({ id: "t6", type: "signin", plan: "Elite" }),
+  activity({ id: "t7", type: "signup", plan: "Starter" }),
+  activity({ id: "t8", type: "visit", path: "/pricing", name: "Visitor (not signed in)", email: null, mobile: null, plan: null }),
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => ({ hour, count: hour === 10 ? 40 : 0 }));
@@ -408,6 +445,154 @@ describe("ActivityFeed", () => {
     render(<ActivityFeed rows={[]} />);
 
     expect(screen.getByText("Nothing of this kind has been recorded in this window yet.")).toBeInTheDocument();
+  });
+});
+
+describe("activityTier", () => {
+  it("recovers the plan an AI feature belongs to", () => {
+    expect(activityTier(TIERED[0])).toBe("starter");
+    expect(activityTier(TIERED[1])).toBe("pro");
+    expect(activityTier(TIERED[2])).toBe("elite");
+  });
+
+  it("claims no plan for a feature key this build no longer knows, or for an event that is not one", () => {
+    expect(activityTier(TIERED[4])).toBeNull();
+    expect(activityTier(TIERED[5])).toBeNull();
+  });
+});
+
+describe("the activity feed's pills", () => {
+  it("paints an AI touch in its plan's colour and names the tier on it", () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    // Sky for Starter, emerald for Pro, violet for Elite — the palette the pricing table, the
+    // sidebar and the lock overlay all already use, so a tier reads without the word.
+    expect(screen.getByTitle("Starter AI feature")).toHaveClass("bg-sky-100");
+    expect(screen.getByTitle("Pro AI feature")).toHaveClass("bg-emerald-100");
+    expect(screen.getByTitle("Elite AI feature")).toHaveClass("bg-violet-100");
+
+    // And the word is there too: colour on its own is not a label.
+    expect(screen.getByTitle("Starter AI feature")).toHaveTextContent("· Starter");
+  });
+
+  it("marks a refusal in amber rather than in the tier it was aimed at", () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    const refused = screen.getByTitle("Elite feature, refused");
+    expect(refused).toHaveClass("bg-amber-50");
+    expect(refused).toHaveTextContent("AI feature (blocked)");
+    expect(refused).toHaveTextContent("· Elite");
+  });
+
+  it("leaves a feature it cannot place, and everything that is not AI, out of the plan palette", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    expect(screen.getByTitle("AI feature")).toHaveClass("bg-amber-50");
+
+    // The account events and the browsing are on page two.
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByTitle("Signed in")).toHaveClass("bg-teal-50");
+    expect(screen.getByTitle("Signed up")).toHaveClass("bg-teal-50");
+    expect(screen.getByTitle("Page visit")).toHaveClass("bg-slate-100");
+  });
+
+  it("badges the account's own plan, and says when there is no account", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    const starter = screen.getByTitle("Starter AI feature").closest("tr") as HTMLElement;
+    expect(within(starter).getByText("Starter")).toHaveClass("bg-sky-100");
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Guest")).toBeInTheDocument();
+  });
+});
+
+describe("the activity feed's controls", () => {
+  it("pages after five rows", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    expect(screen.getByText("Showing 1–5 of 8")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(screen.queryByTitle("Signed in")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByTitle("Signed in")).toBeInTheDocument();
+  });
+
+  it("narrows to one plan, and to the arrivals that had no account", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Plan"), "Elite");
+    expect(screen.getByText(/filtered from 8/)).toBeInTheDocument();
+    expect(screen.getByTitle("Elite AI feature")).toBeInTheDocument();
+    expect(screen.queryByTitle("Starter AI feature")).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText("Plan"), "guest");
+    expect(screen.getByText("Guest")).toBeInTheDocument();
+    expect(screen.queryByTitle("Elite AI feature")).not.toBeInTheDocument();
+  });
+
+  it("narrows to the features one plan buys, whoever touched them", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    // The Starter *account* on t4 reached for an Elite feature, so this filter and the plan filter
+    // are genuinely different questions — which is why both are offered.
+    await userEvent.selectOptions(screen.getByLabelText("AI feature"), "elite");
+
+    expect(screen.getByTitle("Elite AI feature")).toBeInTheDocument();
+    expect(screen.getByTitle("Elite feature, refused")).toBeInTheDocument();
+    expect(screen.queryByTitle("Pro AI feature")).not.toBeInTheDocument();
+  });
+
+  it("separates what was delivered from what the paywall held back", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Outcome"), "blocked");
+    expect(screen.getByTitle("Elite feature, refused")).toBeInTheDocument();
+    expect(screen.queryByTitle("Elite AI feature")).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText("Outcome"), "ok");
+    expect(screen.queryByTitle("Elite feature, refused")).not.toBeInTheDocument();
+  });
+
+  it("puts everything back in one click", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Plan"), "Elite");
+    await userEvent.type(screen.getByLabelText("Search activity"), "asha");
+    await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    expect(screen.getByText("Showing 1–5 of 8")).toBeInTheDocument();
+    expect(screen.getByLabelText("Plan")).toHaveValue("");
+    expect(screen.getByLabelText("Search activity")).toHaveValue("");
+  });
+
+  it("suggests the plans that are actually in the feed", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.type(screen.getByLabelText("Search activity"), "eli");
+
+    // Scoped to the typeahead's own list: the plan and tier dropdowns beside it are full of
+    // options named after the plans too, and those are choices rather than suggestions.
+    const suggestions = screen.getByRole("listbox");
+    expect(within(suggestions).getByRole("option", { name: "Elite" })).toBeInTheDocument();
+
+    await userEvent.click(within(suggestions).getByRole("option", { name: "Elite" }));
+    expect(screen.getByTitle("Elite AI feature")).toBeInTheDocument();
+  });
+
+  it("groups the feed by plan when the column is sorted", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Plan" }));
+
+    // Descending first: Starter, then Pro, then Elite — and the guest, who is on no plan at all,
+    // sorts to the end rather than to the top of the table.
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByText("Starter")).toBeInTheDocument();
+    expect(screen.queryByText("Guest")).not.toBeInTheDocument();
   });
 });
 

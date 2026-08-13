@@ -33,7 +33,8 @@ export type AccountLike = {
   id: string;
   name: string;
   email: string;
-  plan: string;
+  /** Null for an account that has bought no plan — a trial, or a lapse that never converted. */
+  plan: string | null;
   role?: string;
   createdAt: string;
   subscribedUntil?: string | null;

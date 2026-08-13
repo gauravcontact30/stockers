@@ -54,9 +54,25 @@ function slidesFor({ initialPerformance = [], initialDipLeaders = null }: HeroCa
 export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null }: HeroCarouselProps) {
   const slides = slidesFor({ initialPerformance, initialDipLeaders });
   const [activeSlide, setActiveSlide] = useState(0);
+  /**
+   * Which scenes have earned the right to exist yet.
+   *
+   * All four used to mount at once and merely fade between opacities, which meant the browser
+   * hydrated four full scenes — and fired the dip board's request — before a reader had seen
+   * anything but the first. Three of those four were work done for a slide nobody was looking at,
+   * and it landed squarely in the page's blocking time.
+   *
+   * A slide mounts when it first becomes active and then stays mounted, so the crossfade still has
+   * something to fade out of on every subsequent pass, and no scene ever refetches on its way back.
+   */
+  const [mounted, setMounted] = useState<number[]>([0]);
   const goToAdjacentSlide = (step: 1 | -1) => {
     setActiveSlide((previous) => (previous + step + slides.length) % slides.length);
   };
+
+  useEffect(() => {
+    setMounted((previous) => (previous.includes(activeSlide) ? previous : [...previous, activeSlide]));
+  }, [activeSlide]);
 
   useEffect(() => {
     // A setTimeout keyed off activeSlide (rather than a mount-time setInterval) means a
@@ -93,7 +109,7 @@ export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null
               aria-hidden={index !== activeSlide}
               className={`absolute inset-0 transition-opacity duration-700 ${index === activeSlide ? "opacity-100" : "opacity-0"}`}
             >
-              {slide.scene}
+              {mounted.includes(index) && slide.scene}
             </div>
           ))}
 

@@ -168,7 +168,8 @@ describe("sign-up", () => {
 
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
-    expect(payload.user).toMatchObject({ name: "Aarav Sharma", email: "aarav@example.com", plan: "Starter" });
+    // No plan: a new account is on the three-day trial and has bought nothing.
+    expect(payload.user).toMatchObject({ name: "Aarav Sharma", email: "aarav@example.com", plan: null });
     expect(payload.token).toEqual(expect.stringMatching(/^stockers\./));
 
     // The row is really in the table, in the columns the schema declares.
@@ -177,7 +178,7 @@ describe("sign-up", () => {
       email: "aarav@example.com",
       name: "Aarav Sharma",
       mobile: "9876543210",
-      plan: "Starter",
+      plan: null,
       role: "user",
       email_verified_at: null,
     });

@@ -56,6 +56,16 @@ Dashboard → **SQL Editor** → **New query** → paste [`schema.sql`](./schema
 It is safe to run more than once — every statement is `if not exists` — so re-run it after pulling
 a change rather than trying to work out what is missing.
 
+### Migrations, for a project that already has data
+
+`schema.sql` only creates what is missing, so it cannot alter a column that already exists. Where a
+change needs that, there is a numbered file in [`migrations/`](./migrations) to run once, in order.
+Each is idempotent and wrapped in a transaction.
+
+| Migration | What it does | When to run it |
+| --- | --- | --- |
+| [`0001-nullable-plan.sql`](./migrations/0001-nullable-plan.sql) | Lets `users.plan` be null, and clears the placeholder `'Starter'` off accounts that never paid | **Before** deploying the build that stops stamping a plan on new sign-ups — the old `not null` constraint would make sign-up fail |
+
 ## 3. Collect the two values
 
 Dashboard → **Project Settings** → **API**:

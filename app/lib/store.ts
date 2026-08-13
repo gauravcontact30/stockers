@@ -34,7 +34,16 @@ export type AppUser = {
   name: string;
   email: string;
   passwordHash: string;
-  plan: PlanName;
+  /**
+   * The plan this account has bought, or null when it has bought none.
+   *
+   * Null is the state every account starts in and returns to nothing but a purchase moves it out
+   * of. It used to default to "Starter", which meant a brand-new account and a paying Starter
+   * subscriber were indistinguishable in the record — the admin's user list could not tell them
+   * apart, and neither could anything else. Access is still decided by `subscribedUntil` and the
+   * trial clock, not by this field; this names *what* was bought, not *whether* it is live.
+   */
+  plan: PlanName | null;
   createdAt: string;
   /**
    * The ten-digit Indian mobile number, stored without a country code or separators.
@@ -284,7 +293,9 @@ function fromRow(row: UserRow): AppUser {
     name: row.name,
     email: row.email,
     passwordHash: row.password_hash,
-    plan: row.plan as PlanName,
+    // An empty string is what a NOT NULL column holds for "no plan", so both spellings of absence
+    // read back as null rather than as a plan named "".
+    plan: (row.plan as PlanName | null) || null,
     createdAt: row.created_at,
     mobile: row.mobile,
     role: (row.role as UserRole | null) ?? "user",
@@ -415,7 +426,8 @@ export async function createUser(user: {
   name: string;
   email: string;
   password: string;
-  plan: PlanName;
+  /** Omitted for an ordinary sign-up: an account starts with no plan and a live trial. */
+  plan?: PlanName | null;
   mobile?: string | null;
 }) {
   const normalizedEmail = user.email.trim().toLowerCase();
@@ -426,7 +438,7 @@ export async function createUser(user: {
     name: user.name.trim(),
     email: normalizedEmail,
     passwordHash: hashPassword(user.password),
-    plan: user.plan,
+    plan: user.plan ?? null,
     createdAt: now,
     // Normalised on the way in, so every stored number has the same shape whatever was typed.
     mobile: user.mobile ? normaliseMobile(user.mobile) : null,

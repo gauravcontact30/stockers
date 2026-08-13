@@ -24,7 +24,14 @@ create table if not exists public.users (
   -- scrypt, as `<salt>:<derived key>`, both hex. Never leaves the server: `listUsers` strips it.
   password_hash text not null,
 
-  plan text not null default 'Starter' check (plan in ('Starter', 'Pro', 'Elite')),
+  -- Null until something is bought. An account starts on the three-day trial holding no plan at
+  -- all, and it is the absence here — not a placeholder tier — that separates it from a paying
+  -- Starter subscriber. Access is decided by `subscribed_until` and the trial clock; this column
+  -- records *what* was bought, not whether it is still live.
+  --
+  -- Was `not null default 'Starter'`, which made every sign-up indistinguishable from a paid
+  -- Starter account. Existing databases need the migration in ./migrations/0001-nullable-plan.sql.
+  plan text check (plan in ('Starter', 'Pro', 'Elite')),
 
   -- Timestamps are text, holding the exact ISO-8601 string `new Date().toISOString()` produced,
   -- rather than timestamptz. That is deliberate. The application compares and sorts these as

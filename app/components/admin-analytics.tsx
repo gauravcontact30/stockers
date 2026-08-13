@@ -11,8 +11,10 @@ import type {
   Funnel,
   RankedRow,
 } from "../lib/analytics-report";
+import { AI_FEATURES, TIER_LABEL, tierForPlan, type PlanTier } from "../lib/plan-tiers";
 import { DataTable, type Column } from "./data-table";
 import { PieChart, type Slice } from "./pie-chart";
+import { LockIcon, TIER_CHROME } from "./plan-pill";
 import { authHeaders } from "./subscription-provider";
 
 /**
@@ -535,7 +537,7 @@ export function FeatureRanking({ features }: { features: FeatureUsage[] }) {
 export function matchesUser(user: AnalyticsUserRow, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
-  return `${user.name} ${user.email} ${user.mobile ?? ""} ${user.plan} ${user.topFeature ?? ""}`.toLowerCase().includes(needle);
+  return `${user.name} ${user.email} ${user.mobile ?? ""} ${user.plan ?? NO_PLAN} ${user.topFeature ?? ""}`.toLowerCase().includes(needle);
 }
 
 /**
@@ -559,7 +561,7 @@ export function EngagementTable({ users }: { users: AnalyticsUserRow[] }) {
       sortValue: (user) => user.name,
     },
     { key: "mobile", header: "Mobile", cell: (user) => user.mobile ?? "-", className: "whitespace-nowrap" },
-    { key: "plan", header: "Plan", cell: (user) => user.plan, sortValue: (user) => user.plan },
+    { key: "plan", header: "Plan", cell: (user) => <PlanCell plan={user.plan} absent={NO_PLAN} />, sortValue: (user) => user.plan },
     { key: "visits", header: "Visits", align: "right", cell: (u) => formatNumber(u.visits), sortValue: (u) => u.visits, className: "tabular-nums" },
     { key: "actions", header: "Actions", align: "right", cell: (u) => formatNumber(u.actions), sortValue: (u) => u.actions, className: "tabular-nums" },
     { key: "opens", header: "AI opens", align: "right", cell: (u) => formatNumber(u.featureOpens), sortValue: (u) => u.featureOpens, className: "tabular-nums" },
@@ -581,7 +583,7 @@ export function EngagementTable({ users }: { users: AnalyticsUserRow[] }) {
       columns={columns}
       rowKey={(user) => user.id}
       caption="Signed-in accounts active in this window"
-      searchFields={(user) => [user.name, user.email, user.mobile, user.plan, user.topFeature, user.topAction]}
+      searchFields={(user) => [user.name, user.email, user.mobile, user.plan ?? NO_PLAN, user.topFeature, user.topAction]}
       searchPlaceholder="Search name, email, mobile, plan or feature"
       searchLabel="Search accounts"
       filters={[
@@ -592,8 +594,9 @@ export function EngagementTable({ users }: { users: AnalyticsUserRow[] }) {
             { value: "Starter", label: "Starter" },
             { value: "Pro", label: "Pro" },
             { value: "Elite", label: "Elite" },
+            { value: "none", label: NO_PLAN },
           ],
-          test: (user, value) => user.plan === value,
+          test: (user, value) => (value === "none" ? user.plan === null : user.plan === value),
         },
         {
           key: "device",
@@ -650,6 +653,82 @@ export function activityDetail(row: ActivityRow): string {
   return row.label ?? row.feature ?? row.path ?? "-";
 }
 
+/**
+ * Every AI feature's tier, keyed by the label the feed carries.
+ *
+ * The feed stores the feature's admin-facing label rather than its slug — that is what makes the
+ * row readable without a lookup table on the server — so the tier is recovered here from the same
+ * `AI_FEATURES` list the paywall itself is driven by. Labels are unique across the three tiers, and
+ * a label this build does not know resolves to no tier rather than to the wrong one.
+ */
+const TIER_BY_FEATURE_LABEL: Record<string, PlanTier> = Object.fromEntries(
+  AI_FEATURES.map((feature) => [feature.label, feature.tier]),
+);
+
+/** The plan an activity belongs to: the AI feature's own tier, or null for everything else. */
+export function activityTier(row: ActivityRow): PlanTier | null {
+  return row.feature ? (TIER_BY_FEATURE_LABEL[row.feature] ?? null) : null;
+}
+
+const PILL = "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold";
+
+/** What an account with no purchased plan is called, everywhere it has to be named. */
+export const NO_PLAN = "No plan";
+
+/** The quiet chrome for the two rows that are on no tier: a guest, and a trial-or-lapsed account. */
+const NEUTRAL_PILL = "border-dashed border-slate-300 bg-transparent text-slate-500 dark:border-slate-600 dark:text-slate-400";
+
+/**
+ * The chrome for a row that is not an AI feature — deliberately quiet.
+ *
+ * The plan palette (sky, emerald, violet) is spent on the AI rows, which is the whole point of
+ * colouring this column: a reader scanning the feed should be able to pick out Elite usage from
+ * across the room. Giving a page visit its own hue would put five more colours in the way of that,
+ * so browsing is slate and the two account events share one tone that no tier uses.
+ */
+const EVENT_CHROME: Record<ActivityRow["type"], string> = {
+  visit: "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  action: "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  signin: "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-300",
+  signup: "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-300",
+  // Only reachable for a feature key this build no longer knows, which is neither a tier nor a
+  // plain interaction — amber says "something the paywall touched" without claiming a plan.
+  feature: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
+};
+
+/** A refusal, whatever tier it was aimed at. Amber outranks the plan colour: it did not happen. */
+const BLOCKED_CHROME = "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300";
+
+/**
+ * One activity, as a pill tinted by the plan it belongs to.
+ *
+ * The tier is written into the pill as well as painted on it — colour alone is not a label, and an
+ * admin reading this feed in a screenshot or with a colour-vision deficiency needs the word.
+ */
+function ActivityPill({ row }: { row: ActivityRow }) {
+  const tier = activityTier(row);
+  const chrome = row.blocked ? BLOCKED_CHROME : tier ? TIER_CHROME[tier].pill : EVENT_CHROME[row.type];
+
+  return (
+    <span
+      className={`${PILL} ${chrome}`}
+      title={tier ? (row.blocked ? `${TIER_LABEL[tier]} feature, refused` : `${TIER_LABEL[tier]} AI feature`) : EVENT_LABEL[row.type]}
+    >
+      {row.blocked && <LockIcon className="h-3 w-3 shrink-0" />}
+      {activityLabel(row)}
+      {tier && <span className="font-bold uppercase tracking-wider opacity-70">· {TIER_LABEL[tier]}</span>}
+    </span>
+  );
+}
+
+/** The account's own plan, in the same three colours — or the pill a signed-out arrival gets. */
+function PlanCell({ plan, absent = "Guest" }: { plan: string | null; absent?: string }) {
+  if (!plan) return <span className={`${PILL} ${NEUTRAL_PILL}`}>{absent}</span>;
+
+  const tier = tierForPlan(plan);
+  return <span className={`${PILL} ${TIER_CHROME[tier].pill}`}>{TIER_LABEL[tier]}</span>;
+}
+
 export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
   const columns: Column<ActivityRow>[] = [
     { key: "at", header: "When", cell: (row) => formatMoment(row.at), sortValue: (row) => row.at, className: "whitespace-nowrap" },
@@ -666,12 +745,19 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
     },
     { key: "mobile", header: "Mobile", cell: (row) => row.mobile ?? "-", className: "whitespace-nowrap" },
     {
+      key: "plan",
+      header: "Plan",
+      cell: (row) => <PlanCell plan={row.plan} />,
+      // Guests sort last rather than first: "" would put every signed-out arrival at the top of an
+      // ascending sort, which is the one grouping this column is never asked for.
+      sortValue: (row) => row.plan,
+    },
+    {
       key: "what",
       header: "What they did",
-      cell: (row) => (
-        <span className={row.blocked ? "font-semibold text-amber-600 dark:text-amber-400" : ""}>{activityLabel(row)}</span>
-      ),
+      cell: (row) => <ActivityPill row={row} />,
       sortValue: (row) => activityLabel(row),
+      className: "whitespace-nowrap",
     },
     { key: "detail", header: "Detail", cell: (row) => activityDetail(row), sortValue: (row) => activityDetail(row) },
     { key: "device", header: "Device", cell: (row) => row.device ?? "-", sortValue: (row) => row.device },
@@ -683,8 +769,14 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
       columns={columns}
       rowKey={(row) => row.id}
       caption="The most recent activity across the site"
-      searchFields={(row) => [row.name, row.email, row.mobile, activityLabel(row), activityDetail(row), row.plan]}
-      searchPlaceholder="Search who, what or which stock"
+      // The tier rides along in the search pool as well as on the pill, so an admin can type "elite"
+      // and get every Elite feature touch back — the typeahead only ever offers values that are
+      // genuinely on screen, so the suggestion is never a dead end.
+      searchFields={(row) => {
+        const tier = activityTier(row);
+        return [row.name, row.email, row.mobile, activityLabel(row), activityDetail(row), row.plan, tier && TIER_LABEL[tier]];
+      }}
+      searchPlaceholder="Search who, what, which stock or which plan"
       searchLabel="Search activity"
       filters={[
         {
@@ -700,13 +792,25 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
           test: (row, value) => row.type === value,
         },
         {
-          key: "who",
-          label: "Account",
+          key: "plan",
+          label: "Plan",
           options: [
-            { value: "user", label: "Signed in" },
+            { value: "Starter", label: "Starter" },
+            { value: "Pro", label: "Pro" },
+            { value: "Elite", label: "Elite" },
             { value: "guest", label: "Not signed in" },
           ],
-          test: (row, value) => (value === "user" ? row.email !== null : row.email === null),
+          test: (row, value) => (value === "guest" ? row.plan === null : row.plan === value),
+        },
+        {
+          key: "tier",
+          label: "AI feature",
+          options: [
+            { value: "starter", label: "Starter features" },
+            { value: "pro", label: "Pro features" },
+            { value: "elite", label: "Elite features" },
+          ],
+          test: (row, value) => activityTier(row) === value,
         },
         {
           key: "blocked",
@@ -718,8 +822,8 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
           test: (row, value) => row.blocked === (value === "blocked"),
         },
       ]}
-      pageSize={12}
-      minWidth={900}
+      pageSize={5}
+      minWidth={1020}
       empty="Nothing of this kind has been recorded in this window yet."
     />
   );
@@ -827,7 +931,13 @@ export function AdminAnalytics() {
   const planMix = useMemo((): RankedRow[] => {
     const users = report?.users ?? [];
     const counts = new Map<string, number>();
-    for (const user of users) counts.set(user.plan, (counts.get(user.plan) ?? 0) + 1);
+    // Accounts that have bought nothing are a real slice of the mix rather than a gap in it — on a
+    // trial-first product they are usually the largest one, and dropping them would make every
+    // paid share look bigger than it is.
+    for (const user of users) {
+      const plan = user.plan ?? NO_PLAN;
+      counts.set(plan, (counts.get(plan) ?? 0) + 1);
+    }
 
     return [...counts.entries()]
       .map(([plan, count]) => ({ key: plan, label: plan, count, users: count, share: users.length > 0 ? count / users.length : 0 }))
@@ -1023,7 +1133,7 @@ export function AdminAnalytics() {
           <section className={CARD}>
             <SectionHead
               title="Recent activity"
-              blurb={`The latest events, newest first, from the ${report.backend === "supabase" ? "Supabase" : "local JSON"} store.`}
+              blurb={`The latest events, newest first, from the ${report.backend === "supabase" ? "Supabase" : "local JSON"} store. Each AI touch is pilled in its plan's colour — sky for Starter, emerald for Pro, violet for Elite — and amber where the paywall refused it.`}
             />
             <ActivityFeed rows={report.recent} />
           </section>

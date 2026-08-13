@@ -41,9 +41,10 @@ export async function POST(request: Request) {
       name: fields.name,
       email: fields.email,
       password: fields.password,
-      // Everyone starts on the free trial. A plan is chosen at checkout, where its price and what
-      // it buys are both on screen — not on a form before they have seen a single board.
-      plan: "Starter",
+      // No plan, deliberately. Everyone starts on the three-day trial, which opens every AI
+      // feature; a plan is bought at checkout, where its price and what it buys are both on screen
+      // — not stamped on the account at sign-up, where "Starter" would be a subscription nobody
+      // asked for and nobody paid for.
       mobile: normaliseMobile(fields.mobile),
     });
 

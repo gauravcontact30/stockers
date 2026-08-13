@@ -63,7 +63,9 @@ describe("cacheInventory", () => {
 
   /** Measuring means serialising, which is far too expensive to repeat on every poll. */
   it("measures a value once and re-measures only when it is replaced", async () => {
-    let value = { a: 1 };
+    // Typed wider than its first value: the point of the test is to replace it with a bigger
+    // object, and an inferred `{ a: number }` makes that a compile error rather than a re-measure.
+    let value: Record<string, number> = { a: 1 };
     const read = revalidating({ key: "t:sized", ttlMs: 60_000, load: async () => value });
     await read();
 

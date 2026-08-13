@@ -61,20 +61,22 @@ describe("server feature access", () => {
     expect(canUseFeature(activeStatus("elite"), { intel: true }, "intel")).toBe(false);
   });
 
-  it("grants Starter and Pro AI features for the first three calendar days after signup", () => {
+  it("grants every AI feature, Elite included, for the first three calendar days after signup", () => {
     const status = accessStatusFor(newUser as never, "2026-08-03");
 
     expect(status).toMatchObject({
       state: "trial",
       allowed: true,
-      tier: "pro",
-      planName: "Pro",
+      tier: "elite",
+      planName: "Elite",
       marketDaysLeft: 1,
       trialEndsAt: "2026-08-04",
     });
+    // One from each tier: the trial is the whole product for three days, not a sample of the
+    // cheapest part of it.
     expect(canUseFeature(status, {}, "market-pulse")).toBe(true);
     expect(canUseFeature(status, {}, "research")).toBe(true);
-    expect(canUseFeature(status, {}, "intel")).toBe(false);
+    expect(canUseFeature(status, {}, "intel")).toBe(true);
   });
 
   it("locks every AI tier automatically when the three-day trial expires", () => {
@@ -87,7 +89,19 @@ describe("server feature access", () => {
       planName: null,
       marketDaysLeft: 0,
     });
+    // Everything the trial opened closes again, at every tier, until something is bought.
     expect(canUseFeature(status, {}, "market-pulse")).toBe(false);
     expect(canUseFeature(status, {}, "research")).toBe(false);
+    expect(canUseFeature(status, {}, "intel")).toBe(false);
+  });
+
+  it("reopens only what was actually bought once the trial has lapsed", () => {
+    // The point of closing the trial at Elite: what comes back is the plan, not the trial.
+    const starter = accessStatusFor({ ...newUser, plan: "Starter", subscribedUntil: "2026-09-01" } as never, "2026-08-10");
+
+    expect(starter).toMatchObject({ state: "active", tier: "starter", planName: "Starter" });
+    expect(canUseFeature(starter, {}, "market-pulse")).toBe(true);
+    expect(canUseFeature(starter, {}, "research")).toBe(false);
+    expect(canUseFeature(starter, {}, "intel")).toBe(false);
   });
 });

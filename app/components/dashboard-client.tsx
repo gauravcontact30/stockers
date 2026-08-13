@@ -195,7 +195,11 @@ export function DashboardClient() {
   };
 
   const analysisMeta = analysis ? indianStocks.find((s) => s.symbol === analysis.stock) : undefined;
-  const displayTier = tierForPlan(user?.plan);
+  // The tier the server actually grants, not the plan on the account record. During the free trial
+  // those disagree on purpose: nothing has been bought, so the record holds no plan, while access
+  // runs at Elite for three days. Reading the record here badged a trial user "Starter" and made
+  // the trial look like the cheapest plan rather than the whole product.
+  const displayTier = subscriptionStatus?.tier ?? tierForPlan(user?.plan);
 
   const overview = (
     <div className="flex flex-col gap-6">

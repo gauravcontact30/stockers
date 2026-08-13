@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { type ClientReview } from "../lib/client-review";
 
@@ -90,10 +91,17 @@ function Slide({ review }: { review: ClientReview }) {
           the column. There are only ever a handful of reviews; low priority is enough. */}
       <div className="flex w-32 shrink-0 flex-col items-center pl-1 text-center sm:w-40">
         <span className={`inline-flex h-20 w-20 shrink-0 rounded-full bg-gradient-to-br p-[3px] sm:h-24 sm:w-24 ${review.accent}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- reviewer photos are uploaded files, not app-owned assets. */}
-          <img
+          {/* Through the optimiser rather than raw. These are phone-camera portraits somebody
+              uploaded through the admin form — the two on the site are 481KB and 357KB — and they
+              are drawn into a 90px circle. Served as-is that is most of a megabyte to paint a
+              thumbnail; at this size, in AVIF, it is a few kilobytes each. `quality` is deliberately
+              below the default: nothing at 90px across can show the difference. */}
+          <Image
             src={review.photo}
             alt={`${review.name} reviewer profile`}
+            width={96}
+            height={96}
+            quality={60}
             className="h-full w-full rounded-full object-cover ring-2 ring-white dark:ring-slate-900"
             fetchPriority="low"
           />

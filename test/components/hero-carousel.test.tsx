@@ -104,15 +104,33 @@ describe("HeroCarousel", () => {
   });
 
   // One scene per question the product answers, in the order a reader meets them.
-  it("mounts all four scenes: movers, defence, data centres and the winners on sale", () => {
+  it("mounts only the first scene, and the rest as the reader reaches them", () => {
     render(<HeroCarousel />);
+
+    // Three of the four used to hydrate immediately for a reader looking at the first — work that
+    // landed straight in the page's blocking time, and one of them fired a request for a board
+    // nobody had asked to see.
+    expect(screen.getByText("Today's top performers")).toBeInTheDocument();
+    expect(screen.queryByText("Compare three defence stocks by market performance")).not.toBeInTheDocument();
+    expect(screen.queryByText("Compare three data-centre stocks by market performance")).not.toBeInTheDocument();
+    expect(screen.queryByText("Best of the year, cheapest today")).not.toBeInTheDocument();
+
+    tick();
+    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
+  });
+
+  it("keeps a scene mounted once seen, so the crossfade has something to fade out of", () => {
+    render(<HeroCarousel />);
+    tick();
+    tick();
+
+    // Slide one is still in the tree behind slides two and three, not torn down and refetched.
     expect(screen.getByText("Today's top performers")).toBeInTheDocument();
     expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
     expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
-    expect(screen.getByText("Best of the year, cheapest today")).toBeInTheDocument();
   });
 
-  it("passes cached server figures into slides two, three and four before client fetch resolves", () => {
+  it("passes cached server figures into the slides as each is reached, before client fetch resolves", () => {
     render(
       <HeroCarousel
         initialPerformance={[
@@ -146,8 +164,13 @@ describe("HeroCarousel", () => {
       />,
     );
 
+    // Walked to each slide in turn: the figures are handed in as props, so a scene has them the
+    // moment it mounts rather than after a fetch — which is the property this test is about.
+    tick();
     expect(screen.getByText("₹4,100.00")).toBeInTheDocument();
+    tick();
     expect(screen.getByText("₹18,000.00")).toBeInTheDocument();
+    tick();
     expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
     expect(screen.queryAllByText("Updating from live feed")).toHaveLength(0);
   });

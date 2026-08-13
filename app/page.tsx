@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
+import { HeadToHead } from "./components/head-to-head";
 import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
 import { HeroCarousel } from "./components/hero-carousel";
 import { Logo } from "./components/logo";
@@ -19,6 +20,7 @@ import { getCachedPerformanceSummaries } from "./lib/stock-performance";
 export const revalidate = 60;
 
 const navLinks = [
+  { href: "#head-to-head", label: "Beat the AI" },
   { href: "#bse-movers", label: "Gainers & Losers" },
   { href: "#bse-sectors", label: "By Category" },
   { href: "#ownership", label: "Who owns what" },
@@ -111,6 +113,11 @@ export default async function Home() {
         <div className="bleed-gutter">
           <HeroCarousel initialPerformance={initialPerformance} initialDipLeaders={initialDipLeaders} />
         </div>
+
+        {/* Straight under the slider, before any of the boards. The boards are the evidence; this is
+            the claim being tested, and a reader who plays one match has understood what the site is
+            for better than the next three sections could explain it. */}
+        <HeadToHead />
 
         <BandHeading
           eyebrow="01 · The session, both ways"

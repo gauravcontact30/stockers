@@ -24,7 +24,9 @@ function user(overrides: Partial<AdminUser> = {}): AdminUser {
     id: "u1",
     name: "Aarav Sharma",
     email: "aarav@example.com",
-    plan: "Starter",
+    // No plan by default: an account that has bought nothing, which is what every account is until
+    // it pays. That is also what puts it on the Application Users page rather than the other one.
+    plan: null,
     role: "user",
     createdAt: "2026-08-01T10:00:00.000Z",
     subscribedUntil: null,
@@ -34,13 +36,22 @@ function user(overrides: Partial<AdminUser> = {}): AdminUser {
   };
 }
 
+/**
+ * One roster spanning both pages, because the split is the thing under test.
+ *
+ * u1, u3 and u4 have bought nothing and belong to Application Users; u2 and u5 have bought a plan
+ * and belong to Subscription Users — u5 having let it lapse, which is precisely the account that
+ * must not fall off the subscriptions page when its paid period ends.
+ */
 const ROSTER: AdminUser[] = [
   user({ id: "u1", name: "Aarav Sharma", email: "aarav@example.com", emailVerified: true, emailVerifiedAt: "2026-08-02T00:00:00.000Z" }),
   user({ id: "u2", name: "Priya Nair", email: "priya@example.com", plan: "Pro", subscribedUntil: "2026-09-07" }),
   user({ id: "u3", name: "Root Admin", email: "root@example.com", role: "admin", emailVerified: true }),
+  user({ id: "u4", name: "Meera Das", email: "meera@example.com" }),
+  user({ id: "u5", name: "Vikram Rao", email: "vikram@example.com", plan: "Elite", subscribedUntil: "2026-07-01", emailVerified: true }),
 ];
 
-const SUMMARY = { total: 3, verified: 2, subscribed: 1, admins: 1, pro: 1, elite: 0 };
+const SUMMARY = { total: 5, verified: 3, subscribed: 1, admins: 1, pro: 1, elite: 1 };
 
 function mockList(users: AdminUser[] = ROSTER) {
   global.fetch = jest.fn(() =>
@@ -53,16 +64,16 @@ function mockList(users: AdminUser[] = ROSTER) {
 }
 
 describe("selectUsers", () => {
-  it("returns everyone when nothing is asked of it", () => {
-    expect(selectUsers(ROSTER, { query: "", filter: "all", today: TODAY })).toHaveLength(3);
+  it("returns everyone on the page it was asked about", () => {
+    expect(selectUsers(ROSTER, { query: "", filter: "all", today: TODAY }).map((u) => u.id)).toEqual(["u1", "u3", "u4"]);
   });
 
   it("searches name, email and id alike, case-insensitively", () => {
-    const byName = selectUsers(ROSTER, { query: "priya", filter: "all", today: TODAY });
+    const byName = selectUsers(ROSTER, { query: "meera", filter: "all", today: TODAY });
     const byEmail = selectUsers(ROSTER, { query: "AARAV@EXAMPLE", filter: "all", today: TODAY });
     const byId = selectUsers(ROSTER, { query: "u3", filter: "all", today: TODAY });
 
-    expect(byName.map((u) => u.id)).toEqual(["u2"]);
+    expect(byName.map((u) => u.id)).toEqual(["u4"]);
     expect(byEmail.map((u) => u.id)).toEqual(["u1"]);
     expect(byId.map((u) => u.id)).toEqual(["u3"]);
   });
@@ -75,16 +86,43 @@ describe("selectUsers", () => {
     const ids = (filter: Parameters<typeof selectUsers>[1]["filter"]) =>
       selectUsers(ROSTER, { query: "", filter, today: TODAY }).map((u) => u.id);
 
-    expect(ids("unverified")).toEqual(["u2"]);
-    expect(ids("subscribed")).toEqual(["u2"]);
+    expect(ids("unverified")).toEqual(["u4"]);
+    // Nobody on the Application Users page holds a paid period — that is what the page means.
+    expect(ids("subscribed")).toEqual([]);
     expect(ids("admins")).toEqual(["u3"]);
-    // "On trial" is everyone without a live paid period, admins excluded â€” they never pay.
-    expect(ids("trial")).toEqual(["u1"]);
+    // "On trial" is everyone without a live paid period, admins excluded — they never pay.
+    expect(ids("trial")).toEqual(["u1", "u4"]);
   });
 
   it("combines a search with a filter", () => {
-    expect(selectUsers(ROSTER, { query: "priya", filter: "unverified", today: TODAY }).map((u) => u.id)).toEqual(["u2"]);
-    expect(selectUsers(ROSTER, { query: "priya", filter: "admins", today: TODAY })).toEqual([]);
+    expect(selectUsers(ROSTER, { query: "meera", filter: "unverified", today: TODAY }).map((u) => u.id)).toEqual(["u4"]);
+    expect(selectUsers(ROSTER, { query: "meera", filter: "admins", today: TODAY })).toEqual([]);
+  });
+});
+
+describe("the split between the two user pages", () => {
+  const ids = (mode: "users" | "subscriptions") =>
+    selectUsers(ROSTER, { query: "", filter: "all", today: TODAY, mode }).map((u) => u.id);
+
+  it("puts the accounts that have bought nothing on Application Users", () => {
+    expect(ids("users")).toEqual(["u1", "u3", "u4"]);
+  });
+
+  it("puts the accounts that have bought a plan on Subscription Users, lapsed ones included", () => {
+    // u5's paid period ran out in July and it stays here: a lapsed subscriber is a renewal to
+    // chase, and moving it back across would hide it from the page that exists to find it.
+    expect(ids("subscriptions")).toEqual(["u2", "u5"]);
+  });
+
+  it("partitions the roster, so no account is on both pages or on neither", () => {
+    expect([...ids("users"), ...ids("subscriptions")].sort()).toEqual(ROSTER.map((u) => u.id).sort());
+  });
+
+  it("refuses to let a filter widen a page past its own scope", () => {
+    // "Subscribed" on the Application Users page cannot reach the subscribers, and "on trial" on
+    // the Subscription Users page cannot reach the trials. The scope is not a default; it is a wall.
+    expect(selectUsers(ROSTER, { query: "priya", filter: "subscribed", today: TODAY, mode: "users" })).toEqual([]);
+    expect(selectUsers(ROSTER, { query: "aarav", filter: "trial", today: TODAY, mode: "subscriptions" })).toEqual([]);
   });
 });
 
@@ -130,18 +168,32 @@ describe("AdminUsers", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("lists every account with its standing, and the totals above it", async () => {
+  it("lists the accounts that have bought nothing, and the totals above them", async () => {
     mockList();
     render(<AdminUsers />);
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(screen.getByText("Aarav Sharma")).toBeInTheDocument();
-    expect(screen.getByText("Priya Nair")).toBeInTheDocument();
-    expect(screen.getAllByText("verified")).toHaveLength(2);
-    expect(screen.getByText("unverified")).toBeInTheDocument();
+    expect(screen.getByText("Meera Das")).toBeInTheDocument();
     expect(screen.getByText("admin")).toBeInTheDocument();
-    expect(screen.getByText("subscribed")).toBeInTheDocument();
-    expect(screen.getByText("Accounts").previousSibling).toHaveTextContent("3");
+    // Every account here has bought nothing, so every plan cell says so.
+    expect(screen.getAllByText("No plan")).not.toHaveLength(0);
+    // The subscribers are on the other page entirely.
+    expect(screen.queryByText("Priya Nair")).not.toBeInTheDocument();
+    expect(screen.queryByText("Vikram Rao")).not.toBeInTheDocument();
+    // The tile counts the whole roster the server reported, not the slice this page shows.
+    expect(screen.getByText("Accounts").previousSibling).toHaveTextContent("5");
+  });
+
+  it("lists only the accounts that have bought a plan on the subscriptions page", async () => {
+    mockList();
+    render(<AdminUsers mode="subscriptions" />);
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("Priya Nair")).toBeInTheDocument();
+    expect(screen.getByText("Vikram Rao")).toBeInTheDocument();
+    expect(screen.queryByText("Aarav Sharma")).not.toBeInTheDocument();
+    expect(screen.queryByText("Meera Das")).not.toBeInTheDocument();
   });
 
   it("narrows the table by search", async () => {
@@ -150,9 +202,9 @@ describe("AdminUsers", () => {
     render(<AdminUsers />);
     await screen.findByRole("table");
 
-    await person.type(screen.getByLabelText("Search accounts"), "priya");
+    await person.type(screen.getByLabelText("Search accounts"), "meera");
 
-    expect(screen.getByText("Priya Nair")).toBeInTheDocument();
+    expect(screen.getByText("Meera Das")).toBeInTheDocument();
     expect(screen.queryByText("Aarav Sharma")).not.toBeInTheDocument();
   });
 
@@ -182,7 +234,7 @@ describe("AdminUsers", () => {
     expect(USER_FILTERS.map((f) => f.key)).toEqual(["all", "unverified", "subscribed", "trial", "admins"]);
   });
 
-  it("sends a plan change and re-renders from the server's answer", async () => {
+  it("sends a plan change and moves the account onto the subscriptions page", async () => {
     const person = userEvent.setup();
     const updated = ROSTER.map((u) => (u.id === "u1" ? { ...u, plan: "Pro" as const } : u));
 
@@ -203,7 +255,9 @@ describe("AdminUsers", () => {
     expect(url).toBe("/api/admin/users");
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body)).toEqual({ id: "u1", plan: "Pro" });
-    await waitFor(() => expect(within(row).getByLabelText("Plan for Aarav Sharma")).toHaveValue("Pro"));
+    // Giving an account a plan makes it a subscription user, so it leaves this page for the other
+    // one. The row vanishing is the partition working, not the change failing.
+    await waitFor(() => expect(screen.queryByText("Aarav Sharma")).not.toBeInTheDocument());
   });
 
   it("moves a Pro account up to Elite", async () => {
@@ -214,11 +268,26 @@ describe("AdminUsers", () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, users: ROSTER }) });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<AdminUsers />);
+    render(<AdminUsers mode="subscriptions" />);
     await screen.findByRole("table");
 
     await person.selectOptions(within(screen.getByText("Priya Nair").closest("tr")!).getByLabelText("Plan for Priya Nair"), "Elite");
     await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", plan: "Elite" }));
+  });
+
+  it("takes a plan back off an account granted one by mistake", async () => {
+    const person = userEvent.setup();
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, users: ROSTER }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers mode="subscriptions" />);
+    await screen.findByRole("table");
+
+    await person.selectOptions(within(screen.getByText("Priya Nair").closest("tr")!).getByLabelText("Plan for Priya Nair"), "");
+    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", plan: "" }));
   });
 
   it("empties the table rather than crashing if a change comes back without a roster", async () => {
@@ -250,10 +319,22 @@ describe("AdminUsers", () => {
     const trialRow = screen.getByText("Aarav Sharma").closest("tr")!;
     await person.click(within(trialRow).getByRole("button", { name: "Grant 30d" }));
     await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u1", subscription: "grant" }));
+  });
+
+  it("revokes a live subscription from the subscriptions page", async () => {
+    const person = userEvent.setup();
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, users: ROSTER }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers mode="subscriptions" />);
+    await screen.findByRole("table");
 
     const paidRow = screen.getByText("Priya Nair").closest("tr")!;
     await person.click(within(paidRow).getByRole("button", { name: "Revoke" }));
-    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ id: "u2", subscription: "revoke" }));
+    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", subscription: "revoke" }));
   });
 
   it("marks an unverified account verified, and offers that only where it applies", async () => {
@@ -270,9 +351,9 @@ describe("AdminUsers", () => {
     const verified = screen.getByText("Aarav Sharma").closest("tr")!;
     expect(within(verified).queryByRole("button", { name: "Mark verified" })).not.toBeInTheDocument();
 
-    const unverified = screen.getByText("Priya Nair").closest("tr")!;
+    const unverified = screen.getByText("Meera Das").closest("tr")!;
     await person.click(within(unverified).getByRole("button", { name: "Mark verified" }));
-    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u2", emailVerified: true }));
+    await waitFor(() => expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u4", emailVerified: true }));
   });
 
   it("promotes and demotes admins", async () => {

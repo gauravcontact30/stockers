@@ -58,8 +58,9 @@ export type AccessStatus = {
   /**
    * The highest tier this account may use, or null when it may use none.
    *
-   * Null for a lapsed account. A live free trial reports the Pro tier because it unlocks Starter
-   * and Pro AI features for three calendar days. See `accessStatusFor`.
+   * Null for a lapsed account. A live free trial reports the Elite tier, because the trial is the
+   * whole product for three calendar days rather than a sample of the cheapest part of it. See
+   * `accessStatusFor`.
    */
   tier: PlanTier | null;
   /** The plan the account is on, for the client to name it back to them. Null when unsubscribed. */
@@ -174,8 +175,13 @@ export function istDateOf(iso: string): string | null {
 /**
  * Works out what a user may currently access.
  *
- * A live trial grants Starter and Pro AI features for three IST calendar days. Paid plans use the
- * stored plan tier, Elite remains paid, and admins are unconditional above the top tier.
+ * A live trial grants *every* AI feature — Starter, Pro and Elite alike — for three IST calendar
+ * days. A trial that only opened the cheapest tier was arguing for the cheapest plan; showing the
+ * whole product and then closing it is what makes the choice at the end a real one. Paid plans use
+ * the stored plan tier, and admins are unconditional above the top tier.
+ *
+ * When the three days are spent and nothing has been bought, the account falls to `expired` and
+ * every AI feature locks until a plan is purchased.
  */
 export function accessStatusFor(user: AppUser | null, today: string, _holidays: Set<string> = new Set()): AccessStatus {
   const base = {
@@ -238,8 +244,11 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
       ...base,
       state: "trial",
       allowed: true,
-      tier: "pro",
-      planName: "Pro",
+      // The top tier, so nothing in the dashboard is locked while the trial is live. `state` is
+      // what the UI reads to say "free trial" rather than "Elite subscriber" — the tier is the
+      // access granted, not a claim about what they have paid for.
+      tier: "elite",
+      planName: "Elite",
       marketDaysUsed,
       marketDaysLeft,
       trialStartedAt,

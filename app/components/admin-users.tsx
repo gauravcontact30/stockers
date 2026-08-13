@@ -14,7 +14,8 @@ export type AdminUser = {
   id: string;
   name: string;
   email: string;
-  plan: "Starter" | "Pro" | "Elite";
+  /** The plan they have bought. Null for an account that has never bought one. */
+  plan: "Starter" | "Pro" | "Elite" | null;
   role?: "admin" | "user";
   createdAt: string;
   trialStartedAt?: string;
@@ -81,9 +82,43 @@ const SUBSCRIPTION_FILTERS: readonly { key: SubscriptionFilter; label: string }[
   { key: "expired", label: "Expired paid" },
 ];
 
+/**
+ * The plan badge for one account, or a plain "no plan" chip when nothing has been bought.
+ *
+ * `tierForPlan` answers null with "starter" — right for a paywall deciding what to unlock, wrong
+ * for a label, where it would print a Starter badge on an account that has never paid for one.
+ */
+function AccountPlan({ plan }: { plan: AdminUser["plan"] }) {
+  if (!plan) {
+    return (
+      <span className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-600 dark:text-slate-400">
+        No plan
+      </span>
+    );
+  }
+
+  return <PlanPill tier={tierForPlan(plan)} />;
+}
+
 /** Whether one account currently holds a paid period. */
 export function isSubscribed(user: AdminUser, today: string): boolean {
   return Boolean(user.subscribedUntil && user.subscribedUntil >= today);
+}
+
+/**
+ * Whether an account belongs to the Subscription Users page rather than the Application Users one.
+ *
+ * A subscription user is one who has *bought* something: they hold a plan, or a paid period is or
+ * was on the record. A lapsed subscriber stays on this page — they are a renewal conversation, not
+ * a sign-up one, and moving them across when their month ran out would hide exactly the people an
+ * admin opens this page to find.
+ *
+ * Everyone else — on trial, or expired having never paid — is an application user. The two are a
+ * partition: every account is on exactly one of the two pages, which is what makes "the respective
+ * page" a true statement rather than a default filter someone can switch off.
+ */
+export function isSubscriptionUser(user: AdminUser): boolean {
+  return user.plan !== null || Boolean(user.subscribedUntil);
 }
 
 /**
@@ -102,6 +137,7 @@ export function selectUsers(
     role = "all",
     verification = "all",
     subscription = "all",
+    mode = "users",
   }: {
     query: string;
     filter: UserFilter;
@@ -110,11 +146,17 @@ export function selectUsers(
     role?: RoleFilter;
     verification?: VerificationFilter;
     subscription?: SubscriptionFilter;
+    /** Which of the two user pages is asking. Applied before every other rule and not overridable. */
+    mode?: AdminUsersMode;
   },
 ): AdminUser[] {
   const needle = query.trim().toLowerCase();
 
   return users.filter((user) => {
+    // The page's own scope comes first and no control on screen can widen it: an admin narrowing
+    // the Subscription Users page must never be able to filter their way back to a trial account.
+    if (isSubscriptionUser(user) !== (mode === "subscriptions")) return false;
+
     if (needle) {
       const haystack = `${user.name} ${user.email} ${user.id}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
@@ -210,7 +252,7 @@ function ConfirmDeleteModal({
             <p className="font-semibold text-slate-900 dark:text-white">{user.name}</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <PlanPill tier={tierForPlan(user.plan)} />
+              <AccountPlan plan={user.plan} />
               {user.role === "admin" && <Pill tone="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400">admin</Pill>}
             </div>
           </div>
@@ -256,7 +298,10 @@ export function AdminUsers({
   const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilter>("all");
-  const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>(mode === "subscriptions" ? "active" : "all");
+  // "All" on both pages now that `mode` partitions the roster outright. Defaulting the
+  // subscriptions page to "active paid" used to be how it was scoped, and it hid the lapsed
+  // subscribers — the people that page exists to chase.
+  const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>("all");
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -378,8 +423,9 @@ export function AdminUsers({
         role: roleFilter,
         verification: verificationFilter,
         subscription: subscriptionFilter,
+        mode,
       }),
-    [users, query, filter, today, planFilter, roleFilter, verificationFilter, subscriptionFilter],
+    [users, query, filter, today, planFilter, roleFilter, verificationFilter, subscriptionFilter, mode],
   );
   const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
   const page = Math.min(currentPage, pageCount);
@@ -387,13 +433,16 @@ export function AdminUsers({
   const pageUsers = visible.slice(startIndex, startIndex + pageSize);
   const endIndex = visible.length === 0 ? 0 : startIndex + pageUsers.length;
   const searchSuggestions = useMemo(() => {
+    // Scoped to the page, like the table is. Offering a trial account as a suggestion on the
+    // Subscription Users page would be offering a row that cannot be shown when it is chosen.
+    const inScope = users.filter((user) => isSubscriptionUser(user) === (mode === "subscriptions"));
     const needle = query.trim().toLowerCase();
-    if (!needle) return users.slice(0, 6);
+    if (!needle) return inScope.slice(0, 6);
 
-    return users
+    return inScope
       .filter((user) => `${user.name} ${user.email} ${user.id}`.toLowerCase().includes(needle))
       .slice(0, 6);
-  }, [users, query]);
+  }, [users, query, mode]);
   const showSuggestions = searchFocused && searchSuggestions.length > 0;
   const canDeleteUsers = permissions.canDeleteUsers ?? status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
 
@@ -634,7 +683,7 @@ export function AdminUsers({
                     </td>
 
                     <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                      <PlanPill tier={tierForPlan(user.plan)} />
+                      <AccountPlan plan={user.plan} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-400">{formatDay(user.createdAt)}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-400">{formatDay(user.subscribedUntil)}</td>
@@ -642,12 +691,15 @@ export function AdminUsers({
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <select
-                          value={user.plan}
+                          // "" is the no-plan state, and it is selectable: an admin correcting a
+                          // plan granted by mistake needs a way back to "bought nothing".
+                          value={user.plan ?? ""}
                           disabled={busy}
                           aria-label={`Plan for ${user.name}`}
                           onChange={(event) => patch(user.id, { plan: event.target.value })}
                           className="h-8 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition hover:border-slate-400 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
                         >
+                          <option value="">No plan</option>
                           <option value="Starter">Starter</option>
                           <option value="Pro">Pro</option>
                           <option value="Elite">Elite</option>

@@ -147,9 +147,11 @@ describe("ClientReviewsCarousel", () => {
 
     expect(screen.getByText("Meera Iyer")).toBeInTheDocument();
     expect(screen.getByText("Long-term investor, Chennai")).toBeInTheDocument();
+    // Through the image optimiser rather than served raw: these are phone-camera uploads drawn
+    // into a 90px circle, and the original files run to hundreds of kilobytes each.
     expect(screen.getByAltText("Meera Iyer reviewer profile")).toHaveAttribute(
       "src",
-      "/uploads/client-reviews/meera-profile.png",
+      expect.stringContaining(encodeURIComponent("/uploads/client-reviews/meera-profile.png")),
     );
     expect(screen.getByRole("img", { name: "Verified reviewer" })).toBeInTheDocument();
   });

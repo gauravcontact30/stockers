@@ -97,6 +97,9 @@ export async function PATCH(request: Request) {
   const patch: Partial<AppUser> = {};
 
   if (plan === "Starter" || plan === "Pro" || plan === "Elite") patch.plan = plan;
+  // "" is the no-plan state the select offers, for undoing a plan granted by mistake. Distinct
+  // from the field being absent, which means this request is not about the plan at all.
+  else if (plan === "") patch.plan = null;
   if (role === "admin" || role === "user") patch.role = role;
 
   if (emailVerified === true || emailVerified === false) {
