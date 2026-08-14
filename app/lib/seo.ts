@@ -39,6 +39,10 @@ export const SITE_DESCRIPTION =
 export const OG_LOCALE = "en_IN";
 export const HTML_LANG = "en-IN";
 export const CANONICAL_ORIGIN = "https://www.stockersai.com";
+export const SEO_IMAGE_PATH = "/stockersai-ai-stock-research-india-image";
+export const SEO_IMAGE_ALT = "StockersAI BSE AI stock research platform for Indian markets";
+export const SEO_IMAGE_WIDTH = 1200;
+export const SEO_IMAGE_HEIGHT = 630;
 
 /** The whole public surface, in the order a sitemap should list it. Admin and API are not here. */
 export const PUBLIC_ROUTES = [
@@ -145,7 +149,7 @@ export function pageMetadata({
   keywords,
 }: PageSeo): Metadata {
   const url = absoluteUrl(path);
-  const image = absoluteUrl("/opengraph-image");
+  const image = absoluteUrl(SEO_IMAGE_PATH);
 
   return {
     title,
@@ -170,9 +174,9 @@ export function pageMetadata({
       images: [
         {
           url: image,
-          width: 1200,
-          height: 630,
-          alt: `${SITE_NAME} - AI stock research for Indian markets`,
+          width: SEO_IMAGE_WIDTH,
+          height: SEO_IMAGE_HEIGHT,
+          alt: SEO_IMAGE_ALT,
         },
       ],
     },
@@ -180,7 +184,7 @@ export function pageMetadata({
       card: "summary_large_image",
       title: `${title} · ${SITE_NAME}`,
       description,
-      images: [absoluteUrl("/twitter-image")],
+      images: [absoluteUrl(SEO_IMAGE_PATH)],
     },
   };
 }
@@ -201,6 +205,17 @@ export function pageMetadata({
 
 type JsonLdObject = Record<string, unknown>;
 
+export function imageObjectSchema(path = SEO_IMAGE_PATH, caption = SEO_IMAGE_ALT): JsonLdObject {
+  return {
+    "@type": "ImageObject",
+    url: absoluteUrl(path),
+    contentUrl: absoluteUrl(path),
+    width: SEO_IMAGE_WIDTH,
+    height: SEO_IMAGE_HEIGHT,
+    caption,
+  };
+}
+
 /**
  * Who publishes the site.
  *
@@ -220,6 +235,7 @@ export function organizationSchema(): JsonLdObject {
       "@type": "ImageObject",
       url: absoluteUrl("/icon.svg"),
     },
+    image: imageObjectSchema(),
     description: SITE_DESCRIPTION,
     contactPoint: [
       {
@@ -242,6 +258,7 @@ export function websiteSchema(): JsonLdObject {
     description: SITE_DESCRIPTION,
     inLanguage: HTML_LANG,
     publisher: { "@id": `${siteUrl()}/#organization` },
+    image: imageObjectSchema(),
   };
   // No `potentialAction: SearchAction`. The sitelinks search box it asks for requires a URL that
   // runs a site-wide search and renders the results as a page; every search on this site happens
@@ -269,6 +286,7 @@ export function webPageSchema({
     inLanguage: HTML_LANG,
     isPartOf: { "@id": `${siteUrl()}/#website` },
     publisher: { "@id": `${siteUrl()}/#organization` },
+    primaryImageOfPage: imageObjectSchema(),
     ...(breadcrumb ? { breadcrumb } : {}),
   };
 }
@@ -292,6 +310,8 @@ export function softwareApplicationSchema(): JsonLdObject {
     operatingSystem: "Web",
     description: SITE_DESCRIPTION,
     publisher: { "@id": `${siteUrl()}/#organization` },
+    image: imageObjectSchema(),
+    screenshot: imageObjectSchema(),
     offers: plans.map((plan) => ({
       "@type": "Offer",
       name: `${PLAN_LABEL[plan]} plan`,

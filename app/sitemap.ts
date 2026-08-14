@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl } from "./lib/seo";
+import clientReviews from "./data/client-reviews.json";
+import { absoluteUrl, SEO_IMAGE_PATH } from "./lib/seo";
 
 /**
  * The list of pages worth indexing, served at `/sitemap.xml`.
@@ -24,10 +25,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   /** The legal pages carry their own revision date in `lib/policy`; they change when it does. */
   const policyUpdated = new Date("2026-08-09");
+  const siteImage = absoluteUrl(SEO_IMAGE_PATH);
+  const homeImages = [
+    siteImage,
+    ...clientReviews.flatMap((review) => [review.photo, review.signatureImage].filter(Boolean) as string[]).map(absoluteUrl),
+  ];
 
   return [
     {
       url: absoluteUrl("/"),
+      images: homeImages,
       lastModified: built,
       // Every board on it re-reads the session. There is genuinely something new here daily.
       changeFrequency: "daily",
@@ -35,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: absoluteUrl("/news"),
+      images: [siteImage],
       lastModified: built,
       // Headlines, pulled live. Nothing on this site turns over faster.
       changeFrequency: "hourly",
@@ -42,12 +50,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: absoluteUrl("/about"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
       url: absoluteUrl("/contact"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "monthly",
       priority: 0.6,
@@ -57,24 +67,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // should not be re-crawled ahead of the board that changed this morning.
     {
       url: absoluteUrl("/privacy-policy"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: absoluteUrl("/disclaimer"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: absoluteUrl("/refund-policy"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: absoluteUrl("/return-policy"),
+      images: [siteImage],
       lastModified: policyUpdated,
       changeFrequency: "yearly",
       priority: 0.3,

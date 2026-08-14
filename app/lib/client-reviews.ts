@@ -43,14 +43,24 @@ function extensionFor(file: File): string | null {
   return byType[file.type] ?? null;
 }
 
-async function saveImage(file: File, id: string, kind: "profile" | "signature"): Promise<string> {
+function imageSlug(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "stockersai-review"
+  );
+}
+
+async function saveImage(file: File, id: string, kind: "profile" | "signature", label: string): Promise<string> {
   const extension = extensionFor(file);
   if (!extension) throw new Error(`${kind} image must be JPG, PNG, WebP, GIF or SVG.`);
   if (file.size <= 0) throw new Error(`${kind} image is empty.`);
   if (file.size > MAX_IMAGE_BYTES) throw new Error(`${kind} image must be 3 MB or smaller.`);
 
   await fs.mkdir(uploadDir, { recursive: true });
-  const filename = `${id}-${kind}.${extension}`;
+  const filename = `${imageSlug(`${label} stockersai review`)}-${id.slice(-8)}-${kind}.${extension}`;
   const target = path.join(uploadDir, filename);
   await fs.writeFile(target, Buffer.from(await file.arrayBuffer()));
   return `${publicPrefix}/${filename}`;
@@ -115,11 +125,11 @@ export async function createClientReview(form: FormData): Promise<ClientReview> 
     name,
     location: location || "India",
     role: role || "Investor",
-    photo: await saveImage(profile, id, "profile"),
+    photo: await saveImage(profile, id, "profile", name),
     accent: ACCENTS[uploaded.length % ACCENTS.length],
     comment,
     signature,
-    signatureImage: signatureImage instanceof File && signatureImage.size > 0 ? await saveImage(signatureImage, id, "signature") : null,
+    signatureImage: signatureImage instanceof File && signatureImage.size > 0 ? await saveImage(signatureImage, id, "signature", signature) : null,
     rating,
     createdAt: new Date().toISOString(),
   };

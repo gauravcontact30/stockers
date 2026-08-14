@@ -14,6 +14,10 @@ import {
   HTML_LANG,
   organizationSchema,
   SITE_DESCRIPTION,
+  SEO_IMAGE_ALT,
+  SEO_IMAGE_HEIGHT,
+  SEO_IMAGE_PATH,
+  SEO_IMAGE_WIDTH,
   SITE_KEYWORDS,
   SITE_NAME,
   SITE_TITLE,
@@ -69,10 +73,16 @@ export const metadata: Metadata = {
     locale: "en_IN",
     images: [
       {
+        url: absoluteUrl(SEO_IMAGE_PATH),
+        width: SEO_IMAGE_WIDTH,
+        height: SEO_IMAGE_HEIGHT,
+        alt: SEO_IMAGE_ALT,
+      },
+      {
         url: absoluteUrl("/opengraph-image"),
-        width: 1200,
-        height: 630,
-        alt: "StockersAI - AI stock research for Indian markets",
+        width: SEO_IMAGE_WIDTH,
+        height: SEO_IMAGE_HEIGHT,
+        alt: SEO_IMAGE_ALT,
       },
     ],
   },
@@ -80,7 +90,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [absoluteUrl("/twitter-image")],
+    images: [absoluteUrl(SEO_IMAGE_PATH)],
   },
 };
 

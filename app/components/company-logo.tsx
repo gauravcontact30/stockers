@@ -48,6 +48,13 @@ function checkedDomain(ticker: string): string | undefined {
   return domainsBySymbol.get(ticker);
 }
 
+let namesBySymbol: Map<string, string> | null = null;
+
+function companyName(ticker: string): string {
+  namesBySymbol ??= new Map(indianStocks.map((stock) => [stock.symbol, stock.name]));
+  return namesBySymbol.get(ticker) ?? ticker;
+}
+
 function logoSources(symbol: string, override?: string | null): string[] {
   if (override) return [override];
 
@@ -102,6 +109,8 @@ export function CompanyLogo({
   const index = attempt.symbol === symbol ? attempt.index : 0;
   const src = sources[index] ?? null;
   const box = { width: size, height: size };
+  const ticker = normaliseTicker(symbol);
+  const label = companyName(ticker);
 
   /**
    * The failure that happens before React is listening.
@@ -142,7 +151,7 @@ export function CompanyLogo({
       key={src}
       ref={image}
       src={src}
-      alt={`${symbol} logo`}
+      alt={`${label} (${ticker}) logo`}
       style={box}
       width={size}
       height={size}
