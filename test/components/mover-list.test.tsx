@@ -13,8 +13,11 @@ jest.mock("../../app/components/company-logo", () => ({
   CompanyLogo: ({ symbol }: { symbol: string }) => <span data-testid={`logo-${symbol}`} />,
 }));
 
-jest.mock("../../app/components/ownership-modal", () => ({
-  OwnershipModal: ({ symbol }: { symbol: string | null }) => <div data-testid="ownership-modal" data-symbol={symbol} />,
+const openStock = jest.fn();
+
+// The rows open the app-wide detail sheet now, not a shareholding-only modal of their own.
+jest.mock("../../app/components/stock-detail-provider", () => ({
+  useStockDetail: () => ({ openStock, close: jest.fn(), symbol: null }),
 }));
 
 function row(ticker: string, returnPercent: number, extra: Record<string, unknown> = {}) {
@@ -73,23 +76,24 @@ describe("MoverList", () => {
     expect(table.queryByText("HAL Ltd")).not.toBeInTheDocument();
   });
 
-  it("leaves the shareholding sheet unmounted until a company is opened", async () => {
+  it("opens the detail sheet on the company that was clicked", async () => {
     const person = userEvent.setup();
     renderList();
 
-    expect(screen.queryByTestId("ownership-modal")).not.toBeInTheDocument();
+    await person.click(screen.getByRole("button", { name: "Open HAL detail" }));
 
-    await person.click(screen.getByRole("button", { name: "Who owns HAL" }));
-
-    await waitFor(() => expect(screen.getByTestId("ownership-modal")).toHaveAttribute("data-symbol", "HAL"));
+    // Through the app-wide provider rather than a sheet of its own, so two cards on one page can
+    // never stack two sheets on top of each other.
+    await waitFor(() => expect(openStock).toHaveBeenCalledWith("HAL"));
   });
 
-  it("opens the sheet on whichever company was clicked", async () => {
+  it("opens whichever company was clicked, not always the first", async () => {
     const person = userEvent.setup();
     renderList();
 
-    await person.click(screen.getByRole("button", { name: "Who owns LT" }));
-    await waitFor(() => expect(screen.getByTestId("ownership-modal")).toHaveAttribute("data-symbol", "LT"));
+    await person.click(screen.getByRole("button", { name: "Open LT detail" }));
+
+    await waitFor(() => expect(openStock).toHaveBeenCalledWith("LT"));
   });
 
   it("leaves the industry line off a company the catalogue has not classified", () => {

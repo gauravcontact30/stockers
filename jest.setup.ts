@@ -23,6 +23,13 @@ process.env.STOCKERS_ANALYTICS_FILE = path.join(
   `stockers-test-analytics-${process.env.JEST_WORKER_ID ?? "0"}.json`,
 );
 
+// And the live-session store, which `app/lib/presence` resolves at module scope the same way, and
+// which the presence heartbeat writes to from any suite that exercises that endpoint.
+process.env.STOCKERS_PRESENCE_FILE = path.join(
+  os.tmpdir(),
+  `stockers-test-presence-${process.env.JEST_WORKER_ID ?? "0"}.json`,
+);
+
 // And the portfolio store, which the same suites reach through the dashboard's Portfolio section.
 process.env.STOCKERS_PORTFOLIO_FILE = path.join(
   os.tmpdir(),

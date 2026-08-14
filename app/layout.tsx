@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./lib/theme-provider";
 import { StockDetailProvider } from "./components/stock-detail-provider";
 import { SubscriptionProvider } from "./components/subscription-provider";
+import { PresenceTracker } from "./components/presence-tracker";
 import { SubscriptionReminder } from "./components/subscription-reminder";
 import { VisitTracker } from "./components/visit-tracker";
 
@@ -71,6 +72,10 @@ export default function RootLayout({
               {/* Renders nothing — reports one page view per page per tab, so the admin dashboard
                   can say how many people arrived today rather than how many accounts exist. */}
               <VisitTracker />
+              {/* Renders nothing either — says once a minute that this tab is still open, which is
+                  what lets the admin dashboard answer how many people are on the site right now
+                  rather than how many arrived today. */}
+              <PresenceTracker />
             </StockDetailProvider>
           </SubscriptionProvider>
         </ThemeProvider>

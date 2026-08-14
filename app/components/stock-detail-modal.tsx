@@ -438,6 +438,175 @@ export function ComparisonTable({ stock, peers }: { stock: DetailStock; peers: D
 // The modal
 // ---------------------------------------------------------------------------
 
+/** One class of owner, as the shareholding endpoint reports it. */
+type OwnerSlice = {
+  key: string;
+  label: string;
+  percent: number;
+  holders?: number | null;
+  /** The classes inside the class — "Indian promoters", "Central government", and so on. */
+  detail?: { label: string; percent: number; holders?: number | null }[];
+};
+
+type OwnershipPayload = { company?: string; quarter?: string; groups?: OwnerSlice[]; error?: string };
+
+/**
+ * A colour per owner class, and which of them are called out.
+ *
+ * Promoters and government are `lead`: the two the question "who is behind this company" is really
+ * about. A promoter stake is control, and a government stake usually means policy is a shareholder
+ * — both change how the same price move should be read, and neither should have to be picked out
+ * of a list of seven identical grey bars.
+ */
+const OWNER_CHROME: Record<string, { bar: string; chip: string; lead: boolean }> = {
+  promoters: { bar: "bg-emerald-500 dark:bg-emerald-400", chip: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200", lead: true },
+  government: { bar: "bg-amber-500 dark:bg-amber-400", chip: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200", lead: true },
+  fii: { bar: "bg-sky-500 dark:bg-sky-400", chip: "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200", lead: false },
+  dii: { bar: "bg-violet-500 dark:bg-violet-400", chip: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200", lead: false },
+  bodies: { bar: "bg-teal-500 dark:bg-teal-400", chip: "bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200", lead: false },
+  retail: { bar: "bg-slate-400 dark:bg-slate-500", chip: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200", lead: false },
+  others: { bar: "bg-slate-300 dark:bg-slate-600", chip: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200", lead: false },
+};
+
+const OWNER_FALLBACK = { bar: "bg-slate-300 dark:bg-slate-600", chip: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200", lead: false };
+
+/**
+ * Who holds the company, and how much of it.
+ *
+ * Promoters, foreign portfolio investors, domestic institutions, government and individual
+ * shareholders, straight from the company's own quarterly filing through the same
+ * `/api/market/shareholding` endpoint the ownership board reads. Nothing here is inferred from
+ * price or volume, and a class that holds nothing is left out rather than drawn as a zero-width
+ * wedge — a filing reporting 0% government holding is reporting an absence.
+ *
+ * Fetched when the sheet opens rather than with the board behind it: a page of five rows would
+ * otherwise pull five filings nobody had asked to see.
+ */
+function OwnershipSection({ symbol, sector }: { symbol: string; sector: string | null }) {
+  const [owners, setOwners] = useState<OwnerSlice[] | null>(null);
+  const [quarter, setQuarter] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  // No state is reset here, and none needs to be: the caller keys this on the ticker, so opening a
+  // second company remounts the section with fresh state rather than showing the first company's
+  // register while the new filing is still in flight.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`/api/market/shareholding?symbol=${encodeURIComponent(symbol)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const body = (await response.json()) as OwnershipPayload;
+        if (!response.ok) throw new Error(body.error || "no filing");
+        return body;
+      })
+      .then((body) => {
+        setOwners((body.groups ?? []).filter((slice) => slice.percent > 0));
+        setQuarter(body.quarter ?? null);
+      })
+      .catch(() => {
+        // Not every scrip on a 4,900-company exchange has a readable filing, and a missing one is
+        // not an error in the sheet around it — the rest of the panel is still worth reading.
+        if (!controller.signal.aborted) setFailed(true);
+      });
+
+    return () => controller.abort();
+  }, [symbol]);
+
+  // Control first, then the money that follows it, then everybody else. Percent order alone would
+  // put a 45% retail float above a 30% promoter holding, which is the wrong lead for a company.
+  const ordered = [...(owners ?? [])].sort((a, b) => {
+    const lead = Number((OWNER_CHROME[b.key] ?? OWNER_FALLBACK).lead) - Number((OWNER_CHROME[a.key] ?? OWNER_FALLBACK).lead);
+    return lead || b.percent - a.percent;
+  });
+
+  const leaders = ordered.filter((owner) => (OWNER_CHROME[owner.key] ?? OWNER_FALLBACK).lead);
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_22px_70px_-56px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-950/45">
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        Who owns it{quarter ? ` · as filed for ${quarter}` : ""}
+      </h3>
+      <p className="mt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+        Every class on the register, from the company&apos;s own quarterly filing
+        {sector ? <> — a {sector.toLowerCase()} company</> : null}. Promoters and government are
+        called out because those two are control rather than a position.
+      </p>
+
+      {failed ? (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          No shareholding filing could be read for this company.
+        </p>
+      ) : owners === null ? (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Reading the filing…</p>
+      ) : ordered.length === 0 ? (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          This company&apos;s latest filing does not break its register down.
+        </p>
+      ) : (
+        <>
+          {leaders.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {leaders.map((owner) => (
+                <span
+                  key={`lead-${owner.key}`}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${(OWNER_CHROME[owner.key] ?? OWNER_FALLBACK).chip}`}
+                >
+                  {owner.label} {owner.percent.toFixed(2)}%
+                </span>
+              ))}
+            </div>
+          )}
+
+          <ul className="mt-2 flex flex-col gap-2">
+            {ordered.map((owner) => {
+              const chrome = OWNER_CHROME[owner.key] ?? OWNER_FALLBACK;
+
+              return (
+                <li key={owner.key}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-32 shrink-0 truncate text-[11px] ${chrome.lead ? "font-bold text-slate-900 dark:text-white" : "font-semibold text-slate-700 dark:text-slate-300"}`}
+                    >
+                      {owner.label}
+                    </span>
+                    {/* The bar is the comparison; the number beside it is the fact. Neither on its
+                        own answers "who holds most of this company" at a glance. */}
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <span className={`block h-full rounded-full ${chrome.bar}`} style={{ width: `${Math.min(100, owner.percent)}%` }} />
+                    </span>
+                    <span className="w-16 shrink-0 text-right text-[11px] font-bold tabular-nums text-slate-900 dark:text-white">
+                      {owner.percent.toFixed(2)}%
+                    </span>
+                    <span className="hidden w-24 shrink-0 text-right text-[10px] tabular-nums text-slate-400 sm:block dark:text-slate-500">
+                      {owner.holders ? `${owner.holders.toLocaleString("en-IN")} holders` : ""}
+                    </span>
+                  </div>
+
+                  {/* The classes inside the class: Indian and foreign promoters, central and state
+                      government, and so on. "Who is investing how much" is not answered by a single
+                      promoter line when two different promoters are behind it. */}
+                  {(owner.detail ?? []).length > 0 && (
+                    <ul className="mt-1 ml-2 flex flex-col gap-0.5 border-l border-slate-200 pl-3 dark:border-slate-700">
+                      {(owner.detail ?? []).map((part) => (
+                        <li key={`${owner.key}-${part.label}`} className="flex items-baseline justify-between gap-2">
+                          <span className="min-w-0 truncate text-[10px] text-slate-500 dark:text-slate-400">{part.label}</span>
+                          <span className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-700 dark:text-slate-300">
+                            {part.percent.toFixed(2)}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 /**
  * Everything about one company, opened by clicking it anywhere on the site.
  *
@@ -564,6 +733,12 @@ export function StockDetailModal({ symbol, onClose }: { symbol: string | null; o
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{detail.note}</p>
             )}
           </section>
+
+          {/* Who actually holds the company, under what it has been doing. A reader who has just
+              seen a stock move asks two questions in a row — how has it performed, and who owns it
+              — and answering the second one used to mean a separate sheet reached from a different
+              board. */}
+          <OwnershipSection key={stock.ticker} symbol={stock.ticker} sector={stock.sector} />
 
           <p className="text-[10px] leading-snug text-slate-400 dark:text-slate-500">
             Every figure here is BSE&apos;s own published data for the session shown — quotes from the exchange tape,

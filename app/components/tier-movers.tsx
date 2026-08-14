@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BseMoverPage } from "../lib/bse-market";
-import { formatPercent, moveTone, rowTint } from "../lib/market-format";
+import { formatPercent, moveTone } from "../lib/market-format";
 import { buildMoversUrl, type MoverDirection, type MoverTierKey } from "../lib/market-urls";
 import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
 import { SectorPill } from "./sector-pill";
+import { useStockDetail } from "./stock-detail-provider";
 import { pageWindow, useMarketFeed } from "./market-section";
 import { StockCombobox } from "./stock-combobox";
 
@@ -62,33 +63,43 @@ const SEARCH_DEBOUNCE_MS = 300;
 /**
  * One company.
  *
- * Each row gets its own pale wash, cycled by position, so a list of five reads as five rows rather
- * than a block of text. The tint tracks where the row sits, never how the stock did — the move has
- * its own colour, and two colour languages on one line would make neither legible. The rank number
- * is the row's place in the whole ranking, not on the page, so paging reads as one continuous list.
+ * A white row on a white card, separated by its own rounding and spacing. These rows carried a
+ * rotating wash and then a rotating outline; both read as decoration competing with the only colour
+ * on the line that carries meaning, which is the direction of the move. The rank number is the
+ * row's place in the whole ranking, not on the page, so paging reads as one continuous list.
  */
-function Row({ row, rank, index }: { row: BseMoverPage["rows"][number]; rank: number; index: number }) {
+function Row({ row, rank }: { row: BseMoverPage["rows"][number]; rank: number }) {
+  // The whole row opens the company's detail sheet, the same as every other board on the site.
+  // These two cards were the exception: a reader who saw a stock at the top of Top Gainers had no
+  // way to ask why from here, and had to go and find the company somewhere else on the page.
+  const { openStock } = useStockDetail();
+
   return (
-    <li
-      className={`flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:brightness-[0.98] ${rowTint(index)}`}
-    >
-      <span className="w-5 shrink-0 text-right text-[10px] font-bold tabular-nums text-slate-400 dark:text-slate-500">
-        {rank}
-      </span>
-      <CompanyLogo symbol={row.ticker} size={22} />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="flex items-center gap-1.5">
-          <span className="truncate text-[12px] font-semibold text-slate-900 dark:text-white">{row.ticker}</span>
-          <CapTierBadge raw={row.capTier} />
+    <li>
+      <button
+        type="button"
+        onClick={() => openStock(row.ticker)}
+        aria-label={`Open ${row.ticker} detail`}
+        className="flex w-full items-center gap-2 rounded-xl bg-white px-2 py-1.5 text-left transition-colors hover:brightness-[0.98] dark:bg-slate-900"
+      >
+        <span className="w-5 shrink-0 text-right text-[10px] font-bold tabular-nums text-slate-400 dark:text-slate-500">
+          {rank}
         </span>
-        <span className="block truncate text-[9px] text-slate-500 dark:text-slate-400">{row.name}</span>
-        {/* The industry the exchange files it under. Two companies moving the same amount are a
-            very different story if one is a bank and the other a smelter. */}
-        <SectorPill sector={row.sector} className="mt-0.5" />
-      </span>
-      <span className={`shrink-0 text-[11px] font-bold tabular-nums ${moveTone(row.returnPercent)}`}>
-        {formatPercent(row.returnPercent)}
-      </span>
+        <CompanyLogo symbol={row.ticker} size={22} />
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-[12px] font-semibold text-slate-900 dark:text-white">{row.ticker}</span>
+            <CapTierBadge raw={row.capTier} />
+          </span>
+          <span className="block truncate text-[9px] text-slate-500 dark:text-slate-400">{row.name}</span>
+          {/* The industry the exchange files it under. Two companies moving the same amount are a
+              very different story if one is a bank and the other a smelter. */}
+          <SectorPill sector={row.sector} className="mt-0.5" />
+        </span>
+        <span className={`shrink-0 text-[11px] font-bold tabular-nums ${moveTone(row.returnPercent)}`}>
+          {formatPercent(row.returnPercent)}
+        </span>
+      </button>
     </li>
   );
 }
@@ -190,7 +201,7 @@ function SideCard({
           layout jump, and the figures never flash away between page turns. */}
       <ol className={`mt-2 flex flex-1 flex-col gap-1 transition-opacity ${loading ? "opacity-50" : "opacity-100"}`}>
         {rows.map((row, index) => (
-          <Row key={row.code} row={row} rank={(current - 1) * PAGE_SIZE + index + 1} index={index} />
+          <Row key={row.code} row={row} rank={(current - 1) * PAGE_SIZE + index + 1} />
         ))}
       </ol>
 

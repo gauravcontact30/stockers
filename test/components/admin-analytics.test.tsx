@@ -12,7 +12,6 @@ import {
   activityDetail,
   activityLabel,
   activityTier,
-  deltaOf,
   formatDayShort,
   formatHour,
   formatMoment,
@@ -20,6 +19,7 @@ import {
   formatPercent,
   matchesUser,
 } from "../../app/components/admin-analytics";
+import { deltaOf } from "../../app/components/stat-tile";
 import type {
   ActivityRow,
   AnalyticsReport,
@@ -655,7 +655,10 @@ describe("AdminAnalytics", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    // Counted by endpoint rather than in total: the live-users panel above the window chart feeds
+    // itself from /api/admin/presence, and a bare call count would be measuring that as well.
+    const reads = () => fetchMock.mock.calls.filter((call) => String(call[0]).includes("/api/admin/analytics")).length;
+    await waitFor(() => expect(reads()).toBe(2));
   });
 
   it("filters the activity feed to one kind of event", async () => {

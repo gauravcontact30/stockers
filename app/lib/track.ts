@@ -16,7 +16,7 @@ import type { ActionKey } from "./analytics";
 /** Where the browser keeps the id that makes one returning person countable as one person. */
 const VISITOR_KEY = "stockers-visitor";
 /** Per-tab, so a run of events can be read back as one sitting rather than as scattered hits. */
-const SESSION_KEY = "stockers-session";
+export const SESSION_KEY = "stockers-session";
 
 function mint(prefix: string): string {
   return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
@@ -28,7 +28,7 @@ function mint(prefix: string): string {
  * Null when storage is unavailable — a private-mode browser throws on access — in which case the
  * event is still reported, just without the id, and counts as one anonymous interaction.
  */
-function idFrom(store: "localStorage" | "sessionStorage", key: string, prefix: string): string | null {
+export function idFrom(store: "localStorage" | "sessionStorage", key: string, prefix: string): string | null {
   try {
     const storage = window[store];
     const stored = storage.getItem(key) ?? "";

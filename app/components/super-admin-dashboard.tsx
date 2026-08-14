@@ -10,12 +10,15 @@ import type { FeatureUsage } from "../lib/analytics-report";
 // behind it, and this is a client component.
 import { formatPaise, type LedgerState } from "../lib/payments-format";
 import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
-import { AdminAnalytics, deltaOf } from "./admin-analytics";
+import type { LivePresenceState } from "../lib/presence-report";
+import { AdminAnalytics } from "./admin-analytics";
 import { AdminClientReviews } from "./admin-client-reviews";
+import { AdminLiveUsers } from "./admin-live-users";
 import { AdminUsers, type AdminSummary, type AdminUser } from "./admin-users";
 import { CacheControl } from "./cache-control";
 import { DataTable, type Column } from "./data-table";
 import { PieChart } from "./pie-chart";
+import { StatTile, deltaOf } from "./stat-tile";
 import { authHeaders, syncSessionCookie, useSubscription } from "./subscription-provider";
 
 type IconProps = { className?: string };
@@ -23,6 +26,7 @@ type IconProps = { className?: string };
 export type SuperAdminSectionId =
   | "overview"
   | "analytics"
+  | "live"
   | "users"
   | "subscriptions"
   | "reviews"
@@ -171,6 +175,16 @@ function AnalyticsIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  );
+}
+
+function LiveIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4" />
+      <path d="M4.9 4.9a10 10 0 0 0 0 14.2M19.1 19.1a10 10 0 0 0 0-14.2" />
     </svg>
   );
 }
@@ -347,38 +361,6 @@ function SuperAdminTabs({ active }: { active: SuperAdminSectionId }) {
   );
 }
 
-function StatTile({
-  label,
-  value,
-  tone,
-  hint,
-  delta,
-}: {
-  label: string;
-  value: number | string;
-  tone: string;
-  hint?: string;
-  /** Today against yesterday. Rendered as a direction, not another bare number. */
-  delta?: { now: number; before: number };
-}) {
-  const change = delta ? deltaOf(delta.now, delta.before) : null;
-  const changeTone =
-    change?.direction === "up"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : change?.direction === "down"
-        ? "text-rose-600 dark:text-rose-400"
-        : "text-slate-400 dark:text-slate-500";
-
-  return (
-    <div className={`rounded-2xl border p-4 ${tone}`}>
-      <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{value}</p>
-      <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-      {change && <p className={`mt-1 text-[11px] font-semibold ${changeTone}`}>{change.text}</p>}
-      {hint && !change && <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{hint}</p>}
-    </div>
-  );
-}
-
 const URGENCY_STYLE: Record<Urgency, { chip: string; card: string; word: string }> = {
   critical: {
     chip: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
@@ -457,6 +439,36 @@ const CHECK_STYLE: Record<CheckState, { dot: string; label: string }> = {
   off: { dot: "bg-rose-500", label: "Down" },
 };
 
+/** How often the health panel re-probes. Slower than the live-users poll: this one runs queries. */
+const HEALTH_REFRESH_MS = 30_000;
+
+/** Seconds as the largest unit that still reads as a round number. */
+export function uptimeText(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3_600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86_400) return `${Math.floor(seconds / 3_600)}h ${Math.floor((seconds % 3_600) / 60)}m`;
+  return `${Math.floor(seconds / 86_400)}d ${Math.floor((seconds % 86_400) / 3_600)}h`;
+}
+
+/**
+ * A latency, coloured by whether it is worth doing something about.
+ *
+ * The thresholds are round numbers rather than measured ones — anything under a fifth of a second
+ * is invisible to a reader, and anything over a second is a page that feels broken.
+ */
+function Latency({ ms }: { ms: number | null }) {
+  if (ms === null) return null;
+
+  const tone =
+    ms >= 1_000
+      ? "text-rose-600 dark:text-rose-400"
+      : ms >= 200
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-slate-400 dark:text-slate-500";
+
+  return <span className={`ml-2 font-mono text-[10px] font-bold tabular-nums ${tone}`}>{ms}ms</span>;
+}
+
 /**
  * Which parts of this deployment are wired up, and what the app does where they are not.
  *
@@ -466,22 +478,70 @@ const CHECK_STYLE: Record<CheckState, { dot: string; label: string }> = {
  * configured". The consequence line is the point of the panel: `degraded` is often a deliberate
  * state rather than a fault, and saying which is the only way the colour means anything.
  */
-function SystemHealth({ report }: { report: HealthReport | null }) {
+function SystemHealth({ report, age }: { report: HealthReport | null; age: number }) {
   // A panel whose whole job is reporting that something is wrong must not be the thing that breaks
   // when something is. An unexpected payload leaves it waiting rather than taking the page down.
   if (!report || !Array.isArray(report.checks) || !CHECK_STYLE[report.worst]) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">Checking integrations…</p>;
   }
 
+  // Read defensively for the same reason: `stats` arrives from a route that a proxy could answer
+  // for, and a missing block must leave the panel one strip shorter rather than throwing.
+  const stats = report.stats;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-        <span className={`h-2 w-2 rounded-full ${CHECK_STYLE[report.worst].dot}`} aria-hidden="true" />
+        <span className={`h-2 w-2 animate-pulse rounded-full ${CHECK_STYLE[report.worst].dot}`} aria-hidden="true" />
         <span className="font-semibold text-slate-900 dark:text-white">
           {report.worst === "ok" ? "Everything is answering" : report.worst === "degraded" ? "Running with some services off" : "Something is down"}
         </span>
         <span>· accounts in {report.backend === "supabase" ? "Supabase" : "a local JSON file"}</span>
+        {/* The panel re-probes on a timer, so it has to say how old what it is showing is —
+            otherwise a frozen page and a healthy one look exactly alike. */}
+        <span>· re-probed {age < 5 ? "just now" : `${age}s ago`}</span>
       </div>
+
+      {stats && (
+        <>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <StatTile
+              label="Checks passing"
+              value={`${stats.counts.ok}/${stats.counts.total}`}
+              hint={stats.counts.off > 0 ? `${stats.counts.off} down` : stats.counts.degraded > 0 ? `${stats.counts.degraded} degraded` : "Nothing degraded"}
+              tone={
+                stats.counts.off > 0
+                  ? "border-rose-200 bg-rose-50 dark:border-rose-500/25 dark:bg-rose-500/10"
+                  : stats.counts.degraded > 0
+                    ? "border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10"
+                    : "border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10"
+              }
+            />
+            <StatTile
+              label="Slowest probe"
+              value={stats.slowestMs === null ? "—" : `${stats.slowestMs}ms`}
+              hint={stats.slowestMs === null ? "Nothing to probe" : `${stats.probeMs}ms for all of them`}
+              tone="border-sky-200 bg-sky-50 dark:border-sky-500/25 dark:bg-sky-500/10"
+            />
+            <StatTile
+              label="Instance uptime"
+              value={uptimeText(stats.uptimeSeconds)}
+              hint={`Node ${stats.nodeVersion} · ${stats.environment}`}
+              tone="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            />
+            <StatTile
+              label="Memory in use"
+              value={`${stats.memoryMb} MB`}
+              hint={`${stats.heapUsedMb} of ${stats.heapTotalMb} MB heap`}
+              tone="border-violet-200 bg-violet-50 dark:border-violet-500/25 dark:bg-violet-500/10"
+            />
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            Uptime and memory belong to the server instance that answered this request, which on a
+            serverless host is one of several.
+          </p>
+        </>
+      )}
 
       <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {report.checks.map((check) => (
@@ -492,6 +552,7 @@ function SystemHealth({ report }: { report: HealthReport | null }) {
                 {check.label}
                 {/* The state as a word as well as a dot: colour alone is not a channel. */}
                 <span className="ml-2 font-semibold text-slate-400 dark:text-slate-500">{CHECK_STYLE[check.state]?.label ?? "Unknown"}</span>
+                <Latency ms={check.latencyMs ?? null} />
               </p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{check.detail}</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">{check.consequence}</p>
@@ -655,7 +716,10 @@ function SuperAdminOverview() {
   const [traffic, setTraffic] = useState<TrafficPayload | null>(null);
   const [ledger, setLedger] = useState<LedgerState | null>(null);
   const [health, setHealth] = useState<HealthReport | null>(null);
+  const [presence, setPresence] = useState<LivePresenceState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Seconds since the last health probe, so the card can say how old what it shows is. */
+  const [healthAge, setHealthAge] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -663,13 +727,13 @@ function SuperAdminOverview() {
     /**
      * Each panel loads on its own.
      *
-     * Four independent reads, and the slowest of them touches the exchange-free but still remote
-     * Supabase four times. Awaiting them as one would hold the whole page at "loading" for the
+     * Five independent reads, and the slowest of them touches the exchange-free but still remote
+     * Supabase five times. Awaiting them as one would hold the whole page at "loading" for the
      * slowest, when the roster and the traffic strip are usually ready long before the health
      * probe finishes.
      *
      * Only the roster raises an error banner. It is the page's spine — every other panel below
-     * says its own piece when it cannot load, and four stacked banners for one dropped connection
+     * says its own piece when it cannot load, and five stacked banners for one dropped connection
      * would be louder than the problem.
      */
     const pull = async <T,>(url: string, apply: (data: T) => void, onFail?: () => void) => {
@@ -693,11 +757,51 @@ function SuperAdminOverview() {
     void pull<LedgerState>("/api/admin/revenue", (data) => {
       if (data && typeof data.available === "boolean") setLedger(data);
     });
-    void pull<HealthReport>("/api/admin/health", (data) => {
-      if (data && Array.isArray(data.checks)) setHealth(data);
-    });
 
-    return () => controller.abort();
+    /**
+     * Health and presence are pulled again on a timer; the three above are not.
+     *
+     * The difference is what the figure means. How many accounts exist and what was billed last
+     * month do not change while somebody reads the page, so re-reading them would be four more
+     * queries an hour for the same answer. "Is the database still answering" and "how many people
+     * are on the site" are both false the moment they stop being re-measured — a stale number
+     * there is not merely old, it is wrong in a way the reader cannot see.
+     */
+    const probeHealth = () =>
+      pull<HealthReport>("/api/admin/health", (data) => {
+        if (data && Array.isArray(data.checks)) {
+          setHealth(data);
+          setHealthAge(0);
+        }
+      });
+
+    const readPresence = () =>
+      pull<LivePresenceState>("/api/admin/presence", (data) => {
+        if (data && typeof data.available === "boolean") setPresence(data);
+      });
+
+    void probeHealth();
+    void readPresence();
+
+    const refresh = () => {
+      // Nobody is reading an overview in a background tab, and an admin dashboard left open
+      // overnight should not spend the night probing the database.
+      if (document.visibilityState === "hidden") return;
+      void probeHealth();
+      void readPresence();
+    };
+
+    const timer = window.setInterval(refresh, HEALTH_REFRESH_MS);
+    // A tick a second, so "re-probed 8s ago" counts up between probes rather than jumping.
+    const clock = window.setInterval(() => setHealthAge((seconds) => seconds + 1), 1_000);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      window.clearInterval(clock);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, []);
 
   const lockedCount = Object.values(status?.locks ?? {}).filter(Boolean).length;
@@ -705,6 +809,8 @@ function SuperAdminOverview() {
   const accounts = useMemo(() => payload?.users ?? [], [payload]);
   const today = payload?.today ?? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
+  /** The presence report when the store answered; a store that is not there is not a figure. */
+  const live = presence?.available ? presence : null;
   const subscribed = summary?.subscribed ?? 0;
   const activeRate = summary?.total ? Math.round((subscribed / summary.total) * 100) : 0;
   const starter = (summary?.total ?? 0) - (summary?.pro ?? 0) - (summary?.elite ?? 0);
@@ -770,7 +876,15 @@ function SuperAdminOverview() {
         {/* What needs doing leads the page. The totals below it are context for these. */}
         {payload && <AttentionQueue items={attention} />}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {/* First, because it is the only figure here that is true of this minute rather than of
+              the record — and the one an admin opening the page most wants a glance at. */}
+          <StatTile
+            label="On the site now"
+            value={live ? live.summary.online : "..."}
+            hint={live ? `${live.summary.signedIn} signed in · ${live.summary.guests} visitors` : "Reading live sessions"}
+            tone="border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10"
+          />
           <StatTile label="Accounts" value={summary?.total ?? "..."} hint={`${summary?.verified ?? 0} verified`} tone="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" />
           <StatTile label="Subscribers" value={payload ? subscribed : "..."} hint={`${activeRate}% of accounts`} tone="border-sky-200 bg-sky-50 dark:border-sky-500/25 dark:bg-sky-500/10" />
           <StatTile label="Admins" value={summary?.admins ?? "..."} tone="border-violet-200 bg-violet-50 dark:border-violet-500/25 dark:bg-violet-500/10" />
@@ -832,11 +946,17 @@ function SuperAdminOverview() {
           </section>
 
           <section className={OVERVIEW_CARD}>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">System health</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">System health</h2>
+              <Link href="/admin/analytics" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
+                Live users
+              </Link>
+            </div>
             <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">
-              What is wired up in this deployment, and what the app does where something is not.
+              Re-probed every {Math.round(HEALTH_REFRESH_MS / 1_000)} seconds: what is wired up, how
+              fast each store is answering, and what this instance is running on.
             </p>
-            <SystemHealth report={health} />
+            <SystemHealth report={health} age={healthAge} />
           </section>
         </div>
 

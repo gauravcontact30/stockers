@@ -189,6 +189,69 @@ revoke all on public.analytics_events from anon, authenticated;
 --   delete from public.analytics_events where day < to_char(now() - interval '120 days', 'YYYY-MM-DD');
 
 -- ---------------------------------------------------------------------------
+-- Live sessions
+-- ---------------------------------------------------------------------------
+--
+-- One row per open tab, rewritten in place while somebody is looking at it. `app/lib/presence.ts`
+-- writes it from a heartbeat and the Live Users page of the super admin dashboard reads it.
+--
+-- Deliberately not part of `analytics_events`, which is an append-only log. Presence needs a signal
+-- that repeats while nothing is happening — a person reading one page for twenty minutes emits no
+-- events at all — and putting a once-a-minute-per-tab beat into the event log would multiply that
+-- table by traffic-hours while telling the reports nothing they do not already know.
+--
+-- This table does not grow with traffic. A heartbeat is an upsert on `key`, so an hour-long sitting
+-- is one row rewritten sixty times rather than sixty rows, and anything past the retention window
+-- is deleted as the table is read. Its size is bounded by *concurrent* readers.
+
+create table if not exists public.live_sessions (
+  -- The tab, namespaced by what identified it: `s:` for a per-tab id, `v:` for a per-browser one,
+  -- `u:` for an account with neither (a browser with no storage at all). Namespaced so a session
+  -- id can never collide with a visitor id that happens to read the same.
+  key text primary key,
+
+  -- The account, when the sitting is signed in. No foreign key, for the same reason
+  -- `analytics_events` has none: the account store has two backends and only one of them is this
+  -- database, so the constraint would hold in production and not in development.
+  user_id text,
+
+  -- The same random per-browser id the visit tracker mints. Identifies nobody.
+  visitor_id text,
+  session_id text,
+
+  -- The page the last heartbeat came from. Path only — the query string is stripped by the writer,
+  -- because that is where the personal data is (a search term, a referral code, a verification
+  -- token) and none of it is needed to say which page somebody is on.
+  path text,
+
+  device text,
+
+  -- When this sitting was first seen. Defaulted here rather than sent by the application on
+  -- purpose: PostgREST builds the `do update set` of an upsert from the keys it is given, so
+  -- leaving this column out of the payload is exactly what stops a heartbeat from resetting the
+  -- start of a sitting every minute. Text in ISO-8601 UTC, like every other instant here, so both
+  -- backends mint and compare them identically.
+  started_at text not null default to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+
+  -- The last heartbeat. Whether somebody is on the site is decided entirely on this.
+  last_seen_at text not null
+);
+
+-- Every read is "seen since this instant", and the housekeeping delete is the same predicate.
+create index if not exists live_sessions_last_seen_idx on public.live_sessions (last_seen_at desc);
+
+-- Same rule as `analytics_events`, and for the same reason with the clock removed: this table says
+-- who is on the site *right now* and what page they are reading. RLS on, no policies, service_role
+-- only.
+alter table public.live_sessions enable row level security;
+revoke all on public.live_sessions from anon, authenticated;
+
+-- Retention. The application deletes expired rows as it reads, so this is only needed if nobody
+-- has opened the Live Users page for a while:
+--
+--   delete from public.live_sessions where last_seen_at < to_char(now() at time zone 'utc' - interval '1 hour', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+
+-- ---------------------------------------------------------------------------
 -- Portfolios
 -- ---------------------------------------------------------------------------
 --

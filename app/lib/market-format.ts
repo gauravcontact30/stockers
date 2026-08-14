@@ -65,28 +65,6 @@ export function sectorLabel(raw: string | null | undefined): string | null {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-/**
- * A rotating light wash for a row of stocks.
- *
- * Five very pale tints cycled by position, so a list of companies reads as separate rows at a
- * glance instead of one block of text. Deliberately weak and deliberately *not* meaningful: the
- * colour tracks where a row sits in the list, never whether it went up or down — that job belongs
- * to `moveTone`, and two colour languages competing on one row would make neither readable.
- *
- * Kept faint enough that the text on top stays at full contrast in both themes.
- */
-const ROW_TINTS = [
-  "bg-sky-50/60 dark:bg-sky-500/[0.07]",
-  "bg-emerald-50/60 dark:bg-emerald-500/[0.07]",
-  "bg-amber-50/60 dark:bg-amber-500/[0.07]",
-  "bg-violet-50/60 dark:bg-violet-500/[0.07]",
-  "bg-rose-50/60 dark:bg-rose-500/[0.07]",
-];
-
-export function rowTint(index: number): string {
-  return ROW_TINTS[index % ROW_TINTS.length];
-}
-
 /** "₹4,21,35,000 Cr" is unreadable; this is the scale an Indian market report actually uses. */
 export function formatCrore(value: number): string {
   if (value >= 100_000) return `₹${(value / 100_000).toFixed(2)} lakh Cr`;

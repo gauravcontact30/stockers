@@ -1,0 +1,71 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { HEARTBEAT_MS } from "../lib/presence-report";
+import { SESSION_KEY, idFrom } from "../lib/track";
+import { visitorId } from "./visit-tracker";
+
+/**
+ * Says, once a minute, that this tab is still here.
+ *
+ * Mounted app-wide beside `VisitTracker`, and the difference between the two is the whole reason
+ * this exists. A visit is reported once and then folded away for half an hour, which makes it a
+ * good record of an arrival and useless as evidence of a person still reading — somebody twenty
+ * minutes into an article emits nothing at all. The live count on the admin dashboard needs a
+ * signal that repeats while nothing is happening, so here it is.
+ *
+ * It renders nothing, blocks nothing and sends the same three things the visit tracker does: a
+ * random per-browser id, a random per-tab id and a path. No name, no account details, no query
+ * string — the server attaches the account itself, from the session token.
+ *
+ * Only while the tab is actually in front of somebody. A backgrounded tab is not a person using
+ * the site, and counting one would turn the headline figure into "tabs left open since Tuesday".
+ * Nothing reports that a tab was closed — `beforeunload` does not fire reliably on a phone — so
+ * going quiet is how leaving is expressed, and the server drops a sitting that stops beating.
+ */
+export function PresenceTracker() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // The admin's own tour of the dashboard is not somebody using the site, and counting it would
+    // put the person reading the live list onto the live list. The same rule `VisitTracker` follows.
+    if (pathname.startsWith("/admin")) return;
+
+    const beat = () => {
+      // `hidden` covers a backgrounded tab and a locked phone; anything else — including the
+      // "prerender" state — is treated as present, because the alternative is under-counting
+      // somebody who is genuinely there.
+      if (document.visibilityState === "hidden") return;
+
+      try {
+        void fetch("/api/analytics/presence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({
+            path: pathname,
+            visitorId: visitorId(),
+            sessionId: idFrom("sessionStorage", SESSION_KEY, "s"),
+          }),
+        }).catch(() => undefined);
+      } catch {
+        // No fetch, no storage, no network. None of it is worth an error in a reader's console,
+        // and none of it changes the page they came for.
+      }
+    };
+
+    beat();
+    const timer = window.setInterval(beat, HEARTBEAT_MS);
+    // So returning to a tab that has been in the background reports straight away rather than
+    // leaving the reader missing from the list until the next tick.
+    document.addEventListener("visibilitychange", beat);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", beat);
+    };
+  }, [pathname]);
+
+  return null;
+}

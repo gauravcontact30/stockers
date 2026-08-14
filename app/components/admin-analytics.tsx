@@ -12,7 +12,9 @@ import type {
   RankedRow,
 } from "../lib/analytics-report";
 import { AI_FEATURES, TIER_LABEL, tierForPlan, type PlanTier } from "../lib/plan-tiers";
+import { AdminLiveUsers } from "./admin-live-users";
 import { DataTable, type Column } from "./data-table";
+import { deltaOf } from "./stat-tile";
 import { PieChart, type Slice } from "./pie-chart";
 import { LockIcon, TIER_CHROME } from "./plan-pill";
 import { authHeaders } from "./subscription-provider";
@@ -119,17 +121,9 @@ export function formatHour(hour: number): string {
  * Today against yesterday, as a direction and a size.
  *
  * A bare number on a dashboard is unreadable — 214 visitors is either very good or very bad and
- * the tile cannot say which. Growth from nothing is reported as "new" rather than as an infinite
- * percentage, which is what dividing by zero would otherwise put on the screen.
+ * the tile cannot say which. The arithmetic itself is in `./stat-tile`, beside the other tile that
+ * prints it.
  */
-export function deltaOf(now: number, before: number): { direction: "up" | "down" | "flat"; text: string } {
-  if (before === 0) return now === 0 ? { direction: "flat", text: "no change" } : { direction: "up", text: "new" };
-  if (now === before) return { direction: "flat", text: "no change" };
-
-  const change = Math.round(((now - before) / before) * 100);
-  return { direction: now > before ? "up" : "down", text: `${now > before ? "+" : "−"}${Math.abs(change)}% vs yesterday` };
-}
-
 function Delta({ now, before }: { now: number; before: number }) {
   const delta = deltaOf(now, before);
   const tone =
@@ -992,6 +986,17 @@ export function AdminAnalytics() {
               blurb={`Stage sizes across ${report.range.from} to ${report.range.to} — how many people reached each step, not one group followed through time.`}
             />
             <FunnelStrip funnel={report.funnel} />
+          </section>
+
+          {/* Above the window chart, and deliberately so: everything below this point is history,
+              and this is the only thing on the page that is true of this minute. An admin opening
+              Traffic & Usage asks "is anyone on the site" before they ask "how did last week go". */}
+          <section className={CARD}>
+            <SectionHead
+              title="On the site right now"
+              blurb="Live, from a heartbeat each open tab sends — not from the event log below, which cannot tell somebody still reading from somebody who left."
+            />
+            <AdminLiveUsers />
           </section>
 
           <section className={CARD}>

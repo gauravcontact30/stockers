@@ -1,22 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useState } from "react";
 import type { BseMoverPage } from "../lib/bse-market";
-import { formatPercent, moveTone, rowTint } from "../lib/market-format";
+import { formatPercent, moveTone } from "../lib/market-format";
 import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
 import { SectorPill } from "./sector-pill";
 import { DataTable, type Column } from "./data-table";
-
-/**
- * The shareholding sheet, loaded the first time a row is opened.
- *
- * Split out because it pulls the pie chart and the modal shell behind it, and most readers of a
- * movers list never open one — see ./use-once-open for why a dynamic import only pays off when the
- * component is kept out of the tree until it is wanted.
- */
-const OwnershipModal = dynamic(() => import("./ownership-modal").then((module) => module.OwnershipModal));
+import { useStockDetail } from "./stock-detail-provider";
 
 /**
  * One ranked list, paged five at a time, with its own search.
@@ -44,10 +34,15 @@ export function MoverList({
   caption: string;
   pageSize: number;
 }) {
-  // Which company's shareholding sheet is open, if any. Held here rather than in each row so two
-  // rows can never open two sheets on top of each other.
-  const [open, setOpen] = useState<string | null>(null);
-  const onOpen = (symbol: string) => setOpen(symbol);
+  // Clicking a row opens the full detail sheet — performance across every window the archive
+  // reaches, its category and cap tier, how it compares with the strongest performers in that
+  // category, and who holds it. It used to open a shareholding-only sheet, which answered the
+  // second question a reader has about a stock that just moved without answering the first.
+  //
+  // Through the app-wide provider rather than local state, so two rows in two different cards can
+  // never end up with two sheets stacked on each other.
+  const { openStock } = useStockDetail();
+  const onOpen = (symbol: string) => openStock(symbol);
 
   const columns: Column<BseMoverPage["rows"][number]>[] = [
     {
@@ -58,7 +53,7 @@ export function MoverList({
           type="button"
           onClick={() => onOpen(row.ticker)}
           className="flex w-full items-center gap-2 text-left transition hover:opacity-80"
-          aria-label={`Who owns ${row.ticker}`}
+          aria-label={`Open ${row.ticker} detail`}
         >
           <CompanyLogo symbol={row.ticker} size={20} />
           <span className="min-w-0">
@@ -91,8 +86,7 @@ export function MoverList({
   ];
 
   return (
-    <>
-      <DataTable
+    <DataTable
       rows={rows}
       columns={columns}
       rowKey={(row) => row.code}
@@ -103,11 +97,11 @@ export function MoverList({
       searchFields={(row) => [row.ticker, row.name]}
       searchPlaceholder="Search a company"
       searchLabel={`Search ${caption.toLowerCase()}`}
-      // A pale wash per row so five companies read as five rows rather than one block. Tracks
-      // position, never direction — the move already has a colour of its own.
-        rowClassName={(_row, index) => rowTint(index)}
-      />
-      {open && <OwnershipModal symbol={open} onClose={() => setOpen(null)} />}
-    </>
+      // No per-row wash and no per-row border colour: white rows on a white card, separated by the
+      // table's own divider. The rows carried a rotating tint and then a rotating outline, and both
+      // read as decoration competing with the only colour on the row that means anything — the
+      // direction of the move.
+      rowClassName={() => "bg-white dark:bg-slate-900"}
+    />
   );
 }

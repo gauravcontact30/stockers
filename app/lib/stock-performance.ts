@@ -87,7 +87,20 @@ async function fetchChart(yahooSymbol: string, query: string) {
     const response = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; stockers-app/1.0)" },
       signal: AbortSignal.timeout(10000),
-      cache: "no-store",
+      // Revalidated rather than `no-store`, and the difference is worth a paragraph because it is
+      // not really about this fetch.
+      //
+      // `no-store` inside a render marks the *whole route* dynamic. The landing page calls this on
+      // the server for its hero, so one flag here was what made `/` server-rendered on demand —
+      // measured at 665ms to first byte against 18ms for the statically prerendered `/news`, and
+      // that whole delay sits in front of the largest contentful paint.
+      //
+      // Nothing is lost by caching it. What this reads is a chart of *historical anchor closes* —
+      // where the price stood a week, a month, a year ago — which do not change during a session,
+      // and `getCachedPerformanceSummary` already fronts it with a five-minute application cache.
+      // The window here matches that cache rather than undercutting it. Live prices come from
+      // `/api/market/live`, which is a different path and still uncached.
+      next: { revalidate: 300 },
     });
     if (!response.ok) return null;
 
