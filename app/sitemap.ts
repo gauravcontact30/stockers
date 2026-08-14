@@ -11,7 +11,7 @@ import { absoluteUrl } from "./lib/seo";
  * carry no information, and crawlers learn to ignore them. Each entry states when that page's
  * content actually moves.
  *
- * Nine URLs, listed by hand rather than by walking the `app` directory. The directory also holds
+ * Eight URLs, listed by hand rather than by walking the `app` directory. The directory also holds
  * eight admin routes and every API handler, and a filesystem walk would have to be taught to
  * exclude them — a rule that fails silently the first time somebody adds a route it does not know
  * about. The cost of the explicit list is remembering to add a page to it; the cost of the clever
@@ -39,12 +39,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // Headlines, pulled live. Nothing on this site turns over faster.
       changeFrequency: "hourly",
       priority: 0.9,
-    },
-    {
-      url: absoluteUrl("/dashboard"),
-      lastModified: built,
-      changeFrequency: "daily",
-      priority: 0.8,
     },
     {
       url: absoluteUrl("/about"),

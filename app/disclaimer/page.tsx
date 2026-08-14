@@ -1,16 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "../components/json-ld";
 import { PolicyCallout, PolicyList, PolicyPage, PolicySection, PolicyTable } from "../components/policy-page";
 import { COMPANY, CONTACT, DATA_SOURCES, POLICY_UPDATED } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Disclaimer · StockersAI",
-  description:
-    "StockersAI is a research tool, not an investment adviser. What the figures are, where they come from, what the AI does and does not do, and what none of it promises.",
-};
+const DISCLAIMER_DESCRIPTION =
+  "StockersAI is a research tool, not an investment adviser. What the figures are, where they come from, what the AI does and does not do, and what none of it promises.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Disclaimer",
+  description: DISCLAIMER_DESCRIPTION,
+  path: "/disclaimer",
+  keywords: ["StockersAI disclaimer", "not investment advice", "SEBI investment adviser disclaimer"],
+});
 
 export default function DisclaimerPage() {
   return (
+    <>
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Disclaimer",
+            description: DISCLAIMER_DESCRIPTION,
+            path: "/disclaimer",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Disclaimer", path: "/disclaimer" },
+            ]),
+          }),
+        )}
+      />
     <PolicyPage
       eyebrow="Legal"
       title="Disclaimer"
@@ -161,6 +181,7 @@ export default function DisclaimerPage() {
           {COMPANY.legalName}, {COMPANY.address}. {COMPANY.registration}.
         </p>
       </PolicySection>
-    </PolicyPage>
+      </PolicyPage>
+    </>
   );
 }

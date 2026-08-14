@@ -1,16 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "../components/json-ld";
 import { PolicyCallout, PolicyList, PolicyPage, PolicySection } from "../components/policy-page";
 import { COMPANY, CONTACT, POLICY_UPDATED, TERMS } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Refund Policy · StockersAI",
-  description:
-    "When a StockersAI subscription can be refunded, how much, how to ask, and how long it takes to reach your account.",
-};
+const REFUND_DESCRIPTION =
+  "When a StockersAI subscription can be refunded, how much, how to ask, and how long it takes to reach your account.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Refund Policy",
+  description: REFUND_DESCRIPTION,
+  path: "/refund-policy",
+  keywords: ["StockersAI refund policy", "StockersAI cancellation", "StockersAI subscription refund"],
+});
 
 export default function RefundPolicyPage() {
   return (
+    <>
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Refund Policy",
+            description: REFUND_DESCRIPTION,
+            path: "/refund-policy",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Refund Policy", path: "/refund-policy" },
+            ]),
+          }),
+        )}
+      />
     <PolicyPage
       eyebrow="Legal"
       title="Refund Policy"
@@ -146,6 +166,7 @@ export default function RefundPolicyPage() {
           {COMPANY.legalName}, {COMPANY.address}.
         </p>
       </PolicySection>
-    </PolicyPage>
+      </PolicyPage>
+    </>
   );
 }

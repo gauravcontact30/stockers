@@ -1,16 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "../components/json-ld";
 import { PolicyCallout, PolicyList, PolicyPage, PolicySection } from "../components/policy-page";
 import { COMPANY, CONTACT, POLICY_UPDATED, TERMS } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Return Policy · StockersAI",
-  description:
-    "StockersAI sells a digital subscription, so there is nothing to ship back. This page explains what takes the place of a return, and how to end a subscription.",
-};
+const RETURN_DESCRIPTION =
+  "StockersAI sells a digital subscription, so there is nothing to ship back. This page explains what takes the place of a return, and how to end a subscription.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Return Policy",
+  description: RETURN_DESCRIPTION,
+  path: "/return-policy",
+  keywords: ["StockersAI return policy", "StockersAI digital subscription", "StockersAI cancellation"],
+});
 
 export default function ReturnPolicyPage() {
   return (
+    <>
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Return Policy",
+            description: RETURN_DESCRIPTION,
+            path: "/return-policy",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Return Policy", path: "/return-policy" },
+            ]),
+          }),
+        )}
+      />
     <PolicyPage
       eyebrow="Legal"
       title="Return Policy"
@@ -110,6 +130,7 @@ export default function ReturnPolicyPage() {
           {COMPANY.legalName}, {COMPANY.address}.
         </p>
       </PolicySection>
-    </PolicyPage>
+      </PolicyPage>
+    </>
   );
 }

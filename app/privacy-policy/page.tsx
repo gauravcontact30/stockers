@@ -1,16 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "../components/json-ld";
 import { PolicyCallout, PolicyList, PolicyPage, PolicySection, PolicyTable } from "../components/policy-page";
 import { ACCOUNT_FIELDS, CLIENT_STORAGE, COMPANY, CONTACT, DATA_SOURCES, POLICY_UPDATED, PROCESSORS } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy · StockersAI",
-  description:
-    "Exactly what StockersAI stores about you, what your browser keeps, who else sees it, how long it is held, and how to have it deleted.",
-};
+const PRIVACY_DESCRIPTION =
+  "Exactly what StockersAI stores about you, what your browser keeps, who else sees it, how long it is held, and how to have it deleted.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: PRIVACY_DESCRIPTION,
+  path: "/privacy-policy",
+  keywords: ["StockersAI privacy policy", "StockersAI data deletion", "StockersAI account data"],
+});
 
 export default function PrivacyPolicyPage() {
   return (
+    <>
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Privacy Policy",
+            description: PRIVACY_DESCRIPTION,
+            path: "/privacy-policy",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Privacy Policy", path: "/privacy-policy" },
+            ]),
+          }),
+        )}
+      />
     <PolicyPage
       eyebrow="Legal"
       title="Privacy Policy"
@@ -160,6 +180,7 @@ export default function PrivacyPolicyPage() {
           {COMPANY.legalName}, {COMPANY.address}. {COMPANY.registration}.
         </p>
       </PolicySection>
-    </PolicyPage>
+      </PolicyPage>
+    </>
   );
 }

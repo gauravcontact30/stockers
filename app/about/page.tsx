@@ -2,14 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthHeader } from "../components/auth-header";
 import { BackToTop } from "../components/back-to-top";
+import { JsonLd } from "../components/json-ld";
 import { SiteFooter } from "../components/site-footer";
 import { COMPANY, DATA_SOURCES, TERMS } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "About Us · StockersAI",
-  description:
-    "What StockersAI is, where its numbers come from, what its AI is allowed to do, and the rules it holds itself to.",
-};
+const ABOUT_DESCRIPTION =
+  "What StockersAI is, where its numbers come from, what its AI is allowed to do, and the rules it holds itself to.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "About StockersAI",
+  description: ABOUT_DESCRIPTION,
+  path: "/about",
+  keywords: ["StockersAI about", "Indian equities research desk", "AI stock research methodology"],
+});
 
 /** The rules the product is built to. Each is a claim the rest of the site has to keep. */
 const PRINCIPLES: { title: string; body: string }[] = [
@@ -47,6 +53,19 @@ function Principle({ title, body }: { title: string; body: string }) {
 export default function AboutPage() {
   return (
     <main className="gutter min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 py-6 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "About StockersAI",
+            description: ABOUT_DESCRIPTION,
+            path: "/about",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "About", path: "/about" },
+            ]),
+          }),
+        )}
+      />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
         <AuthHeader />
 

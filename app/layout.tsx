@@ -7,6 +7,20 @@ import { SubscriptionProvider } from "./components/subscription-provider";
 import { PresenceTracker } from "./components/presence-tracker";
 import { SubscriptionReminder } from "./components/subscription-reminder";
 import { VisitTracker } from "./components/visit-tracker";
+import { JsonLd } from "./components/json-ld";
+import {
+  absoluteUrl,
+  graph,
+  HTML_LANG,
+  organizationSchema,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_TITLE,
+  siteUrl,
+  softwareApplicationSchema,
+  websiteSchema,
+} from "./lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,8 +33,55 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StockersAI | AI Indian Stock Market Researcher",
-  description: "An AI-powered stock research assistant for Indian investors with market news, trend analysis, and positive/negative sentiment insights.",
+  metadataBase: new URL(siteUrl()),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_NAME, url: siteUrl() }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "Finance",
+  classification: "Financial research software",
+  referrer: "origin-when-cross-origin",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+  },
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    url: siteUrl(),
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_IN",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "StockersAI - AI stock research for Indian markets",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl("/twitter-image")],
+  },
 };
 
 /**
@@ -34,6 +95,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
 };
 
 // Applied before hydration so the correct theme paints on first frame (no flash of the wrong theme).
@@ -54,13 +120,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={HTML_LANG} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <JsonLd schema={graph(organizationSchema(), websiteSchema(), softwareApplicationSchema())} />
         <ThemeProvider>
           {/* Wraps the whole app so any section can ask whether a feature is unlocked, and the
               renewal reminder can appear on whichever page the user lands on. */}

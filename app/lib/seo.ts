@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { appOrigin } from "./app-origin";
 import { COMPANY, CONTACT } from "./policy";
 import { PLAN_LABEL, PLAN_MONTHLY, type PlanKey } from "./subscription-pricing";
 
@@ -7,25 +6,18 @@ import { PLAN_LABEL, PLAN_MONTHLY, type PlanKey } from "./subscription-pricing";
  * Everything the search engines and the social scrapers are told about this site.
  *
  * One module rather than a `metadata` block copied into nineteen pages, because the parts that go
- * wrong in SEO are the parts that drift: a canonical URL that still points at the staging origin, a
- * page whose Open Graph title says something the `<title>` no longer says, a description rewritten
- * on one page and not the two that quote it. Everything below is derived from a single origin and a
- * single site name, so a page can only state a title, a description and its own path.
+ * wrong in SEO are the parts that drift: a canonical URL that still points at localhost, a page
+ * whose Open Graph title says something the `<title>` no longer says, a description rewritten on
+ * one page and not the two that quote it. Everything below is derived from a single public origin
+ * and a single site name, so a page can only state a title, a description and its own path.
  *
  * ---------------------------------------------------------------------------
- * When the origin is read
+ * Why the origin is fixed
  * ---------------------------------------------------------------------------
  *
- * `appOrigin()` reads `APP_URL` from the environment at *module load*, and for a statically
- * prerendered route that load happens during `next build`. So unlike the mailer — which calls the
- * same function per request and therefore picks up a corrected variable on restart — canonical and
- * Open Graph URLs are baked into the built HTML and need a rebuild to change.
- *
- * That is not a workaround, it is what a canonical URL is: the address this page is *the* copy at.
- * It cannot be decided per request, because a request arriving at a preview domain must still name
- * the production URL as canonical or the preview competes with the real site in the index. Set
- * `APP_URL` to the production origin before building. Everything else about the environment can be
- * corrected afterwards; this one cannot.
+ * A canonical URL is the address this page is *the* copy at. It should not be decided from a
+ * request host or a preview deployment variable, because every alternate host must still point to
+ * the production site or it competes with the real site in the index.
  */
 
 export const SITE_NAME = COMPANY.brand;
@@ -46,11 +38,11 @@ export const SITE_DESCRIPTION =
 /** Open Graph wants an underscored locale; the `<html lang>` attribute wants the hyphenated one. */
 export const OG_LOCALE = "en_IN";
 export const HTML_LANG = "en-IN";
+export const CANONICAL_ORIGIN = "https://www.stockersai.com";
 
 /** The whole public surface, in the order a sitemap should list it. Admin and API are not here. */
 export const PUBLIC_ROUTES = [
   "/",
-  "/dashboard",
   "/news",
   "/about",
   "/contact",
@@ -60,8 +52,18 @@ export const PUBLIC_ROUTES = [
   "/return-policy",
 ] as const;
 
+export const SITE_KEYWORDS = [
+  "AI stock research India",
+  "Indian stock market research",
+  "BSE gainers and losers",
+  "Indian equity research",
+  "stock market sentiment India",
+  "BSE market data",
+  "AI investing tools",
+];
+
 export function siteUrl(): string {
-  return appOrigin();
+  return CANONICAL_ORIGIN;
 }
 
 /**
@@ -143,12 +145,18 @@ export function pageMetadata({
   keywords,
 }: PageSeo): Metadata {
   const url = absoluteUrl(path);
+  const image = absoluteUrl("/opengraph-image");
 
   return {
     title,
     description,
     keywords,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: {
+        "en-IN": url,
+      },
+    },
     robots: indexable ? INDEXABLE : UNLISTED,
     openGraph: {
       type: ogType,
@@ -159,11 +167,20 @@ export function pageMetadata({
       // card reading "Market news" with no attribution is a card nobody clicks.
       title: `${title} · ${SITE_NAME}`,
       description,
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: `${SITE_NAME} - AI stock research for Indian markets`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: `${title} · ${SITE_NAME}`,
       description,
+      images: [absoluteUrl("/twitter-image")],
     },
   };
 }
@@ -230,6 +247,30 @@ export function websiteSchema(): JsonLdObject {
   // runs a site-wide search and renders the results as a page; every search on this site happens
   // inside a board without changing the URL. Declaring one would point Google at a route that does
   // not exist.
+}
+
+export function webPageSchema({
+  name,
+  description,
+  path,
+  breadcrumb,
+}: {
+  name: string;
+  description: string;
+  path: string;
+  breadcrumb?: JsonLdObject;
+}): JsonLdObject {
+  return {
+    "@type": "WebPage",
+    "@id": `${absoluteUrl(path)}#webpage`,
+    url: absoluteUrl(path),
+    name,
+    description,
+    inLanguage: HTML_LANG,
+    isPartOf: { "@id": `${siteUrl()}/#website` },
+    publisher: { "@id": `${siteUrl()}/#organization` },
+    ...(breadcrumb ? { breadcrumb } : {}),
+  };
 }
 
 /**

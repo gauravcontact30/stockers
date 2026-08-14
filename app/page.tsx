@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
 import { HeadToHead } from "./components/head-to-head";
@@ -10,15 +11,37 @@ import { StreamedOwnershipBoard } from "./components/streamed-ownership-board";
 import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
 import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
+import { JsonLd } from "./components/json-ld";
 import { AccuracyMatrixSection } from "./components/accuracy-matrix-section";
 import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
 import { getDipLeaders } from "./lib/dip-leaders";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "./lib/seo";
 import { getCachedPerformanceSummaries } from "./lib/stock-performance";
 
 export const revalidate = 60;
+
+const HOME_DESCRIPTION =
+  "AI research on Indian equities with BSE gainers and losers, market news sentiment, shareholding data, returns, comparisons, and subscription plans.";
+
+export const metadata: Metadata = {
+  ...pageMetadata({
+    title: "AI Indian stock market research",
+    description: HOME_DESCRIPTION,
+    path: "/",
+    keywords: [
+      "AI stock research India",
+      "BSE gainers and losers",
+      "Indian stock market research",
+      "StockersAI",
+    ],
+  }),
+  title: {
+    absolute: "StockersAI | AI Indian stock market research",
+  },
+};
 
 const navLinks = [
   { href: "#head-to-head", label: "Beat the AI" },
@@ -66,6 +89,16 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "AI Indian stock market research",
+            description: HOME_DESCRIPTION,
+            path: "/",
+            breadcrumb: breadcrumbSchema([{ name: "Home", path: "/" }]),
+          }),
+        )}
+      />
       {/* px-safe sits on the bar rather than on the row inside it, so it adds to that row's
           padding instead of replacing it. The background still bleeds to the screen edge; only the
           controls move in, clear of a notched phone's rounded corners in landscape. */}

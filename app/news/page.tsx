@@ -2,18 +2,37 @@ import type { Metadata } from "next";
 import { GatedSection } from "../components/ai-gate";
 import { AuthHeader } from "../components/auth-header";
 import { BackToTop } from "../components/back-to-top";
+import { JsonLd } from "../components/json-ld";
 import { MarketNews } from "../components/market-news";
 import { SiteFooter } from "../components/site-footer";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Market news · Stockers",
-  description:
-    "Live Indian market headlines from leading financial publishers, with an AI read on how each story lands for investors.",
-};
+const NEWS_DESCRIPTION =
+  "Live Indian market headlines from leading financial publishers, with an AI read on how each story lands for investors.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Market news",
+  description: NEWS_DESCRIPTION,
+  path: "/news",
+  keywords: ["Indian stock market news", "market news sentiment", "AI market news India"],
+});
 
 export default function NewsPage() {
   return (
     <main className="gutter min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 py-6 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Market news",
+            description: NEWS_DESCRIPTION,
+            path: "/news",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Market news", path: "/news" },
+            ]),
+          }),
+        )}
+      />
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <AuthHeader />
 

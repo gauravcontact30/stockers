@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import { AuthForm } from "../components/auth-form";
 import { AuthHeader } from "../components/auth-header";
+import { pageMetadata } from "../lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Sign up",
+  description: "Create a StockersAI account for AI-backed Indian stock research and BSE market tools.",
+  path: "/signup",
+  indexable: false,
+});
 
 export default function SignupPage() {
   return (

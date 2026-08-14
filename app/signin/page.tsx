@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthForm } from "../components/auth-form";
 import { AuthHeader } from "../components/auth-header";
 import { VerifyNotice } from "../components/verify-notice";
+import { pageMetadata } from "../lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Sign in",
+  description: "Sign in to StockersAI to access your Indian equity research dashboard.",
+  path: "/signin",
+  indexable: false,
+});
 
 export default function SigninPage() {
   return (

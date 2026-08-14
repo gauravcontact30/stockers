@@ -14,8 +14,8 @@ import { absoluteUrl, siteUrl } from "./lib/seo";
  * their own and are *not* blocked here: the crawler has to be allowed to fetch a page to read the
  * `noindex` on it. Blocking them here would be the one thing that guarantees the tag is never seen.
  *
- * What is blocked is what has no page behind it at all. `/api` returns JSON; a crawler fetching it
- * learns nothing and spends this site's crawl budget doing it.
+ * What is blocked is what has no indexable document behind it at all. `/api` returns JSON; a
+ * crawler fetching it learns nothing and spends this site's crawl budget doing it.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -26,8 +26,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           // JSON, not documents. Nothing here belongs in an index.
           "/api/",
-          // Behind an admin gate — a crawler gets a redirect or a refusal, never the dashboard.
-          "/admin",
         ],
       },
     ],

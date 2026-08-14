@@ -3,14 +3,20 @@ import Link from "next/link";
 import { AuthHeader } from "../components/auth-header";
 import { BackToTop } from "../components/back-to-top";
 import { ContactForm } from "../components/contact-form";
+import { JsonLd } from "../components/json-ld";
 import { SiteFooter } from "../components/site-footer";
 import { COMPANY, CONTACT } from "../lib/policy";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Contact Us · StockersAI",
-  description:
-    "Reach the StockersAI desk: support, billing, privacy requests and complaints, with the addresses and response times for each.",
-};
+const CONTACT_DESCRIPTION =
+  "Reach the StockersAI desk: support, billing, privacy requests and complaints, with the addresses and response times for each.";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Contact StockersAI",
+  description: CONTACT_DESCRIPTION,
+  path: "/contact",
+  keywords: ["StockersAI contact", "StockersAI support", "StockersAI grievance officer"],
+});
 
 /** Who to write to, and what to expect back. Stated per route so nobody waits on the wrong inbox. */
 const CHANNELS: { title: string; email: string; blurb: string; response: string }[] = [
@@ -43,6 +49,19 @@ const CHANNELS: { title: string; email: string; blurb: string; response: string 
 export default function ContactPage() {
   return (
     <main className="gutter min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 py-6 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Contact StockersAI",
+            description: CONTACT_DESCRIPTION,
+            path: "/contact",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Contact", path: "/contact" },
+            ]),
+          }),
+        )}
+      />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
         <AuthHeader />
 
