@@ -215,7 +215,7 @@ export function GettingStarted({ onOpen }: { onOpen: (id: DashboardSectionId) =>
             <ul className="mt-3 space-y-2.5 text-sm text-slate-600 dark:text-slate-400">
               <li>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">Every board is bookmarkable.</span> The
-                open section lives in the URL, so <span className="tabular-nums">/dashboard#dividends</span> lands straight
+                open section lives in the URL, so <span className="tabular-nums">/dashboard/dividends</span> lands straight
                 on it and the back button walks between them.
               </li>
               <li>

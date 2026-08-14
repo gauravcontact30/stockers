@@ -68,6 +68,12 @@ function installFetchMock(researchResponse?: unknown, researchOk = true) {
     if (url === "/api/news") {
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     }
+    if (url === "/api/ai/verdicts") {
+      return Promise.resolve({ ok: true, body: null, text: () => Promise.resolve("") });
+    }
+    if (url.startsWith("/api/market/performance")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ rows: [], generatedAt: "2026-08-14T00:00:00.000Z" }) });
+    }
     if (url === "/api/research") {
       return Promise.resolve({
         ok: researchOk,
@@ -96,6 +102,7 @@ async function renderDashboard() {
 describe("DashboardClient", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.history.replaceState(null, "", "/dashboard");
     installFetchMock();
   });
 
@@ -188,6 +195,10 @@ describe("DashboardClient", () => {
       let resolveResearch!: (value: unknown) => void;
       global.fetch = jest.fn((url: string) => {
         if (url === "/api/news") return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        if (url === "/api/ai/verdicts") return Promise.resolve({ ok: true, body: null, text: () => Promise.resolve("") });
+        if (url.startsWith("/api/market/performance")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ rows: [], generatedAt: "2026-08-14T00:00:00.000Z" }) });
+        }
         if (url === "/api/research") {
           return new Promise((resolve) => {
             resolveResearch = resolve;
@@ -211,7 +222,7 @@ describe("DashboardClient", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stock: "reliance" }),
+          body: JSON.stringify({ stock: "RELIANCE" }),
         })
       );
       // selectedSymbol is upper-cased for display in the prediction panel immediately on submit
@@ -276,7 +287,7 @@ describe("DashboardClient", () => {
     const sidebar = () => within(screen.getByRole("navigation", { name: "Dashboard sections" }));
 
     afterEach(() => {
-      window.location.hash = "";
+      window.history.replaceState(null, "", "/dashboard");
     });
 
     it("opens an AI section from the sidebar, mounting only that panel and bookmarking it in the URL", async () => {
@@ -286,12 +297,12 @@ describe("DashboardClient", () => {
 
       await user.click(sidebar().getByRole("button", { name: "Market Pulse" }));
 
-      expect(screen.getByTestId("panel-market-pulse")).toBeInTheDocument();
+      expect(await screen.findByTestId("panel-market-pulse")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Market Pulse" })).toBeInTheDocument();
       expect(screen.getByText("Live breadth, indices and movers with an AI read on the day's mood.")).toBeInTheDocument();
       // The overview is unmounted with its own fetches, so only one section is ever live.
       expect(screen.queryByPlaceholderText("e.g. HDFC BANK")).not.toBeInTheDocument();
-      expect(window.location.hash).toBe("#market-pulse");
+      expect(window.location.pathname + window.location.hash).toBe("/dashboard/market-pulse");
       expect(window.scrollTo).toHaveBeenCalled();
     });
 
@@ -307,20 +318,20 @@ describe("DashboardClient", () => {
       await renderDashboard();
 
       await user.click(sidebar().getByRole("button", { name: label }));
-      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      expect(await screen.findByTestId(testId)).toBeInTheDocument();
     });
 
     it("opens the section named by the URL hash on first render", async () => {
       window.location.hash = "#compare";
       await renderDashboard();
 
-      expect(screen.getByTestId("panel-compare")).toBeInTheDocument();
+      expect(await screen.findByTestId("panel-compare")).toBeInTheDocument();
       // A deep link must not be rewritten on arrival.
       expect(window.location.hash).toBe("#compare");
     });
 
     it("falls back to the overview when the hash names no section", async () => {
-      window.location.hash = "#pricing";
+      window.history.replaceState(null, "", "/dashboard/pricing");
       await renderDashboard();
 
       expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
@@ -337,7 +348,7 @@ describe("DashboardClient", () => {
       });
 
       expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
-      expect(window.location.hash).toBe("");
+      expect(window.location.pathname + window.location.hash).toBe("/dashboard");
     });
 
     // The open section is read from the URL, so a hash change from outside React — the back
@@ -358,7 +369,7 @@ describe("DashboardClient", () => {
       const tabs = within(screen.getByRole("navigation", { name: "Dashboard sections (compact)" }));
       await user.click(tabs.getByRole("button", { name: "Top Picks" }));
 
-      expect(screen.getByTestId("panel-top-picks")).toBeInTheDocument();
+      expect(await screen.findByTestId("panel-top-picks")).toBeInTheDocument();
     });
   });
 
@@ -371,7 +382,7 @@ describe("DashboardClient", () => {
 
   describe("exchange boards and the guided tour", () => {
     afterEach(() => {
-      window.location.hash = "";
+      window.history.replaceState(null, "", "/dashboard");
     });
 
     // Each board is its own destination now, and mounting is still one section at a time.
@@ -392,7 +403,7 @@ describe("DashboardClient", () => {
         within(screen.getByRole("navigation", { name: "Dashboard sections" })).getByRole("button", { name: label }),
       );
 
-      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      expect(await screen.findByTestId(testId)).toBeInTheDocument();
     });
 
     // Getting Started has no AI layer, so it is the one section that is never wrapped in a gate.
@@ -407,7 +418,7 @@ describe("DashboardClient", () => {
       );
 
       expect(screen.getByRole("heading", { name: /here is the order to read them in/ })).toBeInTheDocument();
-      expect(window.location.hash).toBe("#support");
+      expect(window.location.pathname + window.location.hash).toBe("/dashboard/getting-started");
     });
 
     it("jumps from the tour straight into the board it points at", async () => {
@@ -417,8 +428,8 @@ describe("DashboardClient", () => {
 
       await user.click(screen.getByRole("button", { name: "Open Market Pulse →" }));
 
-      expect(screen.getByTestId("panel-market-pulse")).toBeInTheDocument();
-      expect(window.location.hash).toBe("#market-pulse");
+      expect(await screen.findByTestId("panel-market-pulse")).toBeInTheDocument();
+      expect(window.location.pathname + window.location.hash).toBe("/dashboard/market-pulse");
     });
   });
 });

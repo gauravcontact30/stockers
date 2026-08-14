@@ -1357,7 +1357,7 @@ export function AiIntelSearch() {
               Your free trial has ended, or an administrator has turned this feature off. Exchange data stays free.
             </p>
             <Link
-              href="/#pricing"
+              href="/pricing"
               className="mt-3 inline-flex rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
             >
               See plans

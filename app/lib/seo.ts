@@ -47,6 +47,13 @@ export const SEO_IMAGE_HEIGHT = 630;
 /** The whole public surface, in the order a sitemap should list it. Admin and API are not here. */
 export const PUBLIC_ROUTES = [
   "/",
+  "/beat-the-ai",
+  "/live-market",
+  "/bse-gainers-losers",
+  "/bse-sectors",
+  "/shareholding",
+  "/accuracy",
+  "/pricing",
   "/news",
   "/about",
   "/contact",
@@ -57,12 +64,39 @@ export const PUBLIC_ROUTES = [
 ] as const;
 
 export const SITE_KEYWORDS = [
+  "StockersAI",
+  "StockersAI India",
+  "stockers ai",
+  "stockersai.com",
   "AI stock research India",
+  "AI stock analysis India",
+  "AI stock market research India",
+  "Indian stock AI platform",
   "Indian stock market research",
-  "BSE gainers and losers",
   "Indian equity research",
-  "stock market sentiment India",
+  "Indian share market research",
+  "BSE stock research",
+  "BSE stock analysis",
+  "BSE gainers and losers",
+  "BSE top gainers today",
+  "BSE top losers today",
+  "BSE stock screener",
+  "BSE listed companies",
+  "BSE sector performance",
   "BSE market data",
+  "NSE ETF research",
+  "Indian ETF analysis",
+  "IPO analysis India",
+  "Indian IPO watch",
+  "shareholding pattern analysis",
+  "promoter holding analysis",
+  "FII DII holdings",
+  "stock market sentiment India",
+  "market news sentiment India",
+  "AI stock predictions India",
+  "stocks to watch tomorrow India",
+  "Indian stock comparison",
+  "AI portfolio analysis India",
   "AI investing tools",
 ];
 
@@ -154,7 +188,7 @@ export function pageMetadata({
   return {
     title,
     description,
-    keywords,
+    keywords: Array.from(new Set([...SITE_KEYWORDS, ...(keywords ?? [])])),
     alternates: {
       canonical: url,
       languages: {
@@ -318,7 +352,7 @@ export function softwareApplicationSchema(): JsonLdObject {
       price: PLAN_MONTHLY[plan],
       priceCurrency: "INR",
       category: "monthly subscription",
-      url: `${siteUrl()}/#pricing`,
+      url: absoluteUrl("/pricing"),
     })),
   };
 }

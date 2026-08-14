@@ -2,15 +2,12 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactElement } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import type { AnalysisResponse } from "./ai-analysis-report";
 import { AiReportModal } from "./ai-report-modal-lazy";
 import { GatedSection } from "./ai-gate";
-import { AiIntelSearch } from "./ai-intel-search";
-import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
-import { BseStockDirectory } from "./bse-stock-directory";
-import { BuyTomorrowPicks } from "./buy-tomorrow-picks";
 import { OverviewHeader } from "./dashboard-overview";
 import {
   DashboardSectionTabs,
@@ -22,33 +19,52 @@ import {
   type DashboardSection,
   type DashboardSectionId,
 } from "./dashboard-sidebar";
-import { DipWinners } from "./dip-winners";
-import { DividendBoard } from "./dividend-board";
-import { EtfBoard } from "./etf-board";
-import { EtfResearch } from "./etf-research";
-import { GettingStarted } from "./getting-started";
-import { IpoListings } from "./ipo-listings";
-import { LandingResearch } from "./landing-research";
-import { MarketNews } from "./market-news";
-import { MarketPulse } from "./market-pulse";
-import { MostTraded } from "./most-traded";
-import { MtfTraded } from "./mtf-traded";
 import { PlanPill } from "./plan-pill";
-import { PortfolioWorkspace } from "./portfolio-workspace";
 import { PredictionPanel } from "./prediction-panel";
 import { fetchResearch } from "./research-cache";
-import { SectorShowdowns } from "./sector-showdowns";
-import { SectorTrends } from "./sector-trends";
 import { StockExplorer } from "./stock-explorer";
 import { syncSessionCookie, useSubscription } from "./subscription-provider";
-import { StocksInNews } from "./stocks-in-news";
-import { TopPicksToday } from "./top-picks-today";
-import { TripleCompare } from "./triple-compare";
 import { WatchlistCard } from "./watchlist-card";
 import { indianStocks } from "../lib/indian-stocks";
 import { tierForPlan } from "../lib/plan-tiers";
+import { dashboardSectionIdFromPath, dashboardSectionPath } from "../lib/section-routes";
 import { track } from "../lib/track";
 import { stockIcon } from "../lib/company-logos";
+
+function PanelLoader() {
+  return (
+    <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900">
+      <div className="h-5 w-48 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+      <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+      </div>
+    </div>
+  );
+}
+
+const AiIntelSearch = dynamic(() => import("./ai-intel-search").then((module) => module.AiIntelSearch), { loading: PanelLoader });
+const AiStockCompare = dynamic(() => import("./ai-stock-compare").then((module) => module.AiStockCompare), { loading: PanelLoader });
+const BseStockDirectory = dynamic(() => import("./bse-stock-directory").then((module) => module.BseStockDirectory), { loading: PanelLoader });
+const BuyTomorrowPicks = dynamic(() => import("./buy-tomorrow-picks").then((module) => module.BuyTomorrowPicks), { loading: PanelLoader });
+const DipWinners = dynamic(() => import("./dip-winners").then((module) => module.DipWinners), { loading: PanelLoader });
+const DividendBoard = dynamic(() => import("./dividend-board").then((module) => module.DividendBoard), { loading: PanelLoader });
+const EtfBoard = dynamic(() => import("./etf-board").then((module) => module.EtfBoard), { loading: PanelLoader });
+const EtfResearch = dynamic(() => import("./etf-research").then((module) => module.EtfResearch), { loading: PanelLoader });
+const GettingStarted = dynamic(() => import("./getting-started").then((module) => module.GettingStarted), { loading: PanelLoader });
+const IpoListings = dynamic(() => import("./ipo-listings").then((module) => module.IpoListings), { loading: PanelLoader });
+const LandingResearch = dynamic(() => import("./landing-research").then((module) => module.LandingResearch), { loading: PanelLoader });
+const MarketNews = dynamic(() => import("./market-news").then((module) => module.MarketNews), { loading: PanelLoader });
+const MarketPulse = dynamic(() => import("./market-pulse").then((module) => module.MarketPulse), { loading: PanelLoader });
+const MostTraded = dynamic(() => import("./most-traded").then((module) => module.MostTraded), { loading: PanelLoader });
+const MtfTraded = dynamic(() => import("./mtf-traded").then((module) => module.MtfTraded), { loading: PanelLoader });
+const PortfolioWorkspace = dynamic(() => import("./portfolio-workspace").then((module) => module.PortfolioWorkspace), { loading: PanelLoader });
+const SectorShowdowns = dynamic(() => import("./sector-showdowns").then((module) => module.SectorShowdowns), { loading: PanelLoader });
+const SectorTrends = dynamic(() => import("./sector-trends").then((module) => module.SectorTrends), { loading: PanelLoader });
+const StocksInNews = dynamic(() => import("./stocks-in-news").then((module) => module.StocksInNews), { loading: PanelLoader });
+const TopPicksToday = dynamic(() => import("./top-picks-today").then((module) => module.TopPicksToday), { loading: PanelLoader });
+const TripleCompare = dynamic(() => import("./triple-compare").then((module) => module.TripleCompare), { loading: PanelLoader });
 
 type UserData = {
   id: string;
@@ -78,39 +94,44 @@ function readStoredUser(): UserData | null {
 }
 
 // ---------------------------------------------------------------------------
-// The open section lives in the URL hash
+// The open section lives in the URL
 // ---------------------------------------------------------------------------
-// So a link can point straight at one feature (/dashboard#top-picks), a reload keeps the user
-// where they were, and the browser's back button walks between sections.
+// New links use crawlable paths such as /dashboard/top-picks. Hash URLs still read correctly so
+// old bookmarks and shared links do not break.
 
 const hashListeners = new Set<() => void>();
 
 function subscribeToSection(listener: () => void) {
   hashListeners.add(listener);
   window.addEventListener("hashchange", listener);
+  window.addEventListener("popstate", listener);
   return () => {
     hashListeners.delete(listener);
     window.removeEventListener("hashchange", listener);
+    window.removeEventListener("popstate", listener);
   };
 }
 
-function readSectionFromHash(): DashboardSectionId {
+function readSectionFromLocation(fallback: DashboardSectionId): DashboardSectionId {
   const hash = window.location.hash.replace("#", "");
-  return isDashboardSectionId(hash) ? hash : "overview";
+  if (isDashboardSectionId(hash)) return hash;
+
+  const pathSection = dashboardSectionIdFromPath(window.location.pathname);
+  return pathSection && isDashboardSectionId(pathSection) ? pathSection : fallback;
 }
 
 /* istanbul ignore next -- only called while hydrating server-rendered HTML, which jsdom never does. */
-const overviewOnServer = (): DashboardSectionId => "overview";
+const sectionOnServer = (initialSection: DashboardSectionId) => () => initialSection;
 
 function openSection(id: DashboardSectionId) {
   // Which sections people actually open is what the dashboard's own shape should be argued from,
   // and a hash change is not a page view — without this the admin's traffic report would show one
   // visit to /dashboard and nothing about what happened inside it.
   track("nav.section", id);
-  // pushState would make every sidebar click a history entry to walk back through; the hash is a
-  // bookmark for the open section, so it replaces instead. That means no hashchange event fires,
-  // hence the manual notify.
-  window.history.replaceState(null, "", id === "overview" ? window.location.pathname : `#${id}`);
+  // pushState would make every sidebar click a history entry to walk back through. The selected
+  // dashboard surface is a bookmarkable URL, so it replaces instead. No event fires for that, hence
+  // the manual notify.
+  window.history.replaceState(null, "", dashboardSectionPath(id));
   hashListeners.forEach((listener) => listener());
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -139,13 +160,17 @@ function SectionShell({ section, children }: { section: DashboardSection; childr
   );
 }
 
-export function DashboardClient() {
+export function DashboardClient({ initialSection = "overview" }: { initialSection?: DashboardSectionId }) {
   const router = useRouter();
   const { refresh: refreshSubscription, status: subscriptionStatus } = useSubscription();
   const [user] = useState<UserData | null>(readStoredUser);
-  // Reading the hash through useSyncExternalStore keeps the server (which has no hash) and the
-  // first client render in agreement, then resyncs to the real URL right after hydration.
-  const section = useSyncExternalStore(subscribeToSection, readSectionFromHash, overviewOnServer);
+  // Reading the URL through useSyncExternalStore keeps the server and first client render in
+  // agreement, then resyncs to the real URL right after hydration.
+  const section = useSyncExternalStore(
+    subscribeToSection,
+    () => readSectionFromLocation(initialSection),
+    sectionOnServer(initialSection),
+  );
   const [stock, setStock] = useState("RELIANCE");
   const [selectedSymbol, setSelectedSymbol] = useState("RELIANCE");
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);

@@ -79,7 +79,7 @@ function StarRibbon({ tier, feature }: { tier: PlanTier; feature: string }) {
 
 export function LockPanel({ feature, label }: { feature: string; label: string }) {
   const { status, isLocked } = useSubscription();
-  // The plans open over the panel rather than at the end of a link to /#pricing. Being refused and
+  // The plans open over the panel rather than sending the reader away to /pricing. Being refused and
   // being able to do something about it are one step now, and the reader keeps their place.
   const [plansOpen, setPlansOpen] = useState(false);
   const plansEverOpened = useOnceOpen(plansOpen);

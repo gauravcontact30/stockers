@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import clientReviews from "./data/client-reviews.json";
+import { HOME_SECTION_ROUTES } from "./lib/section-routes";
 import { absoluteUrl, SEO_IMAGE_PATH } from "./lib/seo";
 
 /**
@@ -31,6 +32,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...clientReviews.flatMap((review) => [review.photo, review.signatureImage].filter(Boolean) as string[]).map(absoluteUrl),
   ];
 
+  const homeSectionEntries = HOME_SECTION_ROUTES.map((route) => ({
+    url: absoluteUrl(route.path),
+    images: [siteImage],
+    lastModified: built,
+    changeFrequency: "daily" as const,
+    priority: route.path === "/pricing" ? 0.8 : 0.85,
+  }));
+
   return [
     {
       url: absoluteUrl("/"),
@@ -40,6 +49,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 1,
     },
+    ...homeSectionEntries,
     {
       url: absoluteUrl("/news"),
       images: [siteImage],

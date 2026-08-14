@@ -18,6 +18,10 @@
 // rather than throwing, and the caller treats a failure as "the account still exists, the mail
 // didn't go" â€” which is recoverable by resending, whereas a rejected sign-up is not.
 
+// Reads RESEND_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 

@@ -402,7 +402,7 @@ export function SubscriptionReminder() {
                 Create an account
               </Link>
             )}
-            <Link href="/#pricing" className={`rounded-full px-5 py-2 text-sm font-bold transition ${theme.secondary}`}>
+            <Link href="/pricing" className={`rounded-full px-5 py-2 text-sm font-bold transition ${theme.secondary}`}>
               See plans
             </Link>
             <button type="button" onClick={close} className={`rounded-full px-4 py-2 text-sm font-medium transition ${theme.dismiss}`}>

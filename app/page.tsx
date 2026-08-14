@@ -10,6 +10,7 @@ import { MobileNav } from "./components/mobile-nav";
 import { StreamedOwnershipBoard } from "./components/streamed-ownership-board";
 import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
 import { PricingPlans } from "./components/pricing-plans";
+import { ScrollToSection } from "./components/scroll-to-section";
 import { SiteFooter } from "./components/site-footer";
 import { JsonLd } from "./components/json-ld";
 import { AccuracyMatrixSection } from "./components/accuracy-matrix-section";
@@ -18,12 +19,13 @@ import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
 import { getDipLeaders } from "./lib/dip-leaders";
+import { HOME_SECTION_ROUTES, type HomeSectionId } from "./lib/section-routes";
 import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "./lib/seo";
 import { getCachedPerformanceSummaries } from "./lib/stock-performance";
 
 export const revalidate = 60;
 
-const HOME_DESCRIPTION =
+export const HOME_DESCRIPTION =
   "AI research on Indian equities with BSE gainers and losers, market news sentiment, shareholding data, returns, comparisons, and subscription plans.";
 
 export const metadata: Metadata = {
@@ -44,13 +46,7 @@ export const metadata: Metadata = {
 };
 
 const navLinks = [
-  { href: "#head-to-head", label: "Beat the AI" },
-  { href: "#live-market", label: "Live market" },
-  { href: "#bse-movers", label: "Gainers & Losers" },
-  { href: "#bse-sectors", label: "By Category" },
-  { href: "#ownership", label: "Who owns what" },
-  { href: "#accuracy", label: "Accuracy" },
-  { href: "#pricing", label: "Pricing" },
+  ...HOME_SECTION_ROUTES.map(({ path, label }) => ({ href: path, label })),
   { href: "/dashboard", label: "AI Dashboard" },
 ];
 
@@ -84,18 +80,40 @@ function BandHeading({ eyebrow, title, blurb }: { eyebrow: string; title: string
   );
 }
 
-export default async function Home() {
+type HomeProps = {
+  sectionId?: HomeSectionId;
+  seo?: {
+    name: string;
+    description: string;
+    path: string;
+  };
+};
+
+export default async function Home({ sectionId, seo }: HomeProps = {}) {
   const { initialPerformance, initialDipLeaders } = await getHeroInitialData();
+  const pageSeo = seo ?? {
+    name: "AI Indian stock market research",
+    description: HOME_DESCRIPTION,
+    path: "/",
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      {sectionId && <ScrollToSection id={sectionId} />}
       <JsonLd
         schema={graph(
           webPageSchema({
-            name: "AI Indian stock market research",
-            description: HOME_DESCRIPTION,
-            path: "/",
-            breadcrumb: breadcrumbSchema([{ name: "Home", path: "/" }]),
+            name: pageSeo.name,
+            description: pageSeo.description,
+            path: pageSeo.path,
+            breadcrumb: breadcrumbSchema(
+              pageSeo.path === "/"
+                ? [{ name: "Home", path: "/" }]
+                : [
+                    { name: "Home", path: "/" },
+                    { name: pageSeo.name, path: pageSeo.path },
+                  ],
+            ),
           }),
         )}
       />
@@ -110,20 +128,15 @@ export default async function Home() {
           </Link>
 
           <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto whitespace-nowrap rounded-full border border-slate-200/70 bg-slate-50/80 p-1 lg:flex dark:border-slate-800 dark:bg-slate-950/50 [scrollbar-width:thin]">
-            {navLinks.map((link) => {
-              // Same-page anchors stay plain <a> so the browser handles smooth scrolling;
-              // links to another route go through Link for client-side navigation.
-              const NavTag = link.href.startsWith("/") ? Link : "a";
-              return (
-                <NavTag
-                  key={link.href}
-                  href={link.href}
-                  className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-                >
-                  {link.label}
-                </NavTag>
-              );
-            })}
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">

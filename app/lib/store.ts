@@ -20,6 +20,10 @@
 // why at length; the short version is that a silent fallback forks the source of truth and loses
 // the account, and a 500 the visitor can retry is the better failure.
 
+// Reads AUTH_TOKEN_SECRET, and holds the user table. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { adminEmails } from "./admin-access";

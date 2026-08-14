@@ -690,7 +690,7 @@ describe("AiIntelSearch", () => {
     render(<AiIntelSearch />);
 
     await user.type(searchBox(), "tata");
-    await user.click(await screen.findByRole("option", { name: "TATASTEEL logo TATASTEEL Tata Steel Ltd" }));
+    await user.click(await screen.findByRole("option", { name: "Tata Steel (TATASTEEL) logo TATASTEEL Tata Steel Ltd" }));
 
     await waitFor(() => {
       expect(intelCalls(calls).at(-1)?.body).toEqual({ ...DEFAULT_FILTERS, query: "TATASTEEL" });
@@ -873,7 +873,7 @@ describe("AiIntelSearch", () => {
 
     // Every option carries its company's logo, whose alt text names the ticker — so the company
     // rows are told apart from the question rows by their own labels.
-    expect(await screen.findByRole("option", { name: "TATAMOTORS logo TATAMOTORS Tata Motors Ltd" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "TATAMOTORS (TATAMOTORS) logo TATAMOTORS Tata Motors Ltd" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /latest results/ })).toBeInTheDocument();
     expect(box).toHaveAttribute("aria-expanded", "true");
 
@@ -941,7 +941,7 @@ describe("AiIntelSearch", () => {
     await user.click(screen.getByRole("button", { name: "Search" }));
 
     expect(await screen.findByText("Intelligence search is locked")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/#pricing");
+    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/pricing");
   });
 
   it("reports a failed search without blanking the panel", async () => {

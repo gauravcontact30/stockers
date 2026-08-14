@@ -23,6 +23,10 @@
 // plainer words, and it says which it is. This is the same bargain the rest of the app makes: every
 // AI panel still renders, composed from its own measured figures, and admits as much.
 
+// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { appOrigin } from "./app-origin";
 import type { CacheTag } from "./cache";
 import { FAMILY_META, type CacheFamilyReport, type CacheReport } from "./cache-report";

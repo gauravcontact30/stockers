@@ -59,10 +59,12 @@ describe("SiteFooter", () => {
     expect(screen.getByText(/Not a SEBI-registered investment adviser/)).toBeInTheDocument();
   });
 
-  it("sends the dashboard links to the dashboard, with their section anchors intact", () => {
+  it("sends market links to crawlable section routes", () => {
     render(<SiteFooter />);
 
-    expect(screen.getByRole("link", { name: "Market Pulse" })).toHaveAttribute("href", "/dashboard#market-pulse");
+    expect(screen.getByRole("link", { name: "Live BSE market" })).toHaveAttribute("href", "/live-market");
+    expect(screen.getByRole("link", { name: "BSE gainers & losers" })).toHaveAttribute("href", "/bse-gainers-losers");
+    expect(screen.getByRole("link", { name: "AI market pulse" })).toHaveAttribute("href", "/dashboard/market-pulse");
     expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
   });
 });

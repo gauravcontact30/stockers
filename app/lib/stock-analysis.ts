@@ -1,3 +1,7 @@
+// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { getPerformanceSummary, type PerformanceSummary } from "./stock-performance";
 import { appOrigin } from "./app-origin";
 

@@ -48,9 +48,9 @@ const baseStatus = {
   name: "Aarav",
 };
 
-/** Puts the checkout intent in the URL the signup redirect would have landed on. */
+/** Puts the checkout intent in the URL the signup redirect lands on. */
 function atUrl(search: string) {
-  window.history.replaceState(null, "", `/dashboard${search}`);
+  window.history.replaceState(null, "", `/pricing${search}`);
 }
 
 function renderBar(overrides: Record<string, unknown> = {}) {
@@ -218,7 +218,7 @@ describe("PendingSubscriptionCheckout", () => {
   // goes too — otherwise a refresh brings the whole thing straight back.
   it("forgets the intent and cleans the URL when dismissed", async () => {
     const user = userEvent.setup();
-    atUrl("?subscribe=1&plan=pro&cycle=monthly#pricing");
+    atUrl("?subscribe=1&plan=pro&cycle=monthly");
     const { container } = renderBar();
     await screen.findByText("Pro plan ready for checkout");
 
@@ -227,7 +227,7 @@ describe("PendingSubscriptionCheckout", () => {
     expect(container).toBeEmptyDOMElement();
     expect(readPendingSubscription()).toBeNull();
     expect(window.location.search).toBe("");
-    expect(window.location.pathname + window.location.hash).toBe("/dashboard#pricing");
+    expect(window.location.pathname + window.location.hash).toBe("/pricing");
   });
 
   it("offers every plan we sell in the picker", async () => {

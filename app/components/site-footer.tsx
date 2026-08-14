@@ -4,20 +4,21 @@ import { Logo } from "./logo";
 /**
  * The footer's links.
  *
- * Every href is absolute. They used to be bare fragments — `#market-pulse` and the like — which
- * work on the landing page and go nowhere from the policy or account pages, where the footer also
- * appears. A link that silently does nothing on half the site is worse than no link.
+ * Every href is absolute so the footer behaves as a site map from every page.
  */
 const footerColumns: { heading: string; links: { href: string; label: string }[] }[] = [
   {
     heading: "Markets & Data",
     links: [
-      { href: "/dashboard#market-pulse", label: "Market Pulse" },
-      { href: "/dashboard#top-picks", label: "Top Picks" },
-      { href: "/dashboard#dip-winners", label: "Dip Screener" },
-      { href: "/dashboard#ipos", label: "IPO Watch" },
-      { href: "/dashboard#etf-board", label: "ETFs" },
-      { href: "/news", label: "Market News" },
+      { href: "/live-market", label: "Live BSE market" },
+      { href: "/bse-gainers-losers", label: "BSE gainers & losers" },
+      { href: "/bse-sectors", label: "BSE sector movers" },
+      { href: "/shareholding", label: "BSE shareholding" },
+      { href: "/news", label: "Indian market news" },
+      { href: "/dashboard/market-pulse", label: "AI market pulse" },
+      { href: "/dashboard/top-picks", label: "AI top stock picks" },
+      { href: "/dashboard/ipos", label: "Indian IPO watch" },
+      { href: "/dashboard/etf-board", label: "Indian ETF board" },
     ],
   },
   {
@@ -25,8 +26,8 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
     links: [
       { href: "/about", label: "About Us" },
       { href: "/contact", label: "Contact Us" },
-      { href: "/#pricing", label: "Pricing" },
-      { href: "/dashboard#support", label: "Getting Started" },
+      { href: "/pricing", label: "AI stock research pricing" },
+      { href: "/dashboard/getting-started", label: "Getting Started" },
       { href: "/signin", label: "Sign in" },
       { href: "/signup", label: "Sign up" },
     ],

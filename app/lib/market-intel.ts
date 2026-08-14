@@ -24,6 +24,10 @@
 // A point the model can't attribute is still shown, marked as unsourced. That is deliberate: it
 // is more honest than silently dropping it, and it lets a reader discount it.
 
+// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { HISTORY_PERIODS, getBaseline, overallReturn, periodReturn, type Baseline } from "./bse-history";
 import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { getBseDirectory, getBseMovers } from "./bse-market";

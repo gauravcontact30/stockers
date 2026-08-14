@@ -10,6 +10,10 @@
 // composed from the numbers directly. Either way the stance comes from the arithmetic, so the
 // call a reader sees is always explainable — matching how the market pulse labels itself.
 
+// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
 import { appOrigin } from "./app-origin";

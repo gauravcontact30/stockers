@@ -242,13 +242,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       );
       router.push(
         checkoutTarget
-          ? `/?${new URLSearchParams({
+          ? `/pricing?${new URLSearchParams({
               subscribe: "1",
               plan: checkoutTarget.plan,
               cycle: checkoutTarget.cycle,
               ...(checkoutTarget.promoCode ? { promo: checkoutTarget.promoCode } : {}),
               ...(checkoutTarget.referralCode ? { ref: checkoutTarget.referralCode } : {}),
-            }).toString()}#pricing`
+            }).toString()}`
           : "/dashboard",
       );
     } catch {

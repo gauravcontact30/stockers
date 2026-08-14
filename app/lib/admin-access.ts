@@ -1,3 +1,7 @@
+// Reads the admin allowlist. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 export const SUPER_ADMIN_EMAIL = "garvcontact30@gmail.com";
 
 function normalizeEmail(email: string): string {

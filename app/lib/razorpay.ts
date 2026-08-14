@@ -21,6 +21,10 @@
 // Without them every entry point here reports "not configured" and the app carries on with its
 // existing unpaid renewal flow, so a checkout misconfiguration cannot take the site down.
 
+// Reads RAZORPAY_KEY_SECRET. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { discountedAmount, discountFromPaymentNotes, type AppliedDiscount } from "./checkout-discounts";
 import type { PlanName } from "./auth-validation";

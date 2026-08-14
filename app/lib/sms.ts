@@ -12,6 +12,10 @@
 // A gateway will accept the API call and silently drop the message otherwise. The body below is
 // written as a fixed template with one variable so it can be registered as-is.
 
+// Reads TWILIO_AUTH_TOKEN. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { normaliseMobile } from "./auth-validation";

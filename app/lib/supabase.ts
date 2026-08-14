@@ -27,6 +27,10 @@
 // what makes the anon key useless against this table. `supabase/schema.sql` does this; if you
 // create the table by hand, do it there too.
 
+// Reads SUPABASE_SERVICE_ROLE_KEY, which bypasses row-level security. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export type SupabaseConfig = {

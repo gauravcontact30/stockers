@@ -1,3 +1,7 @@
+// Reads AUTH_TOKEN_SECRET. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { createHmac } from "node:crypto";
 import { appOrigin } from "./app-origin";
 import { billedAmount, type BillingCycle, type PlanKey } from "./subscription-pricing";

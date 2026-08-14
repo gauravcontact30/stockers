@@ -8,6 +8,10 @@
 // model only writes prose over figures it is handed, and it is told in as many words not to invent
 // any. With no key configured the read is composed from those same figures directly, and says so.
 
+// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
+// build error, rather than a key that quietly ships to the browser.
+import "server-only";
+
 import { appOrigin } from "./app-origin";
 
 export type BoardFact = { label: string; value: string };

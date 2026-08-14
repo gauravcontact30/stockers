@@ -313,7 +313,20 @@ export function renewedUntil(current: string | null | undefined, today: string, 
 
 export type FeatureLocks = Record<string, boolean>;
 
-const locksPath = process.env.STOCKERS_LOCKS_FILE || path.join(process.cwd(), "app", "data", "feature-locks.json");
+const configuredLocksPath = process.env.STOCKERS_LOCKS_FILE;
+const defaultLocksPath = path.join(process.cwd(), "app", "data", "feature-locks.json");
+
+function featureLocksPath(): string {
+  return configuredLocksPath || defaultLocksPath;
+}
+
+function readLocksFile(): Promise<string> {
+  if (configuredLocksPath) {
+    return fs.readFile(/* turbopackIgnore: true */ configuredLocksPath, "utf8");
+  }
+
+  return fs.readFile(defaultLocksPath, "utf8");
+}
 
 /**
  * One row of `public.feature_locks`. Only locked features are stored — an absent row is open,
@@ -350,7 +363,7 @@ export async function readFeatureLocks(): Promise<FeatureLocks> {
   }
 
   try {
-    const raw = await fs.readFile(locksPath, "utf8");
+    const raw = await readLocksFile();
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
 
@@ -366,6 +379,7 @@ export async function readFeatureLocks(): Promise<FeatureLocks> {
 }
 
 export async function writeFeatureLocks(locks: FeatureLocks): Promise<void> {
+  const locksPath = featureLocksPath();
   await fs.mkdir(path.dirname(locksPath), { recursive: true });
   await fs.writeFile(locksPath, JSON.stringify(locks, null, 2), "utf8");
 }
