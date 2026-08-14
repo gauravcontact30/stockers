@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "./lib/theme-provider";
 import { StockDetailProvider } from "./components/stock-detail-provider";
@@ -159,6 +160,9 @@ export default function RootLayout({
             </StockDetailProvider>
           </SubscriptionProvider>
         </ThemeProvider>
+        {/* Vercel's own page-view/traffic collection — separate from VisitTracker above, which
+            feeds the in-app admin dashboard. Renders nothing; injects a script on Vercel only. */}
+        <Analytics />
       </body>
     </html>
   );
