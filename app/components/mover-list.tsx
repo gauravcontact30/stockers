@@ -3,9 +3,10 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { BseMoverPage } from "../lib/bse-market";
-import { formatPercent, moveTone, rowTint, sectorLabel } from "../lib/market-format";
+import { formatPercent, moveTone, rowTint } from "../lib/market-format";
 import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
+import { SectorPill } from "./sector-pill";
 import { DataTable, type Column } from "./data-table";
 
 /**
@@ -70,11 +71,7 @@ export function MoverList({
             <span className="block truncate text-[9px] leading-tight text-slate-500 dark:text-slate-400">{row.name}</span>
             {/* The industry the exchange files it under: two companies up the same amount are a
                 very different story if one is a bank and the other a smelter. */}
-            {sectorLabel(row.sector) && (
-              <span className="block truncate text-[9px] font-semibold leading-tight text-slate-400 dark:text-slate-500">
-                {sectorLabel(row.sector)}
-              </span>
-            )}
+            <SectorPill sector={row.sector} className="mt-0.5" />
           </span>
         </button>
       ),

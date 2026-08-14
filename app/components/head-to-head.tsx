@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HEAD_TO_HEAD_PICKS, type Contender, type MatchResult, type Side } from "../lib/head-to-head";
 import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
+import { SectorPill } from "./sector-pill";
 import { StockCombobox } from "./stock-combobox";
 
 /**
@@ -84,9 +85,7 @@ function LockedSlot({ pick, chrome, label }: { pick: SlotPick; chrome: "human" |
           <CapTierBadge raw={pick.capTier} />
         </span>
         {pick.name && <span className="block truncate text-[10px] opacity-70">{pick.name}</span>}
-        {sectorLabel(pick.sector) && (
-          <span className="block truncate text-[9px] font-semibold opacity-60">{sectorLabel(pick.sector)}</span>
-        )}
+        <SectorPill sector={pick.sector} className="mt-0.5" />
       </span>
     </div>
   );
@@ -188,60 +187,74 @@ function PickRow({ pick, tone }: { pick: Contender; tone: string }) {
   const unpriced = MATRIX.every((window) => pick[window.key] === null);
 
   return (
-    <li className="border-t border-white/70 py-1.5 first:border-t-0 dark:border-white/5">
-      {/* One row that wraps rather than two breakpoint copies of the same figures: duplicating the
-          matrix would put every return twice into the accessibility tree, where a screen reader
-          reads both. `w-full` drops it to its own line on a narrow screen; `sm:w-auto` lets it sit
-          beside the company name when there is room. */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <CompanyLogo symbol={pick.symbol} size={24} />
+    <li className="rounded-xl bg-white/70 p-2.5 dark:bg-white/5">
+      {/* The company, then the score. Two lines rather than one crowded row: nine return figures
+          and a company identity competing for one line is what made the stats unreadable. */}
+      <div className="flex items-start gap-2.5">
+        <CompanyLogo symbol={pick.symbol} size={28} />
+
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-white">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-[13px] font-bold leading-tight text-slate-900 dark:text-white">
               {pick.symbol}
             </span>
             <CapTierBadge raw={pick.capTier} />
-          </p>
-          {pick.name && <p className="truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">{pick.name}</p>}
-          {/* The live last-traded price, from the same 60-second quote cache the boards read. It
-              is what makes the row a company at a price rather than a ticker and a grade. */}
-          {pick.price !== null && (
-            <p className="truncate text-[10px] font-semibold leading-tight tabular-nums text-slate-700 dark:text-slate-300">
-              ₹{pick.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
+          </div>
+          {pick.name && (
+            <p className="truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">{pick.name}</p>
           )}
-          {unpriced && (
-            <p className="truncate text-[9px] font-semibold leading-tight text-amber-600 dark:text-amber-400">
-              No price history — scored neutral
-            </p>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <SectorPill sector={pick.sector} />
+            {/* The live last-traded price, from the same 60-second quote cache the boards read.
+                It is what makes the row a company at a price rather than a ticker and a grade. */}
+            {pick.price !== null && (
+              <span className="text-[10px] font-semibold tabular-nums text-slate-700 dark:text-slate-300">
+                ₹{pick.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="w-9 shrink-0 text-right">
-          <p className={`text-sm font-bold tabular-nums ${tone}`} title={unpriced ? "Neutral: no returns to score" : undefined}>
+        <div className="shrink-0 text-right">
+          <p
+            className={`text-xl font-bold leading-none tabular-nums ${tone}`}
+            title={unpriced ? "Neutral: no returns to score" : undefined}
+          >
             {pick.score}
           </p>
+          <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Score
+          </p>
         </div>
+      </div>
 
-        {/* The whole record. The four windows the score weighs are ringed and carry a dot; the
-            rest are context. A reader can see why one stock scored above another rather than
-            taking the number on trust, and can also see what the score did not look at. */}
-        <dl className="grid w-full shrink-0 grid-cols-5 gap-1 sm:grid-cols-9">
+      {unpriced && (
+        <p className="mt-1.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400">
+          No price history — scored neutral
+        </p>
+      )}
+
+      {/* The whole record, on one line that scrolls rather than a grid that wraps.
+          Nine cells wrapped across two rows of a five-column grid read as noise; a single strip a
+          reader can push sideways keeps the windows in order and every figure at a legible size.
+          The four the score weighs are ringed and carry a dot; the rest are context. */}
+      <div className="mt-2 -mx-0.5 overflow-x-auto pb-0.5">
+        <dl className="flex min-w-max gap-1 px-0.5">
           {MATRIX.map((window) => (
             <div
               key={window.key}
               title={window.scored ? `${window.label} — counts towards the score` : `${window.label} — shown, not scored`}
-              className={`rounded-md px-1 py-0.5 text-center ${
+              className={`w-[3.1rem] shrink-0 rounded-lg px-1 py-1 text-center ${
                 window.scored
                   ? "bg-white ring-1 ring-slate-300 dark:bg-white/10 dark:ring-white/20"
-                  : "bg-white/50 dark:bg-white/[0.04]"
+                  : "bg-slate-50 dark:bg-white/5"
               }`}
             >
               <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 {window.label}
                 {window.scored && <span aria-hidden="true"> ·</span>}
               </dt>
-              <dd className={`text-[10px] font-semibold leading-tight tabular-nums ${returnTone(pick[window.key])}`}>
+              <dd className={`mt-0.5 text-[11px] font-bold leading-none tabular-nums ${returnTone(pick[window.key])}`}>
                 {formatReturn(pick[window.key])}
               </dd>
             </div>
@@ -250,6 +263,35 @@ function PickRow({ pick, tone }: { pick: Contender; tone: string }) {
       </div>
     </li>
   );
+}
+
+/**
+ * A side in three figures.
+ *
+ * Best and weakest are by score, which is what the match is decided on — not by one-year return,
+ * which would name a different company from the one that actually carried the side. The average is
+ * over the picks that have a one-year figure at all, so an unpriced company neither flatters the
+ * side nor drags it to zero.
+ */
+export function sideStats(side: Side): {
+  /** The ticker, or a dash — so the card renders the answer without a branch of its own. */
+  best: string;
+  worst: string;
+  averageYear: number | null;
+} {
+  if (side.picks.length === 0) return { best: "—", worst: "—", averageYear: null };
+
+  let best = side.picks[0];
+  let worst = side.picks[0];
+  for (const pick of side.picks) {
+    if (pick.score > best.score) best = pick;
+    if (pick.score < worst.score) worst = pick;
+  }
+
+  const years = side.picks.map((pick) => pick.oneYear).filter((value): value is number => value !== null);
+  const averageYear = years.length > 0 ? years.reduce((sum, value) => sum + value, 0) / years.length : null;
+
+  return { best: best.symbol, worst: worst.symbol, averageYear };
 }
 
 function SideCard({
@@ -271,6 +313,7 @@ function SideCard({
   tag?: string;
 }) {
   const chrome = CHROME[who];
+  const stats = sideStats(side);
 
   return (
     <section
@@ -300,11 +343,34 @@ function SideCard({
       </div>
 
       {/* 0-100, so the bar is the score itself rather than a share of anything. */}
-      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/70 dark:bg-white/10">
+      <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-white/70 dark:bg-white/10">
         <div className={`h-full rounded-r-[4px] transition-[width] duration-500 ${chrome.bar}`} style={{ width: `${side.score}%` }} />
       </div>
 
-      <ul className="mt-1.5">
+      {/* The side in three numbers: its best pick, its worst, and the year the five had between
+          them. A card of five scores tells a reader who won; this tells them why. */}
+      <dl className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
+          <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Best</dt>
+          <dd className="mt-0.5 truncate text-[11px] font-bold leading-none text-slate-900 dark:text-white">
+            {stats.best}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
+          <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Weakest</dt>
+          <dd className="mt-0.5 truncate text-[11px] font-bold leading-none text-slate-900 dark:text-white">
+            {stats.worst}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
+          <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Avg 1Y</dt>
+          <dd className={`mt-0.5 text-[11px] font-bold leading-none tabular-nums ${returnTone(stats.averageYear)}`}>
+            {formatReturn(stats.averageYear)}
+          </dd>
+        </div>
+      </dl>
+
+      <ul className="mt-2.5 flex flex-col gap-1.5">
         {side.picks.map((pick) => (
           <PickRow key={pick.symbol} pick={pick} tone={chrome.score} />
         ))}
@@ -337,8 +403,8 @@ export function HeadToHead() {
   // Once locked, both teams are on the table and neither side can be edited. The scores are still
   // behind the countdown; this is only "the hands are down".
   const revealed = result ?? locked;
-  const aiPicks: AiPick[] = revealed?.ai.picks.map((pick) => ({ symbol: pick.symbol, name: pick.name })) ?? [];
-  const humanPicks: AiPick[] = revealed?.human.picks.map((pick) => ({ symbol: pick.symbol, name: pick.name })) ?? [];
+  const aiPicks = slotsFrom(revealed?.ai.picks);
+  const humanPicks = slotsFrom(revealed?.human.picks);
 
   // One tick a second while a fight is on.
   useEffect(() => {
@@ -444,24 +510,7 @@ export function HeadToHead() {
               {humanPicks[index] ? (
                 // Locked. The search boxes are gone rather than disabled: once the AI has answered
                 // this line-up, a greyed-out field still looks like something you might edit.
-                // Driven off the scored contenders rather than the typed strings, so the tile shows
-                // the company the server actually priced.
-                <div
-                  aria-label={`Your pick ${index + 1}`}
-                  className="flex h-10 w-full items-center gap-2 overflow-hidden rounded-xl border border-sky-200 bg-sky-50/70 px-2 dark:border-sky-500/30 dark:bg-sky-500/10"
-                >
-                  <CompanyLogo symbol={humanPicks[index].symbol} size={22} />
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block truncate text-xs font-bold text-sky-900 dark:text-sky-200">
-                      {humanPicks[index].symbol}
-                    </span>
-                    {humanPicks[index].name && (
-                      <span className="block truncate text-[10px] text-sky-700/70 dark:text-sky-300/70">
-                        {humanPicks[index].name}
-                      </span>
-                    )}
-                  </span>
-                </div>
+                <LockedSlot pick={humanPicks[index]} chrome="human" label={`Your pick ${index + 1}`} />
               ) : (
                 <StockCombobox
                   value={symbol}
@@ -495,23 +544,7 @@ export function HeadToHead() {
                 {pick ? (
                   // Revealed: a tile rather than the select, because a <select> cannot hold an
                   // image and the company's own mark is most of what makes a ticker recognisable.
-                  <div
-                    id={`ai-pick-${index}`}
-                    aria-label={`AI pick ${index + 1}`}
-                    className="flex h-10 w-full items-center gap-2 overflow-hidden rounded-xl border border-violet-200 bg-violet-50/70 px-2 dark:border-violet-500/30 dark:bg-violet-500/10"
-                  >
-                    <CompanyLogo symbol={pick.symbol} size={22} />
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <span className="block truncate text-xs font-bold text-violet-900 dark:text-violet-200">
-                        {pick.symbol}
-                      </span>
-                      {pick.name && (
-                        <span className="block truncate text-[10px] text-violet-700/70 dark:text-violet-300/70">
-                          {pick.name}
-                        </span>
-                      )}
-                    </span>
-                  </div>
+                  <LockedSlot pick={pick} chrome="ai" label={`AI pick ${index + 1}`} />
                 ) : (
                   /* Still hidden. A real select, locked and blurred, mirroring the shape of the
                      reader's own five so the two line-ups read as opposing teams. The placeholder

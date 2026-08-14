@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BseMoverPage } from "../lib/bse-market";
-import { formatPercent, moveTone, rowTint, sectorLabel } from "../lib/market-format";
+import { formatPercent, moveTone, rowTint } from "../lib/market-format";
 import { buildMoversUrl, type MoverDirection, type MoverTierKey } from "../lib/market-urls";
 import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
+import { SectorPill } from "./sector-pill";
 import { pageWindow, useMarketFeed } from "./market-section";
 import { StockCombobox } from "./stock-combobox";
 
@@ -83,11 +84,7 @@ function Row({ row, rank, index }: { row: BseMoverPage["rows"][number]; rank: nu
         <span className="block truncate text-[9px] text-slate-500 dark:text-slate-400">{row.name}</span>
         {/* The industry the exchange files it under. Two companies moving the same amount are a
             very different story if one is a bank and the other a smelter. */}
-        {sectorLabel(row.sector) && (
-          <span className="block truncate text-[9px] font-semibold text-slate-400 dark:text-slate-500">
-            {sectorLabel(row.sector)}
-          </span>
-        )}
+        <SectorPill sector={row.sector} className="mt-0.5" />
       </span>
       <span className={`shrink-0 text-[11px] font-bold tabular-nums ${moveTone(row.returnPercent)}`}>
         {formatPercent(row.returnPercent)}

@@ -6,6 +6,7 @@ import {
   HeadToHead,
   formatReturn,
   returnTone,
+  sideStats,
   verdictLine,
 } from "../../app/components/head-to-head";
 import type { MatchResult } from "../../app/lib/head-to-head";
@@ -75,6 +76,7 @@ function side(symbols: string[], score: number) {
       fiveYear: 90,
       overall: 140,
       capTier: "Large",
+      sector: "financials",
       score: 10 + index,
     })),
     score,
@@ -172,6 +174,29 @@ describe("returnTone", () => {
     expect(returnTone(0)).toContain("slate");
     expect(returnTone(null)).toContain("slate");
     expect(returnTone(Number.NaN)).toContain("slate");
+  });
+});
+
+describe("sideStats", () => {
+  it("names the best and weakest by score, and averages the years it has", () => {
+    const stats = sideStats(side(["TCS", "INFY", "ITC", "SBIN", "WIPRO"], 60));
+
+    // Scores run 10..14, so the last pick is the best and the first the weakest.
+    expect(stats.best).toBe("WIPRO");
+    expect(stats.worst).toBe("TCS");
+    expect(stats.averageYear).toBe(20);
+  });
+
+  it("leaves the average empty when nothing has a year behind it", () => {
+    const blank = side(["TCS"], 50) as unknown as { picks: { oneYear: number | null }[]; score: number };
+    blank.picks[0] = { ...blank.picks[0], oneYear: null };
+
+    // Null, not zero: "we do not know" and "it went nowhere" are different answers.
+    expect(sideStats(blank as never).averageYear).toBeNull();
+  });
+
+  it("has nothing to say about a side with no picks", () => {
+    expect(sideStats({ picks: [], score: 0 })).toEqual({ best: "—", worst: "—", averageYear: null });
   });
 });
 
@@ -309,8 +334,24 @@ describe("HeadToHead", () => {
         expect(within(region).getAllByText(new RegExp(`^${label}`)).length).toBe(5);
       }
       expect(within(region).getAllByText("+11.0%").length).toBe(5);
-      expect(within(region).getAllByText("+20.0%").length).toBe(5);
+      // Six, not five: the five rows plus the card's own "Avg 1Y" summary.
+      expect(within(region).getAllByText("+20.0%").length).toBe(6);
     }
+  });
+
+  it("summarises each side by its best, weakest and average year", async () => {
+    serve();
+    render(<HeadToHead />);
+    await playAMatch(person);
+
+    const yours = screen.getByRole("region", { name: "You" });
+    expect(within(yours).getByText("Best")).toBeInTheDocument();
+    expect(within(yours).getByText("Weakest")).toBeInTheDocument();
+    expect(within(yours).getByText("Avg 1Y")).toBeInTheDocument();
+    // Scores run 10..14 across the five, so the last is the best and the first the weakest. Each
+    // now appears twice — once in its own row, once as the summary — which is the summary working.
+    expect(within(yours).getAllByText("WIPRO")).toHaveLength(2);
+    expect(within(yours).getAllByText("TCS")).toHaveLength(2);
   });
 
   it("names the lens the AI picked with", async () => {
