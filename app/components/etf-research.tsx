@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal";
+import { AiReportModal } from "./ai-report-modal-lazy";
 import { IndianEtfsMarket } from "./indian-etfs-market";
 import { fetchResearch } from "./research-cache";
 import { stockIcon } from "../lib/company-logos";

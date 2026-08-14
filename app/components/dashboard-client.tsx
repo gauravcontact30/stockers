@@ -4,9 +4,9 @@ import { useEffect, useState, useSyncExternalStore, type ReactElement } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AnalysisResponse } from "./ai-analysis-report";
+import { AiReportModal } from "./ai-report-modal-lazy";
 import { GatedSection } from "./ai-gate";
 import { AiIntelSearch } from "./ai-intel-search";
-import { AiReportModal } from "./ai-report-modal";
 import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
 import { BseStockDirectory } from "./bse-stock-directory";

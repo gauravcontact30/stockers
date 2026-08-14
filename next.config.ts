@@ -1,12 +1,13 @@
+import bundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 /**
  * Build and delivery settings.
  *
- * The three blocks below are all about the same thing: how few bytes, and how little main-thread
- * work, a first-time visitor has to get through. See `app/components/hero-carousel` for the other
- * half of that story — the JavaScript this config cannot shrink is the JavaScript a component
- * should not have been running in the first place.
+ * The blocks below are all about the same thing: how few bytes, and how little main-thread work, a
+ * first-time visitor has to get through. See `app/components/hero-carousel` for the other half of
+ * that story — the JavaScript this config cannot shrink is the JavaScript a component should not
+ * have been running in the first place.
  */
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -31,4 +32,21 @@ const nextConfig: NextConfig = {
   // rule breaks asset reloading in dev. The bytes worth chasing were the images above.
 };
 
-export default nextConfig;
+/**
+ * The bundle analyzer, off unless asked for.
+ *
+ * `npm run analyze` builds with it on and opens a treemap per bundle. Gated behind an env var
+ * rather than always-on because it writes report HTML beside the build output and adds a plugin
+ * pass to every production build — a cost worth paying when you are reading the numbers and not
+ * when you are shipping.
+ *
+ * What it is for: the client bundles here are entirely first-party, so anything heavy in them is a
+ * component that should be split, deferred or moved to the server, not a dependency to swap out.
+ * The treemap is how you find which one.
+ */
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
+});
+
+export default withBundleAnalyzer(nextConfig);

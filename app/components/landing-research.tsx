@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal";
+import { AiReportModal } from "./ai-report-modal-lazy";
 import { IndianStocksMarket } from "./indian-stocks-market";
 import { StockCombobox } from "./stock-combobox";
 import { indianStocks } from "../lib/indian-stocks";

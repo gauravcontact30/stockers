@@ -64,8 +64,14 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2.5 text-sm">
               {column.links.map((link) => (
                 <li key={link.href}>
+                  {/* Not prefetched on sight. The footer is on every page and these links enter
+                      the viewport together the moment anybody scrolls to the bottom — two dozen
+                      route prefetches fired at once, for policy pages that are read about as often
+                      as policy pages ever are. `false` keeps the prefetch on hover, which is the
+                      point at which somebody has actually shown an interest in one. */}
                   <Link
                     href={link.href}
+                    prefetch={false}
                     className="text-slate-600 transition hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400"
                   >
                     {link.label}
@@ -82,7 +88,7 @@ export function SiteFooter() {
           <p>© {new Date().getFullYear()} StockersAI — AI-powered Indian stock research.</p>
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Not a SEBI-registered investment adviser or research analyst. Market risk applies —{" "}
-            <Link href="/disclaimer" className="underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400">
+            <Link href="/disclaimer" prefetch={false} className="underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400">
               read the disclaimer
             </Link>
             .

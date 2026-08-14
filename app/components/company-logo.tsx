@@ -72,6 +72,7 @@ export function CompanyLogo({
   src: override,
   size = 36,
   className = "",
+  eager = false,
 }: {
   symbol: string;
   /**
@@ -81,6 +82,16 @@ export function CompanyLogo({
   src?: string | null;
   size?: number;
   className?: string;
+  /**
+   * Load without waiting for the intersection check. For above-the-fold logos only.
+   *
+   * `loading="lazy"` is the right default here — the boards render hundreds of these — but it is
+   * actively wrong above the fold, where the browser must complete layout before it will even
+   * start the request for something already on screen. Note this is `loading`, not `priority`:
+   * these are 36px favicons and are never the LCP element, so preloading them would only put them
+   * in front of whatever is.
+   */
+  eager?: boolean;
 }) {
   // Keyed by symbol rather than a bare index: a row that swaps one company for another (paging
   // through a list reuses these nodes) must start again at the best source for the new company
@@ -135,7 +146,7 @@ export function CompanyLogo({
       style={box}
       width={size}
       height={size}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
       referrerPolicy="no-referrer"
       onError={() => setAttempt({ symbol, index: index + 1 })}
       className={`shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-700 dark:bg-white ${className}`}

@@ -115,6 +115,7 @@ export function DataTable<T>({
   minWidth = 720,
   initialSort = null,
   toolbarExtra,
+  rowClassName,
 }: {
   rows: T[];
   columns: Column<T>[];
@@ -131,6 +132,13 @@ export function DataTable<T>({
   initialSort?: SortState;
   /** Anything else that belongs in the controls row — a period toggle, say. */
   toolbarExtra?: ReactNode;
+  /**
+   * Extra classes for one row, by its position on the current page.
+   *
+   * The index is the position in the rendered page, not in the underlying list, so a striping or
+   * tinting rule stays in the same order down the screen as the reader pages through.
+   */
+  rowClassName?: (row: T, index: number) => string;
 }) {
   const listId = useId();
   const [query, setQuery] = useState("");
@@ -382,8 +390,11 @@ export function DataTable<T>({
                 </tr>
               </thead>
               <tbody>
-                {visible.map((row) => (
-                  <tr key={rowKey(row)} className="border-t border-slate-200 dark:border-slate-800">
+                {visible.map((row, index) => (
+                  <tr
+                    key={rowKey(row)}
+                    className={`border-t border-slate-200 transition-colors dark:border-slate-800 ${rowClassName?.(row, index) ?? ""}`}
+                  >
                     {columns.map((column) => (
                       <td
                         key={column.key}

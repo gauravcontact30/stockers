@@ -15,7 +15,7 @@ jest.mock("../../app/components/use-stock-performance", () => ({
   }),
 }));
 
-jest.mock("../../app/components/ai-report-modal", () => ({
+jest.mock("../../app/components/ai-report-modal-lazy", () => ({
   AiReportModal: (props: any) => (
     <div
       data-testid="ai-report-modal"

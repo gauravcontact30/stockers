@@ -1,12 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { FEATURE_BY_KEY, featureTier, starsFor, TIER_LABEL, type FeatureKey, type PlanTier } from "../lib/plan-tiers";
 import { track } from "../lib/track";
 import { LockIcon, PlanPill, PlanRibbon } from "./plan-pill";
-import { SubscribeModal } from "./subscribe-modal";
 import { useSubscription } from "./subscription-provider";
+import { useOnceOpen } from "./use-once-open";
+
+/**
+ * The checkout sheet, kept out of the bundle of every gated panel.
+ *
+ * This gate wraps each of the eighteen AI features, so a static import put the whole purchase flow
+ * into any page carrying one of them — including for subscribers who can already see the feature
+ * and will never be shown a paywall at all.
+ */
+const SubscribeModal = dynamic(() => import("./subscribe-modal").then((module) => module.SubscribeModal));
 
 /**
  * The admin's per-feature switch. Rendered only for admins â€” and backed by a server-side admin
@@ -72,6 +82,7 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
   // The plans open over the panel rather than at the end of a link to /#pricing. Being refused and
   // being able to do something about it are one step now, and the reader keeps their place.
   const [plansOpen, setPlansOpen] = useState(false);
+  const plansEverOpened = useOnceOpen(plansOpen);
   const lockedByAdmin = isLocked(feature);
   const signedIn = status?.signedIn ?? false;
   const requiredTier = featureTier(feature);
@@ -137,7 +148,7 @@ export function LockPanel({ feature, label }: { feature: string; label: string }
 
       {/* Mounted unconditionally: the modal renders nothing until it is opened, and keeping it
           here means the plan the reader was refused is the one the dialog opens on. */}
-      <SubscribeModal open={plansOpen} onClose={() => setPlansOpen(false)} feature={feature} />
+      {plansEverOpened && <SubscribeModal open={plansOpen} onClose={() => setPlansOpen(false)} feature={feature} />}
     </div>
   );
 }

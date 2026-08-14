@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal";
+import { AiReportModal } from "./ai-report-modal-lazy";
 import { CapTierPill, LiveIndicator } from "./market-badges";
 import { fetchResearch } from "./research-cache";
 import { LiveMarketValue, StockReturns } from "./stock-returns";

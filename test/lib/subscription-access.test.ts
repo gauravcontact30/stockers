@@ -95,6 +95,64 @@ describe("server feature access", () => {
     expect(canUseFeature(status, {}, "intel")).toBe(false);
   });
 
+  describe("comped test accounts", () => {
+    const { featureKeys } = require("../../app/lib/subscription") as typeof import("../../app/lib/subscription");
+    const { TEST_ACCESS_UNTIL } = require("../../app/lib/admin-access") as typeof import("../../app/lib/admin-access");
+
+    const TESTERS = [
+      "chiragpandey678@gmail.com",
+      "pankajdubae@gmail.com",
+      "s77464524@gmail.com",
+      "levime7908@careney.com",
+      "jitu050288@gmail.com",
+    ];
+
+    // Well past the three-day trial, so nothing here can be passing on the trial's coat-tails.
+    const DURING = "2026-09-01";
+
+    it.each(TESTERS)("unlocks every AI feature for %s", (email) => {
+      const status = accessStatusFor({ ...newUser, email } as never, DURING);
+
+      expect(status).toMatchObject({
+        state: "active",
+        allowed: true,
+        tier: "elite",
+        planName: "Elite",
+        subscribedUntil: TEST_ACCESS_UNTIL,
+      });
+
+      // Every feature the app gates, not a sample of three — the ask was that nothing of any tier
+      // stays locked, and a spot check could not show that.
+      const locked = featureKeys().filter((feature) => !canUseFeature(status, {}, feature));
+      expect(locked).toEqual([]);
+    });
+
+    it("matches an address however it was typed", () => {
+      const status = accessStatusFor({ ...newUser, email: "  ChiragPandey678@Gmail.com " } as never, DURING);
+      expect(status.tier).toBe("elite");
+    });
+
+    it("does not hand them the back office", () => {
+      // Elite access, not admin. A comped tester must not be able to open the user list.
+      const status = accessStatusFor({ ...newUser, email: TESTERS[0] } as never, DURING);
+      expect(status.isAdmin).toBe(false);
+      expect(status.state).not.toBe("admin");
+    });
+
+    it("expires on the stated day rather than running for ever", () => {
+      const lastDay = accessStatusFor({ ...newUser, email: TESTERS[0] } as never, TEST_ACCESS_UNTIL);
+      expect(lastDay.tier).toBe("elite");
+
+      const dayAfter = accessStatusFor({ ...newUser, email: TESTERS[0] } as never, "2026-09-15");
+      expect(dayAfter).toMatchObject({ state: "expired", allowed: false, tier: null });
+    });
+
+    it("leaves everybody else exactly as they were", () => {
+      const stranger = accessStatusFor({ ...newUser, email: "someone@example.com" } as never, DURING);
+      expect(stranger).toMatchObject({ state: "expired", allowed: false, tier: null });
+    });
+  });
+
   it("reopens only what was actually bought once the trial has lapsed", () => {
     // The point of closing the trial at Elite: what comes back is the plan, not the trial.
     const starter = accessStatusFor({ ...newUser, plan: "Starter", subscribedUntil: "2026-09-01" } as never, "2026-08-10");

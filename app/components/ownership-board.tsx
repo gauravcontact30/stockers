@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { OPENING_SYMBOL } from "../lib/ownership-defaults";
 import { CompanyLogo } from "./company-logo";
 import { PromoterTrendChart } from "./promoter-trend-chart";
 import { StockCombobox } from "./stock-combobox";
+
+/** The opening company's filing, resolved on the server. Null when it could not be. */
+export type PrefetchedOwnership = { symbol: string; data: Ownership } | null;
 
 export type OwnerGroup = "promoters" | "fii" | "dii" | "government" | "retail" | "bodies" | "others";
 
@@ -250,14 +254,29 @@ function MarketSnapshot({ market }: { market: NonNullable<Ownership["market"]> }
  * portfolio investors, domestic institutions, government, individual shareholders — so nothing
  * here is inferred from price or volume.
  */
-export function OwnershipBoard() {
-  const [symbol, setSymbol] = useState("RELIANCE");
-  const [query, setQuery] = useState("RELIANCE");
-  const [data, setData] = useState<Ownership | null>(null);
-  const [state, setState] = useState<{ symbol: string; error: string | null; market?: Ownership["market"] } | null>(null);
+export function OwnershipBoard({ prefetched = null }: { prefetched?: PrefetchedOwnership }) {
+  const [symbol, setSymbol] = useState(OPENING_SYMBOL);
+  const [query, setQuery] = useState(OPENING_SYMBOL);
+  // Seeded from the server when the opening company was resolved there, so the board paints filled
+  // in rather than fetching what the page already knows.
+  const [data, setData] = useState<Ownership | null>(prefetched?.data ?? null);
+  const [state, setState] = useState<{ symbol: string; error: string | null; market?: Ownership["market"] } | null>(
+    prefetched ? { symbol: prefetched.symbol, error: null } : null,
+  );
   const [openGroup, setOpenGroup] = useState<OwnerGroup | null>(null);
+  // The server's answer counts as this symbol having been fetched already. A ref rather than
+  // state: it only ever suppresses the very first request, and re-rendering for it would be a
+  // render to say nothing changed.
+  const served = useRef(prefetched?.symbol ?? null);
 
   useEffect(() => {
+    // The opening company came down with the HTML — going back for it would be a round trip to
+    // fetch what is already on screen. Every later symbol is a question the server was not asked.
+    if (served.current === symbol) {
+      served.current = null;
+      return;
+    }
+
     const controller = new AbortController();
 
     fetch(`/api/market/shareholding?symbol=${encodeURIComponent(symbol)}`, { signal: controller.signal })

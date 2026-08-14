@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -7,8 +8,18 @@ import { CharacterArt, characterFor, speechScript } from "./reminder-characters"
 import { playCall } from "./reminder-sound";
 import { patternStyle, themeFor } from "./reminder-themes";
 import { speak, stopSpeaking } from "./reminder-voice";
-import { SubscribeModal } from "./subscribe-modal";
 import { useSubscription, type SubscriptionStatus } from "./subscription-provider";
+import { useOnceOpen } from "./use-once-open";
+
+/**
+ * The checkout sheet, split out of every bundle that carries this file.
+ *
+ * `SubscribeModal` pulls in the plan cards, the pricing table and the Razorpay checkout behind it,
+ * and this component renders on the landing page — so a visitor who never opens it was downloading
+ * the whole purchase flow to look at a header chip. Loaded on first open instead, which is also
+ * the first moment anyone could possibly need it.
+ */
+const SubscribeModal = dynamic(() => import("./subscribe-modal").then((module) => module.SubscribeModal));
 
 /** How often the reminder comes back after being dismissed. */
 export const REMIND_EVERY_MS = 15 * 60_000;
@@ -175,6 +186,7 @@ export function SubscriptionReminder() {
   const [round, setRound] = useState(0);
   const [muted, setMuted] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
+  const buyEverOpened = useOnceOpen(buyOpen);
 
   // How many appearances this expiry has already had, read once on mount. Held in state rather
   // than read during render so the server and the first client render agree.
@@ -401,7 +413,9 @@ export function SubscriptionReminder() {
       </div>
         </div>
       )}
-      <SubscribeModal open={buyOpen} onClose={() => setBuyOpen(false)} feature="research" />
+      {/* Not in the tree until it has been opened once — see ./use-once-open for why that is what
+          makes the dynamic import above worth anything. */}
+      {buyEverOpened && <SubscribeModal open={buyOpen} onClose={() => setBuyOpen(false)} feature="research" />}
     </>
   );
 }

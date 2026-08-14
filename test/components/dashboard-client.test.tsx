@@ -11,7 +11,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, refresh: mockRefresh }),
 }));
 
-jest.mock("../../app/components/ai-report-modal", () => ({
+jest.mock("../../app/components/ai-report-modal-lazy", () => ({
   AiReportModal: (props: {
     open: boolean;
     onClose: () => void;

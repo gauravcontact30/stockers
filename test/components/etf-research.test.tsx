@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EtfResearch } from "../../app/components/etf-research";
 
-jest.mock("../../app/components/ai-report-modal", () => ({
+jest.mock("../../app/components/ai-report-modal-lazy", () => ({
   AiReportModal: (props: any) => (
     <div
       data-testid="ai-report-modal"

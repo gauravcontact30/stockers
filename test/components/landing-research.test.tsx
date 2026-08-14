@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LandingResearch } from "../../app/components/landing-research";
 
-jest.mock("../../app/components/ai-report-modal", () => ({
+jest.mock("../../app/components/ai-report-modal-lazy", () => ({
   AiReportModal: (props: any) => (
     <div
       data-testid="ai-report-modal"

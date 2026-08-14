@@ -3,9 +3,10 @@ import { BackToTop } from "./components/back-to-top";
 import { HeadToHead } from "./components/head-to-head";
 import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
 import { HeroCarousel } from "./components/hero-carousel";
+import { LiveMarketBoard } from "./components/live-market-board";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
-import { OwnershipBoard } from "./components/ownership-board";
+import { StreamedOwnershipBoard } from "./components/streamed-ownership-board";
 import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
 import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
@@ -21,6 +22,7 @@ export const revalidate = 60;
 
 const navLinks = [
   { href: "#head-to-head", label: "Beat the AI" },
+  { href: "#live-market", label: "Live market" },
   { href: "#bse-movers", label: "Gainers & Losers" },
   { href: "#bse-sectors", label: "By Category" },
   { href: "#ownership", label: "Who owns what" },
@@ -119,6 +121,10 @@ export default async function Home() {
             for better than the next three sections could explain it. */}
         <HeadToHead />
 
+        {/* Straight under the contest: the claim is tested above, and this is the exchange the
+            claim is made about. Streamed, so nine rankings over 4,900 scrips never hold the hero. */}
+        <LiveMarketBoard />
+
         <BandHeading
           eyebrow="01 · The session, both ways"
           title="Every gainer and every loser on the BSE"
@@ -136,7 +142,7 @@ export default async function Home() {
           blurb="Promoters, foreign portfolio investors, domestic institutions, the government and several million individual shareholders. Search a company to see how its register splits, how many people are behind each slice, and how the promoter stake has moved over eight filed quarters."
         />
 
-        <OwnershipBoard />
+        <StreamedOwnershipBoard />
 
         <AccuracyMatrixSection />
 

@@ -370,8 +370,13 @@ function ThemeRow({ stock, rank, theme, largest }: { stock: ThemeStock; rank: nu
           {rank}
         </span>
         {/* The company's own mark, at the size the trio slides use, so the three themed panels
-            read as nine companies rather than nine codes. */}
-        <CompanyLogo symbol={stock.symbol} size={36} />
+            read as nine companies rather than nine codes.
+
+            Eager, and the only logos on the site that are: this is the hero's opening slide, so
+            these nine sit above the fold on every first visit. Lazy-loading an image already on
+            screen makes the browser finish layout before it will even ask for it. Everything
+            further down the page keeps the lazy default. */}
+        <CompanyLogo symbol={stock.symbol} size={36} eager />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate font-mono text-[12px] font-bold text-slate-800">{stock.symbol}</span>

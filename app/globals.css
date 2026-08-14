@@ -194,7 +194,13 @@ canvas {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Geist, loaded by `next/font/google` in ../layout and exposed as `--font-geist-sans`.
+     This said `Arial, Helvetica, sans-serif`, which meant the font was downloaded on every page
+     and then not used by anything — the cost of a webfont with none of the benefit, and a body
+     rendered in Arial while Tailwind's `font-sans` utilities rendered in Geist.
+     The stack behind it is what paints during the swap; `next/font` self-hosts and preloads, so
+     that window is short and the metrics are matched rather than left to shift. */
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -464,6 +470,58 @@ body {
   animation: live-blink 1.6s ease-in-out infinite;
 }
 
+/* The Head-to-Head verdict.
+
+   A settled match is worth a bit of theatre, so the result cards let off fireworks for twenty
+   seconds and then go quiet. Two parts: sparks thrown outward from a burst point, and a soft glow
+   around the card itself.
+
+   Only `transform` and `opacity` are animated — both composited, so thirty sparks cost the main
+   thread nothing while they run. Each spark is handed its own `--dx`/`--dy` inline, which is what
+   lets one keyframe rule serve every direction of a burst. All of it is decorative: the scores
+   read perfectly with the animation off, which is what makes it safe to stop under reduced
+   motion. */
+@keyframes firework-spark {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.25), calc(var(--dy) * 0.25)) scale(1);
+  }
+  70% {
+    opacity: 0.9;
+    transform: translate(calc(var(--dx) * 0.85), calc(var(--dy) * 0.85 + 6px)) scale(0.65);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), calc(var(--dy) + 16px)) scale(0.2);
+  }
+}
+
+@utility animate-firework-spark {
+  animation: firework-spark 1.6s ease-out infinite;
+}
+
+@keyframes celebrate-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px -8px rgba(56, 189, 248, 0.5),
+      0 0 44px -20px rgba(168, 85, 247, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 30px -6px rgba(56, 189, 248, 0.8),
+      0 0 66px -18px rgba(168, 85, 247, 0.7);
+  }
+}
+
+@utility animate-celebrate-glow {
+  animation: celebrate-glow 1.8s ease-in-out infinite;
+}
+
 /* Everything above is decorative, so it all stops for anyone who has asked the OS to reduce
    motion — the reminder still appears and is fully usable, it just doesn't jump about. */
 @media (prefers-reduced-motion: reduce) {
@@ -482,7 +540,9 @@ body {
   .animate-jiggle,
   .animate-ray-spin,
   .animate-hero-drift,
-  .animate-live-blink {
+  .animate-live-blink,
+  .animate-firework-spark,
+  .animate-celebrate-glow {
     animation: none !important;
   }
 }

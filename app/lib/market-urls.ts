@@ -33,13 +33,15 @@ export function buildMoversUrl(
   term: string,
   move: MoverMoveKey,
   page: number,
+  /** Defaulted so every existing caller is unchanged; the tier panel asks for five. */
+  pageSize: number = MOVERS_PAGE_SIZE,
 ) {
   const params = new URLSearchParams({
     tier,
     direction,
     period,
     page: String(page),
-    pageSize: String(MOVERS_PAGE_SIZE),
+    pageSize: String(pageSize),
   });
   if (term) params.set("q", term);
   if (move !== "0") params.set("min", move);

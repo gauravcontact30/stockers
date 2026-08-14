@@ -1,7 +1,7 @@
 import { CACHE_TAGS } from "./cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { isSuperAdminEmail } from "./admin-access";
+import { hasTestAccess, isSuperAdminEmail, TEST_ACCESS_UNTIL } from "./admin-access";
 import type { PlanName } from "./auth-validation";
 import { cached, fetchNse, todayIST } from "./nse-client";
 import {
@@ -208,6 +208,23 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
       tier: "elite",
       planName: "Elite",
       marketDaysLeft: TRIAL_DAYS,
+    };
+  }
+
+  // A comped test account: every AI feature, for a fixed window, without admin rights.
+  //
+  // Checked after the admin branch and before the trial clock, so it cannot be cut short by a
+  // trial that ran out and does not need a payment on the record. Reported as `active` with an
+  // Elite tier and a real end date, which means the countdown, the plan pill and the paywall all
+  // read it the same way they read a paid subscription — no separate state for them to mishandle.
+  if (hasTestAccess(user.email, today)) {
+    return {
+      ...base,
+      state: "active",
+      allowed: true,
+      tier: "elite",
+      planName: "Elite",
+      subscribedUntil: TEST_ACCESS_UNTIL,
     };
   }
 

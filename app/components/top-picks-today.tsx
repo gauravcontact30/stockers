@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal";
+import { AiReportModal } from "./ai-report-modal-lazy";
 import { CapTierPill, LiveIndicator } from "./market-badges";
 import { LiveMarketValue, StockReturns } from "./stock-returns";
 import type { CapTier } from "../lib/indian-stocks";

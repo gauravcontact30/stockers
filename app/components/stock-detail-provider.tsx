@@ -1,8 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { track } from "../lib/track";
-import { StockDetailModal } from "./stock-detail-modal";
+import { useOnceOpen } from "./use-once-open";
+
+/**
+ * The detail sheet, loaded the first time a row is clicked.
+ *
+ * This provider wraps whole pages, so a static import put the sheet — and the charts, quote panel
+ * and AI verdict inside it — into the bundle of every page that has a board on it, whether or not
+ * anybody ever opened a company.
+ */
+const StockDetailModal = dynamic(() => import("./stock-detail-modal").then((module) => module.StockDetailModal));
 
 /**
  * One stock-detail sheet for the whole app.
@@ -23,6 +33,7 @@ const StockDetailContext = createContext<StockDetailValue | null>(null);
 
 export function StockDetailProvider({ children }: { children: ReactNode }) {
   const [symbol, setSymbol] = useState<string | null>(null);
+  const everOpened = useOnceOpen(symbol !== null);
 
   const openStock = useCallback((next: string) => setSymbol(next), []);
   const close = useCallback(() => setSymbol(null), []);
@@ -32,7 +43,7 @@ export function StockDetailProvider({ children }: { children: ReactNode }) {
   return (
     <StockDetailContext.Provider value={value}>
       {children}
-      <StockDetailModal symbol={symbol} onClose={close} />
+      {everOpened && <StockDetailModal symbol={symbol} onClose={close} />}
     </StockDetailContext.Provider>
   );
 }

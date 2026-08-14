@@ -6,7 +6,16 @@
 // asserted directly rather than left to a reviewer to notice.
 
 import type { Prediction } from "../../app/lib/daily-predictions";
-import { HEAD_TO_HEAD_PICKS, chooseAiPicks, decideWinner, normalisePicks } from "../../app/lib/head-to-head";
+import {
+  AI_SKILLS,
+  HEAD_TO_HEAD_PICKS,
+  chooseAiPicks,
+  decideWinner,
+  normalisePicks,
+  pickAiSkill,
+  weightedSample,
+  type AiCandidate,
+} from "../../app/lib/head-to-head";
 import { contenderFrom, sideFrom } from "../../app/lib/head-to-head-score";
 import type { PerformanceSummary } from "../../app/lib/stock-performance";
 
@@ -110,51 +119,183 @@ describe("decideWinner", () => {
   });
 });
 
-describe("chooseAiPicks", () => {
-  const universe = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG"].map((symbol) => ({ symbol }));
-  const predictions: Record<string, Prediction> = {
-    AAA: prediction("AAA", "Bullish", 90),
-    BBB: prediction("BBB", "Bullish", 80),
-    CCC: prediction("CCC", "Neutral", 95),
-    DDD: prediction("DDD", "Bearish", 99),
-    EEE: prediction("EEE", "Bullish", 70),
-    FFF: prediction("FFF", "Bullish", 70),
-    GGG: prediction("GGG", "Neutral", 60),
+/** One company as the exchange board plus the forecast describe it. */
+function candidate(symbol: string, overrides: Partial<AiCandidate> = {}): AiCandidate {
+  return {
+    symbol,
+    name: `${symbol} Ltd`,
+    capTier: "Large",
+    sector: "technology",
+    longRun: 100,
+    today: 1,
+    outlook: "Bullish",
+    confidence: 70,
+    ...overrides,
   };
+}
 
-  it("ranks conviction first and confidence second", () => {
-    // DDD has the highest confidence of anything here and still comes last: a confident Bearish
-    // call is a reason not to field a stock, not a reason to field it.
-    expect(chooseAiPicks(predictions, universe)).toEqual(["AAA", "BBB", "EEE", "FFF", "CCC"]);
+/** A random() that walks a fixed sequence, so a draw can be pinned exactly. */
+function sequence(values: number[]): () => number {
+  let index = 0;
+  return () => values[index++ % values.length];
+}
+
+/** Always takes the first ticket, which makes `weightedSample` behave as "take the top N". */
+const alwaysTop = () => 0;
+
+describe("AI_SKILLS", () => {
+  it("offers several genuinely different lenses, each with something to show the reader", () => {
+    expect(AI_SKILLS.length).toBeGreaterThanOrEqual(5);
+    for (const skill of AI_SKILLS) {
+      expect(skill.key).toBeTruthy();
+      expect(skill.label).toBeTruthy();
+      expect(skill.blurb.length).toBeGreaterThan(20);
+    }
+    // Keys are what the card is told apart by, so two skills must never share one.
+    expect(new Set(AI_SKILLS.map((skill) => skill.key)).size).toBe(AI_SKILLS.length);
   });
 
-  it("breaks ties on the symbol, so identical predictions field an identical team", () => {
-    // EEE and FFF are both Bullish at 70 — the order between them must not be incidental.
-    const once = chooseAiPicks(predictions, universe);
-    const again = chooseAiPicks(predictions, [...universe].reverse());
-    expect(once).toEqual(again);
+  it("never ranks on the window the grader scores with", () => {
+    // The guard against a rigged contest. A skill only ever sees the long-run return, today's
+    // move, and the forward view — never the 1w/1m/6m/1y weighting `momentumScore` uses. Two
+    // candidates identical in those three must rank identically under every skill, which cannot
+    // hold if a skill has quietly started reading performance.
+    const left = candidate("LEFT");
+    const right = candidate("RIGHT");
+    for (const skill of AI_SKILLS) {
+      expect(skill.rank(left)).toBe(skill.rank(right));
+    }
+  });
+});
+
+describe("pickAiSkill", () => {
+  it("draws a different lens as the roll moves across the range", () => {
+    expect(pickAiSkill(() => 0)).toBe(AI_SKILLS[0]);
+    expect(pickAiSkill(() => 0.999)).toBe(AI_SKILLS[AI_SKILLS.length - 1]);
   });
 
-  it("stays off the human's picks", () => {
-    const picks = chooseAiPicks(predictions, universe, { exclude: ["aaa", "BBB"] });
+  it("stays in range on a roll of exactly 1", () => {
+    // Math.random never returns 1, but a stubbed one can, and an out-of-range index here would be
+    // an undefined skill reaching the card.
+    expect(AI_SKILLS).toContain(pickAiSkill(() => 1));
+  });
+});
+
+describe("weightedSample", () => {
+  it("favours the top of the list but can reach past it", () => {
+    const ranked = ["A", "B", "C", "D"];
+    expect(weightedSample(ranked, 2, alwaysTop)).toEqual(["A", "B"]);
+    // A ticket close to the total lands at the tail instead.
+    expect(weightedSample(ranked, 1, () => 0.999)).toEqual(["D"]);
+  });
+
+  it("never draws the same name twice, and stops when the pool runs out", () => {
+    const drawn = weightedSample(["A", "B"], 5, sequence([0.5, 0.5, 0.5]));
+    expect(new Set(drawn).size).toBe(drawn.length);
+    expect(drawn).toHaveLength(2);
+  });
+});
+
+describe("chooseAiPicks", () => {
+  const compounder = AI_SKILLS.find((skill) => skill.key === "compounder")!;
+  const contrarian = AI_SKILLS.find((skill) => skill.key === "contrarian")!;
+  const spread = AI_SKILLS.find((skill) => skill.key === "spread")!;
+  const explorer = AI_SKILLS.find((skill) => skill.key === "explorer")!;
+
+  const field = [
+    candidate("AAA", { longRun: 500 }),
+    candidate("BBB", { longRun: 400 }),
+    candidate("CCC", { longRun: 300 }),
+    candidate("DDD", { longRun: 200 }),
+    candidate("EEE", { longRun: 100 }),
+    candidate("FFF", { longRun: 50 }),
+  ];
+
+  it("fields the skill's best when the draw always takes the top", () => {
+    expect(chooseAiPicks(field, { skill: compounder, random: alwaysTop })).toEqual([
+      "AAA",
+      "BBB",
+      "CCC",
+      "DDD",
+      "EEE",
+    ]);
+  });
+
+  it("fields a different team on a different draw", () => {
+    const first = chooseAiPicks(field, { skill: compounder, random: alwaysTop });
+    const second = chooseAiPicks(field, { skill: compounder, random: sequence([0.99, 0.99, 0.99, 0.99, 0.99]) });
+
+    expect(first).not.toEqual(second);
+    expect(second).toHaveLength(HEAD_TO_HEAD_PICKS);
+  });
+
+  it("leaves out a company the forecast has turned against", () => {
+    const withBear = [...field, candidate("BEAR", { longRun: 9999, outlook: "Bearish" })];
+    // The best long-run record on the board, and it is still not fielded: the record is a reason
+    // to look, not a reason to buy something the desk expects to fall.
+    expect(chooseAiPicks(withBear, { skill: compounder, random: alwaysTop })).not.toContain("BEAR");
+  });
+
+  it("buys weakness when the contrarian lens is drawn", () => {
+    const mixed = [
+      candidate("UP", { longRun: 500, today: 6 }),
+      candidate("DOWN", { longRun: 400, today: -6 }),
+    ];
+    // DOWN has the weaker record and is fielded first anyway, because it is the one on sale.
+    expect(chooseAiPicks(mixed, { skill: contrarian, random: alwaysTop })[0]).toBe("DOWN");
+  });
+
+  it("takes one company per sector when the diversifier is drawn", () => {
+    const sectors = [
+      candidate("T1", { sector: "technology", longRun: 500 }),
+      candidate("T2", { sector: "technology", longRun: 490 }),
+      candidate("F1", { sector: "financials", longRun: 400 }),
+      candidate("E1", { sector: "energy", longRun: 300 }),
+    ];
+    const picks = chooseAiPicks(sectors, { skill: spread, random: alwaysTop, count: 3 });
+
+    expect(picks).toEqual(["T1", "F1", "E1"]);
+    expect(picks).not.toContain("T2");
+  });
+
+  it("keeps unclassified companies out of one shared bucket", () => {
+    const unknowns = [
+      candidate("U1", { sector: null, longRun: 500 }),
+      candidate("U2", { sector: null, longRun: 400 }),
+    ];
+    // Two companies the exchange has not classified are not "the same sector" — lumping them
+    // together would let one unknown scrip block every other.
+    expect(chooseAiPicks(unknowns, { skill: spread, random: alwaysTop, count: 2 })).toEqual(["U1", "U2"]);
+  });
+
+  it("looks past the megacaps when the explorer is drawn", () => {
+    const tiers = [
+      candidate("BIG", { capTier: "Large", longRun: 900 }),
+      candidate("MID", { capTier: "Mid", longRun: 300 }),
+      candidate("SMALL", { capTier: "Small", longRun: 200 }),
+    ];
+    const picks = chooseAiPicks(tiers, { skill: explorer, random: alwaysTop, count: 2 });
+
+    expect(picks).not.toContain("BIG");
+    expect(picks).toEqual(["MID", "SMALL"]);
+  });
+
+  it("stays off the human's picks, however they were typed", () => {
+    const picks = chooseAiPicks(field, { skill: compounder, random: alwaysTop, exclude: ["aaa", "BBB"] });
 
     expect(picks).not.toContain("AAA");
     expect(picks).not.toContain("BBB");
-    expect(picks).toHaveLength(5);
+    expect(picks).toHaveLength(HEAD_TO_HEAD_PICKS - 1);
   });
 
-  it("ignores anything the prediction run had no opinion on", () => {
-    const picks = chooseAiPicks({ AAA: predictions.AAA }, universe);
-    expect(picks).toEqual(["AAA"]);
-  });
+  it("still fields five when its own taste has filtered the board down to fewer", () => {
+    // Every company up on the day, so the contrarian's eligibility rule matches nothing. Falling
+    // back to the wider field beats fielding a short team or failing the match.
+    const allUp = field.map((entry) => ({ ...entry, today: 5 }));
+    const picks = chooseAiPicks(allUp, { skill: contrarian, random: alwaysTop });
 
-  it("does not rank on the figures it is about to be graded on", () => {
-    // The guard against a rigged contest: selection sees predictions only. Two universes whose
-    // realised returns differ wildly but whose predictions match must field the same team, which
-    // can only hold while nothing in the ranking consults performance.
-    const team = chooseAiPicks(predictions, universe);
-    expect(team).toEqual(chooseAiPicks(predictions, universe));
-    expect(team).toHaveLength(HEAD_TO_HEAD_PICKS);
+    expect(picks).toHaveLength(HEAD_TO_HEAD_PICKS);
+    expect(new Set(picks).size).toBe(HEAD_TO_HEAD_PICKS);
   });
 });
 
