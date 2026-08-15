@@ -4,6 +4,19 @@ import { firstError, normaliseMobile, validateSignup, type SignupFields } from "
 import { appOrigin, sendMail, verificationEmail } from "../../../lib/mailer";
 import { sendSms, welcomeSms } from "../../../lib/sms";
 import { createToken, createUser, updateUser } from "../../../lib/store";
+import { TRIAL_DAYS, addTrialDays, istDateOf } from "../../../lib/subscription";
+
+/**
+ * The IST calendar date this account's trial runs to, or null if its start date will not parse.
+ *
+ * The same two steps `accessStatusFor` takes — the account's start date in IST, plus the trial
+ * length — so the date the dialog shows is the date the paywall will actually enforce.
+ */
+function trialEndsOnFor(user: { trialStartedAt?: string | null; createdAt: string }): string | null {
+  const startedAt = user.trialStartedAt ?? user.createdAt;
+  const startDate = istDateOf(startedAt);
+  return startDate ? addTrialDays(startDate) : null;
+}
 
 /** Whatever arrived, as strings, so the shared validator can judge it rather than the parser. */
 function fieldsFrom(body: unknown): SignupFields {
@@ -41,7 +54,7 @@ export async function POST(request: Request) {
       name: fields.name,
       email: fields.email,
       password: fields.password,
-      // No plan, deliberately. Everyone starts on the three-day trial, which opens every AI
+      // No plan, deliberately. Everyone starts on the free trial, which opens every AI
       // feature; a plan is bought at checkout, where its price and what it buys are both on screen
       // — not stamped on the account at sign-up, where "Starter" would be a subscription nobody
       // asked for and nobody paid for.
@@ -77,10 +90,26 @@ export async function POST(request: Request) {
       await updateUser(user.id, { verificationSentAt: new Date().toISOString() });
     }
 
+    /**
+     * When this account's free trial runs out, as an IST calendar date.
+     *
+     * Computed here rather than left for the client to work out from `TRIAL_DAYS`: the trial clock
+     * is the server's, counted in IST from the account's own start date, and a browser doing the
+     * arithmetic in its own timezone would show a reader in London the wrong day. Null only if the
+     * start date will not parse, in which case the dialog simply omits the sentence.
+     */
+    const trialEndsOn = trialEndsOnFor(user);
+
     return NextResponse.json({
       ok: true,
       user: { id: user.id, name: user.name, email: user.email, plan: user.plan, mobile: user.mobile ?? null },
+      // The token is still issued, and the sign-up form deliberately no longer stores it: a new
+      // account is sent to sign in rather than being carried into the dashboard on a session it
+      // never asked for. Kept in the response because it is part of this endpoint's contract and
+      // a non-browser caller — the tests among them — still uses it.
       token: createToken(user),
+      trialDays: TRIAL_DAYS,
+      trialEndsOn,
       // Lets the sign-up page say "check your inbox" only when something was really sent.
       verificationEmailSent: delivery.ok && delivery.transport === "resend",
       // Lets the page say "we've texted you" only when a gateway really accepted it.

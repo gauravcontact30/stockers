@@ -3,8 +3,6 @@ import { isSuperAdminEmail } from "../../../lib/admin-access";
 import { readLedger } from "../../../lib/payments-ledger";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * What the app has been paid.
  *

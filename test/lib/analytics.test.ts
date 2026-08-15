@@ -69,7 +69,7 @@ describe("what arrives from outside", () => {
   });
 
   it("strips the query string from a path, and refuses one that is not ours", () => {
-    expect(cleanPath("/dashboard?token=secret#top")).toBe("/dashboard");
+    expect(cleanPath("/overview?token=secret#top")).toBe("/overview");
     expect(cleanPath("//evil.example.com")).toBeNull();
     expect(cleanPath("https://evil.example.com/x")).toBeNull();
     expect(cleanPath(42)).toBeNull();

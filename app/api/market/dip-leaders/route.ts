@@ -17,8 +17,6 @@ import { getDipLeaders } from "../../../lib/dip-leaders";
  * build can never do that, and costs nothing after the first request: the board underneath is held
  * for a quarter of an hour and refreshed behind the reader.
  */
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   return NextResponse.json(await getDipLeaders(), { headers: cacheHeaders(900) });
 }

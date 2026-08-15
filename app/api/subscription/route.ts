@@ -3,8 +3,6 @@ import { referralCodeForUser, referralShareUrl } from "../../lib/checkout-discou
 import { userFromRequest } from "../../lib/store";
 import { AI_FEATURES, getAccessStatus, readFeatureLocks } from "../../lib/subscription";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The caller's access state plus the current feature locks — one request that tells the client
  * everything it needs to decide what to render.

@@ -11,8 +11,6 @@ import {
 import { userFromRequest } from "../../../../lib/store";
 import { getAccessStatus } from "../../../../lib/subscription";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Confirms a checkout and turns it into subscription days.
  *

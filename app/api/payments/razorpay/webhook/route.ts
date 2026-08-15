@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { creditPayment } from "../../../../lib/razorpay-credit";
 import { isBillingCycle, isPlanKey, paymentCovers, verifyWebhookSignature, type RazorpayPayment } from "../../../../lib/razorpay";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Razorpay's own account of what happened.
  *

@@ -205,30 +205,28 @@ describe("reminderKey", () => {
 
 describe("reminderCopy", () => {
   it("pluralises the remaining days", () => {
-    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toBe(
-      "You have 2 calendar days left on your trial.",
-    );
-    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never).body).toBe(
-      "You have 1 calendar day left on your trial.",
-    );
+    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toContain("2 calendar days left");
+    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never).body).toContain("1 calendar day left");
   });
 
   // One source for both the rendered text and the spoken line, so they cannot diverge.
   it("counts down the trial, with correct pluralisation", () => {
-    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never)).toEqual({
-      headline: "Your free trial is nearly up",
-      body: "You have 1 calendar day left on your trial.",
-    });
+    const lastDay = reminderCopy({ ...baseStatus, marketDaysLeft: 1 } as never);
+    expect(lastDay.headline).toBe("Your free trial is nearly up");
+    expect(lastDay.body).toContain("1 calendar day left");
+    // The last day is the one worth interrupting for, so it says what changes tomorrow rather
+    // than only counting down to it.
+    expect(lastDay.body).toContain("Starter");
 
-    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toBe(
-      "You have 2 calendar days left on your trial.",
-    );
+    expect(reminderCopy({ ...baseStatus, marketDaysLeft: 2 } as never).body).toContain("2 calendar days left");
   });
 
   it("switches to the expired wording, which never claims anything is blocked", () => {
     const copy = reminderCopy({ ...baseStatus, state: "expired", marketDaysLeft: 0 } as never);
     expect(copy.headline).toBe("Your free trial has ended");
-    expect(copy.body).toContain("Subscribe to Starter, Pro or Elite");
+    // The trial ending is a step down to Starter, not a shutdown — the copy has to say which.
+    expect(copy.body).toContain("Starter plan");
+    expect(copy.body).toContain("Pro and Elite");
   });
 });
 
@@ -241,7 +239,7 @@ describe("isReminderFreeRoute", () => {
 
   it("leaves every other route alone", () => {
     expect(isReminderFreeRoute("/")).toBe(false);
-    expect(isReminderFreeRoute("/dashboard")).toBe(false);
+    expect(isReminderFreeRoute("/overview")).toBe(false);
     expect(isReminderFreeRoute("/news")).toBe(false);
     // A route that merely starts with the same letters is not an auth route.
     expect(isReminderFreeRoute("/signups-are-open")).toBe(false);
@@ -269,7 +267,7 @@ describe("SubscriptionReminder", () => {
   });
 
   it("still appears on an ordinary page for the same visitor", async () => {
-    mockPathname = "/dashboard";
+    mockPathname = "/overview";
     mockStatus();
     renderWithProvider(<SubscriptionReminder />);
 
@@ -286,7 +284,7 @@ describe("SubscriptionReminder", () => {
 
     await advanceToFirstShow();
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Your free trial is nearly up");
-    expect(screen.getByText("You have 1 calendar day left on your trial.")).toBeInTheDocument();
+    expect(screen.getByText(/1 calendar day left/)).toBeInTheDocument();
     // The reminder is a nudge, not a wall â€” nothing is actually locked.
     expect(screen.getByText(/Starter and Pro AI features are unlocked/)).toBeInTheDocument();
     expect(playCall).toHaveBeenCalled();
@@ -571,12 +569,25 @@ describe("SubscriptionBadge", () => {
     [{ marketDaysLeft: 3 }, "Trial - 3 calendar days left"],
     [{ state: "active" }, "Subscribed"],
     [{ state: "expired" }, "Trial ended"],
-    [{ state: "expired", signedIn: false }, "Free preview"],
   ])("renders %s as %s", async (overrides, expected) => {
     mockStatus(overrides as Record<string, unknown>);
     renderWithProvider(<SubscriptionBadge />);
     await act(async () => {});
     expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  /**
+   * A signed-out visitor used to get a "Free preview" chip here. It read as a status badge while
+   * describing no status — there is no account, so no preview is running and no clock is against
+   * it — and it sat in the landing navigation among seven links to real content. The way in is
+   * "Sign in" and "Get started", two controls to its right.
+   */
+  it("renders nothing for a signed-out visitor, who has no status to report", async () => {
+    mockStatus({ state: "expired", signedIn: false });
+    const { container } = renderWithProvider(<SubscriptionBadge />);
+    await act(async () => {});
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing until the status arrives", async () => {

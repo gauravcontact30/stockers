@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import { cacheHeaders } from "../../../lib/cache";
+import { cacheLife, cacheTag } from "next/cache";
+import { CACHE_TAGS, cacheHeaders } from "../../../lib/cache";
 import { getMostTraded } from "../../../lib/nse-market";
 
-// Request-independent: the same board for every reader, so Next may cache the whole response
-// and hand it back without running this handler at all. `revalidate` is the interval past
-// which it refreshes; the `nse` cache tag drops it on demand.
-export const revalidate = 300;
+// Request-independent: the same board for every reader, so it is cached rather than rebuilt per
+// request. `use cache` cannot go on the `GET` export, hence the helper. The `board` profile in
+// next.config.ts carries the interval `revalidate = 300` used to; the `nse` tag drops it on demand.
+async function mostTraded() {
+  "use cache";
+  cacheLife("board");
+  cacheTag(CACHE_TAGS.nse);
+
+  return getMostTraded();
+}
 
 export async function GET() {
-  return NextResponse.json(await getMostTraded(), { headers: cacheHeaders(300) });
+  return NextResponse.json(await mostTraded(), { headers: cacheHeaders(300) });
 }

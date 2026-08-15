@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { cacheHeaders } from "../../../lib/cache";
 import { getNewsStory } from "../../../lib/market-news";
 
-export const dynamic = "force-dynamic";
-
 /**
  * One headline, expanded: an AI brief written from the publishers' own coverage, plus that
  * coverage itself with a link to each report.

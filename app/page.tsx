@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
-import { BseTrendingBoard } from "./components/bse-trending-board";
+import { StreamedTrendingBoard } from "./components/streamed-trending-board";
 import { HeadToHead } from "./components/head-to-head";
 import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
 import { LiveMarketBoard } from "./components/live-market-board";
@@ -16,15 +16,13 @@ import { JsonLd } from "./components/json-ld";
 import { AccuracyMatrixSection } from "./components/accuracy-matrix-section";
 import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
-import { SubscriptionBadge } from "./components/subscription-reminder";
-import { ThemeToggle } from "./components/theme-toggle";
+import { AccountMenu } from "./components/account-menu";
 import { StreamedHero } from "./components/streamed-hero";
-import { TierMovers } from "./components/tier-movers";
-import { TopPerformers } from "./components/top-performers";
+import { StreamedAiFeatures } from "./components/streamed-ai-features";
+import { StreamedTierMovers } from "./components/streamed-tier-movers";
+import { StreamedTopPerformers } from "./components/streamed-top-performers";
 import { HOME_SECTION_ROUTES, type HomeSectionId } from "./lib/section-routes";
 import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "./lib/seo";
-
-export const revalidate = 60;
 
 export const HOME_DESCRIPTION =
   "AI research on Indian equities with BSE gainers and losers, market news sentiment, shareholding data, returns, comparisons, and subscription plans.";
@@ -46,10 +44,15 @@ export const metadata: Metadata = {
   },
 };
 
-const navLinks = [
-  ...HOME_SECTION_ROUTES.map(({ path, label }) => ({ href: path, label })),
-  { href: "/dashboard", label: "AI Dashboard" },
-];
+/**
+ * The header nav: the seven public section routes, and nothing else.
+ *
+ * "AI Dashboard" used to sit at the end of this row and no longer does. It pointed at a signed-in
+ * workspace, so for the visitors this page is written for — nobody signed in yet — it was a link
+ * to a sign-in wall sitting among seven links to real content. The way in is "Get started" and
+ * "Sign in" on the right of the same bar, which is where somebody looks for it.
+ */
+const navLinks = HOME_SECTION_ROUTES.map(({ path, label }) => ({ href: path, label }));
 
 /**
  * The divider between groups of sections.
@@ -157,7 +160,7 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="shrink-0 rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
+                className="shrink-0 rounded-full px-2.5 py-1.5 text-[13px] font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
               >
                 {link.label}
               </Link>
@@ -165,13 +168,32 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">
-            <SubscriptionBadge />
-            <ThemeToggle />
+            {/* The trial chip and the theme switch, as one control — see ./components/account-menu
+                for why two separate ones were the wrong shape for this corner of the bar. */}
+            <AccountMenu />
             <HeaderSubscriptionCta />
-            <Link href="/signin" className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <Link
+              href="/signin"
+              className="hidden items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {/* An arrow into a door: the standard mark for signing in, and the one that reads
+                  without its label at small sizes. */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                <path d="M10 17l5-5-5-5" />
+                <path d="M15 12H3" />
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              </svg>
               Sign in
             </Link>
-            <Link href="/signup" className="rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.6)] transition hover:from-emerald-500 hover:to-teal-500">
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.6)] transition hover:from-emerald-500 hover:to-teal-500"
+            >
+              {/* A spark rather than another arrow: this is the primary action beside a secondary
+                  one, and two arrows next to each other would read as the same control twice. */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                <path d="m12 3 2.1 4.9L19 10l-4.9 2.1L12 17l-2.1-4.9L5 10l4.9-2.1L12 3Z" />
+              </svg>
               Get started
             </Link>
             <MobileNav links={navLinks} />
@@ -187,9 +209,16 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
           <StreamedHero />
         </div>
 
-        {/* Straight under the slider, before any of the boards. The boards are the evidence; this is
-            the claim being tested, and a reader who plays one match has understood what the site is
-            for better than the next three sections could explain it. */}
+        {/* Directly under the slider, and deliberately the first thing after it. The hero shows the
+            product moving; this says what it actually consists of, feature by feature, before a
+            reader has scrolled into ten boards of exchange data and formed the impression that the
+            data *is* the product. Filtered against the admin's feature locks in Supabase — see
+            ./components/ai-features-showcase. */}
+        <StreamedAiFeatures />
+
+        {/* Then the contest. The boards below are the evidence; this is the claim being tested, and
+            a reader who plays one match has understood what the site is for better than the next
+            three sections could explain it. */}
         <HeadToHead />
 
         {/* Straight under the contest: the claim is tested above, and this is the exchange the
@@ -208,7 +237,7 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
           title="All cap types, compared side by side"
           blurb="Switch between large cap, mid cap and small cap to see which companies led and lagged inside that exact tier."
         >
-          <TierMovers />
+          <StreamedTierMovers />
         </PerformanceSection>
 
         <BandHeading
@@ -231,7 +260,7 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
           title="Top stock performers and non-performers"
           blurb="Search a company or page through the ranked board to see measured returns by period, with the company logo, sector, cap tier and latest price on every row."
         >
-          <TopPerformers />
+          <StreamedTopPerformers />
         </PerformanceSection>
 
         <BandHeading
@@ -245,7 +274,7 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
 
         {/* The movers board answers "what moved"; this answers "what was actually traded", which is
             a different ten — a 20% move on thin volume is not where the session's money went. */}
-        <BseTrendingBoard />
+        <StreamedTrendingBoard />
 
         <BandHeading
           eyebrow="05 - Who owns what"

@@ -460,7 +460,7 @@ export function AdminUsers({
           existing admin to grant it, or set <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">ADMIN_EMAILS</code> in the
           environment.
         </p>
-        <Link href="/dashboard" className="mt-4 inline-block rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
+        <Link href="/overview" className="mt-4 inline-block rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
           Back to the dashboard
         </Link>
       </div>

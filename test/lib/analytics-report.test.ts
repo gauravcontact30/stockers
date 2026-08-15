@@ -359,12 +359,12 @@ describe("interactions", () => {
 describe("pages, sources and devices", () => {
   it("ranks the pages people land on", () => {
     const built = report([
-      event({ path: "/dashboard", visitorId: "vaaaaaaaaaaa" }),
-      event({ path: "/dashboard", visitorId: "vbbbbbbbbbbb" }),
+      event({ path: "/overview", visitorId: "vaaaaaaaaaaa" }),
+      event({ path: "/overview", visitorId: "vbbbbbbbbbbb" }),
       event({ path: "/news", visitorId: "vaaaaaaaaaaa" }),
     ]);
 
-    expect(built.pages[0]).toMatchObject({ key: "/dashboard", count: 2, users: 2, share: 2 / 3 });
+    expect(built.pages[0]).toMatchObject({ key: "/overview", count: 2, users: 2, share: 2 / 3 });
   });
 
   it("files an arrival with no referrer under direct", () => {

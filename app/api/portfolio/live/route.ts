@@ -4,8 +4,6 @@ import { listHoldings, portfolioSetupError } from "../../../lib/portfolio";
 import { resolveMeta } from "../../../lib/stock-performance";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * A live price for every stock the caller holds.
  *

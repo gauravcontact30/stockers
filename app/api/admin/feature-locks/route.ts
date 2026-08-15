@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { userFromRequest } from "../../../lib/store";
 import { AI_FEATURES, isFeatureKey, readFeatureLocks, setFeatureLock } from "../../../lib/subscription";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   return NextResponse.json({ locks: await readFeatureLocks(), features: AI_FEATURES });
 }

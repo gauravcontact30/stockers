@@ -5,8 +5,6 @@ import { getDailyPredictions } from "../../../lib/daily-predictions";
 import { getAllQuotes } from "../../../lib/market-data";
 import { getTopPicksToday } from "../../../lib/top-picks";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const guard = await guardFeature(request, "top-picks");
   if (!guard.allowed) return lockedResponse(guard, "top-picks");

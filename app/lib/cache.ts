@@ -27,6 +27,32 @@
 //
 // Values are only ever *served* stale, never *presented* as fresh: every entry carries the instant
 // it was fetched, and the feeds surface that to the reader.
+//
+// ---------------------------------------------------------------------------
+// Why this still uses `unstable_cache` after the move to Cache Components
+// ---------------------------------------------------------------------------
+//
+// The obvious reading of the Next 16 migration guide is that `unstable_cache` should become
+// `use cache`. It should not — not here, and the reason is the whole point of the file.
+//
+// `use cache` stores entries **in memory, per deployment, per instance**. The Next docs say so
+// outright. That is precisely the property this module exists to compensate for: the cold numbers
+// at the top of this file are what a reader pays when a process starts with nothing, and a cache
+// that empties on every deploy and every instance recycle would hand somebody that seven-second
+// wait several times a day rather than once. `unstable_cache` writes through to Next's Data Cache,
+// which survives both.
+//
+// It was checked rather than assumed. With `cacheComponents: true` the build compiles, and every
+// `persist: true` feed serves: /api/market/ipos 100ms cold and 36ms warm, /api/market/dividends
+// 21ms then 9ms, and the `unstable_cache` in ./accuracy-matrix 6.3s cold against 84ms warm — which
+// is the same stale-while-revalidate bargain, still being kept.
+//
+// The Cache Components equivalent with the right durability is `'use cache: remote'`, which needs a
+// platform cache handler (Vercel supplies one; self-hosting configures `cacheHandlers`). That is a
+// deployment decision rather than a code one, so it is deliberately not made here. `unstable_cache`
+// is deprecated, not removed; when it goes, that is the replacement to reach for, and the in-memory
+// SWR layer above it should stay either way — coalescing concurrent misses and serving stale
+// instantly are things neither `use cache` nor the Data Cache do.
 
 import { unstable_cache } from "next/cache";
 

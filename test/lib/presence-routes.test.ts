@@ -130,13 +130,13 @@ describe("touchPresence", () => {
     const later = new Date("2026-08-14T10:30:00.000Z");
 
     await touchPresence({ sessionId: "tab_abcdefgh", path: "/news" }, first);
-    await touchPresence({ sessionId: "tab_abcdefgh", path: "/dashboard" }, later);
+    await touchPresence({ sessionId: "tab_abcdefgh", path: "/overview" }, later);
 
     const sessions = await listPresence(later);
     expect(sessions).toHaveLength(1);
     // Where they are now, but the sitting still began when it began — which is what makes "here
     // for 30 minutes" answerable at all.
-    expect(sessions[0]).toMatchObject({ path: "/dashboard", startedAt: first.toISOString(), lastSeenAt: later.toISOString() });
+    expect(sessions[0]).toMatchObject({ path: "/overview", startedAt: first.toISOString(), lastSeenAt: later.toISOString() });
   });
 
   it("keeps two tabs apart", async () => {
@@ -230,14 +230,14 @@ describe("GET /api/admin/presence", () => {
 
   it("answers the super admin with who is on the site", async () => {
     await writeRoster([superAdmin, regular]);
-    await touchPresence({ sessionId: "tab_abcdefgh", userId: regular.id, path: "/dashboard", userAgent: "Mozilla" });
+    await touchPresence({ sessionId: "tab_abcdefgh", userId: regular.id, path: "/overview", userAgent: "Mozilla" });
 
     const response = await GET(adminRead(superAdmin));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ available: true, summary: { online: 1, signedIn: 1, guests: 0 } });
-    expect(body.rows[0]).toMatchObject({ name: "Regular User", email: "regular@example.com", path: "/dashboard" });
+    expect(body.rows[0]).toMatchObject({ name: "Regular User", email: "regular@example.com", path: "/overview" });
   });
 
   it("never lets a cache hold one admin's view of where everyone is", async () => {

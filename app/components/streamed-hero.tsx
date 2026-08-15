@@ -23,7 +23,9 @@
 // the work a deadline walks away from still lands in that cache and the next reader gets it.
 
 import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { HeroCarousel } from "./hero-carousel";
+import { CACHE_TAGS } from "../lib/cache";
 import {
   investorFavouriteTrio,
   topWeeklyGainers,
@@ -104,6 +106,14 @@ export function HeroFallback() {
  * prices off slides one and two as well.
  */
 export async function HeroPayload() {
+  // Cached, so the hero is part of the prerendered shell rather than a per-request hole. Note what
+  // this means for `withDeadline` below: a read that misses its deadline caches the *fallback* for
+  // the window, exactly as the old `revalidate = 60` prerender did. That is the intended trade —
+  // the abandoned read still lands in `../lib/cache`, so the next revalidation picks it up.
+  "use cache";
+  cacheLife("market");
+  cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes);
+
   const [initialPerformance, yearGainers, investorFavourites, topWeekly] = await Promise.all([
     withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(HERO_PERFORMANCE_SYMBOLS), []),
     withDeadline<DynamicTrio | null>(topYearGainerTrio(), null),

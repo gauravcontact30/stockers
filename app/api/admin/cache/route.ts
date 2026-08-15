@@ -13,8 +13,6 @@ import { clearBoardReads } from "../../../lib/board-read";
 import { clearStockVerdictCache } from "../../../lib/stock-verdicts";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Reading and revalidating the cached feeds by hand.
  *

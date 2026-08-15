@@ -78,14 +78,19 @@ export function reminderCopy(status: SubscriptionStatus): { headline: string; bo
   if (status.state === "expired") {
     return {
       headline: "Your free trial has ended",
-      body: "Your three-day Starter and Pro AI trial is over. Subscribe to Starter, Pro or Elite to unlock AI features again.",
+      // Accurate about what actually happened, which is a step down rather than a shutdown: the
+      // account keeps Starter, and only the two paid tiers closed. Saying "subscribe to unlock AI
+      // features again" would now be false — some of them never locked.
+      body: "Your account has moved to the Starter plan and keeps its Starter AI features. Pro and Elite features need a subscription.",
     };
   }
 
   const days = `${status.marketDaysLeft} calendar ${status.marketDaysLeft === 1 ? "day" : "days"}`;
   return {
     headline: "Your free trial is nearly up",
-    body: `You have ${days} left on your trial.`,
+    // The last day is the one day this is worth interrupting for, so it says what changes
+    // tomorrow rather than only counting down to it.
+    body: `You have ${days} left with every AI feature unlocked. After that your account stays open on Starter — Pro and Elite features will lock.`,
   };
 }
 
@@ -424,12 +429,23 @@ export function SubscriptionReminder() {
  * A compact trial/subscription state chip for the header.
  *
  * Nothing is shown to an admin. The chip exists to tell a reader where they stand with the paywall
- * â€” days left, subscribed, expired â€” and an administrator stands outside it entirely, so the chip
+ * — days left, subscribed, expired — and an administrator stands outside it entirely, so the chip
  * had nothing useful to say to them and simply announced the role in the public header.
+ *
+ * Nothing is shown to a signed-out visitor either, and that is the more recent change. They used to
+ * get a "Free preview" chip, which read as a status badge while describing no status: there is no
+ * account, so there is no preview running, no clock against it and nothing the reader can do about
+ * it. It sat in the navigation next to seven links to real content and told them less than any of
+ * them. The invitation they need is already two controls to its right — "Sign in" and "Get
+ * started" — and the trial's actual length is stated on the pricing table and in the reminder.
+ *
+ * The chip therefore appears only when it is reporting something true about an account that exists:
+ * a live trial and its remaining days, a paid subscription, or a lapsed one.
  */
 export function SubscriptionBadge() {
   const { status } = useSubscription();
   if (!status || status.state === "admin") return null;
+  if (!status.signedIn) return null;
 
   const styles: Record<string, string> = {
     active: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-400",
@@ -440,7 +456,9 @@ export function SubscriptionBadge() {
   const labels: Record<string, string> = {
     active: "Subscribed",
     trial: `Trial - ${status.marketDaysLeft} calendar ${status.marketDaysLeft === 1 ? "day" : "days"} left`,
-    expired: status.signedIn ? "Trial ended" : "Free preview",
+    // No signed-out branch any more: the component returns above for anyone without an account,
+    // so reaching here means the trial genuinely has ended.
+    expired: "Trial ended",
   };
 
   return (

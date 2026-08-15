@@ -8,7 +8,7 @@ import { CapTierBadge } from "./cap-tier-badge";
 import { CompanyLogo } from "./company-logo";
 import { SectorPill } from "./sector-pill";
 import { useStockDetail } from "./stock-detail-provider";
-import { pageWindow, useMarketFeed } from "./market-section";
+import { pageWindow, useMarketFeed, type Prefetched } from "./market-section";
 import { StockCombobox } from "./stock-combobox";
 
 /**
@@ -111,6 +111,7 @@ function SideCard({
   chrome,
   accent,
   empty,
+  prefetched,
 }: {
   tier: Exclude<MoverTierKey, "all">;
   direction: MoverDirection;
@@ -118,6 +119,11 @@ function SideCard({
   chrome: string;
   accent: string;
   empty: string;
+  /**
+   * This side's opening page, resolved on the server. Null for every card except the two the
+   * landing page opens on — see ./streamed-tier-movers.
+   */
+  prefetched?: Prefetched<BseMoverPage>;
 }) {
   const [input, setInput] = useState("");
   const [term, setTerm] = useState("");
@@ -150,6 +156,7 @@ function SideCard({
 
   const { data, loading, error } = useMarketFeed<BseMoverPage>(
     buildMoversUrl(tier, direction, "1d", term, "0", page, PAGE_SIZE),
+    prefetched,
   );
 
   const rows = data?.rows ?? [];
@@ -249,7 +256,17 @@ function SideCard({
   );
 }
 
-export function TierMovers() {
+export function TierMovers({
+  prefetched,
+}: {
+  /**
+   * The opening tier's two sides, resolved on the server and keyed by direction.
+   *
+   * Only the tier the board opens on is seeded. Switching to mid or small cap is a question the
+   * server was never asked, so those cards fetch as they always did.
+   */
+  prefetched?: { gainers: Prefetched<BseMoverPage>; losers: Prefetched<BseMoverPage> };
+} = {}) {
   const [tier, setTier] = useState<Exclude<MoverTierKey, "all">>("large");
   const chosen = TIERS.find((entry) => entry.key === tier) ?? TIERS[0];
 
@@ -289,6 +306,7 @@ export function TierMovers() {
             chrome={side.chrome}
             accent={side.accent}
             empty={side.empty}
+            prefetched={prefetched?.[side.direction]}
           />
         ))}
       </div>

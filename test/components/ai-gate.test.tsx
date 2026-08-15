@@ -4,6 +4,14 @@ import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { AiGate, FeatureLockToggle, GatedSection, LockPanel } from "../../app/components/ai-gate";
 import { SubscriptionProvider } from "../../app/components/subscription-provider";
 
+// The subscribe button navigates once a payment confirms — the session it holds was minted before
+// the purchase, so the reader is signed back in to pick the new plan up. Outside an app-router
+// context  throws, and this suite renders that button.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: jest.fn(), push: jest.fn(), refresh: jest.fn() }),
+}));
+
+
 type MockLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
   children: ReactNode;

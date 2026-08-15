@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { SUPER_ADMIN_SECTIONS, SuperAdminDashboard } from "../../app/components/super-admin-dashboard";
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/admin",
+  usePathname: () => "/console",
   useRouter: () => ({ push: jest.fn() }),
 }));
 
@@ -61,7 +61,7 @@ describe("Traffic & Usage in the super admin shell", () => {
   it("is offered in the navigation, pointing at its own page", () => {
     const section = SUPER_ADMIN_SECTIONS.find((entry) => entry.id === "analytics");
 
-    expect(section).toMatchObject({ label: "Traffic & Usage", href: "/admin/analytics" });
+    expect(section).toMatchObject({ label: "Traffic & Usage", href: "/analytics" });
   });
 
   it("renders the analytics panel on its own section", async () => {
@@ -81,7 +81,7 @@ describe("Traffic & Usage in the super admin shell", () => {
     // Waited on the figure rather than the heading: the heading is there before the request lands.
     await waitFor(() => expect(screen.getByText("8")).toBeInTheDocument());
     expect(screen.getByText("Today's traffic")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Full report" })).toHaveAttribute("href", "/admin/analytics");
+    expect(screen.getByRole("link", { name: "Full report" })).toHaveAttribute("href", "/analytics");
     expect(screen.getByText("AI intelligence search")).toBeInTheDocument();
   });
 

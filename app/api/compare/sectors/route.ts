@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { getShowdowns } from "../../../lib/sector-compare";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const guard = await guardFeature(request, "compare");
   if (!guard.allowed) return lockedResponse(guard, "compare");

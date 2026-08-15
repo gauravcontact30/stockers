@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature } from "../../../lib/feature-guard";
 import { getMarketPulse } from "../../../lib/market-pulse";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const [pulse, guard] = await Promise.all([getMarketPulse(), guardFeature(request, "market-pulse")]);
 

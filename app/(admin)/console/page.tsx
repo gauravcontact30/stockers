@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SuperAdminDashboard } from "../components/super-admin-dashboard";
+import { SuperAdminDashboard } from "../../components/super-admin-dashboard";
 
 export const metadata: Metadata = {
   title: "Super Admin | Stockers",

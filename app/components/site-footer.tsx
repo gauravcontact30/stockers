@@ -1,5 +1,26 @@
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 import { Logo } from "./logo";
+
+/**
+ * The year in the copyright line.
+ *
+ * `new Date()` read straight into the markup is a value that changes between renders, and under
+ * Cache Components that fails the prerender rather than quietly baking a stale year into every
+ * page — which is exactly what it used to do. Reading it inside a cached scope makes the staleness
+ * bounded and explicit instead: `days` revalidates once a day, so the line is correct within a day
+ * of midnight on the 31st of December, and costs nothing on any of the other 364.
+ *
+ * Deliberately not `connection()` + `<Suspense>`. That would make the footer a dynamic hole on
+ * every page on the site, and pay a request-time render forever, to get a number right four hours
+ * sooner once a year.
+ */
+async function copyrightYear(): Promise<number> {
+  "use cache";
+  cacheLife("days");
+
+  return new Date().getFullYear();
+}
 
 /**
  * The footer's links.
@@ -15,10 +36,10 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
       { href: "/bse-sectors", label: "BSE sector movers" },
       { href: "/shareholding", label: "BSE shareholding" },
       { href: "/news", label: "Indian market news" },
-      { href: "/dashboard/market-pulse", label: "AI market pulse" },
-      { href: "/dashboard/top-picks", label: "AI top stock picks" },
-      { href: "/dashboard/ipos", label: "Indian IPO watch" },
-      { href: "/dashboard/etf-board", label: "Indian ETF board" },
+      { href: "/market-pulse", label: "AI market pulse" },
+      { href: "/top-picks", label: "AI top stock picks" },
+      { href: "/ipos", label: "Indian IPO watch" },
+      { href: "/etf-board", label: "Indian ETF board" },
     ],
   },
   {
@@ -27,7 +48,7 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
       { href: "/about", label: "About Us" },
       { href: "/contact", label: "Contact Us" },
       { href: "/pricing", label: "AI stock research pricing" },
-      { href: "/dashboard/getting-started", label: "Getting Started" },
+      { href: "/getting-started", label: "Getting Started" },
       { href: "/signin", label: "Sign in" },
       { href: "/signup", label: "Sign up" },
     ],
@@ -43,7 +64,9 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const year = await copyrightYear();
+
   return (
     <footer className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
       <div className="grid grid-cols-1 gap-10 p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
@@ -86,7 +109,7 @@ export function SiteFooter() {
 
       <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800 dark:text-slate-400">
         <div className="space-y-1">
-          <p>© {new Date().getFullYear()} StockersAI — AI-powered Indian stock research.</p>
+          <p>© {year} StockersAI — AI-powered Indian stock research.</p>
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Not a SEBI-registered investment adviser or research analyst. Market risk applies —{" "}
             <Link href="/disclaimer" prefetch={false} className="underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400">

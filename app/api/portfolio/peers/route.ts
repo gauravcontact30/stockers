@@ -5,8 +5,6 @@ import type { PeriodKey } from "../../../lib/portfolio-movers";
 import { getCachedPerformanceSummaries } from "../../../lib/stock-performance";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Sector peers for a handful of stocks, with their returns over the same five windows.
  *

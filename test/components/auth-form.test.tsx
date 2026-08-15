@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthForm } from "../../app/components/auth-form";
 
@@ -40,7 +40,7 @@ describe("AuthForm", () => {
     it("redirects to /dashboard on mount when a session already exists", () => {
       window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "t", user: { name: "Jane" } }));
       render(<AuthForm mode="signin" />);
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+      expect(mockReplace).toHaveBeenCalledWith("/overview");
     });
 
     it("does not redirect when no session exists", () => {
@@ -123,7 +123,7 @@ describe("AuthForm", () => {
         token: "tok-1",
         user: { name: "Jane", plan: "Pro" },
       });
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+      expect(mockPush).toHaveBeenCalledWith("/overview");
     });
 
     // The regression this guards: storing the token in localStorage is not enough. Gated endpoints
@@ -210,7 +210,7 @@ describe("AuthForm", () => {
       // instead), so the button stays in its "Working..." disabled state — only the success
       // message and the redirect call are the observable signals here.
       expect(await screen.findByText("Signed in! Redirecting to your dashboard...")).toBeInTheDocument();
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+      expect(mockPush).toHaveBeenCalledWith("/overview");
     });
 
     it("toggles the password visibility button", async () => {
@@ -343,15 +343,30 @@ describe("AuthForm", () => {
       expect(screen.getByPlaceholderText("you@example.com")).toHaveAttribute("aria-invalid", "true");
     });
 
-    it("signs up successfully, stores the session, and redirects", async () => {
+    /**
+     * Sign-up confirms in a dialog and sends the reader to sign in; it does not open a session.
+     *
+     * It used to store the token, sync the cookie and push straight to the dashboard, which is why
+     * nobody ever read what they had been given: the trial, its length and its end date all went
+     * past in a redirect. Nothing is stored here now — no token, no cookie — and the account is
+     * opened by an ordinary sign-in a moment later.
+     */
+    it("confirms the new account in a dialog instead of opening a session", async () => {
       const user = userEvent.setup();
-      mockFetchOnce({ ok: true, body: { token: "tok-2", user: { name: "Aarav Sharma", plan: "Starter" } } });
+      mockFetchOnce({
+        ok: true,
+        body: { token: "tok-2", user: { name: "Aarav Sharma", plan: "Starter" }, trialEndsOn: "2026-08-20" },
+      });
       render(<AuthForm mode="signup" />);
 
       await fillValidSignupForm(user);
       submitForm();
 
-      expect(await screen.findByText("Account created! Redirecting to your dashboard...")).toBeInTheDocument();
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText(/free trial has started/)).toBeInTheDocument();
+      // The address is echoed back so a typo is catchable before they try to sign in with it.
+      expect(within(dialog).getByText("aarav@example.com")).toBeInTheDocument();
+
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/signup",
         expect.objectContaining({
@@ -366,11 +381,25 @@ describe("AuthForm", () => {
           }),
         })
       );
-      expect(JSON.parse(window.localStorage.getItem("stockers-auth") ?? "{}")).toEqual({
-        token: "tok-2",
-        user: { name: "Aarav Sharma", plan: "Starter" },
-      });
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+
+      // No session: the token went nowhere and the dashboard was not opened.
+      expect(window.localStorage.getItem("stockers-auth")).toBeNull();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it("sends the new account to sign in, carrying the address it just registered", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({ ok: true, body: { token: "tok-2", user: { name: "Aarav Sharma" }, trialEndsOn: null } });
+      render(<AuthForm mode="signup" />);
+
+      await fillValidSignupForm(user);
+      submitForm();
+
+      await user.click(await screen.findByRole("button", { name: "Continue to sign in" }));
+
+      // `replace`, not `push`: the sign-up form is not somewhere back should return to now that
+      // the account exists.
+      expect(mockReplace).toHaveBeenCalledWith("/signin?email=aarav%40example.com&welcome=1");
     });
 
     it("sends the mobile number it collected", async () => {
@@ -381,7 +410,7 @@ describe("AuthForm", () => {
       await fillValidSignupForm(user);
       submitForm();
 
-      await screen.findByText("Account created! Redirecting to your dashboard...");
+      await screen.findByRole("dialog");
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/signup",
         expect.objectContaining({

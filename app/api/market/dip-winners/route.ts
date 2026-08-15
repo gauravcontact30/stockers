@@ -6,8 +6,6 @@ import { stockIcon } from "../../../lib/company-logos";
 import { getReturnsForPeriod, type ReturnPeriod } from "../../../lib/historical-returns";
 import { getAllQuotes } from "../../../lib/market-data";
 
-export const dynamic = "force-dynamic";
-
 // Defaults are tuned to auto-surface the most relevant "buy the dip" set on first load: proven
 // winners over the selected lookback period that have also pulled back over a (separately
 // selectable) decline period, and are trading at their biggest discount today, without the

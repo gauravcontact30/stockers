@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../../lib/cache";
 import { getDailyPredictions } from "../../../lib/daily-predictions";
 import { getAllQuotes } from "../../../lib/market-data";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const quotes = await getAllQuotes();
   const cache = await getDailyPredictions(

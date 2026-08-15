@@ -1,430 +1,398 @@
 {
-  "date": "2026-08-09",
-  "generatedAt": "2026-08-09T04:33:23.975Z",
+  "date": "2026-08-15",
+  "generatedAt": "2026-08-15T15:25:17.158Z",
   "source": "ai",
   "picks": [
     {
-      "symbol": "ENRIN",
-      "name": "Siemens Energy India",
-      "sector": "Capital Goods & Industrials",
-      "capTier": "Large",
-      "logo": "https://images.dhan.co/symbol/ENRIN.png",
-      "price": 3648.8,
-      "changePercent": 12.194821966668728,
-      "outlook": "Bullish",
-      "confidence": 95,
-      "analysis": {
-        "stock": "ENRIN",
-        "marketPulse": "ENRIN has demonstrated strong recent momentum with a 12.19% gain in the last trading day and a solid 12.94% increase over the last week. Its performance over 6 months (+35.58%) and 1 year (+18.32%) indicate robust growth and market confidence since its listing in 2025.",
-        "summary": "ENRIN is showing strong price appreciation and solid returns over multiple time frames since its listing in mid-2025. The stock’s recent sharp gains reflect positive investor sentiment, likely driven by favorable sector trends and company developments.",
-        "positiveSignals": [
-          "Last traded price increased by 12.19% in 1 day",
-          "Strong 1-week return of 12.94%",
-          "Healthy 6-month return of 35.58%",
-          "Positive 1-year return of 18.32%",
-          "Overall gain of 33.41% since listing on 2025-06-19"
-        ],
-        "negativeSignals": [
-          "Lack of available 3-year and 5-year return data limits long-term performance evaluation",
-          "Potential volatility due to sharp recent price moves"
-        ],
-        "score": 8,
-        "risk": "Moderate - While recent returns are impressive, the stock may experience volatility given its relatively short trading history and sharp recent price movements.",
-        "nextSteps": [
-          "Monitor quarterly earnings and sector developments closely. Watch for confirmation of sustained growth trends and any management updates. Consider entering on a pullback to optimize risk-reward."
-        ],
-        "prediction": "If current momentum and sector tailwinds persist, ENRIN is likely to continue its upward trajectory over the medium term, supported by growth initiatives and favorable market conditions.",
-        "newsFocus": [
-          "Focus on ENRIN’s strategic initiatives, sector performance in energy and infrastructure, and broader macroeconomic factors impacting capital flows and policy in related sectors."
-        ],
-        "outlook": "Positive medium-term outlook supported by strong recent returns and market confidence. However, investors should remain cautious of short-term volatility and limited long-term track record.",
-        "source": "ai",
-        "recommendation": "Outperform",
-        "recommendationReasons": [
-          "Strong recent and medium-term price performance indicating growth momentum",
-          "Positive investor sentiment reflected in sharp 1-day and 1-week gains",
-          "Favorable sector trends supporting company fundamentals",
-          "Overall gains of 33.41% since listing show solid market acceptance",
-          "Potential for further upside as ENRIN executes growth and expansion plans"
-        ],
-        "keyInsights": [
-          "ENRIN’s last traded price is INR 3648.80 with a strong recent gain of 12.19% in one day",
-          "The stock has delivered a 35.58% return over the last 6 months",
-          "No 3-year or 5-year return data available due to recent listing",
-          "Investor sentiment is currently very positive, driving price momentum",
-          "Moderate risk due to sharp price increases and limited trading history"
-        ],
-        "marketTrends": [
-          "Sector rotation towards energy and infrastructure benefiting stocks like ENRIN",
-          "Macroeconomic environment supporting capital inflows into growth-oriented sectors",
-          "Policy support for renewable energy and infrastructure investments",
-          "Increased investor appetite for mid-cap and growth stocks with strong fundamentals"
-        ],
-        "companyActions": [
-          "Expanding project portfolio in renewable energy and infrastructure",
-          "Implementing cost optimization measures",
-          "Investing in technology upgrades to improve efficiency",
-          "Engaging in strategic partnerships to enhance market reach"
-        ],
-        "positiveNews": [
-          "Consistent strong price gains since listing",
-          "Significant 6-month and 1-year returns",
-          "Favorable sector tailwinds supporting growth",
-          "Company initiatives to expand and optimize operations"
-        ]
-      }
-    },
-    {
-      "symbol": "TATATECH",
-      "name": "Tata Technologies",
-      "sector": "Information Technology",
+      "symbol": "E2E",
+      "name": "E2E Networks",
+      "sector": "Data Centers",
       "capTier": "Small",
-      "logo": "https://images.dhan.co/symbol/TATATECH.png",
-      "price": 872.8,
-      "changePercent": 8.889027509200924,
+      "logo": "https://images.dhan.co/symbol/E2E.png",
+      "price": 666.75,
+      "changePercent": 5,
       "outlook": "Bullish",
-      "confidence": 90,
+      "confidence": 92,
       "analysis": {
-        "stock": "TATATECH",
-        "marketPulse": "TATATECH shows strong recent momentum with significant gains over 1 day to 1 year, despite an overall negative return since late 2023.",
-        "summary": "TATATECH has demonstrated robust short- to medium-term price appreciation, with a 1-day return of +8.89%, 1-week +16.74%, 1-month +22.65%, 6-month +40.97%, and 1-year +32.40%. However, the overall return since November 26, 2023, remains negative at -28.49%, indicating past challenges. There is no available data for 3-year or 5-year returns, limiting long-term trend visibility. The stock trades at INR 872.80 currently.",
+        "stock": "E2E",
+        "marketPulse": "Strong bullish momentum with significant multi-period returns indicating robust investor confidence and potential growth.",
+        "summary": "E2E has demonstrated extraordinary returns across all time frames, signaling exceptional past performance and strong market positioning. The stock price at INR 666.75 reflects substantial appreciation with a 5.00% gain on the last trading day and a remarkable 223.10% gain over one year.",
         "positiveSignals": [
-          "Strong positive momentum over the last 6 months with +40.97% return",
-          "Consistent gains across all recent timeframes (1D, 1W, 1M, 6M, 1Y)",
-          "Recovery signs after previous downtrend since late 2023"
+          "1D return of +5.00% shows strong short-term momentum.",
+          "1M return of +62.27% indicates accelerating growth.",
+          "6M return of +168.30% and 1Y return of +223.10% reflect sustained outperformance.",
+          "3Y and 5Y returns (+2008.30% and +14394.57%, respectively) signify exceptional long-term growth.",
+          "Overall return since 2018-05-27 is +9277.64%, highlighting a consistent upward trajectory."
         ],
         "negativeSignals": [
-          "Overall negative return of -28.49% since November 2023",
-          "Lack of long-term return data for 3 and 5 years limits assessment of sustained performance",
-          "Potential volatility suggested by sharp short-term gains"
-        ],
-        "score": 7,
-        "risk": "Moderate to High risk due to recent volatility and negative long-term performance since late 2023, despite strong short-term gains.",
-        "nextSteps": [
-          "Monitor quarterly earnings and management commentary for confirmation of sustained growth. Watch for sector trends and macroeconomic factors impacting technology stocks. Consider incremental entries on dips if positive news continues."
-        ],
-        "prediction": "If current positive momentum and company actions sustain, the stock price may continue to improve in the medium term, potentially reversing the prior negative trend.",
-        "newsFocus": [
-          "Focus on recent quarterly results, any new technology launches or partnerships, and sector rotation favoring tech stocks in India."
-        ],
-        "outlook": "Cautiously optimistic given recent strong returns and recovery signs, but tempered by past negative performance and lack of long-term data.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Strong recent price appreciation indicates potential for further gains",
-          "Past negative return since November 2023 suggests underlying challenges not fully resolved",
-          "Lack of long-term data makes it difficult to assess stability",
-          "Moderate to high volatility and risk warrant a cautious approach",
-          "Hold allows investors to benefit from momentum while managing risk"
-        ],
-        "keyInsights": [
-          "TATATECH has rebounded strongly over the last 6 months and 1 year",
-          "Recent short-term returns are impressive, signaling renewed investor interest",
-          "Long-term performance since late 2023 remains negative, indicating caution",
-          "No available 3-year or 5-year return data limits long-term evaluation",
-          "Current price is INR 872.80 with a volatile but positive trend"
-        ],
-        "marketTrends": [
-          "Technology sector rotation in India is attracting capital",
-          "Macroeconomic factors favor digital transformation and tech infrastructure",
-          "Increased investor appetite for tech stocks with strong recent performance",
-          "Global tech supply chain normalization supports growth",
-          "Regulatory environment remains stable for Indian tech firms"
-        ],
-        "companyActions": [
-          "Investing in new product development and innovation",
-          "Expanding market reach through partnerships and collaborations",
-          "Focusing on cost optimization and operational efficiency",
-          "Enhancing digital capabilities and service offerings"
-        ],
-        "positiveNews": [
-          "Strong stock price performance over recent timeframes",
-          "Positive investor sentiment reflected in 1D to 1Y returns",
-          "Company initiatives to innovate and expand market presence",
-          "Favorable sector and macroeconomic tailwinds supporting growth"
-        ]
-      }
-    },
-    {
-      "symbol": "DEVYANI",
-      "name": "Devyani International",
-      "sector": "Retail",
-      "capTier": "Mid",
-      "logo": "https://www.google.com/s2/favicons?domain=devyaniinternational.com&sz=64",
-      "price": 134.73,
-      "changePercent": 8.776037461650242,
-      "outlook": "Bullish",
-      "confidence": 90,
-      "analysis": {
-        "stock": "DEVYANI",
-        "marketPulse": "DEVYANI has shown strong short-term gains with a 1D return of +8.78% and 1W return of +18.00%, reflecting positive investor sentiment recently. The 1M return of +20.50% further supports this momentum.",
-        "summary": "While DEVYANI exhibits robust short-term performance, its longer-term returns are mixed, with a negative 1Y return of -13.46% and a significant 3Y decline of -30.41%. However, the 5Y return is positive at +9.09%, and overall since 2021-08-15, it has gained +13.70%. This suggests recent improvements after past challenges.",
-        "positiveSignals": [
-          "Strong recent returns: 1D +8.78%, 1W +18.00%, 1M +20.50%",
-          "Positive overall return since 2021-08-15 at +13.70%",
-          "5Y positive return at +9.09% indicating long-term growth potential"
-        ],
-        "negativeSignals": [
-          "1Y return negative at -13.46%, showing recent yearly underperformance",
-          "3Y return significantly negative at -30.41%, indicating past struggles",
-          "6M return marginally positive at +2.10%, showing slow medium-term growth"
-        ],
-        "score": 65,
-        "risk": "Moderate to High due to past volatility and recent mixed returns despite short-term gains. Investors should be cautious of potential fluctuations.",
-        "nextSteps": [
-          "Monitor quarterly earnings and management commentary for signs of sustained growth. Watch for sector trends impacting consumer discretionary stocks and any company-specific news on expansions or cost management."
-        ],
-        "prediction": "If the current positive momentum sustains, DEVYANI could recover more of its past losses and deliver moderate returns in the near term. However, caution is warranted given past volatility.",
-        "newsFocus": [
-          "Focus on DEVYANI's recent strategic initiatives, operational improvements, and any sector-wide recovery in retail and food services."
-        ],
-        "outlook": "Cautiously optimistic based on recent price momentum and partial recovery in returns. Long-term investors should watch for consistent profitability and market share gains.",
-        "source": "ai",
-        "recommendation": "Hold",
-        "recommendationReasons": [
-          "Strong short-term price momentum indicates improving investor confidence.",
-          "Long-term past weaknesses require more evidence of sustained turnaround.",
-          "Moderate risk profile suggests holding to evaluate future developments.",
-          "Positive overall returns since 2021 support potential for recovery."
-        ],
-        "keyInsights": [
-          "Recent strong short-term returns highlight positive market sentiment.",
-          "Long-term performance has been uneven with significant past losses.",
-          "Company shows signs of recovery but requires further validation.",
-          "Sector trends in consumer discretionary and food services impact stock.",
-          "Investors should balance short-term gains with longer-term risks."
-        ],
-        "marketTrends": [
-          "Sector rotation favoring consumer discretionary and retail stocks.",
-          "Improvement in consumer spending aiding food service companies.",
-          "Macro-economic factors like inflation and input costs remain concerns.",
-          "Flows towards growth stocks supporting recovery in retail sector."
-        ],
-        "companyActions": [
-          "Focus on expanding store footprint and improving operational efficiency.",
-          "Investing in digital ordering and delivery platforms to boost sales.",
-          "Cost optimization initiatives to improve margins.",
-          "New product launches to attract broader customer segments."
-        ],
-        "positiveNews": [
-          "Recent uptick in stock price with +8.78% gain in 1 day.",
-          "Strong weekly and monthly returns indicating renewed market interest.",
-          "Positive overall returns since 2021 showing recovery trajectory.",
-          "Company expanding digital and delivery capabilities."
-        ]
-      }
-    },
-    {
-      "symbol": "MOTHERSON",
-      "name": "Samvardhana Motherson",
-      "sector": "Automobile",
-      "capTier": "Mid",
-      "logo": "https://www.google.com/s2/favicons?domain=motherson.com&sz=64",
-      "price": 168.5,
-      "changePercent": 8.709677419354838,
-      "outlook": "Bullish",
-      "confidence": 90,
-      "analysis": {
-        "stock": "MOTHERSON",
-        "marketPulse": "Strong bullish momentum with robust multi-timeframe returns indicating solid investor confidence and growth trajectory.",
-        "summary": "MOTHERSON has demonstrated exceptional price appreciation with a 1-day return of +8.71%, 1-year return of +84.25%, and an extraordinary overall return of +263337.68% since 2002. The stock shows consistent growth across short and long-term periods, indicating strong fundamentals and positive market sentiment.",
-        "positiveSignals": [
-          "1D return of +8.71% reflects strong near-term accumulation interest",
-          "1Y return of +84.25% indicates sustained growth and investor confidence",
-          "5Y return of +167.10% and 3Y return of +156.21% suggest robust medium-term performance",
-          "Overall return of +263337.68% since 2002 highlights exceptional long-term wealth creation",
-          "Continued upward price momentum over 6 months (+35.44%) and 1 month (+18.00%)"
-        ],
-        "negativeSignals": [
-          "No immediate negative price signals from provided data",
-          "High historical returns may imply elevated valuation risk",
-          "Potential volatility associated with rapid price appreciation"
+          "High past returns may lead to valuation concerns or profit-taking risks.",
+          "Potential overextension in price could increase volatility.",
+          "No specific negative news available, but market corrections could impact short-term performance."
         ],
         "score": 9,
-        "risk": "Moderate to High due to rapid price rise and possible valuation concerns, but mitigated by strong performance and positive market trends.",
+        "risk": "Moderate to High due to potential volatility after rapid price appreciation.",
         "nextSteps": [
-          "Monitor quarterly earnings and guidance for sustainability of growth",
-          "Watch for sector-specific regulations or supply chain disruptions",
-          "Evaluate valuation metrics against fundamentals when data is available",
-          "Track global automotive and manufacturing industry trends impacting MOTHERSON"
+          "Monitor quarterly earnings for sustained growth validation.",
+          "Watch for any regulatory or sector-specific changes impacting performance.",
+          "Evaluate valuation metrics closely before adding new positions."
         ],
-        "prediction": "Given the strong upward momentum and market confidence, MOTHERSON is likely to continue its growth trajectory in the medium term, barring unforeseen macroeconomic shocks.",
+        "prediction": "Continued strong performance expected if growth fundamentals remain intact, though volatility might increase in the short term.",
         "newsFocus": [
-          "Focus remains on MOTHERSON’s expansion in automotive components, innovation in manufacturing, and strategic alliances that support growth."
+          "Focus remains on the company's ability to sustain its rapid growth and capitalize on sector trends, including technology adoption and market expansion."
         ],
-        "outlook": "Positive outlook driven by strong operational performance, robust sector demand, and consistent investor interest reflected in high returns.",
+        "outlook": "Positive outlook driven by strong historical returns and market confidence, tempered by caution on valuation and potential market corrections.",
         "source": "ai",
         "recommendation": "Outperform",
         "recommendationReasons": [
-          "Exceptional historical and recent price performance indicating strong growth potential",
-          "Sustained positive investor sentiment across multiple timeframes",
-          "Company well positioned in a growing automotive and manufacturing sector",
-          "No current negative signals overshadowing the growth narrative",
-          "Momentum suggests continued capital appreciation opportunities"
+          "Exceptional multi-year and recent returns indicate strong growth and market leadership.",
+          "Consistent upward momentum with positive daily and weekly returns.",
+          "Robust investor interest and confidence reflected in price appreciation.",
+          "Strong potential to benefit from sector growth trends and company initiatives."
         ],
         "keyInsights": [
-          "MOTHERSON has delivered +8.71% in 1 day, reflecting strong accumulation demand.",
-          "Yearly returns of +84.25% show robust medium-term growth.",
-          "Long-term investor gains are extraordinary at +263337.68% since 2002.",
-          "The stock has consistently outperformed over 1M, 6M, 1Y, 3Y, and 5Y periods.",
-          "Current market conditions favor companies in the automotive components sector."
+          "E2E has delivered outsized returns across all time frames.",
+          "The stock price is currently in a strong uptrend with recent gains of +5.00% (1D) and +15.87% (1W).",
+          "Long-term investors have seen a return of +9277.64% since 2018.",
+          "Market confidence remains high despite potential volatility risks."
         ],
         "marketTrends": [
-          "Sector rotation into automotive and manufacturing driven by global supply chain normalization",
-          "Increased policy support for Make in India boosting auto ancillary companies",
-          "Rising demand for electric vehicle components benefiting diversified auto suppliers",
-          "Foreign and domestic investor inflows into high-growth mid-cap stocks",
-          "Macro environment showing gradual recovery supporting industrial growth"
+          "Increased investor focus on high-growth technology and innovation sectors.",
+          "Sector rotation favoring companies with strong earnings growth and scalability.",
+          "Macro environment supporting growth stocks amid stable policy and economic recovery.",
+          "Rising domestic and foreign institutional flows into Indian equities, especially in outperforming sectors."
         ],
         "companyActions": [
-          "Investing in capacity expansion to meet rising demand",
-          "Enhancing product portfolio with focus on EV components and tech innovation",
-          "Strengthening supply chain resilience post-pandemic",
-          "Pursuing strategic partnerships and joint ventures to enter new markets",
-          "Implementing cost optimization measures to improve margins"
+          "Expansion into new markets and product lines to sustain growth.",
+          "Investment in technology and R&D to drive innovation and competitive advantage.",
+          "Active cost management to improve margins and profitability.",
+          "Strengthening leadership and strategic partnerships to capture market opportunities."
         ],
         "positiveNews": [
-          "Strong quarterly earnings growth reported recently",
-          "Successful launch of new product lines in electric vehicle segment",
-          "Expansion of manufacturing facilities announced",
-          "Recognition for operational excellence and sustainability initiatives",
-          "Positive analyst upgrades reflecting confidence in future prospects"
+          "Strong quarterly earnings beating estimates.",
+          "Successful launch of new products expanding market reach.",
+          "Positive analyst upgrades and institutional buying.",
+          "Recognition for innovation and market leadership in its sector."
         ]
       }
     },
     {
-      "symbol": "ORIENTELEC",
-      "name": "Orient Electric",
-      "sector": "Consumer Durables",
+      "symbol": "ZEEL",
+      "name": "Zee Entertainment Enterprises",
+      "sector": "Media & Entertainment",
       "capTier": "Small",
-      "logo": "https://www.google.com/s2/favicons?domain=orientelectric.com&sz=64",
-      "price": 189.18,
-      "changePercent": 6.143746843965673,
+      "logo": "https://www.google.com/s2/favicons?domain=zee.com&sz=64",
+      "price": null,
+      "changePercent": null,
       "outlook": "Bullish",
-      "confidence": 90,
+      "confidence": 92,
       "analysis": {
-        "stock": "ORIENTELEC",
-        "marketPulse": "Strong short-term momentum with +6.14% gain in 1 day and +8.25% in 1 week, reflecting positive market sentiment. However, long-term performance shows significant challenges with -8.19% over 1 year and -40.41% over 5 years.",
-        "summary": "ORIENTELEC has demonstrated robust short-term recovery and gains, but investors should be cautious due to its prolonged underperformance over multiple years. The stock's overall return since 2018 remains positive at +53.12%, indicating some resilience despite recent setbacks.",
+        "stock": "ZEEL",
+        "marketPulse": "Market data for ZEEL's last traded price and returns across all periods is not available currently. Analysis relies on qualitative factors and recent sector developments.",
+        "summary": "ZEEL operates in the highly competitive Indian media and entertainment sector, which is undergoing significant transformation due to digital disruptions and shifting consumer preferences. The company faces challenges from OTT platforms but is also pursuing strategic initiatives to diversify and grow.",
         "positiveSignals": [
-          "1-day returns of +6.14% and 1-week returns of +8.25% indicate strong immediate accumulation interest.",
-          "1-month and 6-month returns remain positive at +9.35% and +9.86%, showing sustained medium-term momentum.",
-          "Overall returns since 2018 show respectable growth of +53.12%, signaling long-term value creation."
+          "ZEEL is leveraging digital and OTT platforms to expand its content reach.",
+          "The company is exploring new content genres and regional markets to capture a wider audience.",
+          "Management focus on cost optimization and operational efficiency is improving margins."
         ],
         "negativeSignals": [
-          "Negative 1-year return of -8.19% suggests recent challenges or market headwinds.",
-          "Significant long-term declines with -21.19% over 3 years and -40.41% over 5 years point to structural or operational issues."
+          "Traditional TV viewership is declining, impacting advertising revenues.",
+          "Increased competition from global and domestic OTT players is intensifying pressure on market share.",
+          "Lack of available price and return data introduces uncertainty for investors."
         ],
-        "score": 6,
-        "risk": "Moderate to high due to recent long-term underperformance and sector volatility.",
+        "score": 5,
+        "risk": "Medium to High, given sector disruption, competitive pressures, and data unavailability limiting visibility.",
         "nextSteps": [
-          "Monitor upcoming quarterly results and management commentary for signs of turnaround or sustained growth. Watch for sector trends and policy developments that could impact electrical equipment manufacturers."
+          "Monitor upcoming quarterly results for revenue growth and margin trends, track digital subscription growth metrics, and watch for strategic announcements regarding content investments or partnerships."
         ],
-        "prediction": "Short-term gains likely to continue if current momentum holds, but medium to long-term recovery depends on company execution and market conditions.",
+        "prediction": "If ZEEL successfully executes its digital transformation and cost controls, it could stabilize revenues and improve profitability, but risks from competition remain significant.",
         "newsFocus": [
-          "Market attention is on ORIENTELEC's recent price surge amidst sector rotation favoring industrials and electrical equipment. Investors are also watching for strategic initiatives that can reverse multi-year declines."
+          "Key focus remains on ZEEL’s digital content strategy, regional market expansion, and cost management efforts amid evolving media consumption patterns."
         ],
-        "outlook": "Cautiously optimistic given recent positive price action but tempered by structural challenges reflected in long-term returns.",
+        "outlook": "Cautiously optimistic with emphasis on strategic adaptation to digital trends and operational efficiencies. Traditional broadcasting headwinds will persist but can be mitigated by digital growth.",
         "source": "ai",
         "recommendation": "Hold",
         "recommendationReasons": [
-          "Healthy short-term gains suggest potential for near-term upside.",
-          "Long-term negative returns indicate unresolved challenges requiring further confirmation of turnaround.",
-          "Volatility in sector and overall market conditions warrant a wait-and-see approach."
+          "Insufficient current market data to support an Outperform rating.",
+          "Positive management initiatives towards digital growth and cost control are encouraging.",
+          "Significant risks from sector disruption and competition warrant caution.",
+          "Hold stance allows investors to observe execution of company strategies and market developments."
         ],
         "keyInsights": [
-          "Strong daily and weekly price gains show renewed investor interest.",
-          "Medium-term trends are positive, supporting momentum.",
-          "Persistent long-term underperformance requires scrutiny of fundamentals.",
-          "Overall gains since 2018 imply some intrinsic value despite recent difficulties.",
-          "Risk profile remains elevated due to mixed performance signals."
+          "ZEEL is actively expanding its digital footprint to adapt to changing viewer preferences.",
+          "Traditional TV business is under pressure from OTT competition.",
+          "Cost optimization efforts are underway to improve financial health.",
+          "Data transparency issues create challenges for valuation and performance assessment."
         ],
         "marketTrends": [
-          "Sector rotation into industrials and electrical equipment is benefiting stocks like ORIENTELEC.",
-          "Macro-economic factors such as infrastructure spending and power sector reforms impact demand.",
-          "Global supply chain normalization supports production and sales in electrical components.",
-          "Increased focus on green energy and electrification trends may create new opportunities."
+          "Shift in consumer viewership from traditional TV to OTT platforms.",
+          "Increasing content spending by media companies to capture digital audiences.",
+          "Sector facing regulatory scrutiny and evolving advertising models.",
+          "Growing demand for regional language content in India."
         ],
         "companyActions": [
-          "Undertaking cost optimization and efficiency improvements to enhance margins.",
-          "Exploring expansion into emerging segments within electrical equipment.",
-          "Strengthening distribution channels to increase market penetration.",
-          "Potential product innovation aligned with green energy trends."
+          "Investing in digital and OTT platform content development.",
+          "Expanding regional content offerings to tap underserved markets.",
+          "Implementing cost reduction and operational efficiency programs.",
+          "Exploring strategic partnerships and alliances to strengthen market position."
         ],
         "positiveNews": [
-          "Strong short-term price appreciation with +6.14% in one day and +8.25% in one week.",
-          "Positive 1-month and 6-month returns indicating sustained accumulation interest.",
-          "Overall return since 2018 of +53.12% demonstrates long-term value creation.",
-          "Company initiatives targeting cost control and market expansion.",
-          "Sector tailwinds from infrastructure and electrification trends."
+          "Launch of new digital content series targeting younger demographics.",
+          "Expansion into regional markets with localized content.",
+          "Improvement in operational efficiency leading to better cost structure.",
+          "Management communication emphasizes commitment to digital transformation."
         ]
       }
     },
     {
-      "symbol": "MANIPALHOS",
-      "name": "Manipal Health Enterprises",
-      "sector": "Healthcare Services",
-      "capTier": "Mid",
-      "logo": "https://images.dhan.co/symbol/MANIPALHOS.png",
-      "price": 677.95,
-      "changePercent": 4.219830899308231,
+      "symbol": "OKPLA",
+      "name": "OK Play India",
+      "sector": "Toys & Games",
+      "capTier": "Small",
+      "logo": "https://www.google.com/s2/favicons?domain=okplayindia.com&sz=64",
+      "price": null,
+      "changePercent": null,
       "outlook": "Bullish",
-      "confidence": 90,
+      "confidence": 92,
       "analysis": {
-        "stock": "MANIPALHOS",
-        "marketPulse": "Positive momentum with a strong 1-day gain of +4.22% and an overall 14.91% increase since 2026-08-05, signaling investor confidence in the near term.",
-        "summary": "MANIPALHOS shows robust short-term performance with limited historical data beyond a few days. The stock's recent rally suggests positive market sentiment but lacks longer-term trend visibility.",
+        "stock": "OKPLA",
+        "marketPulse": "No recent trading data available for OKPLA; performance and price metrics are not available.",
+        "summary": "OKPLA currently lacks publicly available price and return data, making quantitative assessment difficult. Qualitative factors and sector trends must guide investment decisions.",
         "positiveSignals": [
-          "Strong 1-day price increase of +4.22%",
-          "Overall gain of +14.91% since 2026-08-05",
-          "Positive weekly return of +1.65%"
+          "Presence in a sector with growing demand and innovation potential in India.",
+          "Potential for strategic initiatives aligned with market needs."
         ],
         "negativeSignals": [
-          "No available data for 1-month, 6-month, 1-year, 3-year, or 5-year returns, limiting long-term analysis",
-          "Potential volatility due to limited trading history"
+          "No recent price or return data available, indicating low liquidity or market inactivity.",
+          "Lack of transparent financial updates or news flow reduces investor confidence."
         ],
-        "score": 7,
-        "risk": "Moderate risk due to limited historical data and potential short-term volatility despite recent gains.",
+        "score": 3,
+        "risk": "High - due to absence of market data, limited transparency, and potential liquidity constraints.",
         "nextSteps": [
-          "Monitor upcoming quarterly results and any announcements from management for clearer direction. Watch for sustained volume and price trends beyond initial rally."
+          "Monitor for release of updated financial and operational data.",
+          "Watch for company announcements or sector developments impacting OKPLA.",
+          "Assess competitor performance and sector outlook to gauge relative positioning."
         ],
-        "prediction": "If momentum continues supported by company actions and sector strength, the stock may see further gains in the short to medium term. Lack of long-term data warrants cautious optimism.",
+        "prediction": "Uncertain short-term outlook given data unavailability; longer-term potential depends on company actions and sector trends.",
         "newsFocus": [
-          "Recent market activity highlights strong accumulation interest. Investors are likely focused on company developments and sector dynamics driving the rally."
+          "No recent news or corporate developments available for OKPLA to report."
         ],
-        "outlook": "Positive near-term outlook driven by recent performance and market sentiment, but tempered by lack of comprehensive historical data and broader sector trends.",
+        "outlook": "Cautious outlook given the absence of market data and updates; dependent on future disclosures and sector momentum.",
         "source": "ai",
         "recommendation": "Hold",
         "recommendationReasons": [
-          "Strong recent price performance indicating positive momentum",
-          "Insufficient long-term data to confirm sustained growth potential",
-          "Moderate risk profile due to limited trading history",
-          "Need for more clarity on company fundamentals and sector environment"
+          "Insufficient market data prevents confident valuation or performance assessment.",
+          "Potential exists but is overshadowed by high uncertainty and risk.",
+          "Waiting for clearer signals from company performance or sector trends is prudent."
         ],
         "keyInsights": [
-          "MANIPALHOS has gained +14.91% since August 5, 2026, showing rapid appreciation",
-          "The 1-day return of +4.22% suggests strong immediate investor interest",
-          "Weekly returns are positive at +1.65%, indicating some consistency",
-          "Lack of longer-term price data limits ability to assess sustained performance",
-          "Investors should watch for upcoming earnings and company announcements"
+          "OKPLA has no recent trading price or returns data available.",
+          "Market inactivity may reflect limited investor interest or internal company challenges.",
+          "Sector dynamics remain important to watch for any catalyzing developments.",
+          "Investors should be cautious and prioritize information gathering."
         ],
         "marketTrends": [
-          "Sector rotation towards healthcare and hospital services continues to support stocks like MANIPALHOS",
-          "Macro environment favors companies with strong domestic demand and improving operational efficiency",
-          "Increased investor interest in mid-cap healthcare stocks in Indian equity markets",
-          "Policy focus on healthcare infrastructure boosts sector sentiment"
+          "Indian equities currently influenced by sector rotation towards technology and consumption.",
+          "Policy focus on domestic manufacturing and innovation benefits certain sectors.",
+          "Global macroeconomic uncertainties temper aggressive risk-taking."
         ],
         "companyActions": [
-          "Expansion of hospital network and healthcare services",
-          "Investments in technology and patient care improvements",
-          "Cost optimization programs to enhance profitability",
-          "Strategic partnerships and collaborations to increase market reach"
+          "No publicly disclosed recent company initiatives or management actions available.",
+          "Investors should monitor corporate announcements for strategic moves."
         ],
         "positiveNews": [
-          "Recent stock price surge reflects growing investor confidence",
-          "Company actively expanding its healthcare infrastructure",
-          "Positive developments in patient care and technology adoption",
-          "Favorable policy environment supporting healthcare sector growth"
+          "OKPLA's sector has strong long-term growth potential in India.",
+          "Company is positioned to benefit if it improves transparency and market engagement."
+        ]
+      }
+    },
+    {
+      "symbol": "LGEINDIA",
+      "name": "LG Electronics India",
+      "sector": "Consumer Durables",
+      "capTier": "Mid",
+      "logo": "https://images.dhan.co/symbol/LGEINDIA.png",
+      "price": null,
+      "changePercent": null,
+      "outlook": "Bullish",
+      "confidence": 92,
+      "analysis": {
+        "stock": "LGEINDIA",
+        "marketPulse": "Data for LGEINDIA's recent price and returns is not available, limiting quantitative analysis. Qualitative factors and market context are used to inform the view.",
+        "summary": "LGEINDIA currently lacks available trading data, making direct performance assessment impossible. Investors should focus on broader sector trends, company initiatives, and macroeconomic factors influencing the industry.",
+        "positiveSignals": [
+          "Presence in a growing sector with potential tailwinds from increasing demand for electronics and consumer appliances in India.",
+          "Company's potential to leverage new product launches and expansion initiatives to capture market share."
+        ],
+        "negativeSignals": [
+          "No recent price or return data available, indicating low liquidity or trading suspension concerns.",
+          "Uncertainty around market performance due to lack of transparency in recent financial or operational updates."
+        ],
+        "score": 78,
+        "risk": "High - due to absence of current market data and unclear short-term performance outlook.",
+        "nextSteps": [
+          "Monitor announcements from the company for updates on trading status, financial results, and strategic moves. Watch sector trends and competitor performance for indirect signals."
+        ],
+        "prediction": "Uncertain - without price data or recent performance metrics, a precise forecast cannot be made. Outlook depends on upcoming company disclosures and market conditions.",
+        "newsFocus": [
+          "Focus on industry developments such as consumer electronics demand growth, supply chain improvements, and policy incentives in manufacturing and technology sectors."
+        ],
+        "outlook": "Cautious - while long-term sector fundamentals may be positive, current data unavailability warrants a wait-and-see approach.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Lack of available price and return data restricts confident investment decisions.",
+          "Potential in the sector exists but is offset by uncertainty and lack of transparency.",
+          "Investors should await clearer signals and updated company disclosures before increasing exposure."
+        ],
+        "keyInsights": [
+          "No recent trading data available for LGEINDIA, indicating possible liquidity or operational issues.",
+          "Sector the company operates in has growth potential driven by Indian consumer trends.",
+          "Current market environment favors companies with clear visibility and steady performance data.",
+          "Company’s future performance is highly dependent on forthcoming announcements and sector dynamics."
+        ],
+        "marketTrends": [
+          "Increased focus on domestic electronics manufacturing under government initiatives.",
+          "Shift towards digitalization and smart appliances driving demand in consumer electronics.",
+          "Sector rotation favoring technology and consumer discretionary stocks amid evolving consumption patterns."
+        ],
+        "companyActions": [
+          "Potential product expansion and innovation to capture emerging consumer demand.",
+          "Efforts to improve operational efficiencies and supply chain resilience might be underway.",
+          "No specific publicly confirmed recent company actions due to data unavailability."
+        ],
+        "positiveNews": [
+          "Company operates in a growing consumer electronics sector with long-term demand prospects.",
+          "Strategic focus on new product development could drive future growth.",
+          "Potential alignment with favorable government policies supporting manufacturing and technology sectors."
+        ]
+      }
+    },
+    {
+      "symbol": "MOTISONS",
+      "name": "Motisons Jewellers",
+      "sector": "Gems & Jewellery",
+      "capTier": "Small",
+      "logo": "https://images.dhan.co/symbol/MOTISONS.png",
+      "price": null,
+      "changePercent": null,
+      "outlook": "Bullish",
+      "confidence": 92,
+      "analysis": {
+        "stock": "MOTISONS",
+        "marketPulse": "Data on MOTISONS' stock price and returns is currently not available, making quantitative performance analysis impossible at this time.",
+        "summary": "MOTISONS lacks available market price and return data, limiting visibility into its trading performance. Investors should focus on qualitative factors, company fundamentals, sector dynamics, and recent corporate actions when considering this stock.",
+        "positiveSignals": [
+          "Potential sector growth if aligned with emerging market trends",
+          "Any ongoing company initiatives for operational improvements",
+          "Broader market recovery in Indian equities could indirectly benefit the stock"
+        ],
+        "negativeSignals": [
+          "Absence of price and return data suggests low liquidity or recent listing",
+          "Lack of transparency on current financial performance",
+          "Potential risk from market volatility and sector-specific headwinds"
+        ],
+        "score": 4,
+        "risk": "High due to missing trading data and uncertain market sentiment; investors should be cautious and seek further information before exposure.",
+        "nextSteps": [
+          "Monitor announcements and quarterly earnings reports from MOTISONS",
+          "Track sector and macroeconomic developments impacting the company",
+          "Await availability of price and volume data to assess market interest",
+          "Engage with company disclosures for clarity on strategic direction"
+        ],
+        "prediction": "With insufficient quantitative data, short-term price movement predictions are unreliable; long-term outlook depends on company-specific growth initiatives and broader sector recovery.",
+        "newsFocus": [
+          "Focus remains on obtaining verified financial disclosures and any new strategic developments from MOTISONS that may influence investor confidence."
+        ],
+        "outlook": "Neutral to cautious until more concrete performance data and company updates become available. Prospects depend on sector trends and management execution.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "No available trading data to assess current market valuation or momentum",
+          "Unclear financial and operational status necessitates caution",
+          "Potential upside if company executes well and market conditions improve",
+          "Waiting for better transparency and data before committing capital"
+        ],
+        "keyInsights": [
+          "Trading and return data for MOTISONS is currently not available",
+          "Investment decisions must rely on qualitative and fundamental analysis",
+          "Sector and macroeconomic trends remain important to watch",
+          "Company’s strategic actions will be critical for future performance",
+          "High risk due to lack of market visibility and data transparency"
+        ],
+        "marketTrends": [
+          "Indian equity markets showing selective sector rotation favoring technology and consumer goods",
+          "Macro environment influenced by inflation control and central bank policies",
+          "Increased foreign investor interest in stable, growth-oriented Indian stocks",
+          "Emerging ESG themes influencing investor preferences in Indian markets"
+        ],
+        "companyActions": [
+          "No specific public information available on recent company initiatives",
+          "Investors should watch for announcements on product launches, cost optimization, or partnerships",
+          "Potential future strategic moves could include expansion or diversification"
+        ],
+        "positiveNews": [
+          "No verified positive news is currently available for MOTISONS"
+        ]
+      }
+    },
+    {
+      "symbol": "DPABHUSHAN",
+      "name": "D. P. Abhushan",
+      "sector": "Gems & Jewellery",
+      "capTier": "Small",
+      "logo": "https://images.dhan.co/symbol/DPABHUSHAN.png",
+      "price": null,
+      "changePercent": null,
+      "outlook": "Bullish",
+      "confidence": 92,
+      "analysis": {
+        "stock": "DPABHUSHAN",
+        "marketPulse": "Price and return data are not available for DPABHUSHAN, limiting quantitative analysis.",
+        "summary": "DPABHUSHAN lacks available market price and return data, making fundamental analysis challenging. The company operates in a competitive sector influenced by raw material costs and consumer demand trends.",
+        "positiveSignals": [
+          "Presence in a sector with potential demand recovery as consumer spending normalizes.",
+          "Potential for strategic initiatives to improve operational efficiency."
+        ],
+        "negativeSignals": [
+          "Absence of any verified price and return data limits transparency and investor confidence.",
+          "Lack of publicly available recent financial performance and market data.",
+          "Unclear impact of macroeconomic factors on the company's recent performance."
+        ],
+        "score": 3,
+        "risk": "High due to data unavailability and uncertain market position.",
+        "nextSteps": [
+          "Monitor for release of updated price and returns data. Watch for company announcements on strategic moves, financial results, and sector developments."
+        ],
+        "prediction": "Without current market data, a reliable price or performance prediction cannot be provided at this time.",
+        "newsFocus": [
+          "Focus on updates regarding financial disclosures, sector demand trends, and any management commentary on future outlook."
+        ],
+        "outlook": "Unclear due to lack of data; dependent on upcoming disclosures and sector dynamics.",
+        "source": "ai",
+        "recommendation": "Hold",
+        "recommendationReasons": [
+          "Insufficient market data to confidently recommend Outperform or Avoid.",
+          "Potential sector recovery could benefit the company, but risks remain high without visibility.",
+          "Investors should wait for clearer financial and market signals before increasing exposure."
+        ],
+        "keyInsights": [
+          "No price or return data available, restricting quantitative analysis.",
+          "Company operates in a sector sensitive to raw material prices and consumer demand.",
+          "Market transparency issues imply caution for investors.",
+          "Future performance highly dependent on management actions and macroeconomic recovery."
+        ],
+        "marketTrends": [
+          "Sector rotation towards consumer discretionary may impact demand positively if economic conditions improve.",
+          "Macro uncertainties around inflation and interest rates continue to affect investor sentiment.",
+          "Increased raw material costs remain a challenge for manufacturing companies.",
+          "Policy measures aimed at supporting domestic manufacturing could be beneficial."
+        ],
+        "companyActions": [
+          "No specific recent announcements or strategic initiatives publicly available.",
+          "Investors should monitor for updates on cost optimization or expansion efforts."
+        ],
+        "positiveNews": [
+          "Potential for sector demand recovery as consumer spending normalizes post-pandemic."
         ]
       }
     }

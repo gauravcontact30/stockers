@@ -13,12 +13,19 @@
 //
 // Only the opening view is prefetched. The moment a reader changes a tab, a tier or a page they
 // are asking a question the server was never asked, and the client goes to the network as before.
+//
+// Both payloads below carry `use cache`. Under Cache Components an uncached async component is a
+// per-request hole in the prerender, which for a nine-ranking read over 4,900 scrips would be
+// slower than what this file replaced — so the cache directive is what keeps these in the static
+// shell, on the same sixty-second window `revalidate = 60` used to give the whole page.
 
 import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { BseMoversBoard, type BseMoverPage } from "./bse-movers-board";
 import { BseSectorMovers, type BseSectorBoardResponse } from "./bse-sector-movers";
 import { SectionSkeleton } from "./market-section";
 import { getBseMovers, getBseSectorBoard } from "../lib/bse-market";
+import { CACHE_TAGS } from "../lib/cache";
 import { MOVERS_PAGE_SIZE, buildMoversUrl } from "../lib/market-urls";
 
 /** The board's own chrome around a skeleton, so the streamed-in board doesn't shift the page. */
@@ -43,6 +50,10 @@ export function BoardFallback({ rows, height }: { rows: number; height: string }
 const OPENING_MOVERS = { tier: "all", direction: "gainers", period: "overall", term: "", move: "0", page: 1 } as const;
 
 export async function MoversBoard() {
+  "use cache";
+  cacheLife("market");
+  cacheTag(CACHE_TAGS.bse);
+
   const movers = await getBseMovers({
     tier: OPENING_MOVERS.tier,
     direction: OPENING_MOVERS.direction,
@@ -64,6 +75,10 @@ export async function MoversBoard() {
 }
 
 export async function SectorBoard() {
+  "use cache";
+  cacheLife("market");
+  cacheTag(CACHE_TAGS.bse);
+
   const board = await getBseSectorBoard();
   return <BseSectorMovers prefetched={{ url: "/api/market/bse/sectors", data: board as BseSectorBoardResponse }} />;
 }

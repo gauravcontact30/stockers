@@ -2,6 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PLANS, PricingPlans, rupees, yearlyPrice, yearlySaving } from "../../app/components/pricing-plans";
 
+// The subscribe button navigates once a payment confirms — the session it holds was minted before
+// the purchase, so the reader is signed back in to pick the new plan up. Outside an app-router
+// context  throws, and this suite renders that button.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: jest.fn(), push: jest.fn(), refresh: jest.fn() }),
+}));
+
+
 describe("pricing arithmetic", () => {
   // Nine months for twelve is the annual discount, and deriving it means the advertised saving can
   // never drift from the advertised price.

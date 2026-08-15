@@ -4,8 +4,6 @@ import { listHoldings, portfolioSetupError } from "../../../lib/portfolio";
 import { actionsForHoldings } from "../../../lib/portfolio-actions";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Declared corporate actions against the caller's own holdings.
  *

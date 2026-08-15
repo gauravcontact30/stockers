@@ -4,8 +4,6 @@ import { listHoldings, portfolioSetupError } from "../../../lib/portfolio";
 import { DEFAULT_CRITERIA, screenStocks, type ScreenCriteria, type SectorFit } from "../../../lib/portfolio-screen";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The listed universe, filtered against the caller's own book.
  *

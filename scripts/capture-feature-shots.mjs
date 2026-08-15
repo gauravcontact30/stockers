@@ -71,20 +71,20 @@ const MANIFEST = join(ROOT, "app", "data", "feature-shots.json");
  * `test/lib/hero-rotation.test.ts` checks the two lists agree.
  */
 const TARGETS = [
-  { key: "market-pulse", path: "/dashboard/market-pulse" },
-  { key: "sectors", path: "/dashboard/sector-trends" },
-  { key: "dividends", path: "/dashboard/dividends" },
-  { key: "ipos", path: "/dashboard/ipos" },
-  { key: "etf-board", path: "/dashboard/etf-board" },
+  { key: "market-pulse", path: "/market-pulse" },
+  { key: "sectors", path: "/sector-trends" },
+  { key: "dividends", path: "/dividends" },
+  { key: "ipos", path: "/ipos" },
+  { key: "etf-board", path: "/etf-board" },
   { key: "news", path: "/news" },
-  { key: "buy-tomorrow", path: "/dashboard/outperform-tomorrow" },
-  { key: "portfolio", path: "/dashboard/portfolio" },
-  { key: "intel", path: "/dashboard/intelligence-search" },
-  { key: "etf-research", path: "/dashboard/etf-research" },
-  { key: "directory", path: "/dashboard/company-directory" },
-  { key: "most-traded", path: "/dashboard/most-traded" },
-  { key: "mtf", path: "/dashboard/mtf-watch" },
-  { key: "stock-news", path: "/dashboard/stocks-in-news" },
+  { key: "buy-tomorrow", path: "/outperform-tomorrow" },
+  { key: "portfolio", path: "/portfolio" },
+  { key: "intel", path: "/intelligence-search" },
+  { key: "etf-research", path: "/etf-research" },
+  { key: "directory", path: "/company-directory" },
+  { key: "most-traded", path: "/most-traded" },
+  { key: "mtf", path: "/mtf-watch" },
+  { key: "stock-news", path: "/stocks-in-news" },
 ];
 
 /**

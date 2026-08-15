@@ -19,6 +19,7 @@ import {
 // cache, so a client component may only ever take erased types from it.
 import { BSE_PLATFORMS, PLATFORM_NOTE, bsePlatform, type BsePlatform } from "../lib/bse-platform";
 import { PUBLISHING_BROKERS, type BrokerId, type PublishingBroker } from "../lib/brokers";
+import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
 import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow, TrendingRank } from "../lib/bse-market";
 
 /**
@@ -67,7 +68,10 @@ type MoveKey = (typeof MOVE_OPTIONS)[number]["key"];
 type PlatformKey = BsePlatform | "all";
 type BrokerKey = BrokerId | "all";
 
-const PAGE_SIZE = 10;
+// Both now live in ../lib/market-urls, so the server can build the same URL this board asks for
+// when it prefetches the opening payload. Re-exported so existing importers are unaffected.
+export { buildTrendingUrl };
+const PAGE_SIZE = TRENDING_PAGE_SIZE;
 
 /** A light background per broker, so each platform reads as itself across the board. */
 const BROKER_TONE: Record<BrokerId, { pill: string; selected: string }> = {
@@ -100,24 +104,6 @@ const PLATFORM_TONE: Record<BsePlatform, string> = {
   "Trade-to-Trade": "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
   "Z Group": "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
 };
-
-export function buildTrendingUrl(
-  rank: TrendingRank,
-  term: string,
-  platform: PlatformKey,
-  broker: BrokerKey,
-  tier: TierKey,
-  move: MoveKey,
-  page: number,
-): string {
-  const params = new URLSearchParams({ rank, page: String(page), pageSize: String(PAGE_SIZE) });
-  if (term) params.set("q", term);
-  if (platform !== "all") params.set("platform", platform);
-  if (broker !== "all") params.set("broker", broker);
-  if (tier !== "all") params.set("tier", tier);
-  if (move !== "0") params.set("min", move);
-  return `/api/market/bse/trending?${params.toString()}`;
-}
 
 /** The figure the board is currently ranked by, drawn as the row's headline number. */
 function rankValue(row: BseTrendingRow, rank: TrendingRank): string {

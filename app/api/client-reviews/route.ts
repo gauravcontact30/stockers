@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { cacheHeaders } from "../../lib/cache";
 import { listClientReviews } from "../../lib/client-reviews";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   // The same handful of published testimonials for every visitor, changing only when an admin
   // publishes one — so five minutes at the edge, and half an hour of serving a stale copy while

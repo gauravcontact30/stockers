@@ -17,8 +17,6 @@ import { indianStocks } from "../../lib/indian-stocks";
 import { getAllQuotes } from "../../lib/market-data";
 import { getPerformanceSummaries, type PerformanceSummary } from "../../lib/stock-performance";
 
-export const dynamic = "force-dynamic";
-
 /**
  * How much of the exchange the AI gets to look at.
  *

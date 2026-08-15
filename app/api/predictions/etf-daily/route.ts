@@ -5,8 +5,6 @@ import { indianETFs } from "../../../lib/indian-etfs";
 import { getDailyEtfPredictions } from "../../../lib/daily-predictions";
 import { getQuotesFor } from "../../../lib/market-data";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const guard = await guardFeature(request, "etf-research");
   if (!guard.allowed) return lockedResponse(guard, "etf-research");

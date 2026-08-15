@@ -3,8 +3,6 @@ import { parseEnquiry, withinRateLimit, type Topic } from "../../lib/contact";
 import { enquiryEmail, sendMail } from "../../lib/mailer";
 import { CONTACT } from "../../lib/policy";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The contact form's back end.
  *

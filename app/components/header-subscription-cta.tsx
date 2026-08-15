@@ -156,6 +156,8 @@ export function HeaderSubscriptionCta() {
               plan={plan}
               cycle={cycle}
               label={ctaLabel}
+              // Closes the panel before the redirect to sign-in, so it is not left hanging over it.
+              onPaid={() => setOpen(false)}
               className="inline-flex w-full justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_-16px_rgba(5,150,105,0.9)] transition hover:from-emerald-500 hover:to-teal-500"
             />
           </div>

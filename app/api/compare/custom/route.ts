@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../../lib/cache";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { compareCustom, MAX_CUSTOM_STOCKS } from "../../../lib/sector-compare";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const guard = await guardFeature(request, "compare");
   if (!guard.allowed) return lockedResponse(guard, "compare");

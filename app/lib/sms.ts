@@ -18,6 +18,7 @@ import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { TRIAL_DAYS } from "./subscription-policy";
 import { normaliseMobile } from "./auth-validation";
 
 const outboxPath = path.join(process.cwd(), "app", "data", "sms-outbox.json");
@@ -126,7 +127,7 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
  * both a phishing signal to the recipient and a reason for a carrier to filter it.
  */
 export function welcomeSms(name: string): string {
-  return `Welcome to StockersAI, ${name}. Your 3-day Starter and Pro AI free trial has started. Check your email to confirm your address.`;
+  return `Welcome to StockersAI, ${name}. Your ${TRIAL_DAYS}-day free trial of every AI feature has started. Check your email to confirm your address.`;
 }
 
 /** The message sent once a subscription payment has been captured. */

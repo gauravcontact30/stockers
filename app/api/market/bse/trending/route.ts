@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../../../lib/cache";
 import { BSE_PLATFORMS, getBseTrending, type BsePlatform, type TrendingQuery, type TrendingRank } from "../../../../lib/bse-market";
 import { BROKERS, type BrokerId } from "../../../../lib/brokers";
 
-export const dynamic = "force-dynamic";
-
 const RANKS: TrendingRank[] = ["brokers", "turnover", "trades", "volume"];
 const BROKER_IDS: (BrokerId | "all")[] = ["all", ...BROKERS.map((broker) => broker.id)];
 const TIERS: NonNullable<TrendingQuery["tier"]>[] = ["all", "large", "mid", "small"];

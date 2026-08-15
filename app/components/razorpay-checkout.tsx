@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CHECKOUT_BRAND_NAME, CHECKOUT_LOGO_URL, CHECKOUT_WEBSITE_URL } from "../lib/checkout-brand";
 import {
   billingSummary,
@@ -10,7 +11,7 @@ import {
   type PlanKey,
 } from "../lib/subscription-pricing";
 import { track } from "../lib/track";
-import { authHeaders, useSubscription } from "./subscription-provider";
+import { authHeaders, syncSessionCookie, useSubscription } from "./subscription-provider";
 
 /**
  * The subscribe button, and the Razorpay checkout behind it.
@@ -184,6 +185,7 @@ export function SubscribeButton({
   className = "",
   promoCode = "",
   referralCode = "",
+  onPaid,
 }: {
   plan: PlanKey;
   cycle: BillingCycle;
@@ -191,7 +193,15 @@ export function SubscribeButton({
   className?: string;
   promoCode?: string;
   referralCode?: string;
+  /**
+   * Called once a payment is confirmed, before the redirect to sign-in.
+   *
+   * Every caller that opens this inside a dialog passes its own close handler: the button is about
+   * to navigate away, and a dialog left mounted would sit over the page it navigates to.
+   */
+  onPaid?: () => void;
 }) {
+  const router = useRouter();
   const { status, refresh } = useSubscription();
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -248,6 +258,26 @@ export function SubscribeButton({
               track("checkout.paid", plan);
               setPhase("done");
               await refresh();
+
+              /**
+               * Payment confirmed: close whatever opened this, then send them back through sign-in.
+               *
+               * The plan is attached to the account on the server the moment `verify` returns, but
+               * the *session* the browser is holding was minted before the purchase — and several
+               * things downstream read the stored user rather than the live status, so a reader who
+               * carried straight on could see the old plan on their own account until they next
+               * signed in. Signing them back in is what makes the new entitlement unambiguous
+               * everywhere at once, rather than in most places and not the rest.
+               *
+               * `onPaid` closes the containing dialog first. Without it the modal would still be
+               * mounted over the sign-in page it just navigated to.
+               */
+              onPaid?.();
+              window.localStorage.removeItem("stockers-auth");
+              // The token is mirrored into a cookie the server reads on every gated request, so
+              // clearing only localStorage would leave the session live. Same pairing as `logout`.
+              syncSessionCookie();
+              router.replace(`/signin?${new URLSearchParams({ upgraded: "1", plan }).toString()}`);
             } catch (failure) {
               // The money may well have left: say so plainly rather than implying it did not, and
               // point at the receipt, because the webhook will credit it either way.

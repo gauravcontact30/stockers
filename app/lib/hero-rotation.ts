@@ -115,28 +115,28 @@ export const LIVE_SHOWCASES: HeroShowcase[] = [
     title: "Three themes the BSE board is bidding up",
     badge: "RANKED TODAY",
     palette: "mint",
-    href: "/dashboard/top-picks",
+    href: "/top-picks",
     scene: "top-gainers",
   }),
   showcase("compare", {
     title: "HAL, Mazagon Dock and Paras Defence, side by side",
     badge: "LIVE FIGURES",
     palette: "sky",
-    href: "/dashboard/compare-stocks",
+    href: "/compare-stocks",
     scene: "defence",
   }),
   showcase("research", {
     title: "Who is actually building the data centres",
     badge: "LIVE FIGURES",
     palette: "lilac",
-    href: "/dashboard/stock-research",
+    href: "/stock-research",
     scene: "data-centre",
   }),
   showcase("dip-winners", {
     title: "What the AI likes cheap today, and why",
     badge: "SCREENED TODAY",
     palette: "sand",
-    href: "/dashboard/dip-winners",
+    href: "/dip-winners",
     scene: "dip-buys",
   }),
 ];
@@ -156,7 +156,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "The session's mood, read off the whole tape",
     badge: "LIVE BREADTH",
     palette: "sky",
-    href: "/dashboard/market-pulse",
+    href: "/market-pulse",
     columns: ["Index", "Level", "Today"],
     rows: [
       { left: "S&P BSE SENSEX", middle: "81,204", right: "+0.62%", up: true },
@@ -173,7 +173,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Where the money moved, sector by sector",
     badge: "RANKED TODAY",
     palette: "mint",
-    href: "/dashboard/sector-trends",
+    href: "/sector-trends",
     columns: ["Sector", "Index", "Today"],
     rows: [
       { left: "Information technology", middle: "BSE IT", right: "+1.84%", up: true },
@@ -190,7 +190,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Every payout still ahead of you",
     badge: "EX-DATES AHEAD",
     palette: "sand",
-    href: "/dashboard/dividends",
+    href: "/dividends",
     columns: ["Company", "Ex-date", "Payout"],
     rows: [
       { left: "ITC", middle: "12 Sep", right: "₹6.25", symbol: "ITC" },
@@ -207,7 +207,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "What is open, and how well it is going",
     badge: "LIVE SUBSCRIPTION",
     palette: "lilac",
-    href: "/dashboard/ipos",
+    href: "/ipos",
     columns: ["Issue", "Band", "Subscribed"],
     rows: [
       { left: "Mainboard · Auto ancillary", middle: "₹210–221", right: "42.8×", up: true },
@@ -224,7 +224,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Every NSE ETF, by the money actually traded",
     badge: "BY TURNOVER",
     palette: "sky",
-    href: "/dashboard/etf-board",
+    href: "/etf-board",
     columns: ["ETF", "Asset class", "Turnover"],
     rows: [
       { left: "NIFTYBEES", middle: "Equity · NIFTY 50", right: "₹412 Cr", symbol: "NIFTYBEES" },
@@ -258,7 +258,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Names set up for tomorrow, scored overnight",
     badge: "SCORED OVERNIGHT",
     palette: "lilac",
-    href: "/dashboard/outperform-tomorrow",
+    href: "/outperform-tomorrow",
     columns: ["Stock", "Setup", "Score"],
     rows: [
       { left: "SBIN", middle: "Breakout retest", right: "82", up: true, symbol: "SBIN" },
@@ -275,7 +275,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Your own holdings, with a call on each",
     badge: "TRACKED LIVE",
     palette: "sand",
-    href: "/dashboard/portfolio",
+    href: "/portfolio",
     columns: ["Holding", "Weight", "Call"],
     rows: [
       { left: "RELIANCE", middle: "22%", right: "Hold", symbol: "RELIANCE" },
@@ -292,7 +292,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Ask anything about a BSE stock",
     badge: "WITH SOURCES",
     palette: "sky",
-    href: "/dashboard/intelligence-search",
+    href: "/intelligence-search",
     columns: ["Point", "Source", "Impact"],
     rows: [
       { left: "₹2,000 Cr defence order booked", middle: "Mint", right: "Positive", up: true },
@@ -309,7 +309,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Every major Indian ETF, decoded",
     badge: "DECODED",
     palette: "lilac",
-    href: "/dashboard/etf-research",
+    href: "/etf-research",
     columns: ["ETF", "Tracks", "1Y"],
     rows: [
       { left: "NIFTYBEES", middle: "NIFTY 50", right: "+14.2%", up: true, symbol: "NIFTYBEES" },
@@ -326,7 +326,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "All 4,900+ listed companies, searchable",
     badge: "FULL EXCHANGE",
     palette: "mint",
-    href: "/dashboard/company-directory",
+    href: "/company-directory",
     columns: ["Company", "Scrip code", "ISIN"],
     rows: [
       { left: "Reliance Industries", middle: "500325", right: "INE002A01018", symbol: "RELIANCE" },
@@ -343,7 +343,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Where the day's money actually went",
     badge: "BY TURNOVER",
     palette: "sand",
-    href: "/dashboard/most-traded",
+    href: "/most-traded",
     columns: ["Stock", "Turnover", "Share"],
     rows: [
       { left: "RELIANCE", middle: "₹1,284 Cr", right: "6.2%", symbol: "RELIANCE" },
@@ -360,7 +360,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "What you can hold on margin, and the cost",
     badge: "MARGIN ELIGIBLE",
     palette: "sky",
-    href: "/dashboard/mtf-watch",
+    href: "/mtf-watch",
     columns: ["Stock", "Margin", "Funding cost"],
     rows: [
       { left: "SBIN", middle: "4×", right: "14.9% p.a.", symbol: "SBIN" },
@@ -377,7 +377,7 @@ export const FEATURE_SHOWCASES: HeroShowcase[] = [
     title: "Today's corporate filings, grouped and read",
     badge: "FILED TODAY",
     palette: "lilac",
-    href: "/dashboard/stocks-in-news",
+    href: "/stocks-in-news",
     columns: ["Filing", "Sector", "Filed"],
     rows: [
       { left: "Board meeting outcome", middle: "Banking", right: "09:12" },

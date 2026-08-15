@@ -24,6 +24,7 @@ import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { TRIAL_DAYS } from "./subscription-policy";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -153,7 +154,7 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
     "Confirm your email address to finish setting up your account:",
     params.verifyUrl,
     "",
-    "Your free trial runs for three calendar days and includes Starter and Pro AI features.",
+    `Your free trial runs for ${TRIAL_DAYS} calendar days and opens every AI feature. When it ends your account stays open on the Starter plan.`,
     "",
     "If you didn't create this account, you can ignore this message.",
   ].join("\n");
@@ -176,7 +177,7 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
             Verify my email
           </a>
           <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b">
-            Your free trial runs for three calendar days and includes Starter and Pro AI features.
+            Your free trial runs for ${TRIAL_DAYS} calendar days and opens every AI feature. When it ends your account stays open on the Starter plan.
           </p>
           <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;word-break:break-all">
             If the button doesn't work, paste this into your browser:<br />${url}

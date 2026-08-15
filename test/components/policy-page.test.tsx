@@ -9,6 +9,13 @@ import {
   PolicyTable,
 } from "../../app/components/policy-page";
 
+// `SiteFooter` became an async server component when the copyright year moved into a `use cache`
+// scope, and the client renderer these tests use cannot render one. Stubbed rather than awaited,
+// because nothing in this suite is about the footer — it has its own, which renders the real thing.
+jest.mock("../../app/components/site-footer", () => ({
+  SiteFooter: () => <footer data-testid="site-footer" />,
+}));
+
 describe("POLICY_PAGES", () => {
   it("names all four policies, each at its own route", () => {
     expect(POLICY_PAGES.map((page) => page.href)).toEqual([

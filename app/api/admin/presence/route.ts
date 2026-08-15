@@ -5,8 +5,6 @@ import { buildPresenceReport, type LivePresenceState } from "../../../lib/presen
 import { listUsers, userFromRequest } from "../../../lib/store";
 import { isMissingTable, missingTableMessage } from "../../../lib/supabase";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Who is on the site right now.
  *

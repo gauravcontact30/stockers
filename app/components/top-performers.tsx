@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CompanyLogo } from "./company-logo";
 import { StockCombobox } from "./stock-combobox";
 
@@ -17,8 +17,13 @@ export type TopPerformer = {
 type PeriodKey = "1y" | "3y" | "5y" | "max";
 type Direction = "gainers" | "losers";
 
-/** What came back for one set of controls — including a failed request, so it is not retried blind. */
-type Board = {
+/**
+ * What came back for one set of controls — including a failed request, so it is not retried blind.
+ *
+ * Exported so the server wrapper in ./streamed-top-performers can build one and hand it over as
+ * this board's opening value; `key` is what ties it to the controls it answers.
+ */
+export type Board = {
   key: string;
   stocks: TopPerformer[];
   total: number;
@@ -78,19 +83,33 @@ export function formatPrice(value: number | null): string {
  * board itself: a return needs price history per company, and that is tracked for the catalogue,
  * not for all ~4,950 scrips. Searching a name outside it says so rather than showing nothing.
  */
-export function TopPerformers() {
+export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}) {
   const [direction, setDirection] = useState<Direction>("gainers");
   const [period, setPeriod] = useState<PeriodKey>("1y");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   // One piece of state carrying which request it answers, so "loading" is the gap between the
   // controls asked for and the board on screen rather than a flag to keep in step with them.
-  const [board, setBoard] = useState<Board | null>(null);
+  //
+  // Seeded from the server when the page was rendered with this board's opening view already in
+  // hand — see ./streamed-top-performers. The `key` on it is what makes that safe: it is only
+  // treated as the answer while the controls still match the ones it was resolved for.
+  const [board, setBoard] = useState<Board | null>(prefetched ?? null);
 
   const term = query.trim();
   const key = `${direction}|${period}|${term.toLowerCase()}|${page}`;
 
+  // The server's payload, held so it can be spent exactly once. Without this, a reader who changed
+  // a tab and came back to the opening controls would skip the refetch and be shown figures from
+  // whenever the page was rendered rather than from now.
+  const unspent = useRef(prefetched?.key ?? null);
+
   useEffect(() => {
+    if (unspent.current === key) {
+      unspent.current = null;
+      return;
+    }
+
     const controller = new AbortController();
 
     const url = `/api/market/top-performers?direction=${direction}&period=${period}&page=${page}&pageSize=${PAGE_SIZE}&q=${encodeURIComponent(term)}`;

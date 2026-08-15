@@ -20,6 +20,7 @@ import {
   type DashboardSectionId,
 } from "./dashboard-sidebar";
 import { PlanPill } from "./plan-pill";
+import { TrialStatusCard } from "./trial-status-card";
 import { PredictionPanel } from "./prediction-panel";
 import { fetchResearch } from "./research-cache";
 import { StockExplorer } from "./stock-explorer";
@@ -222,7 +223,7 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
   const analysisMeta = analysis ? indianStocks.find((s) => s.symbol === analysis.stock) : undefined;
   // The tier the server actually grants, not the plan on the account record. During the free trial
   // those disagree on purpose: nothing has been bought, so the record holds no plan, while access
-  // runs at Elite for three days. Reading the record here badged a trial user "Starter" and made
+  // runs at Elite for the length of the trial. Reading the record here badged a trial user "Starter" and made
   // the trial look like the cheapest plan rather than the whole product.
   const displayTier = subscriptionStatus?.tier ?? tierForPlan(user?.plan);
 
@@ -371,7 +372,7 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
                       so the link is shown only to the people it will actually work for. */}
                   {subscriptionStatus?.isAdmin && (
                     <Link
-                      href="/admin"
+                      href="/console"
                       className="rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10"
                     >
                       Manage users
@@ -387,6 +388,10 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
                 </div>
               </div>
             </header>
+
+            {/* Above the section tabs, so it is read before the reader goes looking for a feature
+                that may be about to lock. Draws nothing for an admin. */}
+            <TrialStatusCard />
 
             <DashboardSectionTabs active={section} onSelect={openSection} />
 

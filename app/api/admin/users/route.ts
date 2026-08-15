@@ -4,7 +4,6 @@ import { deleteUser, findUserById, listUsers, updateUser, userFromRequest, type 
 import { renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
 
-export const dynamic = "force-dynamic";
 export { SUPER_ADMIN_EMAIL };
 
 /**

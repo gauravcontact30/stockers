@@ -24,8 +24,13 @@ import { chromium } from "playwright";
 const origin = process.argv[2] ?? "http://localhost:3100";
 const runs = Number(process.argv[3] ?? 3);
 
-/** The pages worth measuring: the landing page, and the two heaviest routes behind it. */
-const PAGES = ["/", "/news", "/dashboard"];
+/**
+ * The pages worth measuring: the landing page, and the two heaviest routes behind it.
+ *
+ * `/overview` rather than `/dashboard` — the workspace moved into the `app/(dashboard)` route
+ * group, so the old path is a 308 now and measuring it would time the redirect as well as the page.
+ */
+const PAGES = ["/", "/news", "/overview"];
 
 /**
  * Collected in the page rather than from the CDP performance domain, because these are the same

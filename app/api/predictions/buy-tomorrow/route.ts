@@ -6,8 +6,6 @@ import { getDailyPredictions } from "../../../lib/daily-predictions";
 import { getOneMonthReturns } from "../../../lib/historical-returns";
 import { getAllQuotes } from "../../../lib/market-data";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const guard = await guardFeature(request, "buy-tomorrow");
   if (!guard.allowed) return lockedResponse(guard, "buy-tomorrow");

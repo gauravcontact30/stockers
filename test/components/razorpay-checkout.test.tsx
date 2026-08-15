@@ -8,6 +8,16 @@ import {
 } from "../../app/components/razorpay-checkout";
 import { SubscriptionProvider } from "../../app/components/subscription-provider";
 
+/**
+ * The button navigates once a payment confirms — the session it holds was minted before the
+ * purchase, so the reader is signed back in to pick the new plan up everywhere at once. Outside an
+ * app-router context `useRouter` throws, so it is mocked here and asserted on below.
+ */
+const mockReplace = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), refresh: jest.fn() }),
+}));
+
 jest.setTimeout(30000);
 
 const ORDER: OrderResponse = {
@@ -191,6 +201,43 @@ describe("SubscribeButton", () => {
         referralCode: "",
       },
     });
+  });
+
+  /**
+   * A confirmed payment ends the session and sends the reader back through sign-in.
+   *
+   * The plan is attached to the account on the server the moment `verify` returns, but the session
+   * the browser holds was minted before the purchase — and several things downstream read the
+   * stored user rather than the live status. Signing them back in is what makes the new entitlement
+   * unambiguous everywhere at once rather than in most places and not the rest.
+   */
+  it("closes its dialog, drops the stale session and returns to sign-in once paid", async () => {
+    const user = userEvent.setup();
+    mockApi();
+    const opened = mockCheckout();
+    const onPaid = jest.fn();
+
+    window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "stale", user: { name: "Asha" } }));
+    render(button({ onPaid }));
+
+    await user.click(screen.getByRole("button", { name: "Choose Pro" }));
+    await waitFor(() => expect(opened).toHaveLength(1));
+
+    handlersOf(opened[0].options).handler({
+      razorpay_order_id: "order_test123",
+      razorpay_payment_id: "pay_test456",
+      razorpay_signature: "sig",
+    });
+
+    // The containing dialog closes first, so it is not left hanging over the page below.
+    await waitFor(() => expect(onPaid).toHaveBeenCalledTimes(1));
+
+    // The session minted before the purchase is gone, cookie included — without that, /signin
+    // would bounce straight back to the dashboard on the session it was told to replace.
+    await waitFor(() => expect(window.localStorage.getItem("stockers-auth")).toBeNull());
+    expect(document.cookie).not.toContain("stockers_session=stale");
+
+    expect(mockReplace).toHaveBeenCalledWith("/signin?upgraded=1&plan=pro");
   });
 
   it("passes promo and referral codes through order creation and verification", async () => {

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStockDetail } from "../../../lib/stock-detail";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Everything about one company, plus the top performers of its own category.
  *

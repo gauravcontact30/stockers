@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { ACTION_THROTTLE_MS, recordEvent, VISIT_THROTTLE_MS } from "../../../lib/analytics";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Where the browser reports a page view, or something the reader did on one.
  *

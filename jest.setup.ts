@@ -122,6 +122,21 @@ if (!global.fetch) {
   global.fetch = jest.fn(() => Promise.reject(new Error("fetch was not mocked for this test"))) as unknown as typeof fetch;
 }
 
+// `cacheLife` and `cacheTag` are no-ops under test, and everything else in `next/cache` is real.
+//
+// Both are declarations to the framework rather than behaviour: they tell the build how long a
+// `use cache` scope lives and which tags drop it. Outside a Next render there is no cache to
+// configure, and calling them throws `cacheLife() is only available with the cacheComponents
+// config` — which fails a suite that is only trying to assert what a server component renders.
+// Stubbing exactly these two keeps that assertion possible without weakening anything else: the
+// suites that exercise the admin purge still get the real `revalidateTag` and `revalidatePath` and
+// still assert on them.
+jest.mock("next/cache", () => ({
+  ...jest.requireActual("next/cache"),
+  cacheLife: () => undefined,
+  cacheTag: () => undefined,
+}));
+
 afterEach(() => {
   jest.restoreAllMocks();
   jest.clearAllMocks();

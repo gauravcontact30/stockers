@@ -3,8 +3,6 @@ import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { isFeatureKey } from "../../../lib/subscription";
 import { streamVerdicts } from "../../../lib/stock-verdicts";
 
-export const dynamic = "force-dynamic";
-
 // One panel per dashboard section, each asking about the handful of stocks that section is
 // already showing. More than this and the panel stops being a summary.
 const MAX_SYMBOLS = 6;

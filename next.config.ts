@@ -12,11 +12,16 @@ const isDev = process.env.NODE_ENV === "development";
  *
  * The stricter policy — a per-request nonce with 'strict-dynamic' — cannot be used here, and the
  * reason is structural rather than a matter of effort. Next injects the nonce into the HTML while
- * it renders. Every page on this site is deliberately prerendered and revalidated (`force-static`
- * plus `revalidate = 60`, see app/page.tsx and the six section routes), so the HTML a visitor gets
- * was rendered minutes ago and carries a minutes-old nonce, while the response header would carry
- * a fresh one. They never match, and every script on the page is blocked. Nonces and ISR are
- * mutually exclusive; the Next docs say so outright.
+ * it renders. Every page on this site is deliberately prerendered: the landing page and its six
+ * section routes are built from `use cache` components on the `market` profile below, so the HTML
+ * a visitor gets was rendered minutes ago and carries a minutes-old nonce, while the response
+ * header would carry a fresh one. They never match, and every script on the page is blocked.
+ * Nonces and prerendering are mutually exclusive; the Next docs say so outright.
+ *
+ * Cache Components does not change this. Partial Prerendering still serves a prerendered shell —
+ * that is the entire point of it — so the shell's scripts carry whatever nonce was current when it
+ * was built. Moving caching from the route to the component changed which parts are prerendered,
+ * not whether any part is.
  *
  * Hashes do not rescue it either. React streams the RSC payload down as a run of parser-inserted
  * `self.__next_f.push(...)` tags whose contents differ per page and per build, so there is no
@@ -135,6 +140,106 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
 
+  /**
+   * Cache Components: the Next 16 rendering model, and the reason most of this file's neighbours
+   * changed shape.
+   *
+   * Before this flag, every page here was one all-or-nothing cached unit — `force-static` plus
+   * `revalidate = 60` on the landing page and its six section aliases. That is why `/` shipped a
+   * 442KB HTML document: the header, the footer and ten boards' worth of streamed RSC payload were
+   * all the same prerender, so a visitor waited on the whole thing before anything painted (2.4s to
+   * first contentful paint against a 177ms time to first byte — the gap was almost entirely parse).
+   *
+   * With this on, caching moves from the route to the component. `use cache` marks what may be
+   * prerendered; everything else is dynamic by default and streams into the shell behind its own
+   * `<Suspense>`. Partial Prerendering is the default rather than a separate flag, so the shell is
+   * served immediately and the boards fill in as they resolve.
+   *
+   * It also unlocks `partialPrefetching` below, which is what this app needed most.
+   */
+  cacheComponents: true,
+
+  /**
+   * The freshness window every market feed on the site runs on.
+   *
+   * `revalidate = 60` used to say this, once per page. None of the built-in profiles match it —
+   * `seconds` expires too fast to be worth caching an exchange read for, `minutes` holds a moving
+   * market five times too long — so the window is named here and referenced by `cacheLife('market')`
+   * at each call site.
+   *
+   * `stale` is the half that did not exist before: under Cache Components it also governs how long
+   * a client-side navigation may reuse what it already has, which is why there is no
+   * `experimental.staleTimes` block here. One lever, not two that can disagree.
+   */
+  cacheLife: {
+    market: {
+      stale: 30,
+      revalidate: 60,
+      expire: 300,
+    },
+    /** The NSE boards — sector rotation, most-traded, ETFs, stock news. Was `revalidate = 300`. */
+    board: {
+      stale: 150,
+      revalidate: 300,
+      expire: 1_800,
+    },
+    /** The IPO calendar. A window opens or closes on a date, not on a tick. Was `revalidate = 600`. */
+    calendar: {
+      stale: 300,
+      revalidate: 600,
+      expire: 3_600,
+    },
+    /** Dividends and corporate actions, which move when a company files. Was `revalidate = 900`. */
+    filings: {
+      stale: 450,
+      revalidate: 900,
+      expire: 5_400,
+    },
+  },
+
+  /**
+   * Prefetch one App Shell per route instead of one full page per link.
+   *
+   * This is the fix for the landing page's worst prefetch cost. The seven links in the header nav
+   * point at `/live-market`, `/bse-sectors`, `/beat-the-ai`, `/bse-gainers-losers`, `/shareholding`,
+   * `/accuracy` and `/pricing` — and every one of those routes renders the *entire* landing page
+   * through `app/lib/home-section-page.tsx`, by design, for SEO. Under the old model a static route
+   * is prefetched in full, so a reader sitting on `/` quietly pulled eight near-identical copies of
+   * a 442KB document as those links scrolled into view.
+   *
+   * Partial Prefetching fetches the route's shell once and shares it across every link pointing at
+   * it; the uncached remainder streams in after the navigation instead. Requires `cacheComponents`
+   * — the build fails at config validation without it.
+   */
+  partialPrefetching: true,
+
+  experimental: {
+    /**
+     * `inlineCss` is deliberately OFF. It was tried, measured, and is a loss here.
+     *
+     * The argument for it is that Tailwind is atomic and the stylesheet is small, so inlining it
+     * trades a render-blocking round trip for bytes you were going to download anyway. The first
+     * half is true and the second is not: `app/globals.css` is 628 readable lines, but what
+     * Tailwind v4 generates from it and the class soup across ~200 components is **210KB**, which
+     * is squarely the "large CSS bundle" case the Next docs say to skip.
+     *
+     * Measured on the landing page with it on: the 210KB stylesheet was serialised into the RSC
+     * payload *twice* — 436KB of the document — while the `<link rel="stylesheet">` tags stayed in
+     * the `<head>` regardless, so nothing was saved and the round trip happened anyway. The
+     * document went from 279KB to 961KB and total blocking time from 189ms to 1106ms.
+     *
+     * If the stylesheet is ever brought down to a genuinely small size, this is worth re-measuring.
+     * Not before.
+     */
+
+    /**
+     * Several route handlers wrap their loaders in `try/catch`. Under Cache Components a prerender
+     * bail-out is a *throw*, so those blocks catch it and log it, and the build output fills with
+     * errors that are not errors. This suppresses only what is emitted after a bail-out.
+     */
+    hideLogsAfterAbort: true,
+  },
+
   images: {
     // AVIF first, WebP second, original last. The order is the preference order — Next picks the
     // first entry the browser's Accept header admits to supporting, and AVIF is roughly a third
@@ -160,6 +265,31 @@ const nextConfig: NextConfig = {
    * route handlers — which is the reason they live here rather than in proxy.ts. A header set in
    * Proxy would be skipped for anything served straight off the static cache.
    */
+  /**
+   * The old `/dashboard/*` and `/admin/*` URLs, kept working.
+   *
+   * Both areas moved into route groups — `app/(dashboard)` and `app/(admin)` — so their sections
+   * now sit at the top level: `/portfolio` rather than `/dashboard/portfolio`, `/users` rather than
+   * `/admin/users`. A route group's whole purpose is that the folder does not appear in the path.
+   *
+   * These are 308s rather than 307s because the move is permanent: a bookmark, a link in an old
+   * email, or a search engine's index should all be updated to point at the new URL rather than
+   * keep asking for the old one. The two index pages became named routes — `/dashboard` was the
+   * workspace Overview and `/admin` was the console Overview, and both are real views that would
+   * have been lost had they simply redirected to a sibling section.
+   *
+   * `:path*` on the two prefix rules covers every section in one line each, including any added
+   * later, so this list does not need maintaining alongside `DASHBOARD_SECTION_ROUTES`.
+   */
+  async redirects() {
+    return [
+      { source: "/dashboard", destination: "/overview", permanent: true },
+      { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
+      { source: "/admin", destination: "/console", permanent: true },
+      { source: "/admin/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

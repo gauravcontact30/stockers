@@ -3,8 +3,6 @@ import { isSuperAdminEmail } from "../../../lib/admin-access";
 import { buildHealthReport } from "../../../lib/admin-health";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Which parts of this deployment are actually wired up.
  *

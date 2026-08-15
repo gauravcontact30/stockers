@@ -121,7 +121,7 @@ describe("PresenceTracker", () => {
   });
 
   it("does not count the admin's own tour of the dashboard as somebody using the site", () => {
-    pathname = "/admin/analytics";
+    pathname = "/analytics";
 
     render(<PresenceTracker />);
     act(() => {

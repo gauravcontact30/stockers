@@ -7,8 +7,6 @@ import { ALL_SECTORS, findStock, searchStocks } from "../../../lib/stock-search"
 // with no search params, then serves that one response to every caller — so the box returned the
 // same alphabetical list whatever was typed into it. The data itself is a generated module in
 // memory, so per-request costs a string scan and no I/O.
-export const dynamic = "force-dynamic";
-
 /**
  * Search every listed company.
  *

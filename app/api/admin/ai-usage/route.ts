@@ -6,8 +6,6 @@ import { dayBefore, daysBetween, istDay } from "../../../lib/analytics";
 import { aiConfigured, aiModel } from "../../../lib/openrouter";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /** The windows the dashboard offers. Anything else is snapped into range. */
 export const RANGE_OPTIONS = [1, 7, 30] as const;
 

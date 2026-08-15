@@ -48,6 +48,36 @@ export function buildMoversUrl(
   return `/api/market/bse/movers?${params.toString()}`;
 }
 
+/**
+ * The trending board's page size and URL, moved here for the same reason as the movers builders
+ * above: the landing page resolves this board's opening payload on the server now, and the server
+ * cannot call into `../components/bse-trending-board`, which is `"use client"`. That component
+ * re-exports both, so every existing import still resolves.
+ */
+export const TRENDING_PAGE_SIZE = 10;
+
+export type TrendingRankKey = "brokers" | "turnover" | "trades" | "volume";
+/** `"all"` plus the platform and broker ids; kept loose here so this module pulls in no client code. */
+export type TrendingFilterKey = string;
+
+export function buildTrendingUrl(
+  rank: TrendingRankKey,
+  term: string,
+  platform: TrendingFilterKey,
+  broker: TrendingFilterKey,
+  tier: MoverTierKey,
+  move: string,
+  page: number,
+): string {
+  const params = new URLSearchParams({ rank, page: String(page), pageSize: String(TRENDING_PAGE_SIZE) });
+  if (term) params.set("q", term);
+  if (platform !== "all") params.set("platform", platform);
+  if (broker !== "all") params.set("broker", broker);
+  if (tier !== "all") params.set("tier", tier);
+  if (move !== "0") params.set("min", move);
+  return `/api/market/bse/trending?${params.toString()}`;
+}
+
 export function buildSectorMoversUrl(category: string, direction: MoverDirection, page: number) {
   const params = new URLSearchParams({
     category,

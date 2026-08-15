@@ -254,70 +254,70 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
     id: "overview",
     label: "Overview",
     description: "System totals, access state and the fastest routes to the controls.",
-    href: "/admin",
+    href: "/console",
     icon: DashboardIcon,
   },
   {
     id: "analytics",
     label: "Traffic & Usage",
     description: "Daily visitors, sign-ins, sign-ups and the AI features the audience actually opens.",
-    href: "/admin/analytics",
+    href: "/analytics",
     icon: AnalyticsIcon,
   },
   {
     id: "ai",
     label: "AI Operations",
     description: "Model spend, latency and how often a reader gets the composed read instead of the written one.",
-    href: "/admin/ai",
+    href: "/ai",
     icon: AiIcon,
   },
   {
     id: "logs",
     label: "Platform Logs",
     description: "Operational logs for dashboard usability, APIs, AI features, upstream data, billing and security.",
-    href: "/admin/logs",
+    href: "/logs",
     icon: LogsIcon,
   },
   {
     id: "users",
     label: "Application Users",
     description: "Search accounts, verify emails, assign plans and manage admin roles.",
-    href: "/admin/users",
+    href: "/users",
     icon: UsersIcon,
   },
   {
     id: "subscriptions",
     label: "Subscription Users",
     description: "Review paid accounts, grant access, revoke subscriptions and change tiers.",
-    href: "/admin/subscriptions",
+    href: "/subscriptions",
     icon: SubscriptionIcon,
   },
   {
     id: "reviews",
     label: "Client Reviews",
     description: "Upload client review comments, profile images, signatures and star ratings for the landing page.",
-    href: "/admin/reviews",
+    href: "/reviews",
     icon: ReviewsIcon,
   },
   {
     id: "features",
     label: "Feature Locks",
     description: "Turn AI surfaces on or off without changing code.",
-    href: "/admin/features",
+    href: "/features",
     icon: FeatureIcon,
   },
   {
     id: "cache",
     label: "Cache Control",
     description: "Purge market, AI and news caches when a feed needs a hard refresh.",
-    href: "/admin/cache",
+    href: "/cache",
     icon: CacheIcon,
   },
   {
     id: "application",
     label: "Application",
     description: "Operational links and application management checklist.",
-    href: "/admin/application",
+    href: "/application",
     icon: SettingsIcon,
   },
 ];
@@ -764,7 +764,7 @@ function AdminAccessGate({ children }: { children: React.ReactNode }) {
       <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-500/30 dark:bg-amber-500/10">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Administrators only</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">This dashboard controls application access, subscriptions and cache state.</p>
-        <Link href="/dashboard" className="mt-4 inline-block rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
+        <Link href="/overview" className="mt-4 inline-block rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
           Back to dashboard
         </Link>
       </div>
@@ -960,7 +960,7 @@ function SuperAdminOverview() {
         <section className={OVERVIEW_CARD}>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Today&apos;s traffic</h2>
-            <Link href="/admin/analytics" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
+            <Link href="/analytics" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
               Full report
             </Link>
           </div>
@@ -979,7 +979,7 @@ function SuperAdminOverview() {
         <section className={OVERVIEW_CARD}>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Revenue</h2>
-            <Link href="/admin/subscriptions" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
+            <Link href="/subscriptions" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
               Subscriptions
             </Link>
           </div>
@@ -1014,7 +1014,7 @@ function SuperAdminOverview() {
           <section className={OVERVIEW_CARD}>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">System health</h2>
-              <Link href="/admin/analytics" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
+              <Link href="/analytics" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
                 Live users
               </Link>
             </div>
@@ -1030,7 +1030,7 @@ function SuperAdminOverview() {
           <section className={OVERVIEW_CARD}>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Lapsing this week</h2>
-              <Link href="/admin/subscriptions" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
+              <Link href="/subscriptions" className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300">
                 Renew or extend
               </Link>
             </div>
@@ -1443,7 +1443,7 @@ function FeatureLocksPanel() {
 function ApplicationPanel() {
   const { status } = useSubscription();
   const appLinks = [
-    { href: "/dashboard", label: "Investor dashboard", detail: "Verify subscriber-facing AI sections." },
+    { href: "/overview", label: "Investor dashboard", detail: "Verify subscriber-facing AI sections." },
     { href: "/news", label: "News page", detail: "Review public market news." },
     { href: "/contact", label: "Contact page", detail: "Check support intake." },
     { href: "/privacy-policy", label: "Privacy policy", detail: "Review legal copy." },
@@ -1572,7 +1572,7 @@ export function SuperAdminDashboard({ active }: { active: SuperAdminSectionId })
                       {status.email}
                     </span>
                   )}
-                  <Link href="/dashboard" className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/10">
+                  <Link href="/overview" className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/10">
                     Dashboard
                   </Link>
                   <button

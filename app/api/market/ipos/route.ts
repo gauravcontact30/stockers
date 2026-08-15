@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
-import { cacheHeaders } from "../../../lib/cache";
+import { cacheLife, cacheTag } from "next/cache";
+import { CACHE_TAGS, cacheHeaders } from "../../../lib/cache";
 import { companyLogoUrl } from "../../../lib/indian-stocks";
 import { anticipatedIpos } from "../../../lib/open-ipos";
 import { getIpoFeed } from "../../../lib/nse-ipos";
 
-// Request-independent, so Next may serve the whole response without running the handler.
-export const revalidate = 600;
+/**
+ * Request-independent, so the whole payload is cached rather than rebuilt per reader.
+ *
+ * The shaping below — ids, the curated anticipated list, the source line — is deterministic given
+ * the feed, so it is cached along with it rather than re-run on every request. `use cache` cannot
+ * sit on the `GET` export, which is why this is a separate function. The `calendar` profile in
+ * next.config.ts carries the interval `revalidate = 600` used to.
+ */
+async function ipoBoard() {
+  "use cache";
+  cacheLife("calendar");
+  cacheTag(CACHE_TAGS.nse);
 
-export async function GET() {
   const feed = await getIpoFeed();
 
   // No logo is attached here: the issue already carries the ticker it will list under, which the
@@ -20,7 +30,7 @@ export async function GET() {
   // favicon is a real mark for the real company.
   const anticipated = anticipatedIpos.map((ipo) => ({ ...ipo, logo: companyLogoUrl(ipo.domain) }));
 
-  return NextResponse.json({
+  return {
     ipos,
     anticipated,
     counts: feed.counts,
@@ -30,5 +40,9 @@ export async function GET() {
     source: feed.live
       ? "Live IPO calendar and subscription figures from NSE India"
       : "NSE IPO feed unreachable right now",
-  }, { headers: cacheHeaders(600) });
+  };
+}
+
+export async function GET() {
+  return NextResponse.json(await ipoBoard(), { headers: cacheHeaders(600) });
 }

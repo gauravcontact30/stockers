@@ -128,7 +128,7 @@ export function buildAttentionQueue({
       title: `${unhealthyChecks} integration${unhealthyChecks === 1 ? " is" : "s are"} down`,
       detail: "Something the app depends on is configured but not answering. The panel below names which.",
       count: unhealthyChecks,
-      href: "/admin/application",
+      href: "/application",
       action: "Check application",
     });
   }
@@ -145,7 +145,7 @@ export function buildAttentionQueue({
           ? `The soonest is ${expiring[0].name}, today.`
           : `The soonest is ${expiring[0].name}, in ${soonest} day${soonest === 1 ? "" : "s"}.`,
       count: expiring.length,
-      href: "/admin/subscriptions",
+      href: "/subscriptions",
       action: "Review subscriptions",
     });
   }
@@ -158,7 +158,7 @@ export function buildAttentionQueue({
       title: `${lapsed.length} subscription${lapsed.length === 1 ? " has" : "s have"} lapsed this month`,
       detail: "These accounts have lost their AI access and have not renewed.",
       count: lapsed.length,
-      href: "/admin/subscriptions",
+      href: "/subscriptions",
       action: "Review subscriptions",
     });
   }
@@ -171,7 +171,7 @@ export function buildAttentionQueue({
       title: `${unverified.length} account${unverified.length === 1 ? " has" : "s have"} never verified their email`,
       detail: `Signed up more than ${STALE_VERIFICATION_DAYS} days ago and still unconfirmed — usually a mail delivery problem rather than a change of mind.`,
       count: unverified.length,
-      href: "/admin/users",
+      href: "/users",
       action: "Open accounts",
     });
   }
@@ -186,7 +186,7 @@ export function buildAttentionQueue({
       title: `${blockedTotal} AI open${blockedTotal === 1 ? " was" : "s were"} refused today`,
       detail: `Most refused: ${blocked[0].label}, ${blocked[0].blocked} time${blocked[0].blocked === 1 ? "" : "s"}. This is demand the paywall is holding back, not an error.`,
       count: blockedTotal,
-      href: "/admin/analytics",
+      href: "/analytics",
       action: "See traffic",
     });
   }
@@ -198,7 +198,7 @@ export function buildAttentionQueue({
       title: `${lockedFeatures} feature${lockedFeatures === 1 ? " is" : "s are"} switched off`,
       detail: "An administrator has turned these off for everyone, including paying subscribers.",
       count: lockedFeatures,
-      href: "/admin/features",
+      href: "/features",
       action: "Review locks",
     });
   }
@@ -210,7 +210,7 @@ export function buildAttentionQueue({
       title: "Revenue is not being recorded",
       detail: "Payments still credit accounts, but the ledger they should be written to cannot be read.",
       count: 1,
-      href: "/admin/application",
+      href: "/application",
       action: "Check application",
     });
   }

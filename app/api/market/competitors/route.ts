@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { cacheHeaders } from "../../../lib/cache";
 import { getCompetitors } from "../../../lib/competitors";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const symbol = request.nextUrl.searchParams.get("symbol");
   if (!symbol) {

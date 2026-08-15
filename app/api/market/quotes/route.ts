@@ -4,8 +4,6 @@ import { indianStocks, sectors } from "../../../lib/indian-stocks";
 import { stockIcon } from "../../../lib/company-logos";
 import { getAllQuotes } from "../../../lib/market-data";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const quotes = await getAllQuotes();
   const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));

@@ -4,8 +4,6 @@ import { analyticsBackendName, dayBefore, istDay, listEvents, ANALYTICS_RETENTIO
 import { buildReport } from "../../../lib/analytics-report";
 import { listUsers, userFromRequest, type AppUser } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /** The windows the dashboard offers. Anything else is snapped to the nearest of these. */
 export const RANGE_OPTIONS = [1, 7, 30, 90] as const;
 

@@ -125,7 +125,7 @@ function entryFromLog(log: PlatformLog, users: Map<string, AdminUserView>): Plat
 function analyticsLog(event: AnalyticsEvent, users: Map<string, AdminUserView>): PlatformLog | null {
   const user = event.userId ? users.get(event.userId) : undefined;
   const dashboardEvent =
-    event.path?.startsWith("/dashboard") ||
+    event.path?.startsWith("/overview") ||
     event.action === "nav.section" ||
     event.action?.startsWith("portfolio.") ||
     event.type === "feature";

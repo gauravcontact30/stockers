@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { DashboardClient } from "../components/dashboard-client";
-import { DASHBOARD_SECTION_ROUTES } from "../lib/section-routes";
-import { pageMetadata } from "../lib/seo";
+import { DashboardClient } from "../../components/dashboard-client";
+import { DASHBOARD_SECTION_ROUTES } from "../../lib/section-routes";
+import { pageMetadata } from "../../lib/seo";
 
 const overviewRoute = DASHBOARD_SECTION_ROUTES[0];
 

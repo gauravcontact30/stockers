@@ -37,8 +37,12 @@ export {
 } from "./plan-tiers";
 export type { AiFeature, FeatureKey, PlanTier } from "./plan-tiers";
 
-/** Length of the free trial, counted in IST calendar days from signup. */
-export const TRIAL_DAYS = 3;
+// Both defined in ./subscription-policy so a client component can read them without pulling this
+// module's `node:fs`, cache and NSE client across the boundary. Imported for use below and
+// re-exported, because this is where every server-side caller has always looked for them.
+import { POST_TRIAL_TIER, TRIAL_DAYS } from "./subscription-policy";
+
+export { POST_TRIAL_TIER, TRIAL_DAYS };
 /** Backward-compatible policy/status name; the trial now uses calendar days, not market days. */
 export const TRIAL_MARKET_DAYS = TRIAL_DAYS;
 /** How long a renewal buys, in calendar days. */
@@ -59,7 +63,7 @@ export type AccessStatus = {
    * The highest tier this account may use, or null when it may use none.
    *
    * Null for a lapsed account. A live free trial reports the Elite tier, because the trial is the
-   * whole product for three calendar days rather than a sample of the cheapest part of it. See
+   * whole product for the length of the trial rather than a sample of the cheapest part of it. See
    * `accessStatusFor`.
    */
   tier: PlanTier | null;
@@ -175,13 +179,14 @@ export function istDateOf(iso: string): string | null {
 /**
  * Works out what a user may currently access.
  *
- * A live trial grants *every* AI feature — Starter, Pro and Elite alike — for three IST calendar
- * days. A trial that only opened the cheapest tier was arguing for the cheapest plan; showing the
- * whole product and then closing it is what makes the choice at the end a real one. Paid plans use
- * the stored plan tier, and admins are unconditional above the top tier.
+ * A live trial grants *every* AI feature — Starter, Pro and Elite alike — for `TRIAL_DAYS` IST
+ * calendar days. A trial that only opened the cheapest tier was arguing for the cheapest plan;
+ * showing the whole product and then stepping down from it is what makes the choice at the end a
+ * real one. Paid plans use the stored plan tier, and admins are unconditional above the top tier.
  *
- * When the three days are spent and nothing has been bought, the account falls to `expired` and
- * every AI feature locks until a plan is purchased.
+ * When those days are spent and nothing has been bought, the account falls to `expired` and settles
+ * on `POST_TRIAL_TIER` — Starter. Pro and Elite lock; Starter features and the public market boards
+ * keep working, so the account stays useful and the decision stays open.
  */
 export function accessStatusFor(user: AppUser | null, today: string, _holidays: Set<string> = new Set()): AccessStatus {
   const base = {
@@ -197,6 +202,12 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
   };
 
   // Signed-out visitors are treated as lapsed: they are shown what exists and invited to sign up.
+  //
+  // They share the `expired` state with a spent trial but not its entitlement, and the difference
+  // is the whole reason this returns early rather than falling through to the branch at the bottom.
+  // That branch now grants Starter, which is something an *account* earns by having had a trial;
+  // a visitor with no account has had nothing and gets `tier: null` from `base`. Collapsing the two
+  // would hand every anonymous reader a free Starter plan.
   if (!user) return { ...base, state: "expired", allowed: false };
 
   if (user.role === "admin" || isSuperAdminEmail(user.email)) {
@@ -274,10 +285,21 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
     };
   }
 
+  // The trial is spent and nothing has been bought, so the account settles onto Starter.
+  //
+  // `state` stays `expired` because the trial genuinely did end and every message about it should
+  // keep saying so; `tier` is what the paywall reads, and it is what has changed. A Starter feature
+  // opens, a Pro or Elite one does not — see `canUse` in ../components/subscription-provider, which
+  // gates on `tierAtLeast(status.tier, requiredTier)` before it looks at `allowed`.
+  //
+  // `subscribedUntil` is deliberately left as it was, which for a never-subscribed account is null:
+  // nothing here is a payment, and a date would make the renewal machinery treat it as one.
   return {
     ...base,
     state: "expired",
-    allowed: false,
+    allowed: true,
+    tier: POST_TRIAL_TIER,
+    planName: TIER_LABEL[POST_TRIAL_TIER],
     marketDaysUsed,
     marketDaysLeft,
     trialStartedAt,

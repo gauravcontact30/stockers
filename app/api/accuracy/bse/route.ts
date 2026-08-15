@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBseStockAccuracy, searchPricedBseAccuracyMatches } from "../../../lib/accuracy-matrix";
 import { cacheHeaders } from "../../../lib/cache";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const query = (request.nextUrl.searchParams.get("q") ?? "").trim();
   const select = request.nextUrl.searchParams.get("select") === "1";

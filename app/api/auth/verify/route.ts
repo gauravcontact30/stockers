@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { appOrigin, sendMail, verificationEmail } from "../../../lib/mailer";
 import { refreshVerificationToken, userFromRequest, verifyEmailToken } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The link in the welcome mail.
  *

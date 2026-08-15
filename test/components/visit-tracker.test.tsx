@@ -99,7 +99,7 @@ describe("VisitTracker", () => {
   });
 
   it("does not count the admin's own tour of the dashboard as site traffic", async () => {
-    pathname = "/admin/analytics";
+    pathname = "/analytics";
 
     render(<VisitTracker />);
     await new Promise((resolve) => setTimeout(resolve, 0));

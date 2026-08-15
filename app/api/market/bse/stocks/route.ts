@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { cacheHeaders } from "../../../../lib/cache";
 import { getBseDirectory, type BseCapTier, type DirectoryQuery } from "../../../../lib/bse-market";
 
-export const dynamic = "force-dynamic";
-
 const TIERS: (BseCapTier | "all")[] = ["all", "Large", "Mid", "Small"];
 const SORTS: NonNullable<DirectoryQuery["sort"]>[] = ["mcap", "change", "name", "price"];
 

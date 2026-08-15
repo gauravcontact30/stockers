@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { isAdminPath } from "../lib/section-routes";
 
 /**
  * Reports a page view, once per page per tab session.
@@ -67,7 +68,10 @@ export function VisitTracker() {
   useEffect(() => {
     // The admin's own tour of the dashboard is not site traffic, and counting it would put the
     // person reading the chart into the chart.
-    if (pathname.startsWith("/admin")) return;
+    //
+    // Membership rather than a `/admin` prefix: the admin pages sit in the `app/(admin)` route
+    // group now, so they have no shared prefix left to test for. See `isAdminPath`.
+    if (isAdminPath(pathname)) return;
     if (alreadySent(pathname)) return;
 
     void fetch("/api/analytics/track", {

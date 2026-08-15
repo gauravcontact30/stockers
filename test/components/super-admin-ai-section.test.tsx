@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { SUPER_ADMIN_SECTIONS, SuperAdminDashboard } from "../../app/components/super-admin-dashboard";
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/admin/ai",
+  usePathname: () => "/ai",
   useRouter: () => ({ push: jest.fn() }),
 }));
 
@@ -46,7 +46,7 @@ describe("AI Operations in the super admin shell", () => {
   it("is offered in the navigation, pointing at its own page", () => {
     const section = SUPER_ADMIN_SECTIONS.find((entry) => entry.id === "ai");
 
-    expect(section).toMatchObject({ label: "AI Operations", href: "/admin/ai" });
+    expect(section).toMatchObject({ label: "AI Operations", href: "/ai" });
   });
 
   it("describes itself by what an operator would come looking for", () => {
@@ -75,6 +75,6 @@ describe("AI Operations in the super admin shell", () => {
     // has to point at the same page.
     const links = screen.getAllByRole("link", { name: /AI Operations/ });
     expect(links.length).toBeGreaterThan(0);
-    for (const link of links) expect(link).toHaveAttribute("href", "/admin/ai");
+    for (const link of links) expect(link).toHaveAttribute("href", "/ai");
   });
 });

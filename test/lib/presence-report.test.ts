@@ -161,10 +161,10 @@ describe("buildPresenceReport", () => {
   it("reports where a person is from their most recent heartbeat, not their first", () => {
     const live = report([
       session({ key: "s:old", userId: "user_1", path: "/news", device: "desktop", lastSeenAt: secondsAgo(60) }),
-      session({ key: "s:new", userId: "user_1", path: "/dashboard", device: "mobile", lastSeenAt: secondsAgo(5) }),
+      session({ key: "s:new", userId: "user_1", path: "/overview", device: "mobile", lastSeenAt: secondsAgo(5) }),
     ], [account()]);
 
-    expect(live.rows[0]).toMatchObject({ path: "/dashboard", device: "mobile" });
+    expect(live.rows[0]).toMatchObject({ path: "/overview", device: "mobile" });
   });
 
   it("measures the stay from the earliest of a person's sittings", () => {
@@ -215,12 +215,12 @@ describe("buildPresenceReport", () => {
     const live = report([
       session({ visitorId: "a", path: "/news" }),
       session({ visitorId: "b", path: "/news" }),
-      session({ visitorId: "c", path: "/dashboard" }),
+      session({ visitorId: "c", path: "/overview" }),
     ]);
 
     expect(live.pages).toEqual([
       { key: "/news", label: "/news", people: 2 },
-      { key: "/dashboard", label: "/dashboard", people: 1 },
+      { key: "/overview", label: "/overview", people: 1 },
     ]);
   });
 

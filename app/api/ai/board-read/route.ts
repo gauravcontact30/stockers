@@ -3,8 +3,6 @@ import { parseBrief, streamBoardRead } from "../../../lib/board-read";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { isFeatureKey } from "../../../lib/subscription";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The AI's read of one board, streamed.
  *

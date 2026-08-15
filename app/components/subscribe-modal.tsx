@@ -312,6 +312,9 @@ export function SubscribeModal({
               promoCode={promoCode}
               referralCode={referralCode}
               label={signedOut ? "Create account & buy" : `Buy ${plan.name}`}
+              // Closes this sheet the moment the payment confirms, before the button sends the
+              // reader to sign in again with the plan attached.
+              onPaid={onClose}
               className={`inline-flex w-full justify-center rounded-full px-5 py-2.5 text-sm font-bold text-white shadow-[0_18px_40px_-24px_rgba(5,150,105,0.9)] transition ${plan.button}`}
             />
           </div>

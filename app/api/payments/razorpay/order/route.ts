@@ -11,8 +11,6 @@ import {
 } from "../../../../lib/razorpay";
 import { billingSummary, monthlyEquivalent } from "../../../../lib/subscription-pricing";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Opens a Razorpay order for one subscription period.
  *

@@ -10,8 +10,6 @@ import {
 } from "../../lib/portfolio";
 import { userFromRequest, type AppUser } from "../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * One reader's portfolio.
  *

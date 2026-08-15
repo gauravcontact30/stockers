@@ -88,7 +88,7 @@ describe("POST /api/analytics/track", () => {
   it("attributes the view to the account behind the session token", async () => {
     await writeRoster([regular]);
 
-    await POST(trackRequest({ path: "/dashboard", visitorId: "vabc12345678" }, { Authorization: `Bearer ${createToken(regular)}` }));
+    await POST(trackRequest({ path: "/overview", visitorId: "vabc12345678" }, { Authorization: `Bearer ${createToken(regular)}` }));
 
     const [event] = await listEvents("1970-01-01");
     expect(event.userId).toBe(regular.id);
@@ -123,7 +123,7 @@ describe("POST /api/analytics/track", () => {
         type: "action",
         action: "stock.open",
         label: "RELIANCE",
-        path: "/dashboard",
+        path: "/overview",
         visitorId: "vabc12345678",
         sessionId: "sabc12345678",
       }),
@@ -134,7 +134,7 @@ describe("POST /api/analytics/track", () => {
       type: "action",
       action: "stock.open",
       label: "RELIANCE",
-      path: "/dashboard",
+      path: "/overview",
       sessionId: "sabc12345678",
     });
   });

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBenchmarkIndices } from "../../../lib/market-indices";
 
-export const dynamic = "force-dynamic";
-
 /**
  * How fresh an index level may be before it is fetched again.
  *

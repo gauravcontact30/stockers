@@ -4,7 +4,9 @@ const createJestConfig = nextJest({ dir: "./" });
 
 /** @type {import('jest').Config} */
 const customJestConfig = {
-  testEnvironment: "jest-environment-jsdom",
+  // jsdom, plus the Web globals it omits and `next/cache` needs at import time. See the header of
+  // that file — without it, every suite that touches a `use cache` server component fails to load.
+  testEnvironment: "<rootDir>/test/jsdom-web-apis.js",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   testMatch: ["<rootDir>/test/**/*.test.{ts,tsx}"],
   // Several suites mount a whole page of panels and drive it through userEvent. Those take tens of

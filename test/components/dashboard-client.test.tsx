@@ -102,7 +102,7 @@ async function renderDashboard() {
 describe("DashboardClient", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    window.history.replaceState(null, "", "/dashboard");
+    window.history.replaceState(null, "", "/overview");
     installFetchMock();
   });
 
@@ -287,7 +287,7 @@ describe("DashboardClient", () => {
     const sidebar = () => within(screen.getByRole("navigation", { name: "Dashboard sections" }));
 
     afterEach(() => {
-      window.history.replaceState(null, "", "/dashboard");
+      window.history.replaceState(null, "", "/overview");
     });
 
     it("opens an AI section from the sidebar, mounting only that panel and bookmarking it in the URL", async () => {
@@ -302,7 +302,7 @@ describe("DashboardClient", () => {
       expect(screen.getByText("Live breadth, indices and movers with an AI read on the day's mood.")).toBeInTheDocument();
       // The overview is unmounted with its own fetches, so only one section is ever live.
       expect(screen.queryByPlaceholderText("e.g. HDFC BANK")).not.toBeInTheDocument();
-      expect(window.location.pathname + window.location.hash).toBe("/dashboard/market-pulse");
+      expect(window.location.pathname + window.location.hash).toBe("/market-pulse");
       expect(window.scrollTo).toHaveBeenCalled();
     });
 
@@ -331,7 +331,7 @@ describe("DashboardClient", () => {
     });
 
     it("falls back to the overview when the hash names no section", async () => {
-      window.history.replaceState(null, "", "/dashboard/pricing");
+      window.history.replaceState(null, "", "/pricing");
       await renderDashboard();
 
       expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
@@ -348,7 +348,7 @@ describe("DashboardClient", () => {
       });
 
       expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
-      expect(window.location.pathname + window.location.hash).toBe("/dashboard");
+      expect(window.location.pathname + window.location.hash).toBe("/overview");
     });
 
     // The open section is read from the URL, so a hash change from outside React — the back
@@ -382,7 +382,7 @@ describe("DashboardClient", () => {
 
   describe("exchange boards and the guided tour", () => {
     afterEach(() => {
-      window.history.replaceState(null, "", "/dashboard");
+      window.history.replaceState(null, "", "/overview");
     });
 
     // Each board is its own destination now, and mounting is still one section at a time.
@@ -418,7 +418,7 @@ describe("DashboardClient", () => {
       );
 
       expect(screen.getByRole("heading", { name: /here is the order to read them in/ })).toBeInTheDocument();
-      expect(window.location.pathname + window.location.hash).toBe("/dashboard/getting-started");
+      expect(window.location.pathname + window.location.hash).toBe("/getting-started");
     });
 
     it("jumps from the tour straight into the board it points at", async () => {
@@ -429,7 +429,7 @@ describe("DashboardClient", () => {
       await user.click(screen.getByRole("button", { name: "Open Market Pulse →" }));
 
       expect(await screen.findByTestId("panel-market-pulse")).toBeInTheDocument();
-      expect(window.location.pathname + window.location.hash).toBe("/dashboard/market-pulse");
+      expect(window.location.pathname + window.location.hash).toBe("/market-pulse");
     });
   });
 });

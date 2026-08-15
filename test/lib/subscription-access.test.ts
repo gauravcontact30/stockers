@@ -61,8 +61,8 @@ describe("server feature access", () => {
     expect(canUseFeature(activeStatus("elite"), { intel: true }, "intel")).toBe(false);
   });
 
-  it("grants every AI feature, Elite included, for the first three calendar days after signup", () => {
-    const status = accessStatusFor(newUser as never, "2026-08-03");
+  it("grants every AI feature, Elite included, for the first five calendar days after signup", () => {
+    const status = accessStatusFor(newUser as never, "2026-08-05");
 
     expect(status).toMatchObject({
       state: "trial",
@@ -70,29 +70,52 @@ describe("server feature access", () => {
       tier: "elite",
       planName: "Elite",
       marketDaysLeft: 1,
-      trialEndsAt: "2026-08-04",
+      trialEndsAt: "2026-08-06",
     });
-    // One from each tier: the trial is the whole product for three days, not a sample of the
+    // One from each tier: the trial is the whole product for five days, not a sample of the
     // cheapest part of it.
     expect(canUseFeature(status, {}, "market-pulse")).toBe(true);
     expect(canUseFeature(status, {}, "research")).toBe(true);
     expect(canUseFeature(status, {}, "intel")).toBe(true);
   });
 
-  it("locks every AI tier automatically when the three-day trial expires", () => {
-    const status = accessStatusFor(newUser as never, "2026-08-04");
+  /**
+   * The end of the trial is a step down to Starter, not a wall.
+   *
+   * The trial opens all three tiers; when it lapses the account keeps the cheapest one and loses
+   * the two that are actually sold. That is the whole shape of the offer — the account stays
+   * useful, so there is a reason to come back and decide, and Pro and Elite still have to be paid
+   * for. `state` remains `expired` because the trial did end and every message about it says so;
+   * `tier` is what the paywall reads.
+   */
+  it("drops to Starter when the five-day trial expires, keeping Pro and Elite locked", () => {
+    const status = accessStatusFor(newUser as never, "2026-08-06");
 
     expect(status).toMatchObject({
       state: "expired",
-      allowed: false,
-      tier: null,
-      planName: null,
+      allowed: true,
+      tier: "starter",
+      planName: "Starter",
       marketDaysLeft: 0,
+      // Nothing was bought, so nothing may look like a payment on the record.
+      subscribedUntil: null,
     });
-    // Everything the trial opened closes again, at every tier, until something is bought.
-    expect(canUseFeature(status, {}, "market-pulse")).toBe(false);
+
+    // One feature from each tier: the Starter one survives, the two above it do not.
+    expect(canUseFeature(status, {}, "market-pulse")).toBe(true);
     expect(canUseFeature(status, {}, "research")).toBe(false);
     expect(canUseFeature(status, {}, "intel")).toBe(false);
+  });
+
+  /**
+   * The Starter grant belongs to an account that has had a trial. A visitor with no account has
+   * had nothing, and must not pick it up by sharing the `expired` state.
+   */
+  it("gives a signed-out visitor no tier at all, despite the shared expired state", () => {
+    const status = accessStatusFor(null, "2026-08-06");
+
+    expect(status).toMatchObject({ state: "expired", allowed: false, tier: null, planName: null });
+    expect(canUseFeature(status, {}, "market-pulse")).toBe(false);
   });
 
   describe("comped test accounts", () => {
@@ -107,7 +130,7 @@ describe("server feature access", () => {
       "jitu050288@gmail.com",
     ];
 
-    // Well past the three-day trial, so nothing here can be passing on the trial's coat-tails.
+    // Well past the five-day trial, so nothing here can be passing on the trial's coat-tails.
     const DURING = "2026-09-01";
 
     it.each(TESTERS)("unlocks every AI feature for %s", (email) => {
@@ -144,12 +167,14 @@ describe("server feature access", () => {
       expect(lastDay.tier).toBe("elite");
 
       const dayAfter = accessStatusFor({ ...newUser, email: TESTERS[0] } as never, "2026-09-15");
-      expect(dayAfter).toMatchObject({ state: "expired", allowed: false, tier: null });
+      // Falls back to the ordinary post-trial position rather than to nothing: the comp expired,
+      // the account did not, and every account that has had a trial keeps Starter.
+      expect(dayAfter).toMatchObject({ state: "expired", tier: "starter" });
     });
 
     it("leaves everybody else exactly as they were", () => {
       const stranger = accessStatusFor({ ...newUser, email: "someone@example.com" } as never, DURING);
-      expect(stranger).toMatchObject({ state: "expired", allowed: false, tier: null });
+      expect(stranger).toMatchObject({ state: "expired", tier: "starter" });
     });
   });
 

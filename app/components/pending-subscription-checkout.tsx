@@ -181,6 +181,9 @@ export function PendingSubscriptionCheckout() {
               promoCode={intent.promoCode ?? ""}
               referralCode={intent.referralCode ?? ""}
               label="Pay now"
+              // Clears the pending intent and closes the prompt: it has been paid, so there is
+              // nothing left pending to come back to.
+              onPaid={close}
               className="inline-flex h-10 items-center justify-center rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-500"
             />
             <button

@@ -3,8 +3,6 @@ import { adviseOnCache } from "../../../../lib/cache-advisor";
 import { buildCacheReport } from "../../../../lib/cache-report";
 import { userFromRequest } from "../../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * What to purge, and what it would cost.
  *

@@ -3,8 +3,6 @@ import { updateUser, userFromRequest } from "../../../lib/store";
 import { getAccessStatus, renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Activates or extends a subscription.
  *

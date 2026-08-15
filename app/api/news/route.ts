@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../lib/cache";
 import { guardFeature, lockedResponse } from "../../lib/feature-guard";
 import { getMarketNews } from "../../lib/market-news";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const guard = await guardFeature(request, "news");
   if (!guard.allowed) return lockedResponse(guard, "news");

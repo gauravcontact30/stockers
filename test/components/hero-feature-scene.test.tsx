@@ -60,7 +60,7 @@ describe("HeroFeatureScene", () => {
     render(<HeroFeatureScene showcase={INTEL} />);
 
     const link = screen.getByRole("link", { name: /Open AI intelligence search/ });
-    expect(link).toHaveAttribute("href", "/dashboard/intelligence-search");
+    expect(link).toHaveAttribute("href", "/intelligence-search");
   });
 
   it("draws the shape of the board the feature produces", () => {

@@ -3,8 +3,6 @@ import { cacheHeaders } from "../../../lib/cache";
 import { getBseMarketSnapshot } from "../../../lib/bse-market-snapshot";
 import { getOwnership } from "../../../lib/shareholding";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Who owns one listed company, from its own quarterly filing.
  *

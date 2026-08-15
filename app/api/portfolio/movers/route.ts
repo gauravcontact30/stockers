@@ -6,8 +6,6 @@ import type { MoverDividend, MoverRow, MoverSource, PeriodKey } from "../../../l
 import { getCachedPerformanceSummaries } from "../../../lib/stock-performance";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Everything the movers board ranks: the reader's holdings and their watchlist, priced, with
  * returns over five windows and whatever the dividend calendar has against each.

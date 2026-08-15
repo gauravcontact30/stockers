@@ -11,6 +11,7 @@ import {
   type SignupFields,
 } from "../lib/auth-validation";
 import { readPendingSubscription, savePendingSubscription, type PendingSubscription } from "./razorpay-checkout";
+import { SignupSuccessModal } from "./signup-success-modal";
 
 type AuthMode = "signin" | "signup";
 
@@ -108,6 +109,27 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [success, setSuccess] = useState(false);
   const [checkoutTarget] = useState<PendingSubscription | null>(() => checkoutTargetFromLocation());
 
+  /** The sign-up confirmation dialog, and the two things it reports back to the reader. */
+  const [signupDone, setSignupDone] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [trialEndsOn, setTrialEndsOn] = useState<string | null>(null);
+
+  /**
+   * Leaves the dialog for the sign-in page, carrying the new address in the query.
+   *
+   * `replace` rather than `push`: the sign-up form is not somewhere the browser's back button
+   * should return to now that the account exists, and a second submit of the same form would only
+   * ever produce "an account already exists for this email".
+   *
+   * Any pending checkout is deliberately left in storage rather than acted on here. It is read
+   * again after sign-in by `PendingSubscriptionCheckout`, which is where a purchase belongs — a
+   * reader who arrived from a plan button still lands at checkout, one step later than before.
+   */
+  const continueToSignIn = () => {
+    setSignupDone(false);
+    router.replace(`/signin?${new URLSearchParams({ email: signupEmail, welcome: "1" }).toString()}`);
+  };
+
   // If the visitor already has a session, skip the form and send them straight to the dashboard.
   useEffect(() => {
     // React effects never run during server-side rendering, so `window` is always defined by
@@ -118,7 +140,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
     const existing = window.localStorage.getItem("stockers-auth");
     if (existing) {
-      router.replace("/dashboard");
+      router.replace("/overview");
     }
   }, [router]);
 
@@ -217,6 +239,28 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
+      /**
+       * A new account stops here and is sent to sign in; only an actual sign-in opens a session.
+       *
+       * Sign-up used to store the token, sync the cookie and push straight to the dashboard. That
+       * is convenient and it is also why nobody ever read what they had been given: the trial, its
+       * length and its end date all went past in a redirect. Confirming the account in a dialog and
+       * then asking for the password once is a beat slower and leaves the reader knowing what they
+       * have — and it means the password they just chose gets used once while they still remember
+       * choosing it.
+       *
+       * Nothing is stored for a sign-up: no token, no cookie, no status refetch. The account exists
+       * on the server and the next sign-in is an ordinary one.
+       */
+      if (mode === "signup") {
+        setLoading(false);
+        setSuccess(true);
+        setSignupEmail(fields.email.trim());
+        setTrialEndsOn(typeof data.trialEndsOn === "string" ? data.trialEndsOn : null);
+        setSignupDone(true);
+        return;
+      }
+
       localStorage.setItem("stockers-auth", JSON.stringify({ token: data.token, user: data.user }));
 
       // Storing the token is not the same as being signed in as far as the server is concerned.
@@ -232,13 +276,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       syncSessionCookie();
       void refresh();
 
+      // Only a sign-in reaches this far — a sign-up returned above, into its own dialog — so there
+      // is no longer an "Account created" branch to choose between here.
       setSuccess(true);
       setMessage(
         checkoutTarget
-          ? "Account ready! Redirecting to complete your subscription..."
-          : mode === "signup"
-            ? "Account created! Redirecting to your dashboard..."
-            : "Signed in! Redirecting to your dashboard...",
+          ? "Signed in! Redirecting to complete your subscription..."
+          : "Signed in! Redirecting to your dashboard...",
       );
       router.push(
         checkoutTarget
@@ -249,7 +293,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               ...(checkoutTarget.promoCode ? { promo: checkoutTarget.promoCode } : {}),
               ...(checkoutTarget.referralCode ? { ref: checkoutTarget.referralCode } : {}),
             }).toString()}`
-          : "/dashboard",
+          : "/overview",
       );
     } catch {
       setMessage("Network error. Please check your connection and try again.");
@@ -260,6 +304,15 @@ export function AuthForm({ mode }: AuthFormProps) {
   const signup = mode === "signup";
 
   return (
+    <>
+    {/* Rendered outside the form on purpose: the dialog portals to the body, and a submit control
+        inside a <form> would submit it again. */}
+    <SignupSuccessModal
+      open={signupDone}
+      email={signupEmail}
+      trialEndsOn={trialEndsOn}
+      onContinue={continueToSignIn}
+    />
     <form
       onSubmit={onSubmit}
       noValidate
@@ -403,5 +456,6 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
       </p>
     </form>
+    </>
   );
 }

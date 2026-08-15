@@ -6,8 +6,6 @@ import { buildPlatformLogReport } from "../../../lib/platform-log-report";
 import { listPlatformLogs, PLATFORM_LOG_RETENTION_DAYS } from "../../../lib/platform-logs";
 import { listUsers, userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 const DEFAULT_DAYS = 7;
 export const MAX_DAYS = PLATFORM_LOG_RETENTION_DAYS;
 

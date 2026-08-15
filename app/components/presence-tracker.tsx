@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { isAdminPath } from "../lib/section-routes";
 import { HEARTBEAT_MS } from "../lib/presence-report";
 import { SESSION_KEY, idFrom } from "../lib/track";
 import { visitorId } from "./visit-tracker";
@@ -30,7 +31,10 @@ export function PresenceTracker() {
   useEffect(() => {
     // The admin's own tour of the dashboard is not somebody using the site, and counting it would
     // put the person reading the live list onto the live list. The same rule `VisitTracker` follows.
-    if (pathname.startsWith("/admin")) return;
+    //
+    // Membership rather than a `/admin` prefix: the admin pages sit in the `app/(admin)` route
+    // group now, so they have no shared prefix left to test for. See `isAdminPath`.
+    if (isAdminPath(pathname)) return;
 
     const beat = () => {
       // `hidden` covers a backgrounded tab and a locked phone; anything else — including the

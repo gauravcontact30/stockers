@@ -3,8 +3,6 @@ import { revalidatePath } from "next/cache";
 import { createClientReview, deleteClientReview, listClientReviews } from "../../../lib/client-reviews";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 async function requireAdmin(request: Request) {
   const user = await userFromRequest(request);
   return user && user.role === "admin" ? user : null;

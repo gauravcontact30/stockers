@@ -23,7 +23,7 @@ function row(overrides: Partial<LiveUserRow> = {}): LiveUserRow {
     mobile: "9876543210",
     plan: "Pro",
     signedIn: true,
-    path: "/dashboard",
+    path: "/overview",
     device: "desktop",
     tabs: 1,
     startedAt: "2026-08-14T09:30:00.000Z",
@@ -49,7 +49,7 @@ function report(rows: LiveUserRow[] = [row()]) {
       tabs: here.reduce((total, entry) => total + entry.tabs, 0),
       recent: rows.length,
     },
-    pages: [{ key: "/dashboard", label: "/dashboard", people: here.length }],
+    pages: [{ key: "/overview", label: "/overview", people: here.length }],
     devices: [{ key: "desktop", label: "Desktop", people: here.length }],
     rows,
   };
@@ -195,7 +195,7 @@ describe("AdminLiveUsers", () => {
 
     await waitFor(() => expect(screen.getByText("Asha Rao")).toBeInTheDocument());
     const pages = screen.getByText("Pages").closest("div") as HTMLElement;
-    expect(within(pages).getByText("/dashboard")).toBeInTheDocument();
+    expect(within(pages).getByText("/overview")).toBeInTheDocument();
   });
 
   it("re-reads on its own timer, and stops while nobody is looking", async () => {

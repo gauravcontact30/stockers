@@ -5,8 +5,6 @@ import { suggestStocks } from "../../../lib/stock-search";
 
 // The answer depends on the query string, so it cannot be rendered once at build time — see the
 // sibling /api/stocks/search route, which was bitten by exactly that.
-export const dynamic = "force-dynamic";
-
 const DEFAULT_LIMIT = 20;
 
 export type StockSuggestion = {

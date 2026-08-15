@@ -10,7 +10,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { SuperAdminDashboard } from "../../app/components/super-admin-dashboard";
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/admin",
+  usePathname: () => "/console",
   useRouter: () => ({ push: jest.fn() }),
 }));
 

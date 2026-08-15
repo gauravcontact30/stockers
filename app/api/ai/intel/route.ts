@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { guardFeature, lockedResponse } from "../../../lib/feature-guard";
 import { parseIntelQuery, searchIntel } from "../../../lib/market-intel";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The AI intelligence search: one question about one BSE-listed company, answered from the web.
  *

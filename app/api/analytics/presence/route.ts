@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { touchPresence } from "../../../lib/presence";
 import { userFromRequest } from "../../../lib/store";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Where an open tab says it is still there.
  *
