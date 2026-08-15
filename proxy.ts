@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { recordPlatformLog } from "./app/lib/platform-logs";
 
 /**
  * Rate limiting for the endpoints that spend money per request.
@@ -38,6 +39,9 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server
 
 const WINDOW = "60 s";
 const LIMIT = 20;
+const RATE_LIMITED_PREFIXES = ["/api/ai/", "/api/research", "/api/compare"] as const;
+const TELEMETRY_PREFIXES = ["/api/analytics/", "/api/admin/presence"] as const;
+const STAR_SAMPLE_MODULO = 20;
 
 /**
  * Which forwarded-IP header to believe.
@@ -159,9 +163,75 @@ function limitHeaders(limit: number, remaining: number, reset: number): Record<s
   };
 }
 
+function isRateLimitedPath(pathname: string): boolean {
+  return RATE_LIMITED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
+function isTelemetryPath(pathname: string): boolean {
+  return TELEMETRY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
+function shouldSampleStar(pathname: string): boolean {
+  let hash = 0;
+  for (let index = 0; index < pathname.length; index++) hash = (hash * 31 + pathname.charCodeAt(index)) % 1_000_003;
+  return Math.abs(hash + Math.floor(Date.now() / 60_000)) % STAR_SAMPLE_MODULO === 0;
+}
+
+function recordApiIngress(input: {
+  request: NextRequest;
+  statusCode: number;
+  started: number;
+  message: string;
+  useCase?: string;
+}) {
+  const url = input.request.nextUrl;
+  recordPlatformLog({
+    category: "api",
+    source: "Next.js proxy",
+    useCase: input.useCase ?? "Complete application API request ingress",
+    operation: `${input.request.method} ${url.pathname}`,
+    message: input.message,
+    statusCode: input.statusCode,
+    durationMs: Date.now() - input.started,
+    path: url.pathname,
+    method: input.request.method,
+    metadata: {
+      search: url.search ? url.search.slice(0, 120) : "",
+      userAgent: input.request.headers.get("user-agent") ?? "",
+    },
+  });
+}
+
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  const started = Date.now();
+  const pathname = request.nextUrl.pathname;
+  const shouldLimit = isRateLimitedPath(pathname);
+
+  if (isTelemetryPath(pathname)) return NextResponse.next();
+
+  if (!shouldLimit) {
+    if (shouldSampleStar(pathname)) {
+      recordApiIngress({
+        request,
+        statusCode: 202,
+        started,
+        message: "API request accepted by the application proxy.",
+      });
+    }
+    return NextResponse.next();
+  }
+
   const ratelimit = rateLimiter();
-  if (!ratelimit) return NextResponse.next();
+  if (!ratelimit) {
+    recordApiIngress({
+      request,
+      statusCode: 202,
+      started,
+      message: "API request accepted; AI rate limiting is not configured.",
+      useCase: "Application API rate-limit state",
+    });
+    return NextResponse.next();
+  }
 
   const ip = clientIp(request);
 
@@ -180,6 +250,13 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
      * If the priority ever inverts — abuse costing more than downtime — this is the line to change.
      */
     console.error("[proxy] rate limit check failed, allowing request:", failure);
+    recordApiIngress({
+      request,
+      statusCode: 503,
+      started,
+      message: "Rate-limit backend failed; request was allowed open.",
+      useCase: "Application API alerting",
+    });
     return NextResponse.next();
   }
 
@@ -193,6 +270,14 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
 
   if (!success) {
     const retryAfter = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+
+    recordApiIngress({
+      request,
+      statusCode: 429,
+      started,
+      message: "AI API request was rate limited before it reached the handler.",
+      useCase: "Application API failing and alerting",
+    });
 
     return NextResponse.json(
       {
@@ -216,13 +301,16 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // before it hits the wall rather than discovering it at 429.
   const response = NextResponse.next();
   for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
+  recordApiIngress({
+    request,
+    statusCode: 202,
+    started,
+    message: "AI API request accepted with rate-limit budget headers.",
+    useCase: "Application API loading performance",
+  });
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/api/ai/:path*",
-    "/api/research/:path*",
-    "/api/compare/:path*",
-  ],
+  matcher: ["/api/:path*"],
 };

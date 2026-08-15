@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { HeroTickerProvider } from "../../app/components/hero-ticker";
 import {
   DEFENCE_TRIO,
   DefenceStocksScene,
@@ -15,7 +16,6 @@ import {
   tiltLabel,
   tiltTone,
   MARKET_THEMES,
-  TickerTape,
   TopGainersScene,
   TrioCard,
   signed,
@@ -55,13 +55,8 @@ describe("the palettes", () => {
   });
 });
 
-describe("TickerTape", () => {
-  // The row is duplicated so the marquee can loop without a visible seam.
-  it("renders every ticker twice", () => {
-    render(<TickerTape palette={MINT} />);
-    expect(screen.getAllByText("S&P BSE SENSEX ▲ 0.98%")).toHaveLength(2);
-  });
-});
+// The rail and the tape moved to ./hero-ticker, which is where they are covered — they are no
+// longer constants in this module but a rendering of the week's real large-cap gainers.
 
 // ---------------------------------------------------------------------------
 // Scene 1 — top performers by theme
@@ -120,11 +115,31 @@ describe("TopGainersScene", () => {
 // ---------------------------------------------------------------------------
 
 describe("every scene", () => {
-  it("carries the same BSE index rail", () => {
+  const TICKER = [
+    { symbol: "BOSCHLTD", name: "Bosch Ltd", weekPercent: 12.05 },
+    { symbol: "IDEA", name: "Vodafone Idea Ltd", weekPercent: 10.59 },
+  ];
+
+  it("keeps the old invented index levels out of every scene", () => {
+    for (const Scene of [TopGainersScene, DefenceStocksScene, DataCentreScene, DipBuysScene]) {
+      const { container, unmount } = render(
+        <HeroTickerProvider stocks={TICKER}>
+          <Scene />
+        </HeroTickerProvider>,
+      );
+
+      expect(within(container).queryByText("S&P BSE SENSEX")).not.toBeInTheDocument();
+      expect(within(container).queryByText("BSE BANKEX")).not.toBeInTheDocument();
+      expect(within(container).queryByText("BOSCHLTD")).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  // Nothing is invented when the exchange cannot be read: the strips simply are not drawn.
+  it("draws no strips at all when the week's gainers could not be read", () => {
     for (const Scene of [TopGainersScene, DefenceStocksScene, DataCentreScene, DipBuysScene]) {
       const { container, unmount } = render(<Scene />);
-      expect(within(container).getByText("S&P BSE SENSEX")).toBeInTheDocument();
-      expect(within(container).getByText("BSE BANKEX")).toBeInTheDocument();
+      expect(container.querySelector(".animate-marquee")).toBeNull();
       unmount();
     }
   });
@@ -135,7 +150,11 @@ describe("every scene", () => {
    */
   it("keeps its content inside a padded card, inset from the frame", () => {
     for (const Scene of [TopGainersScene, DefenceStocksScene, DataCentreScene, DipBuysScene]) {
-      const { container, unmount } = render(<Scene />);
+      const { container, unmount } = render(
+        <HeroTickerProvider stocks={TICKER}>
+          <Scene />
+        </HeroTickerProvider>,
+      );
 
       // Each slide sets its own inset — a roomy scene sits further in, a dense one closer to
       // the edge — but every one of them has some.
@@ -144,9 +163,9 @@ describe("every scene", () => {
 
       const card = frame.querySelector(":scope > .rounded-3xl") as HTMLElement;
       expect(card).not.toBeNull();
-      expect(card.className).toContain("p-3");
-      // The rail, the heading, the body, the footnote and the tape all hang off the card.
-      expect(within(card).getByText("BSE BANKEX")).toBeInTheDocument();
+      expect(card.className).toContain("px-3");
+      expect(card.className).toContain("pb-2");
+      expect(within(card).queryByText("BOSCHLTD")).not.toBeInTheDocument();
       unmount();
     }
   });
@@ -337,7 +356,9 @@ describe("DefenceStocksScene and DataCentreScene", () => {
     for (const stock of DEFENCE_TRIO) {
       expect(screen.getByText(stock.symbol)).toBeInTheDocument();
       expect(screen.getByText(stock.company)).toBeInTheDocument();
-      expect(screen.getByAltText(`${stock.symbol} logo`)).toBeInTheDocument();
+      // The mark is labelled "Company Name (TICKER) logo", so a screen reader gets the company
+      // rather than a ticker. Matched on the ticker half, which is what this card is keyed by.
+      expect(screen.getByAltText(new RegExp(String.raw`\(${stock.symbol}\) logo$`))).toBeInTheDocument();
     }
     expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
     for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {
@@ -351,7 +372,9 @@ describe("DefenceStocksScene and DataCentreScene", () => {
     for (const stock of DATA_CENTRE_TRIO) {
       expect(screen.getByText(stock.symbol)).toBeInTheDocument();
       expect(screen.getByText(stock.company)).toBeInTheDocument();
-      expect(screen.getByAltText(`${stock.symbol} logo`)).toBeInTheDocument();
+      // The mark is labelled "Company Name (TICKER) logo", so a screen reader gets the company
+      // rather than a ticker. Matched on the ticker half, which is what this card is keyed by.
+      expect(screen.getByAltText(new RegExp(String.raw`\(${stock.symbol}\) logo$`))).toBeInTheDocument();
     }
     expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
     for (const label of ["1M", "1Y", "3Y", "5Y", "Overall"]) {

@@ -35,6 +35,7 @@ import {
   categoryOf,
   classifyUniverse,
   inHouseCategory,
+  sectorOf,
   type ClassificationProgress,
 } from "./bse-sectors";
 // Generic helpers, not NSE-specific: the same TTL memo and the same lenient number parsing that
@@ -434,6 +435,34 @@ export type BseSectorBoard = {
   sessionDate: string | null;
 };
 
+export type BseSectorBoardQuery = {
+  /** Category, BSE sector, ticker, company name, scrip code, ISIN, group or cap tier. */
+  q?: string;
+};
+
+function searchTerm(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function containsSearch(value: string | number | null | undefined, term: string): boolean {
+  return String(value ?? "").toLowerCase().includes(term);
+}
+
+function stockMatchesSectorSearch(row: BseStock & BseQuote, category: string, term: string): boolean {
+  return (
+    containsSearch(category, term) ||
+    containsSearch(sectorOf(row.code), term) ||
+    containsSearch(categoryOf(row.code), term) ||
+    containsSearch(row.ticker, term) ||
+    containsSearch(row.name, term) ||
+    containsSearch(row.code, term) ||
+    containsSearch(row.isin, term) ||
+    containsSearch(row.group, term) ||
+    containsSearch(row.capTier, term) ||
+    containsSearch(row.rank, term)
+  );
+}
+
 /**
  * The session broken down by the exchange's own sector categories.
  *
@@ -451,9 +480,10 @@ function matchesCategory(code: string, category: string): boolean {
   return category === HOUSE_CATEGORY ? inHouseCategory(code) : categoryOf(code) === category;
 }
 
-export async function getBseSectorBoard(): Promise<BseSectorBoard> {
+export async function getBseSectorBoard(query: BseSectorBoardQuery = {}): Promise<BseSectorBoard> {
   const [universe, tape, industries] = await Promise.all([getBseUniverse(), getBseTape(), getBseIndustries()]);
   const classification = classifyUniverse(universe.stocks.map((stock) => stock.code));
+  const term = searchTerm(query.q);
 
   const priced = universe.stocks
     .map((stock) => join(stock, tape))
@@ -484,19 +514,21 @@ export async function getBseSectorBoard(): Promise<BseSectorBoard> {
     else grouped.set(category, [row]);
   }
 
-  const sectors: BseSectorSummary[] = [...grouped.entries()].map(([sector, rows]) => {
-    const changes = rows.map((row) => row.changePercent as number);
+  const sectors: BseSectorSummary[] = [...grouped.entries()]
+    .filter(([sector, rows]) => term.length === 0 || containsSearch(sector, term) || rows.some((row) => stockMatchesSectorSearch(row, sector, term)))
+    .map(([sector, rows]) => {
+      const changes = rows.map((row) => row.changePercent as number);
 
-    return {
-      sector,
-      stocks: rows.length,
-      gainers: changes.filter((change) => change > 0).length,
-      losers: changes.filter((change) => change < 0).length,
-      star: changes.filter((change) => change >= STANDOUT_PERCENT).length,
-      red: changes.filter((change) => change <= -STANDOUT_PERCENT).length,
-      house: sector === HOUSE_CATEGORY,
-    };
-  });
+      return {
+        sector,
+        stocks: rows.length,
+        gainers: changes.filter((change) => change > 0).length,
+        losers: changes.filter((change) => change < 0).length,
+        star: changes.filter((change) => change >= STANDOUT_PERCENT).length,
+        red: changes.filter((change) => change <= -STANDOUT_PERCENT).length,
+        house: sector === HOUSE_CATEGORY,
+      };
+    });
 
   // Alphabetical: a reader looking for one category should find it where its name puts it, not
   // wherever the day's stock counts happen to place it.

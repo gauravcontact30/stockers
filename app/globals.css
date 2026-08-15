@@ -219,7 +219,87 @@ body {
 }
 
 @utility animate-marquee {
-  animation: marquee 32s linear infinite;
+  animation: marquee 96s linear infinite;
+}
+
+@keyframes hero-rail-blink {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.16);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 28px 4px rgba(16, 185, 129, 0.26);
+    opacity: 0.92;
+  }
+}
+
+@utility animate-hero-rail-blink {
+  animation: hero-rail-blink 2.4s ease-in-out infinite;
+}
+
+@utility animate-hero-rail-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+@utility animate-hero-ribbon-marquee {
+  animation: marquee 72s linear infinite;
+  will-change: transform;
+}
+
+.hover-pause-marquee:hover .animate-hero-ribbon-marquee,
+.hover-pause-marquee:focus-within .animate-hero-ribbon-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes hero-minute-refresh {
+  0%,
+  94%,
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  96% {
+    opacity: 0.88;
+    transform: translate3d(-10px, 0, 0);
+  }
+  98% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@utility animate-hero-minute-refresh {
+  animation: hero-minute-refresh 20s ease-in-out infinite;
+}
+
+@keyframes hero-refresh-blink {
+  0%,
+  82%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.16);
+    opacity: 1;
+    transform: translateZ(0) scale(1);
+  }
+  88% {
+    box-shadow: 0 0 30px 4px rgba(16, 185, 129, 0.28);
+    opacity: 0.88;
+    transform: translateZ(0) scale(0.992);
+  }
+  92% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.16);
+    opacity: 1;
+    transform: translateZ(0) scale(1);
+  }
+  96% {
+    box-shadow: 0 0 24px 3px rgba(16, 185, 129, 0.22);
+    opacity: 0.9;
+    transform: translateZ(0) scale(0.996);
+  }
+}
+
+@utility animate-hero-refresh-blink {
+  animation: hero-refresh-blink 5s ease-in-out infinite;
 }
 
 /* Breathing glow for the live market-pulse bars. It signals that the feed is live; the bar's

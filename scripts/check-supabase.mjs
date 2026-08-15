@@ -1,5 +1,5 @@
-// Checks that Supabase is reachable, that the schema is applied, and that the table is closed to
-// the public key.
+// Checks that Supabase is reachable, that the full application schema is applied, and that the
+// tables are closed to the public key.
 //
 //   node scripts/check-supabase.mjs
 //
@@ -108,6 +108,76 @@ async function rest(pathAndQuery, key, method = "GET") {
   });
 }
 
+const schemaChecks = [
+  {
+    table: "analytics_events",
+    columns: "id,type,at,day,user_id,visitor_id,session_id,feature,action,label,path,referrer,device,blocked",
+    label: "product analytics",
+  },
+  {
+    table: "live_sessions",
+    columns: "key,user_id,visitor_id,session_id,path,device,started_at,last_seen_at",
+    label: "live session presence",
+  },
+  {
+    table: "portfolio_holdings",
+    columns: "id,user_id,symbol,quantity,avg_price,target_price,note,added_at,updated_at",
+    label: "portfolio holdings",
+  },
+  {
+    table: "feature_locks",
+    columns: "feature,locked,updated_at",
+    label: "admin AI feature locks",
+  },
+  {
+    table: "subscription_payments",
+    columns:
+      "payment_id,order_id,user_id,plan,cycle,amount_paise,currency,promo_code,referral_code,subscribed_until,paid_at",
+    label: "subscription payment ledger",
+  },
+  {
+    table: "client_reviews",
+    columns: "id,name,role,comment,rating,image_url,signature_url,created_at",
+    label: "client review content",
+  },
+  {
+    table: "stocks",
+    columns: "symbol,name,scrip_code,isin,sector,cap_tier,domain,updated_at",
+    label: "BSE stock catalogue",
+  },
+  {
+    table: "ai_calls",
+    columns:
+      "id,at,day,feature,model,outcome,status,ms,prompt_tokens,completion_tokens,cost_usd,streamed,error",
+    label: "AI call telemetry",
+  },
+  {
+    table: "platform_logs",
+    columns:
+      "id,at,day,category,severity,source,use_case,operation,message,status_code,duration_ms,user_id,path,method,metadata",
+    label: "super admin platform logs",
+  },
+];
+
+async function checkSchemaTable({ table, columns, label }) {
+  try {
+    const response = await rest(`${table}?select=${columns}&limit=1`, serviceKey);
+
+    if (response.status === 404 || response.status === 400) {
+      fail(
+        `the \`${table}\` table is not there (or is missing columns)`,
+        `Re-run supabase/schema.sql - it is safe to apply twice. Supabase said: ${(await response.text()).slice(0, 180)}`,
+      );
+    } else if (!response.ok) {
+      fail(`Supabase responded ${response.status} for ${table}`, (await response.text()).slice(0, 180));
+    } else {
+      pass(`the \`${table}\` table is reachable and has every column for ${label}`);
+    }
+  } catch (error) {
+    fail(`could not check ${table}`, String(error));
+  }
+}
+
 try {
   const response = await rest("users?select=id&limit=1", serviceKey);
 
@@ -147,6 +217,14 @@ try {
   }
 } catch (error) {
   fail("could not reach Supabase", String(error));
+}
+
+// --- application tables ----------------------------------------------------
+
+// Checked separately because older projects can have a perfectly good account store but be
+// missing later operational tables: AI telemetry, live sessions, payment ledger or platform logs.
+for (const check of schemaChecks) {
+  await checkSchemaTable(check);
 }
 
 // --- analytics -------------------------------------------------------------
@@ -198,7 +276,7 @@ try {
 // checked rather than assumed. Skipped silently when no anon key is configured, since this app
 // never needs one.
 if (anonKey) {
-  for (const table of ["users", "analytics_events", "portfolio_holdings"]) {
+  for (const table of ["users", ...schemaChecks.map((check) => check.table)]) {
     try {
       const response = await rest(`${table}?select=id&limit=1`, anonKey);
       const body = await response.text();

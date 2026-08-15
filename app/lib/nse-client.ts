@@ -6,6 +6,7 @@
 // instead of taking a page down.
 
 import { revalidating, type CacheTag } from "./cache";
+import { recordPlatformLog } from "./platform-logs";
 
 const NSE_BASE = "https://www.nseindia.com/api";
 const TIMEOUT_MS = 9000;
@@ -19,15 +20,52 @@ const NSE_HEADERS = {
 };
 
 export async function fetchNse<T = unknown>(path: string): Promise<T | null> {
+  const started = Date.now();
   try {
     const response = await fetch(`${NSE_BASE}${path}`, {
       headers: NSE_HEADERS,
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
-    if (!response.ok) return null;
-    return (await response.json()) as T;
+    if (!response.ok) {
+      recordPlatformLog({
+        category: "third-party",
+        source: "NSE India",
+        useCase: "Data fetching from third-party platforms",
+        operation: `GET ${path}`,
+        message: "NSE endpoint returned a non-success status.",
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        path,
+        method: "GET",
+      });
+      return null;
+    }
+    const payload = (await response.json()) as T;
+    recordPlatformLog({
+      category: "third-party",
+      source: "NSE India",
+      useCase: "Data fetching from third-party platforms",
+      operation: `GET ${path}`,
+      message: "NSE endpoint completed without error.",
+      statusCode: response.status,
+      durationMs: Date.now() - started,
+      path,
+      method: "GET",
+    });
+    return payload;
   } catch {
+    recordPlatformLog({
+      category: "third-party",
+      source: "NSE India",
+      useCase: "Data fetching from third-party platforms",
+      operation: `GET ${path}`,
+      message: "NSE endpoint could not be reached.",
+      statusCode: 503,
+      durationMs: Date.now() - started,
+      path,
+      method: "GET",
+    });
     return null;
   }
 }

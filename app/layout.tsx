@@ -6,7 +6,7 @@ import { ThemeProvider } from "./lib/theme-provider";
 import { StockDetailProvider } from "./components/stock-detail-provider";
 import { SubscriptionProvider } from "./components/subscription-provider";
 import { PresenceTracker } from "./components/presence-tracker";
-import { SubscriptionReminder } from "./components/subscription-reminder";
+import { SubscriptionReminderLazy } from "./components/subscription-reminder-lazy";
 import { VisitTracker } from "./components/visit-tracker";
 import { JsonLd } from "./components/json-ld";
 import {
@@ -149,7 +149,7 @@ export default function RootLayout({
             {/* Mounted app-wide so any board can open a company's detail sheet by ticker. */}
             <StockDetailProvider>
               {children}
-              <SubscriptionReminder />
+              <SubscriptionReminderLazy />
               {/* Renders nothing — reports one page view per page per tab, so the admin dashboard
                   can say how many people arrived today rather than how many accounts exist. */}
               <VisitTracker />

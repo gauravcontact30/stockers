@@ -126,7 +126,7 @@ describe("TopPerformers", () => {
     expect(rows).toHaveLength(3);
 
     const leader = within(rows[0]);
-    expect(leader.getByAltText("BSE logo")).toBeInTheDocument();
+    expect(leader.getByAltText("BSE (BSE) logo")).toBeInTheDocument();
     expect(leader.getByText("BSE Ltd")).toBeInTheDocument();
     expect(leader.getByText("Capital Markets")).toBeInTheDocument();
     expect(leader.getByText("Mid cap")).toBeInTheDocument();

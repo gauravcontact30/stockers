@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
@@ -11,12 +12,7 @@ import type { FeatureUsage } from "../lib/analytics-report";
 import { formatPaise, type LedgerState } from "../lib/payments-format";
 import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
 import type { LivePresenceState } from "../lib/presence-report";
-import { AdminAiOperations } from "./admin-ai-operations";
-import { AdminAnalytics } from "./admin-analytics";
-import { AdminClientReviews } from "./admin-client-reviews";
-import { AdminLiveUsers } from "./admin-live-users";
-import { AdminUsers, type AdminSummary, type AdminUser } from "./admin-users";
-import { CacheControl } from "./cache-control";
+import type { AdminSummary, AdminUser } from "./admin-users";
 import { DataTable, type Column } from "./data-table";
 import { PieChart } from "./pie-chart";
 import { StatTile, deltaOf } from "./stat-tile";
@@ -24,10 +20,41 @@ import { authHeaders, syncSessionCookie, useSubscription } from "./subscription-
 
 type IconProps = { className?: string };
 
+function AdminPanelLoader() {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+      Loading admin section...
+    </div>
+  );
+}
+
+const AdminAiOperations = dynamic(() => import("./admin-ai-operations").then((module) => module.AdminAiOperations), {
+  loading: AdminPanelLoader,
+});
+const AdminAnalytics = dynamic(() => import("./admin-analytics").then((module) => module.AdminAnalytics), {
+  loading: AdminPanelLoader,
+});
+const AdminClientReviews = dynamic(() => import("./admin-client-reviews").then((module) => module.AdminClientReviews), {
+  loading: AdminPanelLoader,
+});
+const AdminLiveUsers = dynamic(() => import("./admin-live-users").then((module) => module.AdminLiveUsers), {
+  loading: AdminPanelLoader,
+});
+const AdminPlatformLogs = dynamic(() => import("./admin-platform-logs").then((module) => module.AdminPlatformLogs), {
+  loading: AdminPanelLoader,
+});
+const AdminUsers = dynamic(() => import("./admin-users").then((module) => module.AdminUsers), {
+  loading: AdminPanelLoader,
+});
+const CacheControl = dynamic(() => import("./cache-control").then((module) => module.CacheControl), {
+  loading: AdminPanelLoader,
+});
+
 export type SuperAdminSectionId =
   | "overview"
   | "analytics"
   | "ai"
+  | "logs"
   | "live"
   | "users"
   | "subscriptions"
@@ -201,6 +228,19 @@ function AiIcon({ className }: IconProps) {
   );
 }
 
+function LogsIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M5 4.5h14" />
+      <path d="M5 9.5h9" />
+      <path d="M5 14.5h14" />
+      <path d="M5 19.5h9" />
+      <path d="M18 8.5v4" />
+      <path d="M16 10.5h4" />
+    </svg>
+  );
+}
+
 function ChevronIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -230,6 +270,13 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
     description: "Model spend, latency and how often a reader gets the composed read instead of the written one.",
     href: "/admin/ai",
     icon: AiIcon,
+  },
+  {
+    id: "logs",
+    label: "Platform Logs",
+    description: "Operational logs for dashboard usability, APIs, AI features, upstream data, billing and security.",
+    href: "/admin/logs",
+    icon: LogsIcon,
   },
   {
     id: "users",
@@ -1453,6 +1500,12 @@ function SectionContent({ active }: { active: SuperAdminSectionId }) {
       return (
         <AdminAccessGate>
           <AdminAiOperations />
+        </AdminAccessGate>
+      );
+    case "logs":
+      return (
+        <AdminAccessGate>
+          <AdminPlatformLogs />
         </AdminAccessGate>
       );
     case "users":

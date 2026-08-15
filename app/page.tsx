@@ -4,7 +4,6 @@ import { BackToTop } from "./components/back-to-top";
 import { BseTrendingBoard } from "./components/bse-trending-board";
 import { HeadToHead } from "./components/head-to-head";
 import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
-import { HeroCarousel } from "./components/hero-carousel";
 import { LiveMarketBoard } from "./components/live-market-board";
 import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
@@ -19,10 +18,11 @@ import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { SubscriptionBadge } from "./components/subscription-reminder";
 import { ThemeToggle } from "./components/theme-toggle";
-import { getDipLeaders } from "./lib/dip-leaders";
+import { StreamedHero } from "./components/streamed-hero";
+import { TierMovers } from "./components/tier-movers";
+import { TopPerformers } from "./components/top-performers";
 import { HOME_SECTION_ROUTES, type HomeSectionId } from "./lib/section-routes";
 import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "./lib/seo";
-import { getCachedPerformanceSummaries } from "./lib/stock-performance";
 
 export const revalidate = 60;
 
@@ -51,17 +51,6 @@ const navLinks = [
   { href: "/dashboard", label: "AI Dashboard" },
 ];
 
-const HERO_PERFORMANCE_SYMBOLS = ["HAL", "MAZDOCK", "PARAS", "NETWEB", "POWERINDIA", "LT"];
-
-async function getHeroInitialData() {
-  const [initialPerformance, initialDipLeaders] = await Promise.all([
-    getCachedPerformanceSummaries(HERO_PERFORMANCE_SYMBOLS).catch(() => []),
-    getDipLeaders().catch(() => null),
-  ]);
-
-  return { initialPerformance, initialDipLeaders };
-}
-
 /**
  * The divider between groups of sections.
  *
@@ -81,6 +70,34 @@ function BandHeading({ eyebrow, title, blurb }: { eyebrow: string; title: string
   );
 }
 
+function PerformanceSection({
+  id,
+  eyebrow,
+  title,
+  blurb,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  blurb: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="scroll-mt-28 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-colors sm:p-8 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <div className="mb-5 max-w-3xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">{eyebrow}</p>
+        <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{blurb}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 type HomeProps = {
   sectionId?: HomeSectionId;
   seo?: {
@@ -90,8 +107,15 @@ type HomeProps = {
   };
 };
 
-export default async function Home({ sectionId, seo }: HomeProps = {}) {
-  const { initialPerformance, initialDipLeaders } = await getHeroInitialData();
+/**
+ * Deliberately not `async`, and that is the whole of the landing page's time to first byte.
+ *
+ * Every section on this page that needs the network now sits behind its own `<Suspense>` — the
+ * hero included, see `./components/streamed-hero`. Nothing is awaited out here, so the shell, the
+ * header and the footer are written immediately and each board arrives in its own slot. An await
+ * added back at this level would put that feed in front of the entire page again.
+ */
+export default function Home({ sectionId, seo }: HomeProps = {}) {
   const pageSeo = seo ?? {
     name: "AI Indian stock market research",
     description: HOME_DESCRIPTION,
@@ -160,7 +184,7 @@ export default async function Home({ sectionId, seo }: HomeProps = {}) {
       <div className="gutter pb-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <div className="bleed-gutter">
-          <HeroCarousel initialPerformance={initialPerformance} initialDipLeaders={initialDipLeaders} />
+          <StreamedHero />
         </div>
 
         {/* Straight under the slider, before any of the boards. The boards are the evidence; this is
@@ -173,7 +197,45 @@ export default async function Home({ sectionId, seo }: HomeProps = {}) {
         <LiveMarketBoard />
 
         <BandHeading
-          eyebrow="01 · The session, both ways"
+          eyebrow="01 - Cap performance"
+          title="Large, mid and small caps on their own boards"
+          blurb="Each market-cap tier gets both sides of the session: top gainers and top losers, searchable and paged across the whole tier rather than just the first few visible rows."
+        />
+
+        <PerformanceSection
+          id="cap-performance"
+          eyebrow="Market-cap tiers"
+          title="All cap types, compared side by side"
+          blurb="Switch between large cap, mid cap and small cap to see which companies led and lagged inside that exact tier."
+        >
+          <TierMovers />
+        </PerformanceSection>
+
+        <BandHeading
+          eyebrow="02 - Sector-wise performance"
+          title="Every BSE category ranked by its session"
+          blurb="Sectors and categories get their own performance read, with gainers, losers, standout leaders and laggards separated instead of buried in the full exchange table."
+        />
+
+        <StreamedSectorMovers />
+
+        <BandHeading
+          eyebrow="03 - Stock performance"
+          title="Single-stock performance across long windows"
+          blurb="Rank individual companies by one-year, three-year, five-year and whole-history returns, then flip the same board to the deepest long-window losers."
+        />
+
+        <PerformanceSection
+          id="stock-performance"
+          eyebrow="Stock returns"
+          title="Top stock performers and non-performers"
+          blurb="Search a company or page through the ranked board to see measured returns by period, with the company logo, sector, cap tier and latest price on every row."
+        >
+          <TopPerformers />
+        </PerformanceSection>
+
+        <BandHeading
+          eyebrow="04 - The session, both ways"
           title="Every gainer and every loser on the BSE"
           blurb="Two tabs over the whole exchange: everything that closed higher, and everything that closed lower. Each is paged on its own, in descending order of the move, and filters down to a single cap tier."
         />
@@ -181,14 +243,12 @@ export default async function Home({ sectionId, seo }: HomeProps = {}) {
         {/* Both resolved on the server and streamed into their slots — see ./components/streamed-boards. */}
         <StreamedMoversBoard />
 
-        <StreamedSectorMovers />
-
         {/* The movers board answers "what moved"; this answers "what was actually traded", which is
             a different ten — a 20% move on thin volume is not where the session's money went. */}
         <BseTrendingBoard />
 
         <BandHeading
-          eyebrow="02 · Who owns what"
+          eyebrow="05 - Who owns what"
           title="Every shareholder class, as the company files it"
           blurb="Promoters, foreign portfolio investors, domestic institutions, the government and several million individual shareholders. Search a company to see how its register splits, how many people are behind each slice, and how the promoter stake has moved over eight filed quarters."
         />

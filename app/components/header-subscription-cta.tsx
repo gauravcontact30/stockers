@@ -13,8 +13,12 @@ const BILLING: { key: Billing; label: string }[] = [
 
 export function HeaderSubscriptionCta() {
   const [open, setOpen] = useState(false);
-  const [plan, setPlan] = useState<PlanKey>("pro");
-  const [cycle, setCycle] = useState<Billing>("yearly");
+  // The panel opens on the cheapest way in — Starter, billed monthly — rather than on the plan and
+  // cycle the site would rather sell. Everything in here is one click away, and a reader who opens
+  // a pricing panel already pre-set to the dearest option has to work out what they were defaulted
+  // into before they can trust the figure underneath it.
+  const [plan, setPlan] = useState<PlanKey>("starter");
+  const [cycle, setCycle] = useState<Billing>("monthly");
   const panel = useRef<HTMLDivElement>(null);
   const { status } = useSubscription();
 

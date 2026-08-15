@@ -88,19 +88,28 @@ describe("CompanyLogo", () => {
   it("renders the company's own logo, sized and lazy", () => {
     render(<CompanyLogo symbol="RELIANCE" size={40} />);
 
-    const image = screen.getByAltText("RELIANCE logo");
+    const image = screen.getByAltText("Reliance Industries (RELIANCE) logo");
     expect(image).toHaveAttribute("src", "https://images.dhan.co/symbol/RELIANCE.png");
     expect(image).toHaveAttribute("loading", "lazy");
     expect(image).toHaveStyle({ width: "40px", height: "40px" });
+  });
+
+  it("can prefer a checked real company mark before the ticker image", () => {
+    render(<CompanyLogo symbol="LGEINDIA" preferReal />);
+
+    expect(screen.getByAltText("LG Electronics India (LGEINDIA) logo")).toHaveAttribute(
+      "src",
+      "https://www.google.com/s2/favicons?domain=lg.com&sz=128",
+    );
   });
 
   // A miss is the expected outcome for the long tail of small caps, not an error.
   it("swaps to a monogram when the store has no logo", () => {
     render(<CompanyLogo symbol="SWANDEF" />);
 
-    fireEvent.error(screen.getByAltText("SWANDEF logo"));
+    fireEvent.error(screen.getByAltText("SWANDEF (SWANDEF) logo"));
 
-    expect(screen.queryByAltText("SWANDEF logo")).not.toBeInTheDocument();
+    expect(screen.queryByAltText("SWANDEF (SWANDEF) logo")).not.toBeInTheDocument();
     expect(screen.getByText("SWA")).toBeInTheDocument();
   });
 
@@ -114,22 +123,22 @@ describe("CompanyLogo", () => {
   // Rows are reused as a list pages, so a miss on one company must not blank out the next.
   it("tries again when the row is reused for another company", () => {
     const { rerender } = render(<CompanyLogo symbol="SWANDEF" />);
-    fireEvent.error(screen.getByAltText("SWANDEF logo"));
+    fireEvent.error(screen.getByAltText("SWANDEF (SWANDEF) logo"));
     expect(screen.getByText("SWA")).toBeInTheDocument();
 
     rerender(<CompanyLogo symbol="RELIANCE" />);
-    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
+    expect(screen.getByAltText("Reliance Industries (RELIANCE) logo")).toBeInTheDocument();
   });
 
   it("honours a hand-checked logo for a company with no ticker", () => {
     render(<CompanyLogo symbol="Delta Logistics" src="https://logo.test/delta.png" />);
 
-    expect(screen.getByAltText("Delta Logistics logo")).toHaveAttribute("src", "https://logo.test/delta.png");
+    expect(screen.getByAltText("DELTA LOGISTICS (DELTA LOGISTICS) logo")).toHaveAttribute("src", "https://logo.test/delta.png");
   });
 
   it("accepts extra classes from the row it sits in", () => {
     render(<CompanyLogo symbol="TCS" className="mt-1" />);
-    expect(screen.getByAltText("TCS logo")).toHaveClass("mt-1");
+    expect(screen.getByAltText("Tata Consultancy Services (TCS) logo")).toHaveClass("mt-1");
   });
 
   /**
@@ -149,7 +158,7 @@ describe("CompanyLogo", () => {
     render(<CompanyLogo symbol="SWANDEF" />);
 
     expect(await screen.findByText("SWA")).toBeInTheDocument();
-    expect(screen.queryByAltText("SWANDEF logo")).not.toBeInTheDocument();
+    expect(screen.queryByAltText("SWANDEF (SWANDEF) logo")).not.toBeInTheDocument();
 
     complete.mockRestore();
     width.mockRestore();
@@ -161,7 +170,7 @@ describe("CompanyLogo", () => {
 
     render(<CompanyLogo symbol="RELIANCE" />);
 
-    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
+    expect(screen.getByAltText("Reliance Industries (RELIANCE) logo")).toBeInTheDocument();
 
     complete.mockRestore();
     width.mockRestore();

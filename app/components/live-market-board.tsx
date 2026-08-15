@@ -13,10 +13,8 @@
 // the requested name.
 
 import { Suspense } from "react";
-import { getBseBoard, getBseMovers, type BseBoard, type BseMoverPage } from "../lib/bse-market";
-import { ExchangeTicker } from "./exchange-ticker";
+import { getBseMovers, type BseMoverPage } from "../lib/bse-market";
 import { MoverList } from "./mover-list";
-import { TierMovers } from "./tier-movers";
 import { MarketRefresher } from "./market-refresher";
 import { SectionSkeleton } from "./market-section";
 
@@ -57,24 +55,18 @@ function MoverPanel({
 }
 
 export async function LiveMarketPayload() {
-  // Only what this server render still owns: the exchange summary, and the week's two rankings.
-  // The per-tier lists moved to <TierMovers/>, which pages them from the API on demand — fetching
-  // six tier rankings here as well would have been six rankings nobody was looking at.
-  const [board, weekUp, weekDown] = await Promise.all([
-    getBseBoard(),
+  // The per-tier lists have their own landing section now, so this block stays focused on whole-exchange weekly moves.
+  //
+  // `getBseBoard()` went with the index-and-breadth strip that used to head this section: it was
+  // read for `board.summary` and nothing else, so dropping the strip drops a whole-universe read
+  // from the section's critical path rather than leaving it fetching a figure nobody displays.
+  const [weekUp, weekDown] = await Promise.all([
     getBseMovers({ tier: "all", direction: "gainers", period: "1w", page: 1, pageSize: DEPTH }),
     getBseMovers({ tier: "all", direction: "losers", period: "1w", page: 1, pageSize: DEPTH }),
   ]);
 
   return (
     <div className="flex flex-col gap-3">
-      <ExchangeTicker initial={board.summary} />
-
-      {/* The tier the reader chose, and only that tier: both sides of it, each on its own card
-          with its own search and its own pages over the whole tier. Client-side because the choice
-          is interactive; the ranking and paging behind it stay on the server. */}
-      <TierMovers />
-
       {/* The week, named for the window it actually measures — see the header of this file for why
           this is the week and not yesterday. */}
       <div className="grid gap-3 xl:grid-cols-2">
@@ -128,9 +120,11 @@ export function LiveMarketBoard() {
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
           Where the BSE is right now
         </h2>
+        {/* Rewritten with the index-and-breadth strip that used to sit at the top of this section:
+            the old blurb opened on "how much of the market traded and which way it went", which was
+            a description of that strip and of nothing that is still here. */}
         <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-          The session as the exchange reports it: how much of the market traded and which way it went, then the biggest
-          moves in each cap tier. Companies that did not trade are excluded from the counts rather than carried at
+          The week&apos;s best and worst across the whole exchange, as BSE reports it. Companies that did not trade are excluded from the rankings rather than carried at
           yesterday&apos;s close.
         </p>
       </div>

@@ -29,6 +29,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { discountedAmount, discountFromPaymentNotes, type AppliedDiscount } from "./checkout-discounts";
 import type { PlanName } from "./auth-validation";
 import { CHECKOUT_BRAND_NAME, CHECKOUT_WEBSITE_URL } from "./checkout-brand";
+import { recordPlatformLog } from "./platform-logs";
 import {
   billedAmount,
   isBillingCycle,
@@ -169,10 +170,22 @@ async function gatewayFailure(response: Response): Promise<RazorpayGatewayFailur
 export async function createOrder(request: OrderRequest): Promise<RazorpayGatewayResult<RazorpayOrder>> {
   const keys = razorpayKeys();
   if (!keys) {
+    recordPlatformLog({
+      category: "billing",
+      severity: "warning",
+      source: "Razorpay",
+      useCase: "Billing gateway configuration",
+      operation: "POST /orders",
+      message: "Razorpay order creation was requested but keys are not configured.",
+      statusCode: 503,
+      method: "POST",
+      metadata: { plan: request.plan, cycle: request.cycle },
+    });
     return { ok: false, error: "Razorpay API key id and secret are not configured." };
   }
   const baseAmountRupees = billedAmount(request.plan, request.cycle);
   const finalAmountRupees = priceFor(request.plan, request.cycle, request.discount);
+  const started = Date.now();
 
   try {
     const response = await fetch(`${API}/orders`, {
@@ -203,12 +216,63 @@ export async function createOrder(request: OrderRequest): Promise<RazorpayGatewa
       signal: AbortSignal.timeout(15000),
     });
 
-    if (!response.ok) return gatewayFailure(response);
+    if (!response.ok) {
+      const failure = await gatewayFailure(response);
+      recordPlatformLog({
+        category: "billing",
+        source: "Razorpay",
+        useCase: "Billing order creation",
+        operation: "POST /orders",
+        message: failure.error,
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        method: "POST",
+        metadata: { plan: request.plan, cycle: request.cycle, amountPaise: finalAmountRupees * 100 },
+      });
+      return failure;
+    }
 
     const payload = (await response.json()) as RazorpayOrder;
-    return payload?.id ? { ok: true, value: payload } : { ok: false, error: "Razorpay returned an unreadable order." };
+    if (!payload?.id) {
+      recordPlatformLog({
+        category: "billing",
+        severity: "error",
+        source: "Razorpay",
+        useCase: "Billing order creation",
+        operation: "POST /orders",
+        message: "Razorpay returned an unreadable order.",
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        method: "POST",
+        metadata: { plan: request.plan, cycle: request.cycle },
+      });
+      return { ok: false, error: "Razorpay returned an unreadable order." };
+    }
+    recordPlatformLog({
+      category: "billing",
+      source: "Razorpay",
+      useCase: "Billing order creation",
+      operation: "POST /orders",
+      message: "Razorpay order was created successfully.",
+      statusCode: response.status,
+      durationMs: Date.now() - started,
+      method: "POST",
+      metadata: { plan: request.plan, cycle: request.cycle, orderId: payload.id, amountPaise: payload.amount },
+    });
+    return { ok: true, value: payload };
   } catch (error) {
     console.error(error);
+    recordPlatformLog({
+      category: "billing",
+      source: "Razorpay",
+      useCase: "Billing order creation",
+      operation: "POST /orders",
+      message: "Razorpay could not be reached while creating an order.",
+      statusCode: 503,
+      durationMs: Date.now() - started,
+      method: "POST",
+      metadata: { plan: request.plan, cycle: request.cycle },
+    });
     return { ok: false, error: "Couldn't reach Razorpay while creating the order." };
   }
 }
@@ -228,6 +292,7 @@ export type RazorpayPayment = {
 export async function fetchPayment(paymentId: string): Promise<RazorpayPayment | null> {
   const keys = razorpayKeys();
   if (!keys) return null;
+  const started = Date.now();
 
   try {
     const response = await fetch(`${API}/payments/${encodeURIComponent(paymentId)}`, {
@@ -235,12 +300,47 @@ export async function fetchPayment(paymentId: string): Promise<RazorpayPayment |
       signal: AbortSignal.timeout(15000),
     });
 
-    if (!response.ok) throw new Error(`Razorpay responded with ${response.status}`);
+    if (!response.ok) {
+      recordPlatformLog({
+        category: "billing",
+        source: "Razorpay",
+        useCase: "Billing payment verification",
+        operation: "GET /payments/:id",
+        message: "Razorpay payment lookup returned a non-success status.",
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        method: "GET",
+        metadata: { paymentId },
+      });
+      return null;
+    }
 
     const payload = (await response.json()) as RazorpayPayment;
+    recordPlatformLog({
+      category: "billing",
+      source: "Razorpay",
+      useCase: "Billing payment verification",
+      operation: "GET /payments/:id",
+      message: payload?.id ? "Razorpay payment lookup completed successfully." : "Razorpay payment lookup returned an unreadable payload.",
+      statusCode: response.status,
+      durationMs: Date.now() - started,
+      method: "GET",
+      metadata: { paymentId, paymentStatus: payload?.status ?? null },
+    });
     return payload?.id ? payload : null;
   } catch (error) {
     console.error(error);
+    recordPlatformLog({
+      category: "billing",
+      source: "Razorpay",
+      useCase: "Billing payment verification",
+      operation: "GET /payments/:id",
+      message: "Razorpay payment lookup could not be reached.",
+      statusCode: 503,
+      durationMs: Date.now() - started,
+      method: "GET",
+      metadata: { paymentId },
+    });
     return null;
   }
 }

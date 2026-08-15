@@ -5,6 +5,7 @@ import {
   CATEGORIES_PER_PAGE,
   BseSectorMovers,
   CategoryMoverRow,
+  buildSectorBoardUrl,
   buildSectorMoversUrl,
   type BseSectorBoardResponse,
 } from "../../app/components/bse-sector-movers";
@@ -119,7 +120,21 @@ function mockFeed(summary: BseSectorBoardResponse = board, ok = true) {
   global.fetch = jest.fn((url: string) => {
     const text = String(url);
     if (!text.startsWith("/api/market/bse/movers")) {
-      return Promise.resolve({ ok, json: () => Promise.resolve(summary) });
+      const params = new URLSearchParams(text.split("?")[1] ?? "");
+      const term = (params.get("q") ?? "").toLowerCase();
+      const filtered =
+        term === ""
+          ? summary
+          : {
+              ...summary,
+              sectors: summary.sectors.filter((sector) => {
+                if (sector.sector.toLowerCase().includes(term)) return true;
+                if (term === "idfcfirstb" || term === "idfc first bank") return sector.sector === "Financial Services";
+                if (term === "telecommunication") return sector.sector === "Data Centers";
+                return false;
+              }),
+            };
+      return Promise.resolve({ ok, json: () => Promise.resolve(filtered) });
     }
 
     const params = new URLSearchParams(text.split("?")[1]);
@@ -147,6 +162,7 @@ describe("page sizes", () => {
     expect(CATEGORIES_PER_PAGE).toBe(10);
     // The inner boards are paged by the server, so the page size travels in the request.
     expect(buildSectorMoversUrl("Energy", "gainers", 1)).toContain("pageSize=5");
+    expect(buildSectorBoardUrl("IDFCFIRSTB", 99)).toBe("/api/market/bse/sectors?q=IDFCFIRSTB&t=99");
   });
 });
 
@@ -308,10 +324,23 @@ describe("BseSectorMovers", () => {
     render(<BseSectorMovers />);
     await screen.findByText("IDFC First Bank Ltd");
 
-    await user.type(screen.getByPlaceholderText("Search categories"), "data");
+    await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "data");
 
-    expect(headerNames()).toEqual([expect.stringContaining("Data Centers")]);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/market/bse/sectors?q=data"));
+    await waitFor(() => expect(headerNames()).toEqual([expect.stringContaining("Data Centers")]));
     expect(screen.queryByText("Financial Services")).not.toBeInTheDocument();
+  });
+
+  it("searches stock details on the backend and keeps the returned category visible", async () => {
+    const user = userEvent.setup();
+    mockFeed();
+    render(<BseSectorMovers />);
+    await screen.findByText("IDFC First Bank Ltd");
+
+    await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "IDFCFIRSTB");
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/market/bse/sectors?q=IDFCFIRSTB"));
+    await waitFor(() => expect(headerNames()).toEqual([expect.stringContaining("Financial Services")]));
   });
 
   it("reorders the categories and hides the empty ones on request", async () => {
@@ -358,16 +387,16 @@ describe("BseSectorMovers", () => {
     const clear = screen.getAllByRole("button", { name: "Clear filters" })[0];
     expect(clear).toBeDisabled();
 
-    await user.type(screen.getByPlaceholderText("Search categories"), "zzz");
+    await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "zzz");
     expect(clear).toBeEnabled();
-    expect(screen.getByText("No category matches “zzz”.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("No category matches “zzz”.")).toBeInTheDocument());
 
     await user.click(clear);
 
-    expect(screen.getByPlaceholderText("Search categories")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Search categories, sectors or stocks")).toHaveValue("");
     expect(screen.getByLabelText("Sort")).toHaveValue("star");
     expect(screen.getByLabelText("Show")).toHaveValue("all");
-    expect(headerNames()).toHaveLength(5);
+    await waitFor(() => expect(headerNames()).toHaveLength(5));
   });
 
   // The walk takes minutes, so a board that showed partial counts as final would be lying.
@@ -468,8 +497,8 @@ describe("BseSectorMovers pagination", () => {
     expect(showingLine()).toHaveTextContent("Showing 21–23 of 23");
 
     // Without the reset key this would leave the reader on an empty page 3.
-    await user.type(screen.getByPlaceholderText("Search categories"), "Category 0");
-    expect(showingLine()).toHaveTextContent("Showing 1–9 of 9");
+    await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "Category 0");
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–9 of 9"));
   });
 
   it("offers a reset from the empty state and restores the full list", async () => {
@@ -478,8 +507,8 @@ describe("BseSectorMovers pagination", () => {
     render(<BseSectorMovers />);
     await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
 
-    await user.type(screen.getByPlaceholderText("Search categories"), "zzzz");
-    expect(screen.getByText("No category matches “zzzz”.")).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "zzzz");
+    await waitFor(() => expect(screen.getByText("No category matches “zzzz”.")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "Reset search" }));
     expect(showingLine()).toHaveTextContent("Showing 1–10 of 23");

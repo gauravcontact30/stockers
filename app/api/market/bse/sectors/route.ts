@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cacheHeaders } from "../../../../lib/cache";
 import { getBseSectorBoard } from "../../../../lib/bse-market";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const board = await getBseSectorBoard();
+export async function GET(request: NextRequest) {
+  const board = await getBseSectorBoard({
+    q: request.nextUrl.searchParams.get("q") ?? undefined,
+  });
 
   return NextResponse.json(board, {
     headers: {

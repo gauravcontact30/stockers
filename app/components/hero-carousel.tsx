@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { DataCentreScene, DefenceStocksScene, DipBuysScene, TopGainersScene, type DipLeaderBoard } from "./hero-scenes";
+import type { DynamicTrio } from "../lib/hero-trios";
+import { HeroTickerProvider, TopMoversTape, type HeroTickerStock } from "./hero-ticker";
+import {
+  DataCentreScene,
+  DefenceStocksScene,
+  InvestorFavouritesScene,
+  MINT,
+  YearGainersScene,
+  type Trio,
+} from "./hero-scenes";
 import type { StockPerformance } from "./use-stock-performance";
 
 /** How long each slide holds before the carousel advances on its own. */
@@ -15,44 +24,77 @@ type Slide = {
 
 export type HeroCarouselProps = {
   initialPerformance?: readonly StockPerformance[];
-  initialDipLeaders?: DipLeaderBoard | null;
+  /**
+   * The three strongest one-year returns, resolved on the server.
+   *
+   * A prop rather than a fetch in here for the same reason every other figure on this page is: the
+   * hero is server-rendered and then hydrated, and a ranking computed independently in the browser
+   * would differ from the one already in the markup. Null when the board could not be built, which
+   * the scene renders as "reading" rather than as an error.
+   */
+  yearGainers?: DynamicTrio | null;
+  /** The three names brokers place highest on their own most-bought lists. Same contract. */
+  investorFavourites?: DynamicTrio | null;
+  /**
+   * The week's strongest large caps, for the rail and tape that frame every slide.
+   *
+   * Handed to a provider rather than into `slidesFor`, because the strips are drawn by `SceneCard`
+   * and shared by every scene — see `./hero-ticker`. An empty list is what the strips get when the
+   * exchange could not be read, and they render nothing rather than inventing a row.
+   */
+  topWeekly?: readonly HeroTickerStock[];
 };
 
 /**
- * Four scenes, each answering one question in the order a reader asks it: what is running today,
- * how do the defence names compare, who is building the data centres, and how does any of this work.
+ * The four slides.
  *
- * The two middle slides carry live exchange figures rather than an illustration — a reader who
- * never scrolls past the hero has still seen the session's real prices and returns for six
- * companies. All six symbols are raised in the same tick, so they cost one batched request.
+ * Two fixed themes and two rankings, in that order:
  *
- * Nothing is written over the scenes. They carry their own labels — index levels, scrip codes,
- * panel headings — and a headline laid on top only competed with those. The pitch and the calls
- * to action sit underneath the frame instead, where they obscure nothing.
+ *   1. Data centres — the capacity build-out, three companies at three points in the chain
+ *   2. Defence — aircraft, warships and components, at three different sizes
+ *   3. Most gainers over one year — chosen by measured returns
+ *   4. Where investors are buying — chosen by what brokers publish as most bought
+ *
+ * The first two are fixed because the *theme* is the editorial point and its companies are stable.
+ * The last two are rankings, so their companies come out of the data — a hard-coded "top gainers"
+ * list is a claim that stops being true the week after it is written.
+ *
+ * Every card carries the company's own mark, the sector the exchange files it under with that
+ * family's glyph, its cap tier, a live price and the full return matrix. Nothing is written over
+ * the scenes: they carry their own labels, and a headline laid on top only competed with those.
  */
-function slidesFor({ initialPerformance = [], initialDipLeaders = null }: HeroCarouselProps): Slide[] {
+export function slidesFor({
+  initialPerformance = [],
+  yearGainers = null,
+  investorFavourites = null,
+}: HeroCarouselProps): Slide[] {
   return [
-  {
-    caption: "Today's top performers by theme",
-    scene: <TopGainersScene />,
-  },
-  {
-    caption: "HAL, Mazagon Dock and Paras Defence compared",
-    scene: <DefenceStocksScene initialPerformances={initialPerformance} />,
-  },
-  {
-    caption: "Three data-centre stocks compared",
-    scene: <DataCentreScene initialPerformances={initialPerformance} />,
-  },
-  {
-    caption: "How the AI works, and what it likes cheap today",
-    scene: <DipBuysScene initialBoard={initialDipLeaders} />,
-  },
+    {
+      caption: "Data centres: three companies building the capacity",
+      scene: <DataCentreScene initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Defence: aircraft, warships and components compared",
+      scene: <DefenceStocksScene initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Most gainers: the three biggest one-year runs",
+      scene: <YearGainersScene trio={yearGainers as Trio | null} initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Where investors are buying: the three most bought through brokers",
+      scene: <InvestorFavouritesScene trio={investorFavourites as Trio | null} initialPerformances={initialPerformance} />,
+    },
   ];
 }
 
-export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null }: HeroCarouselProps) {
-  const slides = slidesFor({ initialPerformance, initialDipLeaders });
+export function HeroCarousel({
+  initialPerformance = [],
+  yearGainers = null,
+  investorFavourites = null,
+  topWeekly = [],
+}: HeroCarouselProps) {
+  const slides = slidesFor({ initialPerformance, yearGainers, investorFavourites });
   const [activeSlide, setActiveSlide] = useState(0);
   /**
    * Which scenes have earned the right to exist yet.
@@ -86,7 +128,7 @@ export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null
   }, [activeSlide]);
 
   return (
-    <>
+    <HeroTickerProvider stocks={topWeekly}>
       {/* The page still needs exactly one h1 for a screen reader and for search, but the visible
           headline was cut, so the site name carries it out of sight instead. */}
       <h1 className="sr-only">StockersAI — AI stock research for Indian investors</h1>
@@ -99,7 +141,7 @@ export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null
              slide needs — the narrow case, where three comparison cards stack into a column instead
              of sitting in a row. Measured against the real scenes at each breakpoint rather than
              guessed. */
-          className="relative min-h-[1040px] w-full overflow-hidden sm:min-h-[720px] lg:min-h-[590px]"
+          className="relative min-h-[850px] w-full overflow-hidden sm:min-h-[590px] lg:min-h-[470px]"
           aria-roledescription="carousel"
           aria-label="StockersAI product scenes"
         >
@@ -107,6 +149,18 @@ export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null
             <div
               key={slide.caption}
               aria-hidden={index !== activeSlide}
+              /**
+               * `inert` as well as `aria-hidden`, now that a slide can contain a link.
+               *
+               * The two are not the same thing and only one of them was needed before. `aria-hidden`
+               * takes a pane out of the accessibility tree but leaves everything in it focusable, so
+               * a keyboard reader tabbing through the hero would have landed on the "Open …" button
+               * of three slides that are at zero opacity — focus disappearing off-screen, which is
+               * among the worst things a carousel can do. `inert` is what actually removes a subtree
+               * from the tab order. The old scenes held no focusable content at all, so this cost
+               * nothing to overlook; a showcase with a call to action makes it real.
+               */
+              inert={index !== activeSlide}
               className={`absolute inset-0 transition-opacity duration-700 ${index === activeSlide ? "opacity-100" : "opacity-0"}`}
             >
               {mounted.includes(index) && slide.scene}
@@ -136,7 +190,9 @@ export function HeroCarousel({ initialPerformance = [], initialDipLeaders = null
           </div>
         </div>
       </section>
-
-    </>
+      <div className="w-full bg-slate-100 px-3 pb-4 text-slate-900 sm:px-5 dark:bg-slate-950 dark:text-white">
+        <TopMoversTape palette={MINT} />
+      </div>
+    </HeroTickerProvider>
   );
 }

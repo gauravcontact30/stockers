@@ -529,3 +529,46 @@ create index if not exists ai_calls_day_idx on public.ai_calls (day, at desc);
 -- roles get nothing, as with every other table here.
 alter table public.ai_calls enable row level security;
 revoke all on public.ai_calls from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Platform logs
+-- ---------------------------------------------------------------------------
+--
+-- One operational row per platform-level observation: API traffic, upstream market-data calls,
+-- payment gateway requests, AI platform status, security events and clean "star performer" runs.
+--
+-- This table is separate from `analytics_events` and `ai_calls`. Those are product and model
+-- telemetry with narrow schemas. This one is the admin operator's event stream: categorized,
+-- severity-tagged and flexible enough to carry endpoint-specific metadata without adding a column
+-- for every upstream platform the app integrates with.
+--
+-- Retention: the application prunes rows older than 25 IST days when platform logs are read or
+-- written, so this table stays operational rather than becoming a permanent audit archive.
+
+create table if not exists public.platform_logs (
+  id text primary key,
+  at text not null,
+  day text not null,
+  category text not null check (category in ('dashboard', 'api', 'ai', 'third-party', 'data', 'billing', 'security', 'system')),
+  severity text not null check (severity in ('star', 'info', 'warning', 'error', 'critical')),
+  source text not null,
+  use_case text not null,
+  operation text not null,
+  message text not null,
+  status_code integer,
+  duration_ms integer,
+  user_id text,
+  path text,
+  method text,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists platform_logs_day_idx on public.platform_logs (day desc, at desc);
+create index if not exists platform_logs_category_idx on public.platform_logs (category, day desc, at desc);
+create index if not exists platform_logs_severity_idx on public.platform_logs (severity, day desc, at desc);
+create index if not exists platform_logs_user_idx
+  on public.platform_logs (user_id, day desc)
+  where user_id is not null;
+
+alter table public.platform_logs enable row level security;
+revoke all on public.platform_logs from anon, authenticated;

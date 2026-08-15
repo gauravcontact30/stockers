@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildSectorMoversUrl, type MoverDirection } from "../lib/market-urls";
 import type { BseMoverRow } from "./bse-movers-board";
 import { CategoryIcon } from "./category-icon";
@@ -48,6 +48,8 @@ const SHOW_OPTIONS: { key: ShowKey; label: string }[] = [
   { key: "mapped", label: "With stocks only" },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export type BseSectorBoardResponse = {
   sectors: BseSectorSummary[];
   unclassified: number;
@@ -75,6 +77,15 @@ export { buildSectorMoversUrl };
 
 function count(value: number): string {
   return value.toLocaleString("en-IN");
+}
+
+export function buildSectorBoardUrl(term = "", nonce = 0): string {
+  const params = new URLSearchParams();
+  const q = term.trim();
+  if (q) params.set("q", q);
+  if (nonce > 0) params.set("t", String(nonce));
+  const query = params.toString();
+  return query ? `/api/market/bse/sectors?${query}` : "/api/market/bse/sectors";
 }
 
 const RANK_STYLES = [
@@ -127,20 +138,16 @@ function rankStyle(rank: number) {
 /**
  * The category list as the reader asked to see it.
  *
- * Searching, filtering and sorting all happen here rather than at the endpoint: this is two dozen
- * rows already in the browser, and a round trip to reorder them would be slower than the typing.
+ * Sorting and the "with stocks only" filter happen here because the endpoint already returns a
+ * small category list. Search lives on the backend, where category names, BSE sectors and stock
+ * details can all be matched against the full exchange universe.
  */
 function arrangeCategories(
   sectors: BseSectorSummary[],
-  term: string,
   sort: SortKey,
   show: ShowKey,
 ): BseSectorSummary[] {
-  const needle = term.trim().toLowerCase();
-
-  const visible = sectors
-    .filter((summary) => !needle || summary.sector.toLowerCase().includes(needle))
-    .filter((summary) => show === "all" || summary.stocks > 0);
+  const visible = sectors.filter((summary) => show === "all" || summary.stocks > 0);
 
   const ranked = [...visible];
   ranked.sort((a, b) => {
@@ -469,12 +476,8 @@ function CategoryBlock({
 export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSectorBoardResponse> }) {
   // Bumped by the refresh control to re-ask while the exchange is still being classified.
   const [nonce, setNonce] = useState(0);
-  const { data, loading, error } = useMarketFeed<BseSectorBoardResponse>(
-    nonce === 0 ? "/api/market/bse/sectors" : `/api/market/bse/sectors?t=${nonce}`,
-    prefetched,
-  );
-
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("star");
   const [show, setShow] = useState<ShowKey>("all");
 
@@ -482,16 +485,30 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
   // the board opens the first category that actually has companies in it — alphabetically first is
   // not much use while the walk is still filling the early letters in.
   const [choice, setChoice] = useState<string | null>(null);
+  const url = buildSectorBoardUrl(query, nonce);
+  const { data, loading, error } = useMarketFeed<BseSectorBoardResponse>(
+    url,
+    query === "" && nonce === 0 ? prefetched : undefined,
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(search.trim());
+      setChoice(null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const sectors = useMemo(
-    () => arrangeCategories(data?.sectors ?? [], search, sort, show),
-    [data, search, sort, show],
+    () => arrangeCategories(data?.sectors ?? [], sort, show),
+    [data, sort, show],
   );
 
   // Ten a page. The exchange publishes over twenty categories and each one opens into two paged
   // boards of its own, so the whole list at once was a long scroll before the reader reached the
   // one they came for. The key resets to page one whenever the list underneath becomes a
   // different list — otherwise a search that narrows to three rows leaves you on an empty page 3.
-  const paged = usePaged(sectors, CATEGORIES_PER_PAGE, `${search}|${sort}|${show}`);
+  const paged = usePaged(sectors, CATEGORIES_PER_PAGE, `${query}|${sort}|${show}`);
 
   const openSector = choice ?? paged.slice.find((summary) => summary.stocks > 0)?.sector ?? "";
   const progress = data?.classification;
@@ -499,6 +516,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
 
   const resetFilters = () => {
     setSearch("");
+    setQuery("");
     setSort("star");
     setShow("all");
     setChoice(null);
@@ -543,7 +561,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search categories"
+            placeholder="Search categories, sectors or stocks"
             className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         </label>
@@ -571,7 +589,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
             </span>{" "}
             of <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{count(paged.total)}</span>{" "}
             categories
-            {search.trim() && <> matching &ldquo;{search.trim()}&rdquo;</>}
+            {query && <> matching &ldquo;{query}&rdquo;</>}
           </p>
 
           <div className="mt-2 space-y-1.5">

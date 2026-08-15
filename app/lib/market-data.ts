@@ -1,5 +1,6 @@
 import { indianStocks } from "./indian-stocks";
 import { CACHE_TAGS, revalidatingBy } from "./cache";
+import { recordPlatformLog } from "./platform-logs";
 
 export type QuoteSubject = { symbol: string; yahooSymbol: string };
 
@@ -19,6 +20,7 @@ export type LiveQuote = {
 const LIVE_TTL_MS = 60_000;
 const RETRY_TTL_MS = 10_000;
 const CONCURRENCY = 12;
+const YAHOO_SLOW_MS = 5_000;
 
 function emptyQuote(symbol: string): LiveQuote {
   return {
@@ -36,6 +38,8 @@ function emptyQuote(symbol: string): LiveQuote {
 }
 
 async function fetchYahooQuote(subject: QuoteSubject): Promise<LiveQuote> {
+  const started = Date.now();
+  const operation = `GET ${subject.yahooSymbol}`;
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(subject.yahooSymbol)}?interval=1d&range=2d`;
     const response = await fetch(url, {
@@ -44,18 +48,44 @@ async function fetchYahooQuote(subject: QuoteSubject): Promise<LiveQuote> {
       cache: "no-store",
     });
 
-    if (!response.ok) return emptyQuote(subject.symbol);
+    if (!response.ok) {
+      recordPlatformLog({
+        category: "data",
+        source: "Yahoo Finance",
+        useCase: "Market quote data fetching",
+        operation,
+        message: "Yahoo quote endpoint returned a non-success status.",
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        method: "GET",
+        metadata: { symbol: subject.symbol },
+      });
+      return emptyQuote(subject.symbol);
+    }
 
     const payload = await response.json();
     const meta = payload?.chart?.result?.[0]?.meta;
-    if (!meta || typeof meta.regularMarketPrice !== "number") return emptyQuote(subject.symbol);
+    if (!meta || typeof meta.regularMarketPrice !== "number") {
+      recordPlatformLog({
+        category: "data",
+        source: "Yahoo Finance",
+        useCase: "Market quote data fetching",
+        operation,
+        message: "Yahoo quote payload did not include a readable market price.",
+        statusCode: response.status,
+        durationMs: Date.now() - started,
+        method: "GET",
+        metadata: { symbol: subject.symbol },
+      });
+      return emptyQuote(subject.symbol);
+    }
 
     const price = meta.regularMarketPrice;
     const previousClose = typeof meta.chartPreviousClose === "number" ? meta.chartPreviousClose : price;
     const change = price - previousClose;
     const changePercent = previousClose ? (change / previousClose) * 100 : 0;
 
-    return {
+    const quote = {
       symbol: subject.symbol,
       price,
       previousClose,
@@ -67,7 +97,33 @@ async function fetchYahooQuote(subject: QuoteSubject): Promise<LiveQuote> {
       live: true,
       asOf: new Date((meta.regularMarketTime ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
     };
+    const durationMs = Date.now() - started;
+    if (durationMs >= YAHOO_SLOW_MS) {
+      recordPlatformLog({
+        category: "data",
+        source: "Yahoo Finance",
+        useCase: "Market quote data fetching",
+        operation,
+        message: "Yahoo quote endpoint completed slowly.",
+        statusCode: response.status,
+        durationMs,
+        method: "GET",
+        metadata: { symbol: subject.symbol },
+      });
+    }
+    return quote;
   } catch {
+    recordPlatformLog({
+      category: "data",
+      source: "Yahoo Finance",
+      useCase: "Market quote data fetching",
+      operation,
+      message: "Yahoo quote endpoint could not be reached.",
+      statusCode: 503,
+      durationMs: Date.now() - started,
+      method: "GET",
+      metadata: { symbol: subject.symbol },
+    });
     return emptyQuote(subject.symbol);
   }
 }

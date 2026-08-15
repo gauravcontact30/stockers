@@ -7,18 +7,21 @@ it is safe to run twice.
 | --- | --- | --- |
 | `users` | Accounts, roles, plans, verification | Yes |
 | `analytics_events` | Page views, sign-ins, sign-ups, AI opens, every tracked interaction | Yes |
+| `live_sessions` | One row per active browser tab for the Live Users admin panel | Yes |
 | `portfolio_holdings` | What each reader owns or tracks, and what they paid | Yes |
 | `feature_locks` | The admin's per-feature AI switches | Yes |
+| `ai_calls` | Durable AI feature usage, outcome, latency, token and cost telemetry | Yes |
+| `platform_logs` | Categorized platform, API, AI, third-party, data, billing and security logs | Yes |
 | `subscription_payments` | One row per payment Razorpay confirmed — the revenue ledger | Written |
 | `client_reviews` | Landing-page testimonials | **Not yet** — see below |
 | `stocks` | The listed-company catalogue | **Not yet** — see below |
 
 Where a store has a local fallback, configuration alone decides which is used:
 
-| `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Accounts | Analytics | Portfolios | Feature locks |
-| --- | --- | --- | --- | --- |
-| set | Supabase (Postgres) | Supabase | Supabase | Supabase |
-| not set | `app/data/users.json` | `app/data/analytics-events.json` | `app/data/portfolio-holdings.json` | `app/data/feature-locks.json` |
+| `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Accounts | Analytics | Presence | Portfolios | Feature locks | AI telemetry | Platform logs |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| set | Supabase (Postgres) | Supabase | Supabase | Supabase | Supabase | Supabase + memory | Supabase + memory |
+| not set | `app/data/users.json` | `app/data/analytics-events.json` | `app/data/live-sessions.json` | `app/data/portfolio-holdings.json` | `app/data/feature-locks.json` | process memory | process memory |
 
 The last two rows of the first table are provisioned but not yet read:
 
@@ -65,6 +68,9 @@ Each is idempotent and wrapped in a transaction.
 | Migration | What it does | When to run it |
 | --- | --- | --- |
 | [`0001-nullable-plan.sql`](./migrations/0001-nullable-plan.sql) | Lets `users.plan` be null, and clears the placeholder `'Starter'` off accounts that never paid | **Before** deploying the build that stops stamping a plan on new sign-ups — the old `not null` constraint would make sign-up fail |
+
+| [`0002-live-sessions.sql`](./migrations/0002-live-sessions.sql) | Adds the `live_sessions` presence table for the Live Users admin panel | When an existing project is missing `public.live_sessions` |
+| [`0003-ai-and-platform-logs.sql`](./migrations/0003-ai-and-platform-logs.sql) | Adds `ai_calls` and `platform_logs` for AI telemetry and Super Admin Platform Logs | When an existing project is missing either observability table |
 
 ## 3. Collect the two values
 

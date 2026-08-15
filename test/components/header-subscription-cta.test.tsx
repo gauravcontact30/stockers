@@ -88,18 +88,33 @@ describe("HeaderSubscriptionCta", () => {
     expect(screen.getByText(/UPI, cards and netbanking/)).toBeInTheDocument();
   });
 
-  it("opens on the yearly cycle with Pro selected, and prices both", async () => {
+  /**
+   * The panel opens on the cheapest way in, not the dearest.
+   *
+   * Both halves matter and neither is cosmetic: a pricing panel that arrives pre-set to the
+   * costliest plan on the longest commitment is asking the reader to notice what they were
+   * defaulted into before they can trust the figure under it. Starter, monthly, is the honest
+   * starting point — every other combination is one click away.
+   */
+  it("opens on the monthly cycle with Starter selected, and prices both", async () => {
     const user = userEvent.setup();
     renderCta();
     await openPanel(user);
 
-    expect(screen.getByRole("button", { name: "Yearly" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Monthly" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Monthly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Yearly" })).toHaveAttribute("aria-pressed", "false");
 
-    // Pro is ₹399/mo billed monthly; the yearly cycle is nine months for twelve, so ₹3,591
-    // payable now and ₹299/mo equivalent.
-    expect(screen.getByText("₹3,591")).toBeInTheDocument();
-    expect(screen.getAllByText("₹299/mo").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /^Starter/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Pro/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /^Elite/ })).toHaveAttribute("aria-pressed", "false");
+
+    // Starter is ₹149/mo, and on the monthly cycle that is both what is payable now and the
+    // per-month figure beside it.
+    expect(screen.getByText("₹149")).toBeInTheDocument();
+    expect(screen.getAllByText("₹149/mo").length).toBeGreaterThan(0);
+    // The annual saving line belongs to the yearly cycle only.
+    expect(screen.queryByText(/Annual billing saves/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Buy Starter" })).toBeInTheDocument();
   });
 
   it("switches every price when the billing cycle changes", async () => {
@@ -107,12 +122,12 @@ describe("HeaderSubscriptionCta", () => {
     renderCta();
     await openPanel(user);
 
-    await user.click(screen.getByRole("button", { name: "Monthly" }));
+    await user.click(screen.getByRole("button", { name: "Yearly" }));
 
-    expect(screen.getByText("₹399")).toBeInTheDocument();
-    expect(screen.getAllByText("₹399/mo").length).toBeGreaterThan(0);
-    // The annual saving line belongs to the yearly cycle only.
-    expect(screen.queryByText(/Annual billing saves/)).not.toBeInTheDocument();
+    // Starter is ₹149/mo billed monthly; the yearly cycle is nine months for twelve, so ₹1,341
+    // payable now and ₹112/mo equivalent.
+    expect(screen.getByText("₹1,341")).toBeInTheDocument();
+    expect(screen.getAllByText("₹112/mo").length).toBeGreaterThan(0);
   });
 
   it("names the annual saving on the yearly cycle", async () => {
@@ -120,9 +135,11 @@ describe("HeaderSubscriptionCta", () => {
     renderCta();
     await openPanel(user);
 
-    // Twelve months at ₹399 is ₹4,788; nine of them is ₹3,591, so ₹1,197 stays in the pocket.
+    await user.click(screen.getByRole("button", { name: "Yearly" }));
+
+    // Twelve months at ₹149 is ₹1,788; nine of them is ₹1,341, so ₹447 stays in the pocket.
     expect(screen.getByText(/Annual billing saves/)).toBeInTheDocument();
-    expect(screen.getByText("₹1,197")).toBeInTheDocument();
+    expect(screen.getByText("₹447")).toBeInTheDocument();
   });
 
   it("reprices when another plan is picked", async () => {
@@ -130,14 +147,15 @@ describe("HeaderSubscriptionCta", () => {
     renderCta();
     await openPanel(user);
 
-    // Anchored, because once Starter is selected the checkout button is named "Buy Starter" and
-    // an unanchored match finds the tile and the CTA both.
-    await user.click(screen.getByRole("button", { name: /^Starter/ }));
+    // Anchored, because once Pro is selected the checkout button is named "Buy Pro" and an
+    // unanchored match finds the tile and the CTA both.
+    await user.click(screen.getByRole("button", { name: /^Pro/ }));
 
-    // Starter is ₹149/mo, so ₹1,341 for the year and ₹112 a month equivalent.
-    expect(screen.getByRole("button", { name: /^Starter/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("₹1,341")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Buy Starter" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Pro/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Starter/ })).toHaveAttribute("aria-pressed", "false");
+    // Pro is ₹399/mo, and the panel is still on the monthly cycle it opened with.
+    expect(screen.getByText("₹399")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Buy Pro" })).toBeInTheDocument();
   });
 
   it("hands the selected plan and cycle to the checkout button", async () => {
@@ -145,12 +163,13 @@ describe("HeaderSubscriptionCta", () => {
     renderCta();
     await openPanel(user);
 
+    // Both moved off the defaults, so this proves the handoff rather than restating them.
     await user.click(screen.getByRole("button", { name: /^Elite/ }));
-    await user.click(screen.getByRole("button", { name: "Monthly" }));
+    await user.click(screen.getByRole("button", { name: "Yearly" }));
 
     const checkout = screen.getByRole("button", { name: "Buy Elite" });
     expect(checkout).toHaveAttribute("data-plan", "elite");
-    expect(checkout).toHaveAttribute("data-cycle", "monthly");
+    expect(checkout).toHaveAttribute("data-cycle", "yearly");
   });
 
   // Someone who is not signed in has to make an account before they can be charged, and the

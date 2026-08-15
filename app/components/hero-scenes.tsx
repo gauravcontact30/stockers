@@ -24,6 +24,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CompanyLogo } from "./company-logo";
+import { SectorPill } from "./sector-pill";
 import { useStockPerformance, type StockPerformance } from "./use-stock-performance";
 
 // ---------------------------------------------------------------------------
@@ -153,59 +154,11 @@ function GridOverlay({ palette }: { palette: ScenePalette }) {
   );
 }
 
-const TICKERS = [
-  "S&P BSE SENSEX  ▲ 0.98%",
-  "BSE BANKEX  ▲ 1.14%",
-  "RELIANCE 500325  ▲ 2.1%",
-  "TCS 532540  ▼ 0.6%",
-  "HDFCBANK 500180  ▲ 1.4%",
-  "INFY 500209  ▲ 0.9%",
-  "BSE MIDCAP  ▲ 1.1%",
-  "ITC 500875  ▼ 0.3%",
-];
-
-/** The scrolling tape along the foot of the card. */
-export function TickerTape({ palette }: { palette: ScenePalette }) {
-  const tickerRow = [...TICKERS, ...TICKERS];
-  return (
-    <div className={`overflow-hidden rounded-xl border px-3 py-1.5 ${palette.tape}`}>
-      <div className="flex w-max animate-marquee gap-10 text-[12px] font-semibold whitespace-nowrap">
-        {tickerRow.map((item, i) => (
-          <span key={i}>{item}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// BSE's own index family rather than NSE's — every scene in the carousel is a BSE surface.
-const INDEX_STRIP: { label: string; value: string; up: boolean }[] = [
-  { label: "S&P BSE SENSEX", value: "81,204 ▲0.6%", up: true },
-  { label: "BSE BANKEX", value: "62,340 ▲1.1%", up: true },
-  { label: "BSE MIDCAP", value: "46,918 ▲0.9%", up: true },
-  { label: "BSE SMALLCAP", value: "54,072 ▼0.2%", up: false },
-  { label: "BSE 500", value: "36,415 ▲0.5%", up: true },
-];
-
-/**
- * The index rail across the top of every card — one consistent thread from slide to slide, so
- * four differently-coloured frames still read as one product.
- */
-function TopStatStrip({ palette }: { palette: ScenePalette }) {
-  return (
-    <div className={`flex flex-wrap items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 ${palette.rail}`}>
-      {INDEX_STRIP.map((item) => (
-        <span
-          key={item.label}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-semibold tracking-wide whitespace-nowrap shadow-sm"
-        >
-          <span className="text-slate-500">{item.label}</span>
-          <span className={item.up ? UP_TEXT : DOWN_TEXT}>{item.value}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
+// The rail across the top of each card and the tape along its foot both moved to `./hero-ticker`.
+// They used to be two constants here — five invented index levels and eight invented quotes — and
+// are now one list of real companies: the week's strongest large caps, each with its own logo, its
+// own name and the weekly return that put it on the strip. See that file for why the list arrives
+// through context rather than as a prop.
 
 /** A small lamp — the one animated element a working board actually has. */
 function LiveBadge({ palette, label }: { palette: ScenePalette; label: string }) {
@@ -231,20 +184,28 @@ function Panel({ palette, className, children }: { palette: ScenePalette; classN
  * within it — so nothing ever touches the edge of the slide and every slide is inset by the same
  * amount whatever its layout.
  */
-function SceneCard({
+/**
+ * The gap between the card and the edge of the slide.
+ *
+ * One value for every scene, which it did not used to be — the four scenes carried `lg:p-14`,
+ * `lg:p-12` and `lg:p-8` between them, on the reasoning that an airier scene should get a shorter
+ * card and a denser one a taller card. Two things were wrong with that. It left a wide tinted band
+ * around the card that was doing no work, and because the slides cross-fade in the same frame, the
+ * card's edges visibly jumped from one slide to the next as the inset changed underneath them.
+ *
+ * Shared, and much tighter than any of the three it replaces: the card is the slide, and the tint
+ * around it is a border, not a margin.
+ */
+export const SCENE_INSET = "p-2 sm:p-4 lg:p-5";
+
+export function SceneCard({
   palette,
   eyebrow,
   title,
   badge,
   footnote,
-  /**
-   * The gap between the card and the edge of the slide. Every slide shares one frame height, so
-   * this is how an airier scene gets a shorter card and a denser one gets a taller card.
-   *
-   * Required rather than defaulted: every scene has an opinion about its own density, and a
-   * default only ever meant one of them had not been given the thought.
-   */
-  inset,
+  /** Override for a scene that genuinely needs a different frame. See `SCENE_INSET`. */
+  inset = SCENE_INSET,
   children,
 }: {
   palette: ScenePalette;
@@ -252,7 +213,7 @@ function SceneCard({
   title: string;
   badge: string;
   footnote: string;
-  inset: string;
+  inset?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -260,10 +221,8 @@ function SceneCard({
       <GridOverlay palette={palette} />
 
       <div
-        className={`relative flex h-full flex-col gap-2.5 overflow-hidden rounded-3xl border p-3 shadow-[0_30px_70px_-35px_rgba(15,23,42,0.5)] backdrop-blur-sm sm:gap-3 sm:p-4 ${palette.shell}`}
+        className={`relative flex h-full flex-col gap-2 overflow-hidden rounded-3xl border px-3 pt-3 pb-2 shadow-[0_30px_70px_-35px_rgba(15,23,42,0.5)] backdrop-blur-sm sm:gap-2.5 sm:px-4 sm:pt-4 sm:pb-2.5 ${palette.shell}`}
       >
-        <TopStatStrip palette={palette} />
-
         <div className={`flex flex-wrap items-end justify-between gap-3 border-b pb-2 ${palette.rule}`}>
           <div className="min-w-0">
             <p className={`text-[11px] font-bold tracking-[0.3em] uppercase ${palette.eyebrow}`}>{eyebrow}</p>
@@ -274,11 +233,10 @@ function SceneCard({
 
         {/* `min-h-0` lets this shrink inside the flex column, and `overflow-hidden` guarantees a
             tall layout clips at the card's own rounded edge rather than spilling past it. */}
-        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        <div className="min-h-0 overflow-hidden">{children}</div>
 
         <p className={`text-[10px] ${palette.muted}`}>{footnote}</p>
 
-        <TickerTape palette={palette} />
       </div>
     </div>
   );
@@ -376,7 +334,7 @@ function ThemeRow({ stock, rank, theme, largest }: { stock: ThemeStock; rank: nu
             these nine sit above the fold on every first visit. Lazy-loading an image already on
             screen makes the browser finish layout before it will even ask for it. Everything
             further down the page keeps the lazy default. */}
-        <CompanyLogo symbol={stock.symbol} size={36} eager />
+        <CompanyLogo symbol={stock.symbol} size={44} eager />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate font-mono text-[12px] font-bold text-slate-800">{stock.symbol}</span>
@@ -406,7 +364,6 @@ export function TopGainersScene() {
       eyebrow="Today's top performers"
       title="Three themes the BSE board is bidding up"
       badge="RANKED TODAY"
-      inset="p-3 sm:p-10 lg:p-14"
       footnote="Companies and BSE scrip codes are real; the figures illustrate the layout. The live ranking is on the BSE board."
     >
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -462,6 +419,15 @@ export type TrioStock = {
    * fill behind small tabular numbers costs more legibility than the separation it buys.
    */
   wash: string;
+  /**
+   * What the company does, as the exchange classifies it — drawn on the card as a pill with its
+   * family's own icon.
+   *
+   * Carried on the stock rather than looked up from the catalogue for the same reason `tier` is:
+   * one of these companies sits outside the curated list, and a lookup would print a blank against
+   * a real company. The dynamic trios fill this in from the data they were built from.
+   */
+  sector: string;
   /**
    * Cap tier, carried here rather than read from the quote feed.
    *
@@ -675,10 +641,13 @@ export function TrioCard({
   return (
     <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_12px_32px_-20px_rgba(15,23,42,0.5)] ${stock.accent} ${stock.wash}`}>
       <div className="flex items-start gap-3 px-3 pt-3">
-        <CompanyLogo symbol={stock.symbol} size={36} />
+        <CompanyLogo symbol={stock.symbol} size={48} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-black leading-tight text-slate-900">{stock.symbol}</p>
           <p className="truncate text-xs font-medium text-slate-600">{stock.company}</p>
+          {/* The sector the exchange files this company under, with its family's own glyph — the
+              same pill the movers boards use, so a sector reads identically wherever it appears. */}
+          <SectorPill sector={stock.sector} className="mt-1" />
         </div>
         <span className="shrink-0 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-600">
           {stock.tier}
@@ -768,7 +737,7 @@ function StockTrioScene({
   const rows = [first, second, third];
 
   return (
-    <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote} inset="p-3 sm:p-6 lg:p-8">
+    <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote}>
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {stocks.map((stock, index) => (
           <TrioCard key={stock.symbol} stock={stock} performance={rows[index].performance} loading={rows[index].loading} periods={periods} />
@@ -789,6 +758,7 @@ function StockTrioScene({
 export const DEFENCE_TRIO: Trio = [
   {
     symbol: "HAL",
+    sector: "Aerospace & Defence",
     company: "Hindustan Aeronautics",
     blurb: "Builds and services India's military aircraft and helicopters. The largest of the three by far.",
     accent: "border-emerald-300",
@@ -797,6 +767,7 @@ export const DEFENCE_TRIO: Trio = [
   },
   {
     symbol: "MAZDOCK",
+    sector: "Aerospace & Defence",
     company: "Mazagon Dock Shipbuilders",
     blurb: "The navy's shipyard: destroyers and submarines, on long fixed-price programmes.",
     accent: "border-teal-300",
@@ -805,6 +776,7 @@ export const DEFENCE_TRIO: Trio = [
   },
   {
     symbol: "PARAS",
+    sector: "Aerospace & Defence",
     company: "Paras Defence and Space Technologies",
     blurb: "Optics, electronics and drone systems that go inside other people's platforms.",
     accent: "border-cyan-300",
@@ -832,6 +804,7 @@ export function DefenceStocksScene({ initialPerformances = [] }: { initialPerfor
 export const DATA_CENTRE_TRIO: Trio = [
   {
     symbol: "NETWEB",
+    sector: "Computers - Software & Consulting",
     company: "Netweb Technologies India",
     blurb: "Builds the high-performance compute and AI servers that fill the racks.",
     accent: "border-violet-300",
@@ -840,6 +813,7 @@ export const DATA_CENTRE_TRIO: Trio = [
   },
   {
     symbol: "POWERINDIA",
+    sector: "Heavy Electrical Equipment",
     company: "Hitachi Energy India",
     blurb: "Supplies the grid connection, transformers and switchgear that feed them.",
     accent: "border-fuchsia-300",
@@ -848,6 +822,7 @@ export const DATA_CENTRE_TRIO: Trio = [
   },
   {
     symbol: "LT",
+    sector: "Civil Construction",
     company: "Larsen & Toubro",
     blurb: "Engineers and constructs the buildings themselves, campus by campus.",
     accent: "border-purple-300",
@@ -988,7 +963,7 @@ function DipLeaderCard({ leader, rank }: { leader: DipLeader; rank: number }) {
         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-black tabular-nums text-amber-700">
           {rank}
         </span>
-        <CompanyLogo symbol={leader.ticker} size={32} />
+        <CompanyLogo symbol={leader.ticker} size={42} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black text-slate-900">{leader.ticker}</p>
           <p className="truncate text-[11px] font-medium text-slate-600">{leader.name}</p>
@@ -1110,7 +1085,6 @@ export function DipBuysScene({ initialBoard = null }: { initialBoard?: DipLeader
       eyebrow="Winners on sale"
       title="Best of the year, cheapest today"
       badge="SCREENED LIVE"
-      inset="p-3 sm:p-8 lg:p-12"
       footnote="Among the year's strongest performers worth ₹1,000 crore or more that traded at least ₹1 crore today, ranked by the discount to their own recent closes · returns from BSE's published sessions, headlines counted separately and never part of the screen · not investment advice"
     >
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1137,5 +1111,106 @@ export function DipBuysScene({ initialBoard = null }: { initialBoard?: DipLeader
         </p>
       )}
     </SceneCard>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Scenes 3 and 4 — the two rankings
+// ---------------------------------------------------------------------------
+//
+// These differ from the two trios above in one way: their companies are chosen by the data rather
+// than by us. `app/lib/hero-trios.ts` resolves them on the server and the carousel passes them
+// down, so the hero cannot disagree with the boards a reader reaches by clicking it.
+//
+// A ranking that could not be built comes back as null. That is rare — the one-year returns are a
+// committed data file and the broker board is cached for half an hour — but a hero slide is not a
+// place to throw, so the scene says it is reading rather than showing an error or, worse, showing
+// last week's leaders as though they were today's.
+
+function RankingScene({
+  palette,
+  eyebrow,
+  title,
+  badge,
+  footnote,
+  trio,
+  periods,
+  initialPerformances = [],
+}: {
+  palette: ScenePalette;
+  eyebrow: string;
+  title: string;
+  badge: string;
+  footnote: string;
+  trio: Trio | null;
+  periods?: readonly TrioPeriod[];
+  initialPerformances?: readonly StockPerformance[];
+}) {
+  if (!trio) {
+    return (
+      <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote}>
+        <div className="flex h-full items-center justify-center">
+          <p className={`text-sm font-semibold ${palette.muted}`}>Reading the board…</p>
+        </div>
+      </SceneCard>
+    );
+  }
+
+  return (
+    <StockTrioScene
+      palette={palette}
+      eyebrow={eyebrow}
+      title={title}
+      badge={badge}
+      footnote={footnote}
+      stocks={trio}
+      periods={periods}
+      initialPerformances={initialPerformances}
+    />
+  );
+}
+
+/** The three strongest one-year returns in the tracked universe, on live figures. */
+export function YearGainersScene({
+  trio = null,
+  initialPerformances = [],
+}: {
+  trio?: Trio | null;
+  initialPerformances?: readonly StockPerformance[];
+}) {
+  return (
+    <RankingScene
+      palette={MINT}
+      eyebrow="Most gainers, last 1 year"
+      title="The three biggest one-year runs on the board"
+      badge="RANKED BY 1Y"
+      // The long windows, because a slide about a year is the one place a single week says least.
+      periods={LONG_RETURN_TRIO_PERIODS}
+      footnote="Ranked on measured one-year returns from the same price history the returns tables use. Prices are live."
+      trio={trio}
+      initialPerformances={initialPerformances}
+    />
+  );
+}
+
+/** The three names India's retail brokers place highest on their own most-bought lists. */
+export function InvestorFavouritesScene({
+  trio = null,
+  initialPerformances = [],
+}: {
+  trio?: Trio | null;
+  initialPerformances?: readonly StockPerformance[];
+}) {
+  return (
+    <RankingScene
+      palette={SAND}
+      eyebrow="Where investors are buying"
+      title="The three names most bought through India's brokers"
+      badge="BROKER RANKED"
+      // Attributed, not asserted: this is what the brokers publish, not what we have measured.
+      footnote="Placings are the brokers' own published most-bought lists, joined to today's BSE tape. Prices are live."
+      trio={trio}
+      initialPerformances={initialPerformances}
+    />
   );
 }

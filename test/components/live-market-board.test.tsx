@@ -117,13 +117,18 @@ describe("LiveMarketPayload", () => {
     expect(within(down).getByText("ALL-LOSERS-1W")).toBeInTheDocument();
   });
 
-  it("hands the exchange strip and the tier panel their own places", async () => {
+  it("leaves the cap-tier panel to its own section, and no longer heads the section with the exchange strip", async () => {
     serveMovers();
     await renderPayload();
 
-    // The summary is seeded from this server render; the tier lists page themselves from the API.
-    expect(screen.getByTestId("exchange-ticker")).toHaveAttribute("data-listed", "4949");
-    expect(screen.getByTestId("tier-movers")).toBeInTheDocument();
+    // The tier lists page themselves from the API in the landing page's cap-performance section.
+    expect(screen.queryByTestId("tier-movers")).not.toBeInTheDocument();
+
+    // The index-and-breadth strip — SENSEX, the advancing/declining bar and the listed/traded
+    // counts — was taken off the landing page. It was the only reader of `getBseBoard()`, so the
+    // read went with it: a whole-universe fetch is not worth keeping to feed a figure nobody sees.
+    expect(screen.queryByTestId("exchange-ticker")).not.toBeInTheDocument();
+    expect(getBseBoard).not.toHaveBeenCalled();
   });
 
   it("signs the moves and carries each company's mark", async () => {

@@ -43,9 +43,15 @@ export function monogramText(symbol: string): string {
 // catalogue per row adds up fast on a board showing fifty of them.
 let domainsBySymbol: Map<string, string | undefined> | null = null;
 
+const CHECKED_LOGO_DOMAINS: Record<string, string> = {
+  BDL: "bdl-india.in",
+  LGEINDIA: "lg.com",
+  SOLARINDS: "solargroup.com",
+};
+
 function checkedDomain(ticker: string): string | undefined {
-  domainsBySymbol ??= new Map(indianStocks.map((stock) => [stock.symbol, stock.domain]));
-  return domainsBySymbol.get(ticker);
+  domainsBySymbol ??= new Map(indianStocks.map((stock) => [stock.symbol, stock.domain || CHECKED_LOGO_DOMAINS[stock.symbol]]));
+  return domainsBySymbol.get(ticker) || CHECKED_LOGO_DOMAINS[ticker];
 }
 
 let namesBySymbol: Map<string, string> | null = null;
@@ -55,16 +61,23 @@ function companyName(ticker: string): string {
   return namesBySymbol.get(ticker) ?? ticker;
 }
 
-function logoSources(symbol: string, override?: string | null): string[] {
+function logoSources(symbol: string, override?: string | null, preferReal = false): string[] {
   if (override) return [override];
 
   const ticker = normaliseTicker(symbol);
   const domain = checkedDomain(ticker);
+  const favicon = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null;
+  const symbolLogo = stockLogoUrl(ticker);
+  const extraSymbolSources = preferReal
+    ? [
+        `https://assets-netstorage.groww.in/stock-assets/logos/${encodeURIComponent(ticker)}.png`,
+        `https://static.tickertape.in/stock-logos/${encodeURIComponent(ticker)}.png`,
+      ]
+    : [];
 
-  return [
-    stockLogoUrl(ticker),
-    domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null,
-  ].filter((source): source is string => source !== null);
+  return [...(preferReal ? [favicon, symbolLogo] : [symbolLogo, favicon]), ...extraSymbolSources].filter(
+    (source): source is string => source !== null,
+  );
 }
 
 /**
@@ -80,6 +93,7 @@ export function CompanyLogo({
   size = 36,
   className = "",
   eager = false,
+  preferReal = false,
 }: {
   symbol: string;
   /**
@@ -99,13 +113,15 @@ export function CompanyLogo({
    * in front of whatever is.
    */
   eager?: boolean;
+  /** Try additional real image sources before drawing the fallback monogram. */
+  preferReal?: boolean;
 }) {
   // Keyed by symbol rather than a bare index: a row that swaps one company for another (paging
   // through a list reuses these nodes) must start again at the best source for the new company
   // instead of inheriting how far the old one got.
   const [attempt, setAttempt] = useState<{ symbol: string; index: number }>({ symbol, index: 0 });
 
-  const sources = logoSources(symbol, override);
+  const sources = logoSources(symbol, override, preferReal);
   const index = attempt.symbol === symbol ? attempt.index : 0;
   const src = sources[index] ?? null;
   const box = { width: size, height: size };

@@ -8,6 +8,7 @@
     "analyze": "cross-env ANALYZE=true next build",
     "start": "next start",
     "lint": "eslint",
+    "shots": "node scripts/capture-feature-shots.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
