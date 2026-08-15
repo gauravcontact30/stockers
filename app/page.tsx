@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BackToTop } from "./components/back-to-top";
+import { BseTrendingBoard } from "./components/bse-trending-board";
 import { HeadToHead } from "./components/head-to-head";
 import { HeaderSubscriptionCta } from "./components/header-subscription-cta";
 import { HeroCarousel } from "./components/hero-carousel";
@@ -181,6 +182,10 @@ export default async function Home({ sectionId, seo }: HomeProps = {}) {
         <StreamedMoversBoard />
 
         <StreamedSectorMovers />
+
+        {/* The movers board answers "what moved"; this answers "what was actually traded", which is
+            a different ten — a 20% move on thin volume is not where the session's money went. */}
+        <BseTrendingBoard />
 
         <BandHeading
           eyebrow="02 · Who owns what"

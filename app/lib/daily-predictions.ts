@@ -1,11 +1,11 @@
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
 import { readJsonCache, writeJsonCache } from "./data-cache";
 import { indianStocks } from "./indian-stocks";
 import { indianETFs } from "./indian-etfs";
-import { appOrigin } from "./app-origin";
+import { aiConfigured, chatJson } from "./openrouter";
 
 export type Outlook = "Bullish" | "Bearish" | "Neutral";
 
@@ -27,7 +27,6 @@ type UniverseItem = { symbol: string; name: string; sector: string };
 type ChangeInput = UniverseItem & { changePercent: number | null };
 
 const CHUNK_SIZE = 25;
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 function todayIST() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -46,54 +45,44 @@ function heuristicPrediction(symbol: string, changePercent: number | null): Pred
   return { symbol, outlook, confidence, note };
 }
 
+/**
+ * The reply here is a JSON *array*, not an object, so it does not go through
+ * `extractJsonObject` — the outlook for a chunk is one entry per input item.
+ */
 async function generateChunkWithAI(chunk: ChangeInput[], entityLabel: string): Promise<Record<string, Prediction> | null> {
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-daily-predictions-agent",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              `You are an AI research agent producing a one-day outlook for ${entityLabel}. Respond ONLY with a JSON array, one object per input item, in this exact shape: {"symbol": string, "outlook": "Bullish"|"Bearish"|"Neutral", "confidence": number (0-100), "note": string (max 140 characters)}. Do not include any text outside the JSON array.`,
-          },
-          {
-            role: "user",
-            content: JSON.stringify(chunk),
-          },
-        ],
-        temperature: 0.6,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
+  return chatJson({
+    feature: "daily-predictions",
+    system: `You are an AI research agent producing a one-day outlook for ${entityLabel}. Respond ONLY with a JSON array, one object per input item, in this exact shape: {"symbol": string, "outlook": "Bullish"|"Bearish"|"Neutral", "confidence": number (0-100), "note": string (max 140 characters)}. Do not include any text outside the JSON array.`,
+    user: JSON.stringify(chunk),
+    temperature: 0.6,
+    parse: (text) => {
+      const match = text.match(/\[[\s\S]*\]/);
+      if (!match) return null;
 
-    if (!response.ok) return null;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+      if (!Array.isArray(parsed)) return null;
 
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) return null;
-
-    const parsed = JSON.parse(match[0]) as Prediction[];
-    const results: Record<string, Prediction> = {};
-    for (const item of parsed) {
-      if (item?.symbol) results[item.symbol] = item;
-    }
-    return results;
-  } catch {
-    return null;
-  }
+      const results: Record<string, Prediction> = {};
+      for (const item of parsed as Prediction[]) {
+        if (item?.symbol) results[item.symbol] = item;
+      }
+      // A chunk that named nothing is a fallback, not a success: every symbol in it drops back to
+      // its heuristic outlook exactly as if the request had failed.
+      return Object.keys(results).length > 0 ? results : null;
+    },
+  });
 }
 
 async function generateWithAI(itemsWithChange: ChangeInput[], entityLabel: string): Promise<Record<string, Prediction> | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
+  // Checked once here rather than per chunk: without a key there is nothing to attempt, and
+  // letting each of the chunks below record its own "unconfigured" call would put a spike of
+  // dozens of them on the AI dashboard for a single unconfigured run.
+  if (!aiConfigured()) return null;
 
   const chunks: ChangeInput[][] = [];
   for (let i = 0; i < itemsWithChange.length; i += CHUNK_SIZE) {

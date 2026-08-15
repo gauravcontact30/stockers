@@ -1,11 +1,11 @@
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
 import { CACHE_TAGS, revalidatingBy } from "./cache";
 import { indianStocks } from "./indian-stocks";
 import { searchIndex } from "./stock-search";
-import { appOrigin } from "./app-origin";
+import { chatJson, extractJsonObject } from "./openrouter";
 
 export type Sentiment = "Positive" | "Negative" | "Neutral";
 
@@ -168,53 +168,31 @@ function parseFeed(xml: string, limit = ITEM_LIMIT, order: FeedOrder = "date"): 
 // it never authors a headline, a source, or a link, so a bad model response can mislabel a story
 // but can never invent one.
 async function classifyWithAi(items: NewsItem[]): Promise<Sentiment[] | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
+  return chatJson({
+    feature: "news-sentiment",
+    // Twelve seconds rather than twenty-five: this is a labelling pass over headlines that are
+    // already on screen, and the keyword classifier behind it is instant.
+    timeoutMs: 12_000,
+    system:
+      "You label Indian market news headlines by their likely effect on investor sentiment. " +
+      'Reply with JSON only: {"sentiments":["Positive"|"Negative"|"Neutral", ...]} with exactly one entry per headline, in order. ' +
+      "Do not rewrite, summarise, or add headlines.",
+    user: items.map((item, index) => `${index + 1}. ${item.title}`).join("\n"),
+    temperature: 0,
+    parse: (text) => {
+      const parsed = extractJsonObject(text) as { sentiments?: unknown } | null;
+      const sentiments = parsed?.sentiments;
+      // One label per headline or nothing: a short list would silently shift every label after the
+      // gap onto the wrong story, which is worse than falling back to the keyword classifier.
+      if (!Array.isArray(sentiments) || sentiments.length !== items.length) return null;
 
-  try {
-    const numbered = items.map((item, index) => `${index + 1}. ${item.title}`).join("\n");
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You label Indian market news headlines by their likely effect on investor sentiment. " +
-              'Reply with JSON only: {"sentiments":["Positive"|"Negative"|"Neutral", ...]} with exactly one entry per headline, in order. ' +
-              "Do not rewrite, summarise, or add headlines.",
-          },
-          { role: "user", content: numbered },
-        ],
-        temperature: 0,
-      }),
-      signal: AbortSignal.timeout(12000),
-    });
-
-    if (!response.ok) return null;
-
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const parsed = text.match(/\{[\s\S]*\}/);
-    if (!parsed) return null;
-
-    const sentiments: unknown = JSON.parse(parsed[0])?.sentiments;
-    if (!Array.isArray(sentiments) || sentiments.length !== items.length) return null;
-
-    return sentiments.map((value, index) =>
-      value === "Positive" || value === "Negative" || value === "Neutral"
-        ? (value as Sentiment)
-        : classifySentiment(items[index].title)
-    );
-  } catch {
-    return null;
-  }
+      return sentiments.map((value, index) =>
+        value === "Positive" || value === "Negative" || value === "Neutral"
+          ? (value as Sentiment)
+          : classifySentiment(items[index].title),
+      );
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -348,50 +326,28 @@ export async function getNewsStory(input: { title: string; url: string; symbol?:
 }
 
 async function briefWithAi(title: string, related: NewsItem[]): Promise<string[] | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
+  const context = related.map((item, index) => `${index + 1}. ${item.title} (${item.source})`).join("\n");
 
-  try {
-    const context = related.map((item, index) => `${index + 1}. ${item.title} (${item.source})`).join("\n");
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You explain an Indian market news story to a retail investor, using only the headlines you are given. " +
-              'Reply with JSON only: {"brief":["sentence", "sentence", "sentence"]} — two or three short sentences. ' +
-              "Say what the story is about and why it matters to a shareholder. " +
-              "Do not invent facts, figures, prices, price targets or dates that are not in the headlines. " +
-              "Do not give outperform or underperform advice. If the headlines are too thin to explain, say so plainly.",
-          },
-          { role: "user", content: `Headline: ${title}\n\nOther coverage:\n${context || "(none found)"}` },
-        ],
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(12000),
-    });
+  return chatJson({
+    feature: "news-brief",
+    timeoutMs: 12_000,
+    system:
+      "You explain an Indian market news story to a retail investor, using only the headlines you are given. " +
+      'Reply with JSON only: {"brief":["sentence", "sentence", "sentence"]} — two or three short sentences. ' +
+      "Say what the story is about and why it matters to a shareholder. " +
+      "Do not invent facts, figures, prices, price targets or dates that are not in the headlines. " +
+      "Do not give outperform or underperform advice. If the headlines are too thin to explain, say so plainly.",
+    user: `Headline: ${title}\n\nOther coverage:\n${context || "(none found)"}`,
+    temperature: 0.2,
+    parse: (text) => {
+      const parsed = extractJsonObject(text) as { brief?: unknown } | null;
+      const brief = parsed?.brief;
+      if (!Array.isArray(brief)) return null;
 
-    if (!response.ok) return null;
-
-    const payload = await response.json();
-    const parsed = (payload.choices?.[0]?.message?.content || "").match(/\{[\s\S]*\}/);
-    if (!parsed) return null;
-
-    const brief: unknown = JSON.parse(parsed[0])?.brief;
-    if (!Array.isArray(brief) || brief.length === 0) return null;
-
-    return brief.filter((line): line is string => typeof line === "string" && line.trim().length > 0).slice(0, 4);
-  } catch {
-    return null;
-  }
+      const lines = brief.filter((line): line is string => typeof line === "string" && line.trim().length > 0).slice(0, 4);
+      return lines.length > 0 ? lines : null;
+    },
+  });
 }
 
 /** Whether a feed comes back newest-first or in the order the publisher's search ranked it. */

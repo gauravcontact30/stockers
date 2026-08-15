@@ -11,6 +11,13 @@
 // its answer is kept for a day since a company's sector does not move.
 
 import { fetchBse, fetchBseText } from "./bse-client";
+// Kept in its own dependency-free module so the client board can import the mapping without
+// pulling this file — and the network and cache layers it imports — into the browser bundle.
+import { BSE_PLATFORMS, bsePlatform, type BsePlatform } from "./bse-platform";
+// What the brokers themselves publish about their customers' buying — see ./brokers for why only
+// one of the five tracked platforms contributes any data.
+import { getBrokerPopularity } from "./broker-popularity";
+import type { BrokerId, BrokerPick } from "./brokers";
 import { CACHE_TAGS } from "./cache";
 // Sector classification lives on its own because it is the one thing this feed will not answer in
 // bulk: see ./bse-sectors for why the whole exchange is mapped in the background.
@@ -35,6 +42,7 @@ import {
 import { cached, toNumber, toText } from "./nse-client";
 
 export { attachSectors };
+export { BSE_PLATFORMS, bsePlatform, type BsePlatform };
 
 export type BseCapTier = "Large" | "Mid" | "Small";
 
@@ -747,6 +755,210 @@ export async function getBseRows(): Promise<{ rows: (BseStock & BseQuote)[]; ses
     rows: universe.stocks
       .map((stock) => join(stock, tape))
       .filter((row): row is BseStock & BseQuote => row !== null),
+    sessionDate: tape.sessionDate,
+  };
+}
+
+/**
+ * What "trending" is measured by.
+ *
+ * The first three are figures the exchange itself publishes. "brokers" is the odd one out: it
+ * ranks by where the brokers place a company on their own most-bought lists, so it answers "what
+ * are retail investors buying" rather than "what did the exchange trade".
+ */
+export type TrendingRank = "brokers" | "turnover" | "trades" | "volume";
+
+export type BseTrendingRow = BseRow & {
+  /**
+   * Where this company sits on any tracked broker's own published list. Empty for most rows: only
+   * one of the five platforms publishes such a list at all — see ./broker-popularity.
+   */
+  brokers: BrokerPick[];
+  /**
+   * Best placing this company holds across every tracked broker, 1 = most bought. Null when no
+   * broker lists it. This is what the "brokers" ranking sorts on, and a lower number is a better
+   * placing — so ranking by it ascending puts the most-bought company first.
+   */
+  brokerRank: number | null;
+  /** This scrip's share of the whole session's traded value, in percent. */
+  turnoverShare: number | null;
+  /**
+   * The average rupee size of one trade in this scrip. A large-cap moved by institutions prints
+   * in lakhs per trade; a name retail is crowding into prints in thousands, however high its
+   * total turnover climbs — so this is what separates "big money moved it" from "a lot of people
+   * bought it".
+   */
+  averageTradeValue: number | null;
+};
+
+export type TrendingQuery = {
+  rank?: TrendingRank;
+  /** Name, ticker, scrip code or ISIN — the same four ways the directory is searched. */
+  q?: string;
+  platform?: BsePlatform | "all";
+  /** Only companies on this broker's own published list. */
+  broker?: BrokerId | "all";
+  tier?: "all" | Lowercase<BseCapTier>;
+  /** Only moves of at least this size, as a positive percentage in either direction. */
+  minPercent?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type BseTrendingBoard = {
+  rows: BseTrendingRow[];
+  rank: TrendingRank;
+  /** Exchange-wide session totals, which is what each row's share is a share of. */
+  totals: { turnoverCr: number; volume: number; trades: number; traded: number };
+  /**
+   * How many of the matching stocks sit on each platform. Counted before the platform filter is
+   * applied but after every other one, so the chips say what choosing them would actually yield.
+   */
+  platforms: { platform: BsePlatform; count: number }[];
+  /** Every stock matching the query, not the page — the pager needs the whole count. */
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
+  sessionDate: string | null;
+};
+
+const TRENDING_SIZE = 10;
+const MAX_TRENDING_SIZE = 50;
+
+/**
+ * The best placing a company holds across every broker that lists it, or Infinity when none does.
+ *
+ * Infinity rather than 0 because these sort ascending: an unlisted company must fall to the bottom,
+ * and a 0 would put it at the very top, ahead of every broker's own number one.
+ */
+function bestBrokerRank(picks: Record<string, BrokerPick[]>, row: { code: string }): number {
+  const listed = picks[row.code] ?? [];
+  return listed.length ? Math.min(...listed.map((pick) => pick.rank)) : Number.POSITIVE_INFINITY;
+}
+
+const TRENDING_METRIC: Record<Exclude<TrendingRank, "brokers">, (quote: BseQuote) => number | null> = {
+  turnover: (quote) => quote.turnoverCr,
+  trades: (quote) => quote.trades,
+  volume: (quote) => quote.volume,
+};
+
+/**
+ * The stocks BSE is actually crowding into this session.
+ *
+ * There is no such thing as a "most searched" feed. Every broker ranks its own search traffic
+ * in-app and none publishes it — the same wall `MostTraded` hit on the NSE side. What some of them
+ * do publish is a most-*bought* list, and what the exchange publishes is every scrip's traded
+ * value, share count and transaction count. Those are the four rankings offered here, and choosing
+ * between them is a real choice rather than a display preference:
+ *
+ *   brokers   where the brokers place a company on their own most-bought lists — what retail is
+ *             buying, but only across the customers of the brokers that publish anything
+ *   turnover  the rupees that changed hands — where the money went, dominated by large caps
+ *   trades    how many separate transactions — the closest public proxy for crowd attention
+ *   volume    share count, which flatters low-priced scrips and is the least comparable
+ *
+ * The three exchange rankings cover the whole traded universe, so a mid-cap that had an unusual day
+ * can displace a habitual heavyweight. The broker ranking is necessarily narrower: it can only
+ * contain companies some broker has actually listed, so it is a short board by construction.
+ *
+ * Searching, filtering and paging all happen here rather than in the browser for the same reason
+ * `getBseMovers` does it: the traded universe is thousands of rows, and each row's sector costs an
+ * upstream call, so only the page actually being looked at is ever resolved.
+ */
+export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTrendingBoard> {
+  const rank = query.rank ?? "turnover";
+  // The broker board still only contains companies that traded, so it is gated on turnover the
+  // same way the turnover board is — a listing nobody traded today is not something to show.
+  const metric = TRENDING_METRIC[rank === "brokers" ? "turnover" : rank];
+  const term = (query.q ?? "").trim().toLowerCase();
+  const platform = query.platform ?? "all";
+  const broker = query.broker ?? "all";
+  const tier = query.tier ?? "all";
+  const minPercent = query.minPercent && query.minPercent > 0 ? query.minPercent : 0;
+  const pageSize = Math.min(Math.max(query.pageSize ?? TRENDING_SIZE, 1), MAX_TRENDING_SIZE);
+
+  const [universe, tape, brokerPicks] = await Promise.all([getBseUniverse(), getBseTape(), getBrokerPopularity()]);
+
+  // A scrip with no price did not trade at all; one with turnover but no transaction count is a
+  // filing artefact. Both would otherwise sort into the board on a null treated as zero.
+  const traded = universe.stocks
+    .map((stock) => join(stock, tape))
+    .filter((row): row is BseStock & BseQuote => row !== null && row.price !== null && (metric(row) ?? 0) > 0);
+
+  // Computed over everything that traded, not over the filtered set: a row's share of the session
+  // means its share of the exchange, and would be a different — and misleading — number if it were
+  // recomputed against whatever the reader happened to filter down to.
+  const totals = traded.reduce(
+    (sum, row) => ({
+      turnoverCr: sum.turnoverCr + (row.turnoverCr ?? 0),
+      volume: sum.volume + (row.volume ?? 0),
+      trades: sum.trades + (row.trades ?? 0),
+      traded: sum.traded + 1,
+    }),
+    { turnoverCr: 0, volume: 0, trades: 0, traded: 0 },
+  );
+
+  const matching = traded
+    .filter(
+      (row) =>
+        !term ||
+        row.name.toLowerCase().includes(term) ||
+        row.ticker.toLowerCase().includes(term) ||
+        row.code.includes(term) ||
+        row.isin.toLowerCase() === term,
+    )
+    .filter((row) => tier === "all" || row.capTier === TIER_FOR_KEY[tier])
+    // The size of a move, not its sign — a 5% filter means the same thing in either direction.
+    .filter((row) => minPercent === 0 || Math.abs(row.changePercent ?? 0) >= minPercent)
+    // "Show me what Groww's customers are buying, that also traded on BSE today."
+    .filter((row) => broker === "all" || (brokerPicks[row.code] ?? []).some((pick) => pick.broker === broker))
+    // Ranking by broker placing over companies no broker lists would be ranking by nothing, so the
+    // board is confined to the listed ones rather than padded with unplaced rows at the bottom.
+    .filter((row) => rank !== "brokers" || (brokerPicks[row.code] ?? []).length > 0);
+
+  // Faceted: the counts describe the search and the other filters, so a platform chip that would
+  // return nothing reads as zero rather than silently emptying the board when it is clicked.
+  const platforms = BSE_PLATFORMS.map((each) => ({
+    platform: each,
+    count: matching.filter((row) => bsePlatform(row.group) === each).length,
+  })).filter((entry) => entry.count > 0);
+
+  const rows = matching
+    .filter((row) => platform === "all" || bsePlatform(row.group) === platform)
+    .sort((a, b) =>
+      rank === "brokers"
+        ? // A better placing is a *lower* number, so ascending placing is descending popularity:
+          // the broker's own #1 leads the board. Companies level on placing — which is what two
+          // brokers listing different names at #3 looks like — fall back to the money behind them.
+          bestBrokerRank(brokerPicks, a) - bestBrokerRank(brokerPicks, b) ||
+          (b.turnoverCr ?? 0) - (a.turnoverCr ?? 0)
+        : (metric(b) ?? 0) - (metric(a) ?? 0),
+    );
+
+  const total = rows.length;
+  const pages = Math.max(Math.ceil(total / pageSize), 1);
+  const page = Math.min(Math.max(query.page ?? 1, 1), pages);
+
+  const resolved = await attachSectors(rows.slice((page - 1) * pageSize, page * pageSize));
+
+  return {
+    rows: resolved.map((row) => ({
+      ...row,
+      brokers: brokerPicks[row.code] ?? [],
+      brokerRank: (brokerPicks[row.code] ?? []).length ? bestBrokerRank(brokerPicks, row) : null,
+      turnoverShare:
+        totals.turnoverCr > 0 && row.turnoverCr !== null ? (row.turnoverCr / totals.turnoverCr) * 100 : null,
+      // Turnover is carried in crore, so it is scaled back to rupees before being split across trades.
+      averageTradeValue: row.turnoverCr !== null && row.trades ? (row.turnoverCr * 1e7) / row.trades : null,
+    })),
+    rank,
+    totals,
+    platforms,
+    total,
+    page,
+    pageSize,
+    pages,
     sessionDate: tape.sessionDate,
   };
 }

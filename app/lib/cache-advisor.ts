@@ -23,11 +23,11 @@
 // plainer words, and it says which it is. This is the same bargain the rest of the app makes: every
 // AI panel still renders, composed from its own measured figures, and admits as much.
 
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
-import { appOrigin } from "./app-origin";
+import { chatJson } from "./openrouter";
 import type { CacheTag } from "./cache";
 import { FAMILY_META, type CacheFamilyReport, type CacheReport } from "./cache-report";
 
@@ -44,8 +44,6 @@ export type CacheAdvice = {
   warm: string[];
   source: "ai" | "heuristic";
 };
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 /** Bytes as something readable. Kept here rather than imported so this module stands alone. */
 export function formatBytes(bytes: number): string {
@@ -258,40 +256,18 @@ export function parseAdvice(text: string): { headline: string; points: string[] 
 }
 
 async function phraseWithModel(brief: string): Promise<{ headline: string; points: string[] } | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
-
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-cache-advisor",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: brief },
-        ],
-        temperature: 0.3,
-      }),
-      // Shorter than the reader-facing calls: an admin waiting on a diagnosis wants the composed
-      // answer at fifteen seconds far more than the written one at twenty-five.
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) return null;
-
-    const payload = (await response.json()) as { choices?: { message?: { content?: unknown } }[] };
-    const content = payload.choices?.[0]?.message?.content;
-    return typeof content === "string" ? parseAdvice(content) : null;
-  } catch {
-    // A refused or slow model is not a failed diagnosis — the composed advice below is the same
-    // advice, and the panel says which one it got.
-    return null;
-  }
+  // A refused or slow model is not a failed diagnosis — the composed advice is the same advice,
+  // and the panel says which one it got.
+  return chatJson({
+    feature: "cache-advisor",
+    system: SYSTEM_PROMPT,
+    user: brief,
+    temperature: 0.3,
+    // Shorter than the reader-facing calls: an admin waiting on a diagnosis wants the composed
+    // answer at fifteen seconds far more than the written one at twenty-five.
+    timeoutMs: 15_000,
+    parse: parseAdvice,
+  });
 }
 
 /**

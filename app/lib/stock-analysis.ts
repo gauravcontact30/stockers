@@ -1,11 +1,9 @@
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
 import { getPerformanceSummary, type PerformanceSummary } from "./stock-performance";
-import { appOrigin } from "./app-origin";
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+import { aiConfigured, chatJson, extractJsonObject } from "./openrouter";
 
 function toStringArray(value: unknown, fallback: string[]): string[] {
   if (Array.isArray(value)) {
@@ -147,57 +145,35 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
   const cached = analysisCache.get(stock);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    return buildDemoAnalysis(stock);
-  }
+  if (!aiConfigured()) return buildDemoAnalysis(stock);
 
+  // The figures the model is required to quote verbatim. Fetched before the completion and guarded
+  // separately: a quote feed that is down is not a model failure, and recording it as one would put
+  // a spike on the AI dashboard pointing at the wrong dependency.
+  let performance: PerformanceSummary;
   try {
-    const performance = await getPerformanceSummary(stock);
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are stockers, an AI research assistant for Indian equities and ETFs. Return compact JSON only, with these keys: stock, marketPulse, summary, positiveSignals, negativeSignals, score, risk, nextSteps, prediction, newsFocus, outlook, recommendation, recommendationReasons, keyInsights, marketTrends, companyActions, positiveNews. " +
-              "recommendation must be exactly one of \"Outperform\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
-              "Accuracy rule: the user message supplies verified live market data. Every price or performance number you write must be copied from it verbatim. Never invent or estimate prices, returns, price targets, market caps, valuation multiples, or percentages.",
-          },
-          {
-            role: "user",
-            content: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Outperform, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
-          },
-        ],
-        temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenRouter responded with ${response.status}`);
-    }
-
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const parsed = text.match(/\{[\s\S]*\}/);
-
-    if (parsed) {
-      const result = normalizeAnalysis(JSON.parse(parsed[0]), stock);
-      analysisCache.set(stock, { data: result, expiresAt: Date.now() + ANALYSIS_CACHE_TTL_MS });
-      return result;
-    }
-
-    return buildDemoAnalysis(stock);
+    performance = await getPerformanceSummary(stock);
   } catch (error) {
     console.error(error);
     return buildDemoAnalysis(stock);
   }
+
+  const analysis = await chatJson({
+    feature: "stock-analysis",
+    system:
+      "You are stockers, an AI research assistant for Indian equities and ETFs. Return compact JSON only, with these keys: stock, marketPulse, summary, positiveSignals, negativeSignals, score, risk, nextSteps, prediction, newsFocus, outlook, recommendation, recommendationReasons, keyInsights, marketTrends, companyActions, positiveNews. " +
+      "recommendation must be exactly one of \"Outperform\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
+      "Accuracy rule: the user message supplies verified live market data. Every price or performance number you write must be copied from it verbatim. Never invent or estimate prices, returns, price targets, market caps, valuation multiples, or percentages.",
+    user: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Outperform, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
+    temperature: 0.7,
+    parse: (text) => {
+      const parsed = extractJsonObject(text);
+      return parsed === null ? null : normalizeAnalysis(parsed, stock);
+    },
+  });
+
+  if (!analysis) return buildDemoAnalysis(stock);
+
+  analysisCache.set(stock, { data: analysis, expiresAt: Date.now() + ANALYSIS_CACHE_TTL_MS });
+  return analysis;
 }

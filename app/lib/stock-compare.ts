@@ -1,10 +1,8 @@
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
-import { appOrigin } from "./app-origin";
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+import { chatJson, extractJsonObject } from "./openrouter";
 
 function toStringArray(value: unknown, fallback: string[]): string[] {
   if (Array.isArray(value)) {
@@ -91,50 +89,17 @@ export async function generateComparison(stockAInput: string, stockBInput: strin
   const stockA = stockAInput.trim().toUpperCase();
   const stockB = stockBInput.trim().toUpperCase();
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    return buildDemoComparison(stockA, stockB);
-  }
+  const comparison = await chatJson({
+    feature: "compare",
+    system:
+      "You are stockers, an AI research assistant comparing two Indian stocks head-to-head for an investor deciding between them. Return compact JSON only, with these keys: winner, verdict, stockAPros, stockACons, stockBPros, stockBCons, stockAScore, stockBScore. winner must be exactly one of \"A\", \"B\", or \"Tie\". verdict is 1-2 sentences giving a clear, direct comparison call. stockAPros/stockACons/stockBPros/stockBCons are arrays of specific, concrete points. stockAScore and stockBScore are 0-100 overall scores.",
+    user: `Compare ${stockA} (stock A) against ${stockB} (stock B) for an Indian investor choosing between the two. Give a clear winner call with reasons, pros/cons for each, and a score for each.`,
+    temperature: 0.7,
+    parse: (text) => {
+      const parsed = extractJsonObject(text);
+      return parsed === null ? null : normalizeComparison(parsed, stockA, stockB);
+    },
+  });
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-compare",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are stockers, an AI research assistant comparing two Indian stocks head-to-head for an investor deciding between them. Return compact JSON only, with these keys: winner, verdict, stockAPros, stockACons, stockBPros, stockBCons, stockAScore, stockBScore. winner must be exactly one of \"A\", \"B\", or \"Tie\". verdict is 1-2 sentences giving a clear, direct comparison call. stockAPros/stockACons/stockBPros/stockBCons are arrays of specific, concrete points. stockAScore and stockBScore are 0-100 overall scores.",
-          },
-          {
-            role: "user",
-            content: `Compare ${stockA} (stock A) against ${stockB} (stock B) for an Indian investor choosing between the two. Give a clear winner call with reasons, pros/cons for each, and a score for each.`,
-          },
-        ],
-        temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!response.ok) throw new Error(`OpenRouter responded with ${response.status}`);
-
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const parsed = text.match(/\{[\s\S]*\}/);
-
-    if (parsed) {
-      return normalizeComparison(JSON.parse(parsed[0]), stockA, stockB);
-    }
-
-    return buildDemoComparison(stockA, stockB);
-  } catch (error) {
-    console.error(error);
-    return buildDemoComparison(stockA, stockB);
-  }
+  return comparison ?? buildDemoComparison(stockA, stockB);
 }

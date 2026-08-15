@@ -11,6 +11,7 @@ import type { FeatureUsage } from "../lib/analytics-report";
 import { formatPaise, type LedgerState } from "../lib/payments-format";
 import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
 import type { LivePresenceState } from "../lib/presence-report";
+import { AdminAiOperations } from "./admin-ai-operations";
 import { AdminAnalytics } from "./admin-analytics";
 import { AdminClientReviews } from "./admin-client-reviews";
 import { AdminLiveUsers } from "./admin-live-users";
@@ -26,6 +27,7 @@ type IconProps = { className?: string };
 export type SuperAdminSectionId =
   | "overview"
   | "analytics"
+  | "ai"
   | "live"
   | "users"
   | "subscriptions"
@@ -189,6 +191,16 @@ function LiveIcon({ className }: IconProps) {
   );
 }
 
+function AiIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="6" y="6" width="12" height="12" rx="2.5" />
+      <path d="M9.5 9.5h5v5h-5z" />
+      <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" />
+    </svg>
+  );
+}
+
 function ChevronIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -211,6 +223,13 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
     description: "Daily visitors, sign-ins, sign-ups and the AI features the audience actually opens.",
     href: "/admin/analytics",
     icon: AnalyticsIcon,
+  },
+  {
+    id: "ai",
+    label: "AI Operations",
+    description: "Model spend, latency and how often a reader gets the composed read instead of the written one.",
+    href: "/admin/ai",
+    icon: AiIcon,
   },
   {
     id: "users",
@@ -1428,6 +1447,12 @@ function SectionContent({ active }: { active: SuperAdminSectionId }) {
       return (
         <AdminAccessGate>
           <AdminAnalytics />
+        </AdminAccessGate>
+      );
+    case "ai":
+      return (
+        <AdminAccessGate>
+          <AdminAiOperations />
         </AdminAccessGate>
       );
     case "users":

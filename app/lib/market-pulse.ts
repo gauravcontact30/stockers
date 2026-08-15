@@ -1,14 +1,13 @@
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
 import { CACHE_TAGS, revalidating } from "./cache";
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getAllQuotes, type LiveQuote } from "./market-data";
 import { getBenchmarkIndices, type IndexQuote } from "./market-indices";
-import { appOrigin } from "./app-origin";
+import { chatJson, extractJsonObject } from "./openrouter";
 
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 // Market breadth shifts through the trading session, so this is cached far shorter than the
 // once-a-day disk caches used elsewhere (predictions, returns) — an in-memory TTL is enough.
 const CACHE_TTL_MS = 15 * 60 * 1000;
@@ -221,75 +220,53 @@ function buildHeuristicNarrative(breadth: MarketBreadth): Narrative {
 }
 
 async function generateNarrativeWithAI(breadth: MarketBreadth): Promise<Narrative | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
+  return chatJson({
+    feature: "market-pulse",
+    // Shorter than the 25 seconds the other call sites allow: this one sits in front of a board
+    // that already has its live figures on screen, so a slow narrative is worth less than a fast
+    // composed one.
+    timeoutMs: 20_000,
+    system:
+      "You are stockers, an AI market-breadth analyst for Indian equities. You are given real, computed breadth statistics (advancers/decliners, average move, leading/lagging sectors) from a live universe of Indian stocks — not the full market. Return compact JSON only, with these keys: mood, summary, themes, sectorsToWatch. mood must be exactly one of \"Risk-On\", \"Neutral\", or \"Risk-Off\", consistent with the advance/decline data given. summary is 2-3 sentences on today's mood grounded in the data provided. themes is an array of 3 short (2-5 word) theme labels. sectorsToWatch is an array of 2-3 sector names to watch, drawn from the data given. " +
+      // The live counts and averages are rendered beside this text and keep ticking, while
+      // the narrative is cached for minutes. If the model quotes a figure it will visibly
+      // disagree with the tiles next to it, so it is told to stay qualitative and name
+      // sectors and stocks instead.
+      "IMPORTANT: write the summary qualitatively. Do not state any counts, percentages, or numeric figures — the live numbers are displayed alongside your text and would contradict you. Refer to breadth in words (\"advancers comfortably outnumber decliners\") and name the leading and lagging sectors and stocks instead.",
+    // Only the aggregate figures go to the model — the per-tier mover lists are rendered
+    // straight from the quote feed and would just inflate the prompt.
+    user: `Real breadth data from our tracked Indian stock universe: ${JSON.stringify({
+      totalTracked: breadth.totalTracked,
+      advancing: breadth.advancing,
+      declining: breadth.declining,
+      unchanged: breadth.unchanged,
+      averageChangePercent: breadth.averageChangePercent,
+      topSector: breadth.topSector,
+      bottomSector: breadth.bottomSector,
+      topGainer: breadth.topGainer,
+      topLoser: breadth.topLoser,
+    })}. Write today's market pulse from this data.`,
+    temperature: 0.6,
+    parse: (text) => {
+      const parsed = extractJsonObject(text) as Record<string, unknown> | null;
+      if (!parsed) return null;
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-market-pulse",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are stockers, an AI market-breadth analyst for Indian equities. You are given real, computed breadth statistics (advancers/decliners, average move, leading/lagging sectors) from a live universe of Indian stocks — not the full market. Return compact JSON only, with these keys: mood, summary, themes, sectorsToWatch. mood must be exactly one of \"Risk-On\", \"Neutral\", or \"Risk-Off\", consistent with the advance/decline data given. summary is 2-3 sentences on today's mood grounded in the data provided. themes is an array of 3 short (2-5 word) theme labels. sectorsToWatch is an array of 2-3 sector names to watch, drawn from the data given. " +
-              // The live counts and averages are rendered beside this text and keep ticking, while
-              // the narrative is cached for minutes. If the model quotes a figure it will visibly
-              // disagree with the tiles next to it, so it is told to stay qualitative and name
-              // sectors and stocks instead.
-              "IMPORTANT: write the summary qualitatively. Do not state any counts, percentages, or numeric figures — the live numbers are displayed alongside your text and would contradict you. Refer to breadth in words (\"advancers comfortably outnumber decliners\") and name the leading and lagging sectors and stocks instead.",
-          },
-          {
-            role: "user",
-            // Only the aggregate figures go to the model — the per-tier mover lists are rendered
-            // straight from the quote feed and would just inflate the prompt.
-            content: `Real breadth data from our tracked Indian stock universe: ${JSON.stringify({
-              totalTracked: breadth.totalTracked,
-              advancing: breadth.advancing,
-              declining: breadth.declining,
-              unchanged: breadth.unchanged,
-              averageChangePercent: breadth.averageChangePercent,
-              topSector: breadth.topSector,
-              bottomSector: breadth.bottomSector,
-              topGainer: breadth.topGainer,
-              topLoser: breadth.topLoser,
-            })}. Write today's market pulse from this data.`,
-          },
-        ],
-        temperature: 0.6,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
+      const fallback = buildHeuristicNarrative(breadth);
+      const summary = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary : fallback.summary;
+      const themes = Array.isArray(parsed.themes) ? parsed.themes.filter((t: unknown): t is string => typeof t === "string") : [];
+      const sectorsToWatch = Array.isArray(parsed.sectorsToWatch)
+        ? parsed.sectorsToWatch.filter((t: unknown): t is string => typeof t === "string")
+        : [];
 
-    if (!response.ok) return null;
-
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-
-    const parsed = JSON.parse(match[0]);
-    const fallback = buildHeuristicNarrative(breadth);
-    const summary = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary : fallback.summary;
-    const themes = Array.isArray(parsed.themes) ? parsed.themes.filter((t: unknown) => typeof t === "string") : [];
-    const sectorsToWatch = Array.isArray(parsed.sectorsToWatch) ? parsed.sectorsToWatch.filter((t: unknown) => typeof t === "string") : [];
-
-    return {
-      summary,
-      themes: themes.length > 0 ? themes : fallback.themes,
-      sectorsToWatch: sectorsToWatch.length > 0 ? sectorsToWatch : fallback.sectorsToWatch,
-      generatedAt: new Date().toISOString(),
-      source: "ai",
-    };
-  } catch {
-    return null;
-  }
+      return {
+        summary,
+        themes: themes.length > 0 ? themes : fallback.themes,
+        sectorsToWatch: sectorsToWatch.length > 0 ? sectorsToWatch : fallback.sectorsToWatch,
+        generatedAt: new Date().toISOString(),
+        source: "ai",
+      } satisfies Narrative;
+    },
+  });
 }
 
 function latestTradeAt(quotes: { asOf: string | null }[]): string | null {

@@ -35,7 +35,7 @@ import { categoryOf } from "./bse-sectors";
 import { fetchNewsQuery, matchCompany, type NewsItem } from "./market-news";
 import { findStock, searchStocks } from "./stock-search";
 import { buildOutlook, type StockOutlook, type TrailingReturns } from "./stock-outlook";
-import { appOrigin } from "./app-origin";
+import { chatJson, extractJsonObject } from "./openrouter";
 
 // ---------------------------------------------------------------------------
 // The query, and the filters over it
@@ -617,8 +617,6 @@ async function answerWithAi(
   items: NewsItem[],
   outlook: StockOutlook | null,
 ): Promise<{ headline: string; points: IntelPoint[] } | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
-
   const numbered = items
     .map((item, index) => `${index + 1}. ${item.title} (${item.source}, ${item.publishedAt.slice(0, 10)})`)
     .join("\n");
@@ -627,67 +625,44 @@ async function answerWithAi(
     ? `Computed call: ${outlook.stance === "Buy" ? "Outperform" : outlook.stance} (conviction ${outlook.conviction}/100). Measured returns: ${measuredLine(outlook.measured)}.`
     : "No measured returns are available for this company.";
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-intel-search",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Company: ${subject}\nQuestion: ${question}\n${measured}\n\nHeadlines:\n${numbered}`,
-          },
-        ],
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
+  return chatJson({
+    feature: "intel-search",
+    system: SYSTEM_PROMPT,
+    user: `Company: ${subject}\nQuestion: ${question}\n${measured}\n\nHeadlines:\n${numbered}`,
+    temperature: 0.2,
+    parse: (text) => {
+      const parsed = extractJsonObject(text) as { headline?: unknown; points?: unknown } | null;
+      if (!parsed) return null;
 
-    if (!response.ok) throw new Error(`OpenRouter responded with ${response.status}`);
+      const headline = clip(parsed.headline, 120);
 
-    const payload = await response.json();
-    const match = (payload.choices?.[0]?.message?.content || "").match(/\{[\s\S]*\}/);
-    if (!match) return null;
+      const points = (Array.isArray(parsed.points) ? parsed.points : [])
+        .map((point) => {
+          const entry = point as { text?: unknown; source?: unknown; category?: unknown; impact?: unknown; badge?: unknown };
+          const text = clip(entry?.text);
+          // A citation is only kept when it names a headline that was actually supplied — a model
+          // that cites article 9 out of six is corrected to "unsourced", not believed.
+          const source = Number(entry?.source);
+          const cited = Number.isInteger(source) && source >= 1 && source <= items.length ? source : null;
 
-    const parsed = JSON.parse(match[0]) as { headline?: unknown; points?: unknown };
-    const headline = clip(parsed.headline, 120);
+          return {
+            text,
+            source: cited,
+            // An unrecognised category is worked out from the point's own words rather than dumped
+            // into "other", so a card is only ever "Other developments" when it really is.
+            category: isCategory(entry?.category) ? entry.category : categorise(text),
+            impact: isImpact(entry?.impact) ? entry.impact : "neutral",
+            badge: clip(entry?.badge, MAX_BADGE),
+          };
+        })
+        .filter((point) => point.text.length > 0)
+        .slice(0, MAX_POINTS);
 
-    const points = (Array.isArray(parsed.points) ? parsed.points : [])
-      .map((point) => {
-        const entry = point as { text?: unknown; source?: unknown; category?: unknown; impact?: unknown; badge?: unknown };
-        const text = clip(entry?.text);
-        // A citation is only kept when it names a headline that was actually supplied — a model
-        // that cites article 9 out of six is corrected to "unsourced", not believed.
-        const source = Number(entry?.source);
-        const cited = Number.isInteger(source) && source >= 1 && source <= items.length ? source : null;
+      if (!headline || points.length === 0) return null;
 
-        return {
-          text,
-          source: cited,
-          // An unrecognised category is worked out from the point's own words rather than dumped
-          // into "other", so a card is only ever "Other developments" when it really is.
-          category: isCategory(entry?.category) ? entry.category : categorise(text),
-          impact: isImpact(entry?.impact) ? entry.impact : "neutral",
-          badge: clip(entry?.badge, MAX_BADGE),
-        };
-      })
-      .filter((point) => point.text.length > 0)
-      .slice(0, MAX_POINTS);
-
-    if (!headline || points.length === 0) return null;
-
-    return { headline, points };
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
+      return { headline, points };
+    },
+  });
 }
 
 /**

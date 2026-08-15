@@ -8,11 +8,11 @@
 // model only writes prose over figures it is handed, and it is told in as many words not to invent
 // any. With no key configured the read is composed from those same figures directly, and says so.
 
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
-import { appOrigin } from "./app-origin";
+import { chatStream, usageFromStreamPayload, type StreamHandle, type UsagePayload } from "./openrouter";
 
 export type BoardFact = { label: string; value: string };
 
@@ -82,8 +82,6 @@ export function composeRead(brief: BoardBrief): BoardRead {
 
   return { headline, points, source: "heuristic" };
 }
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
 // The reply is asked for as lines rather than as a JSON object so it can be shown as it arrives.
 // Half a JSON object is not renderable — it parses only once the closing brace lands, which means
@@ -189,42 +187,16 @@ export function deltaOf(payload: string): string {
   }
 }
 
-async function openRouterStream(brief: BoardBrief): Promise<Response | null> {
-  if (!process.env.OPENROUTER_API_KEY) return null;
-
+function openRouterStream(brief: BoardBrief): Promise<StreamHandle | null> {
   const facts = brief.facts.map((fact) => `${fact.label}: ${fact.value}`).join("\n");
   const highlights = brief.highlights.map((highlight) => `- ${highlight}`).join("\n");
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-board-read",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Board: ${brief.subject}\nQuestion: ${brief.question}\n\nFigures:\n${facts}\n\nStandouts:\n${highlights}`,
-          },
-        ],
-        temperature: 0.5,
-        stream: true,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!response.ok || !response.body) throw new Error(`OpenRouter responded with ${response.status}`);
-    return response;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
+  return chatStream({
+    feature: "board-read",
+    system: SYSTEM_PROMPT,
+    user: `Board: ${brief.subject}\nQuestion: ${brief.question}\n\nFigures:\n${facts}\n\nStandouts:\n${highlights}`,
+    temperature: 0.5,
+  });
 }
 
 /**
@@ -243,8 +215,8 @@ export async function* streamBoardRead(brief: BoardBrief): AsyncGenerator<ReadFr
     return;
   }
 
-  const response = await openRouterStream(brief);
-  if (!response?.body) {
+  const handle = await openRouterStream(brief);
+  if (!handle?.response.body) {
     const composed = composeRead(brief);
     readCache.put(brief, composed);
     yield* framesOf(composed);
@@ -252,10 +224,14 @@ export async function* streamBoardRead(brief: BoardBrief): AsyncGenerator<ReadFr
   }
 
   const decoder = new TextDecoder();
-  const reader = response.body.getReader();
+  const reader = handle.response.body.getReader();
   let buffer = "";
   let headline = "";
   const points: string[] = [];
+  /** The usage block from the stream's final chunk — see `usageFromStreamPayload`. */
+  let usage: UsagePayload | undefined;
+  /** Whether the read loop threw, which separates a cut-off stream from an empty one. */
+  let broke = false;
 
   /**
    * Turns the complete lines sitting in `buffer` into frames.
@@ -291,25 +267,36 @@ export async function* streamBoardRead(brief: BoardBrief): AsyncGenerator<ReadFr
       const { payloads, rest } = readSseChunk(sse);
       sse = rest;
 
-      for (const payload of payloads) buffer += deltaOf(payload);
+      for (const payload of payloads) {
+        usage = usageFromStreamPayload(payload) ?? usage;
+        buffer += deltaOf(payload);
+      }
       yield* drain(false);
     }
     // The model's last line usually arrives without a trailing newline, so it is still in the
     // buffer when the stream closes.
     if (buffer.trim()) yield* drain(true);
   } catch (error) {
+    broke = true;
     console.error(error);
   }
 
   // A reply that produced nothing usable is not worth caching as the board's read; the figures
   // themselves always say something, so they are what the reader gets instead.
   if (!headline || points.length === 0) {
+    // A stream that was cut off and one that finished having written nothing usable both leave the
+    // reader with the composed read, but they are different faults — one is the connection and one
+    // is the model — so they are recorded apart.
+    handle.settle(broke ? "failed" : "unusable", usage);
     const composed = composeRead(brief);
     readCache.put(brief, composed);
     yield* framesOf(composed);
     return;
   }
 
+  // A stream that broke after writing a usable headline and points still gave the reader a written
+  // read, which is what this records.
+  handle.settle("ok", usage);
   const read: BoardRead = { headline, points, source: "ai" };
   readCache.put(brief, read);
   yield { type: "done", source: "ai" };

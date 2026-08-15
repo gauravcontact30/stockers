@@ -10,13 +10,13 @@
 // composed from the numbers directly. Either way the stance comes from the arithmetic, so the
 // call a reader sees is always explainable — matching how the market pulse labels itself.
 
-// Reads OPENROUTER_API_KEY. The `server-only` import makes a client component that pulls this in a
-// build error, rather than a key that quietly ships to the browser.
+// Reads OPENROUTER_API_KEY through `./openrouter`. The `server-only` import makes a client
+// component that pulls this in a build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
 import { indianStocks, type CapTier } from "./indian-stocks";
 import { getPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
-import { appOrigin } from "./app-origin";
+import { chatJson, extractJsonObject } from "./openrouter";
 
 export type Stance = "Buy" | "Hold" | "Sell";
 
@@ -101,7 +101,6 @@ export function explainVerdict(summary: PerformanceSummary, stance: Stance, sect
 
 type AiRationale = { symbol: string; rationale: string };
 
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 const STANCE_LABELS: Record<Stance, string> = { Buy: "Outperform", Hold: "Hold", Sell: "Underperform" };
 
 /**
@@ -111,8 +110,6 @@ const STANCE_LABELS: Record<Stance, string> = { Buy: "Outperform", Hold: "Hold",
  * list on any failure, which drops every row back to its computed explanation.
  */
 async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummary }[]): Promise<AiRationale[]> {
-  if (!process.env.OPENROUTER_API_KEY) return [];
-
   const facts = rows
     .map(
       ({ verdict }) =>
@@ -120,50 +117,30 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
     )
     .join("\n");
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appOrigin(),
-        "X-Title": "stockers-verdicts",
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              'You are stockers, an AI equity analyst writing for Indian investors. For each stock you are given the call that has already been decided from its returns. Write one specific sentence justifying that exact call using those numbers and what you know of the company and its sector. Never contradict the call. Return JSON only: {"rationales":[{"symbol":"SYM","rationale":"..."}]}',
-          },
-          { role: "user", content: facts },
-        ],
-        temperature: 0.6,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
+  const rationales = await chatJson({
+    feature: "verdicts",
+    system:
+      'You are stockers, an AI equity analyst writing for Indian investors. For each stock you are given the call that has already been decided from its returns. Write one specific sentence justifying that exact call using those numbers and what you know of the company and its sector. Never contradict the call. Return JSON only: {"rationales":[{"symbol":"SYM","rationale":"..."}]}',
+    user: facts,
+    temperature: 0.6,
+    parse: (text) => {
+      const parsed = extractJsonObject(text) as { rationales?: unknown } | null;
+      if (!parsed || !Array.isArray(parsed.rationales)) return null;
 
-    if (!response.ok) throw new Error(`OpenRouter responded with ${response.status}`);
+      const kept = parsed.rationales.flatMap((entry): AiRationale[] => {
+        const row = entry as Record<string, unknown>;
+        return typeof row?.symbol === "string" && typeof row?.rationale === "string" && row.rationale.trim()
+          ? [{ symbol: row.symbol.toUpperCase(), rationale: row.rationale.trim() }]
+          : [];
+      });
 
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content || "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return [];
+      // An empty list is a reply that narrated nothing, which is a fallback rather than a success:
+      // every row drops back to its computed explanation exactly as if the call had failed.
+      return kept.length > 0 ? kept : null;
+    },
+  });
 
-    const parsed = JSON.parse(match[0]) as { rationales?: unknown };
-    if (!Array.isArray(parsed.rationales)) return [];
-
-    return parsed.rationales.flatMap((entry) => {
-      const row = entry as Record<string, unknown>;
-      return typeof row.symbol === "string" && typeof row.rationale === "string" && row.rationale.trim()
-        ? [{ symbol: row.symbol.toUpperCase(), rationale: row.rationale.trim() }]
-        : [];
-    });
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
+  return rationales ?? [];
 }
 
 const VERDICT_TTL_MS = 10 * 60_000;
