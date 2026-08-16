@@ -170,6 +170,41 @@ describe("createUser", () => {
     ).resolves.toBeNull();
   });
 
+  it("retries without optional auth-extension columns when an older Supabase schema is missing them", async () => {
+    fetchMock
+      .mockResolvedValueOnce(reply({ code: "PGRST204", message: "Could not find the 'mfa_enforced' column of 'users' in the schema cache" }, 400))
+      .mockImplementationOnce(async (_url: string, init: RequestInit) => reply([JSON.parse(init.body as string)]))
+      .mockImplementationOnce(async (_url: string, init: RequestInit) => reply([JSON.parse(init.body as string)]));
+
+    const user = await createUser({
+      name: "Legacy Person",
+      email: "legacy@example.com",
+      password: "secret123",
+      plan: "Starter",
+      mobile: "9876543210",
+    });
+
+    const [first, second] = calls();
+    expect(user?.email).toBe("legacy@example.com");
+    expect(first.body).toHaveProperty("mfa_enforced", false);
+    expect(second.body).toMatchObject({ email: "legacy@example.com", role: "user" });
+    expect(second.body).not.toHaveProperty("password_reset_token");
+    expect(second.body).not.toHaveProperty("mfa_mode");
+    expect(second.body).not.toHaveProperty("mfa_enforced");
+    expect(second.body).not.toHaveProperty("social_providers");
+
+    await createUser({
+      name: "Next Legacy Person",
+      email: "legacy-next@example.com",
+      password: "secret123",
+      plan: "Starter",
+    });
+
+    const third = calls()[2];
+    expect(third.body).toMatchObject({ email: "legacy-next@example.com", role: "user" });
+    expect(third.body).not.toHaveProperty("mfa_enforced");
+  });
+
   it("throws on any other failure instead of quietly writing somewhere else", async () => {
     fetchMock.mockResolvedValueOnce(reply({ code: "42P01", message: 'relation "public.users" does not exist' }, 404));
 

@@ -15,10 +15,9 @@
 // network exactly as before.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { BseTrendingBoard } from "./bse-trending-board";
 import { getBseTrending, type BseTrendingBoard as BseTrendingPayload } from "../lib/bse-market";
-import { CACHE_TAGS } from "../lib/cache";
 import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
 import { BoardFallback } from "./streamed-boards";
 
@@ -47,9 +46,7 @@ const OPENING = {
 } as const;
 
 export async function TrendingPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse, CACHE_TAGS.nse);
+  await io();
 
   const board = await getBseTrending({
     rank: OPENING.rank,

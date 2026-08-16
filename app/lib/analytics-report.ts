@@ -11,7 +11,9 @@
 
 import type { AnalyticsEvent, DeviceKind } from "./analytics";
 import { ACTIONS, dayBefore, daysBetween, isActionKey } from "./analytics";
+import { MONITORED_EMAILS } from "./monitored-users";
 import { FEATURE_BY_KEY, isFeatureKey, type FeatureKey, type PlanTier } from "./plan-tiers";
+import { buildPresenceReport, type PresenceSession } from "./presence-report";
 import type { AdminUserView } from "./store";
 
 export type DailyPoint = {
@@ -87,6 +89,66 @@ export type ActivityRow = {
   plan: string | null;
 };
 
+export type MonitoredFeatureUse = {
+  key: FeatureKey;
+  label: string;
+  tier: PlanTier;
+  opens: number;
+  blocked: number;
+  firstAt: string | null;
+  lastAt: string | null;
+  /** Best-effort observed time after feature opens, capped at thirty minutes per step. */
+  estimatedSeconds: number;
+};
+
+export type MonitoredSessionRow = {
+  key: string;
+  startedAt: string | null;
+  lastSeenAt: string | null;
+  estimatedSeconds: number;
+  events: number;
+  pages: string[];
+  device: DeviceKind | null;
+};
+
+export type MonitoredUserRow = {
+  email: string;
+  found: boolean;
+  userId: string | null;
+  name: string;
+  mobile: string | null;
+  plan: string | null;
+  role: string | null;
+  emailVerified: boolean;
+  subscribedUntil: string | null;
+  createdAt: string | null;
+  visits: number;
+  actions: number;
+  featureOpens: number;
+  blockedAttempts: number;
+  signins: number;
+  signups: number;
+  sessions: number;
+  estimatedSeconds: number;
+  firstSeen: string | null;
+  lastSeen: string | null;
+  device: DeviceKind | null;
+  topPage: string | null;
+  topFeature: string | null;
+  live: {
+    online: boolean;
+    path: string | null;
+    minutes: number;
+    idleSeconds: number;
+    tabs: number;
+    startedAt: string;
+    lastSeenAt: string;
+  } | null;
+  features: MonitoredFeatureUse[];
+  sessionRows: MonitoredSessionRow[];
+  recent: ActivityRow[];
+};
+
 export type AnalyticsTotals = {
   visitors: number;
   views: number;
@@ -157,6 +219,8 @@ export type AnalyticsReport = {
   /** Interactions by hour of the IST day, 0-23, always all 24 so the shape is readable. */
   hours: { hour: number; count: number }[];
   users: AnalyticsUserRow[];
+  /** The fixed accounts the admin asked to watch closely, present even with no activity. */
+  monitoredUsers: MonitoredUserRow[];
   recent: ActivityRow[];
 };
 
@@ -504,6 +568,171 @@ function recentFrom(events: AnalyticsEvent[], byId: Map<string, AdminUserView>, 
   });
 }
 
+function secondsBetween(from: string | null, to: string | null): number {
+  if (!from || !to) return 0;
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+  return Math.round((end - start) / 1_000);
+}
+
+function mostCommon(values: Array<string | null | undefined>): string | null {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+
+  let winner: string | null = null;
+  let best = 0;
+  for (const [value, count] of counts) {
+    if (count > best) {
+      winner = value;
+      best = count;
+    }
+  }
+  return winner;
+}
+
+const FEATURE_STEP_CAP_SECONDS = 30 * 60;
+
+function monitoredUsersFrom({
+  events,
+  users,
+  byId,
+  presence = [],
+  now,
+  recentLimit,
+}: {
+  events: AnalyticsEvent[];
+  users: AdminUserView[];
+  byId: Map<string, AdminUserView>;
+  presence?: PresenceSession[];
+  now: Date;
+  recentLimit: number;
+}): MonitoredUserRow[] {
+  const usersByEmail = new Map(users.map((user) => [user.email.toLowerCase(), user]));
+  const liveRows = buildPresenceReport({ sessions: presence, users, now }).rows;
+
+  return MONITORED_EMAILS.map((email) => {
+    const user = usersByEmail.get(email);
+    const userEvents = user ? events.filter((event) => event.userId === user.id) : [];
+    const ascending = [...userEvents].sort((a, b) => a.at.localeCompare(b.at));
+    const recent = recentFrom(userEvents, byId, recentLimit);
+    const live = user ? (liveRows.find((row) => row.email?.toLowerCase() === email) ?? null) : null;
+
+    const groupedSessions = new Map<string, AnalyticsEvent[]>();
+    for (const event of ascending) {
+      const key = event.sessionId ?? `event:${event.id}`;
+      const group = groupedSessions.get(key);
+      if (group) group.push(event);
+      else groupedSessions.set(key, [event]);
+    }
+
+    const sessionRows: MonitoredSessionRow[] = [...groupedSessions.entries()].map(([key, group]) => {
+      const first = group[0] ?? null;
+      const last = group[group.length - 1] ?? null;
+      return {
+        key,
+        startedAt: first?.at ?? null,
+        lastSeenAt: last?.at ?? null,
+        estimatedSeconds: secondsBetween(first?.at ?? null, last?.at ?? null),
+        events: group.length,
+        pages: [...new Set(group.map((event) => event.path).filter((path): path is string => Boolean(path)))],
+        device: last?.device ?? null,
+      };
+    });
+
+    const featureTallies = new Map<FeatureKey, MonitoredFeatureUse>();
+    for (let index = 0; index < ascending.length; index++) {
+      const event = ascending[index];
+      if (event.type !== "feature" || !isFeatureKey(event.feature)) continue;
+
+      const key = event.feature;
+      const feature = FEATURE_BY_KEY[key];
+      const existing =
+        featureTallies.get(key) ?? {
+          key,
+          label: feature.label,
+          tier: feature.tier,
+          opens: 0,
+          blocked: 0,
+          firstAt: null,
+          lastAt: null,
+          estimatedSeconds: 0,
+        };
+
+      if (event.blocked) existing.blocked++;
+      else existing.opens++;
+      existing.firstAt = existing.firstAt && existing.firstAt < event.at ? existing.firstAt : event.at;
+      existing.lastAt = existing.lastAt && existing.lastAt > event.at ? existing.lastAt : event.at;
+
+      const next = ascending[index + 1];
+      if (!event.blocked && event.sessionId && next?.sessionId === event.sessionId) {
+        existing.estimatedSeconds += Math.min(secondsBetween(event.at, next.at), FEATURE_STEP_CAP_SECONDS);
+      }
+
+      featureTallies.set(key, existing);
+    }
+
+    const features = [...featureTallies.values()].sort(
+      (a, b) =>
+        b.opens - a.opens ||
+        b.blocked - a.blocked ||
+        b.estimatedSeconds - a.estimatedSeconds ||
+        a.label.localeCompare(b.label),
+    );
+    const sessionSeconds = sessionRows.reduce((total, row) => total + row.estimatedSeconds, 0);
+    const liveSeconds = live?.online ? live.minutes * 60 : 0;
+    const liveOverlapSeconds =
+      live?.online
+        ? sessionRows
+            .filter((row) => row.lastSeenAt !== null && row.lastSeenAt >= live.startedAt)
+            .reduce((total, row) => total + row.estimatedSeconds, 0)
+        : 0;
+
+    return {
+      email,
+      found: Boolean(user),
+      userId: user?.id ?? null,
+      name: user?.name ?? "Account not found",
+      mobile: user?.mobile ?? null,
+      plan: user?.plan ?? null,
+      role: user?.role ?? null,
+      emailVerified: user?.emailVerified ?? false,
+      subscribedUntil: user?.subscribedUntil ?? null,
+      createdAt: user?.createdAt ?? null,
+      visits: userEvents.filter((event) => event.type === "visit").length,
+      actions: userEvents.filter((event) => event.type === "action").length,
+      featureOpens: userEvents.filter((event) => event.type === "feature" && !event.blocked).length,
+      blockedAttempts: userEvents.filter((event) => event.type === "feature" && event.blocked).length,
+      signins: userEvents.filter((event) => event.type === "signin").length,
+      signups: userEvents.filter((event) => event.type === "signup").length,
+      sessions: groupedSessions.size,
+      estimatedSeconds: sessionSeconds + Math.max(0, liveSeconds - liveOverlapSeconds),
+      firstSeen: ascending[0]?.at ?? null,
+      lastSeen: ascending[ascending.length - 1]?.at ?? null,
+      device: ascending[ascending.length - 1]?.device ?? null,
+      topPage: mostCommon(userEvents.map((event) => event.path)),
+      topFeature: features.find((feature) => feature.opens > 0)?.label ?? null,
+      live: live
+        ? {
+            online: live.online,
+            path: live.path,
+            minutes: live.minutes,
+            idleSeconds: live.idleSeconds,
+            tabs: live.tabs,
+            startedAt: live.startedAt,
+            lastSeenAt: live.lastSeenAt,
+          }
+        : null,
+      features,
+      sessionRows: sessionRows.sort((a, b) => (b.lastSeenAt ?? "").localeCompare(a.lastSeenAt ?? "")),
+      recent,
+    };
+  });
+}
+
 /**
  * The whole report.
  *
@@ -517,6 +746,8 @@ export function buildReport({
   days,
   backend,
   recentLimit = RECENT_LIMIT,
+  presence = [],
+  now = new Date(),
 }: {
   events: AnalyticsEvent[];
   users: AdminUserView[];
@@ -524,6 +755,8 @@ export function buildReport({
   days: number;
   backend: "supabase" | "file";
   recentLimit?: number;
+  presence?: PresenceSession[];
+  now?: Date;
 }): AnalyticsReport {
   const from = dayBefore(today, Math.max(0, days - 1));
   const calendar = daysBetween(from, today);
@@ -562,6 +795,7 @@ export function buildReport({
     // than on unique users because "trending" is about volume of use, not breadth of it.
     trending: features.find((feature) => feature.opens > 0) ?? null,
     users: usersFrom(inRange, users),
+    monitoredUsers: monitoredUsersFrom({ events: inRange, users, byId, presence, now, recentLimit }),
     recent: recentFrom(inRange, byId, recentLimit),
   };
 }

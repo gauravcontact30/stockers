@@ -14,8 +14,29 @@ import { readPendingSubscription, savePendingSubscription, type PendingSubscript
 import { SignupSuccessModal } from "./signup-success-modal";
 
 type AuthMode = "signin" | "signup";
+type MfaChallenge = { challengeToken: string; mode: "sms" | "totp" };
 
 type AuthFormProps = { mode: AuthMode };
+
+function readStoredAuthSession(): { token: string; user: unknown } | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = window.localStorage.getItem("stockers-auth");
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as { token?: unknown; user?: unknown };
+    if (typeof parsed.token === "string" && parsed.token.startsWith("stockers.") && parsed.user && typeof parsed.user === "object") {
+      return { token: parsed.token, user: parsed.user };
+    }
+  } catch {
+    // Cleared below.
+  }
+
+  window.localStorage.removeItem("stockers-auth");
+  document.cookie = "stockers_session=; path=/; max-age=0; samesite=lax";
+  return null;
+}
 
 function checkoutTargetFromLocation(): PendingSubscription | null {
   if (typeof window === "undefined") return null;
@@ -108,6 +129,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [checkoutTarget] = useState<PendingSubscription | null>(() => checkoutTargetFromLocation());
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   /** The sign-up confirmation dialog, and the two things it reports back to the reader. */
   const [signupDone, setSignupDone] = useState(false);
@@ -138,7 +165,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (typeof window === "undefined") {
       return;
     }
-    const existing = window.localStorage.getItem("stockers-auth");
+    const existing = readStoredAuthSession();
     if (existing) {
       router.replace("/overview");
     }
@@ -154,6 +181,31 @@ export function AuthForm({ mode }: AuthFormProps) {
       );
     }
   }, [checkoutTarget]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email");
+    const reset = params.get("reset");
+    const social = params.get("social");
+    const socialError = params.get("error");
+
+    if (email) setFields((current) => ({ ...current, email }));
+    if (reset) {
+      setRecoveryOpen(true);
+      setResetToken(reset);
+    }
+    if (socialError) {
+      const provider = social ? `${social} ` : "";
+      setSuccess(false);
+      setMessage(
+        socialError === "social_config_missing"
+          ? `${provider}login is not configured yet. Add the provider client ID and secret on the server.`
+          : `${provider}login could not be completed. Please try again.`,
+      );
+    }
+  }, []);
 
   const localErrors: FieldErrors =
     mode === "signup" ? validateSignup(fields) : validateSignin({ email: fields.email, password: fields.password });
@@ -189,6 +241,102 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   const blur = (field: keyof SignupFields) => () => setTouched((current) => ({ ...current, [field]: true }));
+
+  const finishSignin = (data: { token: string; user: unknown }) => {
+    localStorage.setItem("stockers-auth", JSON.stringify({ token: data.token, user: data.user }));
+    syncSessionCookie();
+    void refresh();
+    setSuccess(true);
+    setMessage(
+      checkoutTarget
+        ? "Signed in! Redirecting to complete your subscription..."
+        : "Signed in! Redirecting to your dashboard...",
+    );
+    router.push(
+      checkoutTarget
+        ? `/pricing?${new URLSearchParams({
+            subscribe: "1",
+            plan: checkoutTarget.plan,
+            cycle: checkoutTarget.cycle,
+            ...(checkoutTarget.promoCode ? { promo: checkoutTarget.promoCode } : {}),
+            ...(checkoutTarget.referralCode ? { ref: checkoutTarget.referralCode } : {}),
+          }).toString()}`
+        : "/overview",
+    );
+  };
+
+  const requestPasswordReset = async () => {
+    setMessage(null);
+    setSuccess(false);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fields.email.trim() }),
+      });
+      const data = await response.json();
+      setSuccess(response.ok);
+      setMessage(data.message || data.error || "Unable to request a reset link.");
+    } catch {
+      setMessage("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPasswordNow = async () => {
+    setMessage(null);
+    setSuccess(false);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: resetToken.trim(),
+          password: resetPassword,
+          confirmPassword: resetConfirmPassword,
+        }),
+      });
+      const data = await response.json();
+      setSuccess(response.ok);
+      setMessage(data.message || data.error || "Unable to reset password.");
+      if (response.ok) {
+        setRecoveryOpen(false);
+        setResetPassword("");
+        setResetConfirmPassword("");
+      }
+    } catch {
+      setMessage("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyMfa = async () => {
+    if (!mfaChallenge) return;
+    setMessage(null);
+    setSuccess(false);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/mfa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeToken: mfaChallenge.challengeToken, code: mfaCode.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage(data.error || "Unable to verify the security code.");
+        setLoading(false);
+        return;
+      }
+      finishSignin(data);
+    } catch {
+      setMessage("Network error. Please check your connection and try again.");
+      setLoading(false);
+    }
+  };
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -258,6 +406,19 @@ export function AuthForm({ mode }: AuthFormProps) {
         setSignupEmail(fields.email.trim());
         setTrialEndsOn(typeof data.trialEndsOn === "string" ? data.trialEndsOn : null);
         setSignupDone(true);
+        return;
+      }
+
+      if (data.mfaRequired && typeof data.challengeToken === "string") {
+        const challengeMode = data.mode === "totp" ? "totp" : "sms";
+        setMfaChallenge({ challengeToken: data.challengeToken, mode: challengeMode });
+        setSuccess(false);
+        setMessage(
+          challengeMode === "sms"
+            ? "Password accepted. Enter the SMS code to finish signing in."
+            : "Password accepted. Enter your authenticator app code to finish signing in.",
+        );
+        setLoading(false);
         return;
       }
 
@@ -401,6 +562,95 @@ export function AuthForm({ mode }: AuthFormProps) {
           </button>
         </div>
       </Field>
+
+      {!signup && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setRecoveryOpen((open) => !open);
+              setMessage(null);
+            }}
+            className="text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+          >
+            Forgot password?
+          </button>
+        </div>
+      )}
+
+      {!signup && recoveryOpen && (
+        <div className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/30 dark:bg-sky-500/10">
+          <Field label="Reset token" hint="Paste the token from your email link, or use the link directly.">
+            <input
+              value={resetToken}
+              onChange={(event) => setResetToken(event.target.value)}
+              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+              placeholder="Reset token"
+              autoComplete="one-time-code"
+            />
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="password"
+              value={resetPassword}
+              onChange={(event) => setResetPassword(event.target.value)}
+              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+              placeholder="New password"
+              autoComplete="new-password"
+            />
+            <input
+              type="password"
+              value={resetConfirmPassword}
+              onChange={(event) => setResetConfirmPassword(event.target.value)}
+              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+              placeholder="Confirm new password"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={requestPasswordReset}
+              className="rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-60 dark:border-sky-500/30 dark:bg-slate-950 dark:text-sky-300"
+            >
+              Email reset link
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={resetPasswordNow}
+              className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+            >
+              Update password
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!signup && mfaChallenge && (
+        <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <Field label={mfaChallenge.mode === "sms" ? "SMS code" : "Authenticator code"}>
+            <input
+              value={mfaCode}
+              onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className={`${FIELD_BASE} border-amber-200 tracking-[0.4em] dark:border-amber-500/40`}
+              placeholder="000000"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+            />
+          </Field>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={verifyMfa}
+            className="w-full rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:opacity-60"
+          >
+            Verify and sign in
+          </button>
+        </div>
+      )}
 
       {signup && (
         <Field label="Confirm password" error={errorFor("confirmPassword")}>

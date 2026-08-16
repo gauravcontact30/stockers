@@ -382,6 +382,76 @@ describe("AdminUsers", () => {
     await screen.findByRole("table");
 
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send reset" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Grant 5d trial" })).not.toBeInTheDocument();
+  });
+
+  it("lets the super admin send a password reset link", async () => {
+    mockStatus = { isAdmin: true, email: "garvcontact30@gmail.com" };
+    const person = userEvent.setup();
+    const updated = ROSTER.map((entry) =>
+      entry.id === "u1" ? { ...entry, passwordResetSentAt: "2026-08-08T10:00:00.000Z" } : entry,
+    );
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            ok: true,
+            users: updated,
+            summary: SUMMARY,
+            today: TODAY,
+            message: "Password reset link sent to aarav@example.com.",
+          }),
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    await person.click(within(screen.getByText("Aarav Sharma").closest("tr")!).getByRole("button", { name: "Send reset" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u1", passwordReset: "send" });
+    expect(await screen.findByText("Password reset link sent to aarav@example.com.")).toBeInTheDocument();
+    expect(screen.getByText(/Reset sent/)).toBeInTheDocument();
+  });
+
+  it("lets the super admin approve a 5-day free trial", async () => {
+    mockStatus = { isAdmin: true, email: "garvcontact30@gmail.com" };
+    const person = userEvent.setup();
+    const updated = ROSTER.map((entry) =>
+      entry.id === "u4" ? { ...entry, trialStartedAt: "2026-08-08T10:00:00.000Z" } : entry,
+    );
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ users: ROSTER, summary: SUMMARY, today: TODAY }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            ok: true,
+            users: updated,
+            summary: SUMMARY,
+            today: TODAY,
+            message: "5-day free trial approved for meera@example.com.",
+          }),
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<AdminUsers />);
+    await screen.findByRole("table");
+
+    await person.click(within(screen.getByText("Meera Das").closest("tr")!).getByRole("button", { name: "Grant 5d trial" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ id: "u4", freeTrial: "grant5d" });
+    expect(await screen.findByText("5-day free trial approved for meera@example.com.")).toBeInTheDocument();
+    expect(screen.getByText(/Trial started/)).toBeInTheDocument();
   });
 
   it("lets the super admin delete another user", async () => {

@@ -9,8 +9,10 @@ import type {
   DailyPoint,
   FeatureUsage,
   Funnel,
+  MonitoredUserRow,
   RankedRow,
 } from "../lib/analytics-report";
+import { isMonitoredUserEmail } from "../lib/monitored-users";
 import { AI_FEATURES, TIER_LABEL, tierForPlan, type PlanTier } from "../lib/plan-tiers";
 import { AdminLiveUsers } from "./admin-live-users";
 import { DataTable, type Column } from "./data-table";
@@ -108,6 +110,15 @@ export function formatMoment(value: string | null): string {
 
 export function formatPercent(share: number): string {
   return `${Math.round(share * 100)}%`;
+}
+
+export function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${seconds}s`;
 }
 
 /** "9 am", "3 pm" — the hour labels under the busiest-hours chart. */
@@ -345,6 +356,63 @@ export function DailyTraffic({ daily, metric }: { daily: DailyPoint[]; metric: k
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function WindowInsightCards({
+  daily,
+  metric,
+  from,
+  to,
+}: {
+  daily: DailyPoint[];
+  metric: keyof Omit<DailyPoint, "day">;
+  from: string;
+  to: string;
+}) {
+  const label = METRIC_LABEL[metric];
+  const total = daily.reduce((sum, point) => sum + point[metric], 0);
+  const average = daily.length > 0 ? Math.round(total / daily.length) : 0;
+  const peak = daily.reduce((best, point) => (point[metric] > best[metric] ? point : best), daily[0] ?? ({ day: to, [metric]: 0 } as DailyPoint));
+  const quiet = daily.reduce((best, point) => (point[metric] < best[metric] ? point : best), daily[0] ?? ({ day: from, [metric]: 0 } as DailyPoint));
+
+  const cards = [
+    {
+      label: "Total in selected window",
+      value: formatNumber(total),
+      hint: `${label} from ${formatDayShort(from)} to ${formatDayShort(to)}`,
+      tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300",
+    },
+    {
+      label: "Daily average",
+      value: formatNumber(average),
+      hint: `Typical day for ${label.toLowerCase()}`,
+      tone: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300",
+    },
+    {
+      label: "Best day",
+      value: formatDayShort(peak.day),
+      hint: `${formatNumber(peak[metric])} ${label.toLowerCase()}`,
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+    },
+    {
+      label: "Quietest day",
+      value: formatDayShort(quiet.day),
+      hint: `${formatNumber(quiet[metric])} ${label.toLowerCase()}`,
+      tone: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300",
+    },
+  ];
+
+  return (
+    <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map((card) => (
+        <div key={card.label} className={`rounded-2xl border p-3 ${card.tone}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">{card.label}</p>
+          <p className="mt-1 text-lg font-black tabular-nums text-slate-900 dark:text-white">{card.value}</p>
+          <p className="mt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">{card.hint}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -692,7 +760,6 @@ const EVENT_CHROME: Record<ActivityRow["type"], string> = {
 
 /** A refusal, whatever tier it was aimed at. Amber outranks the plan colour: it did not happen. */
 const BLOCKED_CHROME = "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300";
-
 /**
  * One activity, as a pill tinted by the plan it belongs to.
  *
@@ -731,7 +798,10 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
       header: "Who",
       cell: (row) => (
         <div>
-          <p className="font-semibold text-slate-900 dark:text-white">{row.name}</p>
+          <p className="flex flex-wrap items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+            {row.name}
+            {isMonitoredUserEmail(row.email) && <span className={`${PILL} border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300`}>Tracked</span>}
+          </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? "No account"}</p>
         </div>
       ),
@@ -807,6 +877,12 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
           test: (row, value) => activityTier(row) === value,
         },
         {
+          key: "tracked",
+          label: "Tracked emails",
+          options: [{ value: "tracked", label: "Only tracked emails" }],
+          test: (row) => isMonitoredUserEmail(row.email),
+        },
+        {
           key: "blocked",
           label: "Outcome",
           options: [
@@ -820,6 +896,83 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
       minWidth={1020}
       empty="Nothing of this kind has been recorded in this window yet."
     />
+  );
+}
+
+export function MonitoredUsersPanel({ rows = [] }: { rows?: MonitoredUserRow[] }) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-2">
+      {rows.map((row) => (
+        <article key={row.email} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{row.name}</p>
+              <p className="break-all text-xs text-slate-500 dark:text-slate-400">{row.email}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <PlanCell plan={row.plan} absent={row.found ? "Trial" : "No account"} />
+                <span className={`${PILL} ${row.live?.online ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300" : NEUTRAL_PILL}`}>
+                  {row.live?.online ? "Online now" : row.live ? "Recently seen" : "Not live"}
+                </span>
+                <span className={`${PILL} ${row.emailVerified ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300" : NEUTRAL_PILL}`}>
+                  {row.emailVerified ? "Verified" : "Unverified"}
+                </span>
+              </div>
+            </div>
+            <div className="text-left sm:text-right">
+              <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{formatDuration(row.estimatedSeconds)}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Observed site time</p>
+            </div>
+          </div>
+
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            {[
+              ["Sessions", row.sessions],
+              ["Visits", row.visits],
+              ["AI opens", row.featureOpens],
+              ["Blocked", row.blockedAttempts],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{label}</dt>
+                <dd className="mt-1 font-mono text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatNumber(Number(value))}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-4 grid gap-3 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+            <p>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Last seen:</span> {formatMoment(row.lastSeen ?? row.live?.lastSeenAt ?? null)}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Current path:</span> {row.live?.path ?? row.topPage ?? "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Mobile:</span> {row.mobile ?? "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Subscribed until:</span> {row.subscribedUntil ?? "-"}
+            </p>
+          </div>
+
+          <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Feature time</p>
+            {(row.features ?? []).length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No AI feature use recorded in this window.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {(row.features ?? []).slice(0, 4).map((feature) => (
+                  <li key={feature.key} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900">
+                    <span className="font-semibold text-slate-900 dark:text-white">{feature.label}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {formatDuration(feature.estimatedSeconds)} · {feature.opens} opened · {feature.blocked} blocked
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -1000,22 +1153,37 @@ export function AdminAnalytics() {
           </section>
 
           <section className={CARD}>
-            <SectionHead title="Over the window" blurb={METRIC_HINT[metric]} />
+            <SectionHead
+              title="Window trend"
+              blurb={`How ${METRIC_LABEL[metric].toLowerCase()} changed across the selected date range. Use this to spot spikes, quiet days and whether the current window is healthy.`}
+            />
+            <WindowInsightCards daily={report.daily} metric={metric} from={report.range.from} to={report.range.to} />
             {/* Grouped and named: the table below this chart has a sortable "Interactions" column
                 header, so without a group these two controls would be indistinguishable to anyone
                 navigating by role. */}
-            <div role="group" aria-label="Chart measure" className="mb-4 flex flex-wrap gap-1.5">
-              {METRICS.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setMetric(option.key)}
-                  aria-pressed={metric === option.key}
-                  className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${metric === option.key ? PILL_ON : PILL_OFF}`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div role="group" aria-label="Chart measure" className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Choose chart measure</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{METRIC_HINT[metric]}</p>
+                </div>
+                <p className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                  Showing {METRIC_LABEL[metric]}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {METRICS.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setMetric(option.key)}
+                    aria-pressed={metric === option.key}
+                    className={`h-8 rounded-full border px-3 text-xs font-semibold transition ${metric === option.key ? PILL_ON : PILL_OFF}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <DailyTraffic daily={report.daily} metric={metric} />
 
@@ -1137,8 +1305,16 @@ export function AdminAnalytics() {
 
           <section className={CARD}>
             <SectionHead
+              title="Tracked email activity"
+              blurb="Dedicated watchlist for garvcontact30@gmail.com and gauravcontact66@gmail.com, including account details, observed site time, live status and AI feature time."
+            />
+            <MonitoredUsersPanel rows={report.monitoredUsers} />
+          </section>
+
+          <section className={CARD}>
+            <SectionHead
               title="Recent activity"
-              blurb={`The latest events, newest first, from the ${report.backend === "supabase" ? "Supabase" : "local JSON"} store. Each AI touch is pilled in its plan's colour — sky for Starter, emerald for Pro, violet for Elite — and amber where the paywall refused it.`}
+              blurb={`The latest events, newest first, from the ${report.backend === "supabase" ? "Supabase" : "local JSON"} store. Use the Tracked emails filter for garvcontact30@gmail.com and gauravcontact66@gmail.com. Each AI touch is pilled in its plan's colour — sky for Starter, emerald for Pro, violet for Elite — and amber where the paywall refused it.`}
             />
             <ActivityFeed rows={report.recent} />
           </section>

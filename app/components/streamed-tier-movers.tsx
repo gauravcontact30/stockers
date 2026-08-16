@@ -9,10 +9,9 @@
 // server was never asked, and those cards go to the network exactly as before.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { TierMovers } from "./tier-movers";
 import { getBseMovers, type BseMoverPage } from "../lib/bse-market";
-import { CACHE_TAGS } from "../lib/cache";
 import { buildMoversUrl } from "../lib/market-urls";
 import { SectionSkeleton } from "./market-section";
 
@@ -50,9 +49,7 @@ async function side(direction: "gainers" | "losers") {
 }
 
 export async function TierMoversPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse);
+  await io();
 
   const [gainers, losers] = await Promise.all([side("gainers"), side("losers")]);
 

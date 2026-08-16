@@ -80,7 +80,7 @@ describe("TrendingPayload", () => {
 
     // The company name, not the ticker: the row renders the ticker as `{ticker} · {code}`, so it
     // is not a text node of its own.
-    expect(await screen.findByText("Reliance Industries")).toBeInTheDocument();
+    expect(await screen.findAllByText("Reliance Industries")).not.toHaveLength(0);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

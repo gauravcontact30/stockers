@@ -27,6 +27,10 @@ const PIE_SIZE = 220;
 const PIE_CENTER = PIE_SIZE / 2;
 const PIE_RADIUS = 82;
 
+function svgNumber(value: number): string {
+  return (Math.round(value * 1000) / 1000).toString();
+}
+
 const SERIES_ORDER: InvestorSeriesKey[] = ["promoters", "fii", "dii", "government", "retail", "bodies", "others", "public"];
 const SERIES_META: Record<InvestorSeriesKey, { label: string; color: string; text: string; pale: string }> = {
   promoters: {
@@ -146,9 +150,9 @@ function piePath(start: number, end: number) {
   const endPoint = pointOnPie(clampedEnd);
   const largeArc = clampedEnd - start > 50 ? 1 : 0;
   return [
-    `M ${PIE_CENTER} ${PIE_CENTER}`,
-    `L ${startPoint.x} ${startPoint.y}`,
-    `A ${PIE_RADIUS} ${PIE_RADIUS} 0 ${largeArc} 1 ${endPoint.x} ${endPoint.y}`,
+    `M ${svgNumber(PIE_CENTER)} ${svgNumber(PIE_CENTER)}`,
+    `L ${svgNumber(startPoint.x)} ${svgNumber(startPoint.y)}`,
+    `A ${svgNumber(PIE_RADIUS)} ${svgNumber(PIE_RADIUS)} 0 ${largeArc} 1 ${svgNumber(endPoint.x)} ${svgNumber(endPoint.y)}`,
     "Z",
   ].join(" ");
 }

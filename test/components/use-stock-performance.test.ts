@@ -126,7 +126,7 @@ describe("useStockPerformance", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("paints a locally cached symbol immediately and revalidates it in the background", async () => {
+  it("paints a locally cached symbol after hydration and revalidates it in the background", async () => {
     const stored = performanceFor("BATCH_STORED");
     window.localStorage.setItem(
       "stockers:performance-cache:v1",
@@ -136,8 +136,9 @@ describe("useStockPerformance", () => {
 
     const { result } = renderHook(() => useStockPerformance("BATCH_STORED"));
 
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.performance?.price).toBe(100));
     expect(result.current.loading).toBe(false);
-    expect(result.current.performance?.price).toBe(100);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(result.current.performance?.price).toBe(111));
@@ -153,8 +154,9 @@ describe("useStockPerformance", () => {
 
     const { result } = renderHook(() => useStockPerformance("BATCH_STALE"));
 
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.performance?.symbol).toBe("BATCH_STALE"));
     expect(result.current.loading).toBe(false);
-    expect(result.current.performance?.symbol).toBe("BATCH_STALE");
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     expect(result.current.performance?.symbol).toBe("BATCH_STALE");
   });

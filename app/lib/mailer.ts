@@ -194,6 +194,51 @@ export function verificationEmail(params: { name: string; verifyUrl: string }): 
   return { subject: `Confirm your email Â· ${BRAND}`, html, text };
 }
 
+export function passwordResetEmail(params: { name: string; resetUrl: string }): Omit<MailMessage, "to"> {
+  const name = escapeHtml(params.name);
+  const url = escapeHtml(params.resetUrl);
+
+  const text = [
+    `Hi ${params.name},`,
+    "",
+    "Use this link to reset your StockersAI password:",
+    params.resetUrl,
+    "",
+    "This link expires in 30 minutes. If you did not request it, you can ignore this message.",
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0f172a">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px">
+      <tr>
+        <td style="height:4px;background:linear-gradient(90deg,#38bdf8,#22c55e,#f59e0b);border-radius:16px 16px 0 0"></td>
+      </tr>
+      <tr>
+        <td style="padding:32px">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0284c7">${BRAND}</p>
+          <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25">Reset your password</h1>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569">
+            Hi ${name}, use the secure link below to choose a new password.
+          </p>
+          <a href="${url}" style="display:inline-block;padding:12px 24px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:999px;font-weight:600;font-size:15px">
+            Reset password
+          </a>
+          <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;word-break:break-all">
+            If the button doesn't work, paste this into your browser:<br />${url}
+          </p>
+          <p style="margin:24px 0 0;font-size:12px;color:#94a3b8">
+            This link expires in 30 minutes. If you did not request it, you can ignore this message.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject: `Reset your StockersAI password`, html, text };
+}
+
 /**
  * An enquiry from the contact form, addressed to the desk rather than to a visitor.
  *

@@ -48,16 +48,17 @@ export type HeroCarouselProps = {
 /**
  * The four slides.
  *
- * Two fixed themes and two rankings, in that order:
+ * A visitor lands looking for proof before editorial breadth, so the two live rankings open the
+ * carousel and the fixed sector themes follow as examples of how to inspect a thesis:
  *
- *   1. Data centres — the capacity build-out, three companies at three points in the chain
- *   2. Defence — aircraft, warships and components, at three different sizes
- *   3. Most gainers over one year — chosen by measured returns
- *   4. Where investors are buying — chosen by what brokers publish as most bought
+ *   1. Most gainers over one year — chosen by measured returns
+ *   2. Where investors are buying — chosen by what brokers publish as most bought
+ *   3. Data centres — the capacity build-out, three companies at three points in the chain
+ *   4. Defence — aircraft, warships and components, at three different sizes
  *
- * The first two are fixed because the *theme* is the editorial point and its companies are stable.
- * The last two are rankings, so their companies come out of the data — a hard-coded "top gainers"
- * list is a claim that stops being true the week after it is written.
+ * The ranking slides get their companies out of the data — a hard-coded "top gainers" list is a
+ * claim that stops being true the week after it is written. The last two are fixed because the
+ * *theme* is the editorial point and its companies are stable.
  *
  * Every card carries the company's own mark, the sector the exchange files it under with that
  * family's glyph, its cap tier, a live price and the full return matrix. Nothing is written over
@@ -70,20 +71,20 @@ export function slidesFor({
 }: HeroCarouselProps): Slide[] {
   return [
     {
-      caption: "Data centres: three companies building the capacity",
-      scene: <DataCentreScene initialPerformances={initialPerformance} />,
-    },
-    {
-      caption: "Defence: aircraft, warships and components compared",
-      scene: <DefenceStocksScene initialPerformances={initialPerformance} />,
-    },
-    {
       caption: "Most gainers: the three biggest one-year runs",
       scene: <YearGainersScene trio={yearGainers as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
       caption: "Where investors are buying: the three most bought through brokers",
       scene: <InvestorFavouritesScene trio={investorFavourites as Trio | null} initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Data centres: three companies building the capacity",
+      scene: <DataCentreScene initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Defence: aircraft, warships and components compared",
+      scene: <DefenceStocksScene initialPerformances={initialPerformance} />,
     },
   ];
 }

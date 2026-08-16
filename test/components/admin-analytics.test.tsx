@@ -187,7 +187,7 @@ function activity(overrides: Partial<ActivityRow> & { id: string }): ActivityRow
  * also proves the table pages after five.
  */
 const TIERED: ActivityRow[] = [
-  activity({ id: "t1", feature: "AI market pulse", plan: "Starter" }),
+  activity({ id: "t1", feature: "AI market pulse", plan: "Starter", name: "Garv Contact", email: "garvcontact30@gmail.com" }),
   activity({ id: "t2", feature: "AI stock research", plan: "Pro" }),
   activity({ id: "t3", feature: "AI intelligence search", plan: "Elite" }),
   activity({ id: "t4", feature: "AI ETF research", blocked: true, plan: "Starter" }),
@@ -217,6 +217,77 @@ function report(overrides: Partial<AnalyticsReport> = {}): AnalyticsReport {
     devices: [{ key: "mobile", label: "mobile", count: 70, users: 25, share: 1 }],
     hours: HOURS,
     users: USERS,
+    monitoredUsers: [
+      {
+        email: "garvcontact30@gmail.com",
+        found: true,
+        userId: "user_1",
+        name: "Garv Contact",
+        mobile: "9876543210",
+        plan: "Pro",
+        role: "user",
+        emailVerified: true,
+        subscribedUntil: "2026-09-01",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        visits: 3,
+        actions: 2,
+        featureOpens: 1,
+        blockedAttempts: 0,
+        signins: 1,
+        signups: 0,
+        sessions: 1,
+        estimatedSeconds: 900,
+        firstSeen: "2026-08-12T09:45:00.000Z",
+        lastSeen: "2026-08-12T10:00:00.000Z",
+        device: "mobile",
+        topPage: "/overview",
+        topFeature: "AI intelligence search",
+        live: { online: true, path: "/overview", minutes: 15, idleSeconds: 20, tabs: 1, startedAt: "2026-08-12T09:45:00.000Z", lastSeenAt: "2026-08-12T10:00:00.000Z" },
+        features: [
+          {
+            key: "intel",
+            label: "AI intelligence search",
+            tier: "elite",
+            opens: 1,
+            blocked: 0,
+            firstAt: "2026-08-12T09:50:00.000Z",
+            lastAt: "2026-08-12T09:50:00.000Z",
+            estimatedSeconds: 600,
+          },
+        ],
+        sessionRows: [],
+        recent: [],
+      },
+      {
+        email: "gauravcontact66@gmail.com",
+        found: false,
+        userId: null,
+        name: "Account not found",
+        mobile: null,
+        plan: null,
+        role: null,
+        emailVerified: false,
+        subscribedUntil: null,
+        createdAt: null,
+        visits: 0,
+        actions: 0,
+        featureOpens: 0,
+        blockedAttempts: 0,
+        signins: 0,
+        signups: 0,
+        sessions: 0,
+        estimatedSeconds: 0,
+        firstSeen: null,
+        lastSeen: null,
+        device: null,
+        topPage: null,
+        topFeature: null,
+        live: null,
+        features: [],
+        sessionRows: [],
+        recent: [],
+      },
+    ],
     recent: ACTIVITY,
     ...overrides,
   };
@@ -557,6 +628,16 @@ describe("the activity feed's controls", () => {
     expect(screen.queryByTitle("Elite feature, refused")).not.toBeInTheDocument();
   });
 
+  it("narrows to the monitored email watchlist", async () => {
+    render(<ActivityFeed rows={TIERED} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Tracked emails"), "tracked");
+
+    expect(screen.getByText("Garv Contact")).toBeInTheDocument();
+    expect(screen.getByText("garvcontact30@gmail.com")).toBeInTheDocument();
+    expect(screen.queryByText("Asha Rao")).not.toBeInTheDocument();
+  });
+
   it("puts everything back in one click", async () => {
     render(<ActivityFeed rows={TIERED} />);
 
@@ -606,9 +687,18 @@ describe("AdminAnalytics", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/analytics?days=1", expect.anything());
     expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Today — 2026-08-12")).toBeInTheDocument();
+    expect(screen.getByText("Window trend")).toBeInTheDocument();
+    expect(screen.getByText("Total in selected window")).toBeInTheDocument();
+    expect(screen.getByText("Daily average")).toBeInTheDocument();
+    expect(screen.getByText("Best day")).toBeInTheDocument();
+    expect(screen.getByText("Quietest day")).toBeInTheDocument();
     expect(screen.getByText("What people do")).toBeInTheDocument();
     expect(screen.getByText("Companies they look into")).toBeInTheDocument();
     expect(screen.getByText("When they are here")).toBeInTheDocument();
+    expect(screen.getByText("Tracked email activity")).toBeInTheDocument();
+    const tracked = sectionOf("Tracked email activity");
+    expect(within(tracked).getByText("garvcontact30@gmail.com")).toBeInTheDocument();
+    expect(within(tracked).getByText("AI intelligence search")).toBeInTheDocument();
     expect(screen.getByText(/local JSON store/)).toBeInTheDocument();
   });
 

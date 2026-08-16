@@ -1,9 +1,9 @@
 // The landing page slider: four slides, in a fixed order.
 //
-//   1. Data centres      three companies at three points in the build-out
-//   2. Defence           aircraft, warships and components, at three sizes
-//   3. Most gainers 1Y   chosen by measured one-year returns
-//   4. Investor buying   chosen by what brokers publish as most bought
+//   1. Most gainers 1Y   chosen by measured one-year returns
+//   2. Investor buying   chosen by what brokers publish as most bought
+//   3. Data centres      three companies at three points in the build-out
+//   4. Defence           aircraft, warships and components, at three sizes
 //
 // The first two carry fixed companies; the last two are rankings whose companies arrive as props
 // resolved on the server. What is checked here is the wiring — the order, the props reaching the
@@ -115,29 +115,29 @@ describe("HeroCarousel", () => {
     expect(screen.queryByRole("button", { name: /Go to slide/ })).not.toBeInTheDocument();
   });
 
-  it("opens on data centres, then defence, then the two rankings", () => {
+  it("opens on the two rankings, then data centres and defence", () => {
     render(<HeroCarousel yearGainers={GAINERS} investorFavourites={FAVOURITES} />);
 
-    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
-
-    tick();
-    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
-
-    tick();
     expect(screen.getByText("The three biggest one-year runs on the board")).toBeInTheDocument();
 
     tick();
     expect(screen.getByText("The three names most bought through India's brokers")).toBeInTheDocument();
+
+    tick();
+    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
+
+    tick();
+    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
   });
 
   it("names the arrow controls with their destination slides", () => {
     render(<HeroCarousel />);
 
     expect(
-      screen.getByRole("button", { name: "Previous slide: Where investors are buying: the three most bought through brokers" }),
+      screen.getByRole("button", { name: "Previous slide: Defence: aircraft, warships and components compared" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Next slide: Defence: aircraft, warships and components compared" }),
+      screen.getByRole("button", { name: "Next slide: Where investors are buying: the three most bought through brokers" }),
     ).toBeInTheDocument();
   });
 
@@ -174,6 +174,8 @@ describe("HeroCarousel", () => {
    */
   it("draws the scene artwork inline, with no artwork image to download", () => {
     const { container } = render(<HeroCarousel />);
+    tick();
+    tick();
 
     const images = Array.from(container.querySelectorAll("img"));
     expect(images.length).toBeGreaterThan(0);
@@ -185,19 +187,19 @@ describe("HeroCarousel", () => {
 
     // Three of the four used to hydrate immediately for a reader looking at the first — work that
     // landed straight in the page's blocking time.
-    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
-    expect(screen.queryByText("Compare three defence stocks by market performance")).not.toBeInTheDocument();
+    expect(screen.getByText(/Reading the board/)).toBeInTheDocument();
+    expect(screen.queryByText("The three names most bought through India's brokers")).not.toBeInTheDocument();
 
     tick();
-    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
+    expect(screen.getByText("The three names most bought through India's brokers")).toBeInTheDocument();
   });
 
   it("keeps a scene mounted once seen, so the crossfade has something to fade out of", () => {
     render(<HeroCarousel />);
     tick();
 
-    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
-    expect(screen.getByText("Compare three defence stocks by market performance")).toBeInTheDocument();
+    expect(screen.getAllByText(/Reading the board/).length).toBeGreaterThan(0);
+    expect(screen.getByText("The three names most bought through India's brokers")).toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------
@@ -207,7 +209,10 @@ describe("HeroCarousel", () => {
   it("gives every company its own mark and the sector the exchange files it under", () => {
     const { container } = render(<HeroCarousel initialPerformance={PERFORMANCES} />);
 
-    // The data-centre trio, on the opening slide.
+    tick();
+    tick();
+
+    // The data-centre trio, on the third slide.
     for (const symbol of ["NETWEB", "POWERINDIA", "LT"]) {
       expect(screen.getByAltText(new RegExp(String.raw`\(${symbol}\) logo$`))).toBeInTheDocument();
     }
@@ -221,6 +226,8 @@ describe("HeroCarousel", () => {
   it("hands the defence trio its cached server figures, before any client fetch resolves", () => {
     render(<HeroCarousel initialPerformance={PERFORMANCES} />);
     tick();
+    tick();
+    tick();
 
     expect(screen.getByText("₹4,100.00")).toBeInTheDocument();
     expect(screen.queryAllByText("Updating from live feed")).toHaveLength(0);
@@ -228,6 +235,8 @@ describe("HeroCarousel", () => {
 
   it("hands the data-centre trio its cached server figures", () => {
     render(<HeroCarousel initialPerformance={PERFORMANCES} />);
+    tick();
+    tick();
 
     expect(screen.getByText("₹18,000.00")).toBeInTheDocument();
   });
@@ -238,10 +247,8 @@ describe("HeroCarousel", () => {
 
   it("shows the companies the one-year ranking resolved to", () => {
     const { container } = render(<HeroCarousel yearGainers={GAINERS} />);
-    tick();
-    tick();
 
-    const slide = panes(container)[2];
+    const slide = panes(container)[0];
     for (const symbol of ["STLTECH", "HFCL", "SKYGOLD"]) {
       expect(within(slide as HTMLElement).getByText(symbol)).toBeInTheDocument();
     }
@@ -250,10 +257,8 @@ describe("HeroCarousel", () => {
   it("shows the companies the broker ranking resolved to, and attributes the placing", () => {
     const { container } = render(<HeroCarousel investorFavourites={FAVOURITES} />);
     tick();
-    tick();
-    tick();
 
-    const slide = panes(container)[3];
+    const slide = panes(container)[1];
     expect(within(slide as HTMLElement).getByText("SUZLON")).toBeInTheDocument();
     // Attributed, not asserted: this is what the brokers publish, not what we measured.
     expect(screen.getByText(/the brokers' own published most-bought lists/)).toBeInTheDocument();
@@ -265,7 +270,7 @@ describe("HeroCarousel", () => {
     tick();
     tick();
 
-    expect(screen.getByText("Reading the board…")).toBeInTheDocument();
+    expect(screen.getAllByText(/Reading the board/).length).toBeGreaterThan(0);
   });
 
   // ---------------------------------------------------------------------------

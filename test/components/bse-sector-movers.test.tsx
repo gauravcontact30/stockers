@@ -158,8 +158,8 @@ function mockFeed(summary: BseSectorBoardResponse = board, ok = true) {
 }
 
 describe("page sizes", () => {
-  it("shows ten categories a page, and five stocks a page inside one", () => {
-    expect(CATEGORIES_PER_PAGE).toBe(10);
+  it("shows five categories a page, and five stocks a page inside one", () => {
+    expect(CATEGORIES_PER_PAGE).toBe(5);
     // The inner boards are paged by the server, so the page size travels in the request.
     expect(buildSectorMoversUrl("Energy", "gainers", 1)).toContain("pageSize=5");
     expect(buildSectorBoardUrl("IDFCFIRSTB", 99)).toBe("/api/market/bse/sectors?q=IDFCFIRSTB&t=99");
@@ -269,7 +269,9 @@ describe("BseSectorMovers", () => {
     render(<BseSectorMovers />);
     await screen.findByText("IDFC First Bank Ltd");
 
-    await user.click(screen.getByRole("button", { name: /Forest Materials/ }));
+    const header = screen.getByRole("button", { name: /Forest Materials/ });
+    await user.click(header);
+    await waitFor(() => expect(header).toHaveAttribute("aria-expanded", "true"));
 
     expect(await screen.findByText("Nothing in this category closed higher this session.")).toBeInTheDocument();
     expect(screen.getByText("Nothing in this category closed lower this session.")).toBeInTheDocument();
@@ -282,7 +284,9 @@ describe("BseSectorMovers", () => {
     render(<BseSectorMovers />);
     await screen.findByText("IDFC First Bank Ltd");
 
-    await user.click(screen.getByRole("button", { name: /Capital Goods/ }));
+    const header = screen.getByRole("button", { name: /Capital Goods/ });
+    await user.click(header);
+    await waitFor(() => expect(header).toHaveAttribute("aria-expanded", "true"));
 
     expect(await screen.findByText(/No company has been classified into this category yet/)).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalledWith(buildSectorMoversUrl("Capital Goods", "gainers", 1));
@@ -299,8 +303,8 @@ describe("BseSectorMovers", () => {
 
     await user.click(header);
 
-    expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("IDFC First Bank Ltd")).not.toBeInTheDocument();
+    await waitFor(() => expect(header).toHaveAttribute("aria-expanded", "false"));
+    await waitFor(() => expect(screen.queryByText("IDFC First Bank Ltd")).not.toBeInTheDocument());
   });
 
   it("pages within a category, with the ranks running on", async () => {
@@ -322,7 +326,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("IDFC First Bank Ltd");
+    await screen.findByText("Financial Services");
 
     await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "data");
 
@@ -347,7 +351,7 @@ describe("BseSectorMovers", () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseSectorMovers />);
-    await screen.findByText("IDFC First Bank Ltd");
+    await screen.findByText("Financial Services");
 
     await user.selectOptions(screen.getByLabelText("Sort"), "stocks");
     expect(headerNames()).toEqual([
@@ -465,25 +469,25 @@ describe("BseSectorMovers pagination", () => {
     })),
   };
 
-  it("shows ten categories a page and says which ten they are", async () => {
+  it("shows five categories a page and says which five they are", async () => {
     mockFeed(many);
     render(<BseSectorMovers />);
 
-    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23 categories"));
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–5 of 23 categories"));
     expect(screen.getByRole("button", { name: /Category 01/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Category 11/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Category 06/ })).not.toBeInTheDocument();
   });
 
-  it("pages on to the next ten", async () => {
+  it("pages on to the next five", async () => {
     const user = userEvent.setup();
     mockFeed(many);
     render(<BseSectorMovers />);
-    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–5 of 23"));
 
     await user.click(screen.getByRole("button", { name: "Page 2" }));
 
-    expect(showingLine()).toHaveTextContent("Showing 11–20 of 23");
-    expect(screen.getByRole("button", { name: /Category 11/ })).toBeInTheDocument();
+    expect(showingLine()).toHaveTextContent("Showing 6–10 of 23");
+    expect(screen.getByRole("button", { name: /Category 06/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Category 01/ })).not.toBeInTheDocument();
   });
 
@@ -491,27 +495,27 @@ describe("BseSectorMovers pagination", () => {
     const user = userEvent.setup();
     mockFeed(many);
     render(<BseSectorMovers />);
-    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–5 of 23"));
 
-    await user.click(screen.getByRole("button", { name: "Page 3" }));
+    await user.click(screen.getByRole("button", { name: "Page 5" }));
     expect(showingLine()).toHaveTextContent("Showing 21–23 of 23");
 
     // Without the reset key this would leave the reader on an empty page 3.
     await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "Category 0");
-    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–9 of 9"));
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–5 of 9"));
   });
 
   it("offers a reset from the empty state and restores the full list", async () => {
     const user = userEvent.setup();
     mockFeed(many);
     render(<BseSectorMovers />);
-    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–10 of 23"));
+    await waitFor(() => expect(showingLine()).toHaveTextContent("Showing 1–5 of 23"));
 
     await user.type(screen.getByPlaceholderText("Search categories, sectors or stocks"), "zzzz");
     await waitFor(() => expect(screen.getByText("No category matches “zzzz”.")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "Reset search" }));
-    expect(showingLine()).toHaveTextContent("Showing 1–10 of 23");
+    expect(showingLine()).toHaveTextContent("Showing 1–5 of 23");
   });
 
   it("names the filters rather than a search term when only a filter is set", async () => {

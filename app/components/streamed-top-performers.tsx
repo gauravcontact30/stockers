@@ -10,9 +10,8 @@
 // question the server was never asked, and the client goes to the network as before.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { TopPerformers, type Board } from "./top-performers";
-import { CACHE_TAGS } from "../lib/cache";
 import { getTopPerformers } from "../lib/top-performers";
 import { SectionSkeleton } from "./market-section";
 
@@ -25,9 +24,7 @@ import { SectionSkeleton } from "./market-section";
 const OPENING = { direction: "gainers", period: "1y", term: "", page: 1, pageSize: 5 } as const;
 
 export async function TopPerformersPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.quotes);
+  await io();
 
   const board = await getTopPerformers({
     direction: OPENING.direction,

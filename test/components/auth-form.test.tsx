@@ -34,13 +34,23 @@ function submitForm() {
 describe("AuthForm", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    mockPush.mockClear();
+    mockReplace.mockClear();
+    mockRefresh.mockClear();
   });
 
   describe("existing-session redirect", () => {
-    it("redirects to /dashboard on mount when a session already exists", () => {
-      window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "t", user: { name: "Jane" } }));
+    it("redirects to /dashboard on mount when a valid-looking session already exists", () => {
+      window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "stockers.user.email.signature", user: { name: "Jane" } }));
       render(<AuthForm mode="signin" />);
       expect(mockReplace).toHaveBeenCalledWith("/overview");
+    });
+
+    it("clears malformed stored auth instead of redirecting away from signin", () => {
+      window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "stale-token", user: { name: "Jane" } }));
+      render(<AuthForm mode="signin" />);
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(window.localStorage.getItem("stockers-auth")).toBeNull();
     });
 
     it("does not redirect when no session exists", () => {
@@ -56,6 +66,9 @@ describe("AuthForm", () => {
       expect(screen.queryByText("Full name")).not.toBeInTheDocument();
       expect(screen.queryByText("Confirm password")).not.toBeInTheDocument();
       expect(screen.queryByText("Subscription")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /google/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /instagram/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /facebook/i })).not.toBeInTheDocument();
       expect(screen.getByText("New to StockersAI?")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/signup");
     });
@@ -90,7 +103,7 @@ describe("AuthForm", () => {
      */
     it("sends a short but existing password through to the server", async () => {
       const user = userEvent.setup();
-      mockFetchOnce({ ok: true, body: { token: "t", user: { name: "Jane" } } });
+      mockFetchOnce({ ok: true, body: { token: "stockers.user.email.short", user: { name: "Jane" } } });
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
@@ -103,7 +116,7 @@ describe("AuthForm", () => {
 
     it("signs in successfully, stores the session, and redirects to /dashboard", async () => {
       const user = userEvent.setup();
-      mockFetchOnce({ ok: true, body: { token: "tok-1", user: { name: "Jane", plan: "Pro" } } });
+      mockFetchOnce({ ok: true, body: { token: "stockers.user.email.tok1", user: { name: "Jane", plan: "Pro" } } });
       render(<AuthForm mode="signin" />);
 
       await user.type(screen.getByPlaceholderText("you@example.com"), "jane@example.com");
@@ -120,7 +133,7 @@ describe("AuthForm", () => {
         })
       );
       expect(JSON.parse(window.localStorage.getItem("stockers-auth") ?? "{}")).toEqual({
-        token: "tok-1",
+        token: "stockers.user.email.tok1",
         user: { name: "Jane", plan: "Pro" },
       });
       expect(mockPush).toHaveBeenCalledWith("/overview");
@@ -131,7 +144,7 @@ describe("AuthForm", () => {
     // just signed in was still reported by the server as signed-out and lapsed.
     it("mirrors the session into the cookie the server actually reads", async () => {
       const user = userEvent.setup();
-      mockFetchOnce({ ok: true, body: { token: "tok-cookie", user: { name: "Jane", plan: "Pro" } } });
+      mockFetchOnce({ ok: true, body: { token: "stockers.user.email.cookie", user: { name: "Jane", plan: "Pro" } } });
       render(<AuthForm mode="signin" />);
 
       // jsdom keeps cookies for the whole file, so an earlier sign-in may already have set one.
@@ -143,7 +156,7 @@ describe("AuthForm", () => {
       submitForm();
 
       await screen.findByText("Signed in! Redirecting to your dashboard...");
-      expect(document.cookie).toContain(`stockers_session=${encodeURIComponent("tok-cookie")}`);
+      expect(document.cookie).toContain(`stockers_session=${encodeURIComponent("stockers.user.email.cookie")}`);
     });
 
     it("shows the server-provided error message when sign-in fails", async () => {
@@ -204,7 +217,7 @@ describe("AuthForm", () => {
 
       expect(await screen.findByRole("button", { name: "Working..." })).toBeDisabled();
 
-      resolveFetch({ ok: true, json: () => Promise.resolve({ token: "t", user: { name: "Jane" } }) });
+      resolveFetch({ ok: true, json: () => Promise.resolve({ token: "stockers.user.email.pending", user: { name: "Jane" } }) });
 
       // On success the component never resets `loading` (it navigates away via router.push
       // instead), so the button stays in its "Working..." disabled state — only the success

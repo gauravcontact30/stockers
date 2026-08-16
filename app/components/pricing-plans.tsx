@@ -338,7 +338,19 @@ export function PricingPlans() {
                 )}
               </p>
 
-              <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+              {/* The buying action comes before the long feature list. A visitor comparing cards
+                  decides on fit from name, price, billing and headline promise first; the list
+                  below is the validation, not the thing they should have to cross before acting. */}
+              <div className="mt-6">
+                <SubscribeButton
+                  plan={plan.key}
+                  cycle={billing}
+                  label={`Choose ${plan.name}`}
+                  className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white transition ${plan.button}`}
+                />
+              </div>
+
+              <ul className="mt-5 space-y-2 border-t border-slate-200/70 pt-5 text-sm text-slate-700 dark:border-slate-700/60 dark:text-slate-300">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex gap-2">
                     <span aria-hidden="true" className={plan.accent}>
@@ -349,17 +361,6 @@ export function PricingPlans() {
                 ))}
               </ul>
 
-              {/* Signed in, this opens Razorpay for the cycle currently on screen; signed out it is
-                  still the sign-up link it always was, because a subscription needs an account to
-                  attach itself to. */}
-              <div className="mt-6">
-                <SubscribeButton
-                  plan={plan.key}
-                  cycle={billing}
-                  label={`Choose ${plan.name}`}
-                  className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white transition ${plan.button}`}
-                />
-              </div>
             </div>
           );
         })}

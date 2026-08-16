@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { isSuperAdminEmail, SUPER_ADMIN_EMAIL } from "../../../lib/admin-access";
 import { logAuditEvent, logSecurityEvent } from "../../../lib/application-logger";
-import { deleteUser, findUserById, listUsers, updateUser, userFromRequest, type AppUser, type AdminUserView } from "../../../lib/store";
-import { renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
+import { appOrigin, passwordResetEmail, sendMail } from "../../../lib/mailer";
+import {
+  deleteUser,
+  findUserById,
+  issuePasswordResetToken,
+  listUsers,
+  updateUser,
+  userFromRequest,
+  type AppUser,
+  type AdminUserView,
+} from "../../../lib/store";
+import { renewedUntil, SUBSCRIPTION_DAYS, TRIAL_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
 
 export { SUPER_ADMIN_EMAIL };
@@ -51,7 +61,11 @@ async function rosterResponse(admin: AppUser, extra: Record<string, unknown> = {
     users,
     summary: summaryFor(users, today),
     today,
-    permissions: { canDeleteUsers: isSuperAdmin(admin) },
+    permissions: {
+      canDeleteUsers: isSuperAdmin(admin),
+      canSendPasswordReset: isSuperAdmin(admin),
+      canGrantFreeTrial: isSuperAdmin(admin),
+    },
   });
 }
 
@@ -70,6 +84,10 @@ type Patch = {
   emailVerified?: unknown;
   /** "grant" adds a subscription period from today; "revoke" clears it. */
   subscription?: unknown;
+  /** "send" emails a password reset link to the selected user. Super Admin only. */
+  passwordReset?: unknown;
+  /** "grant5d" restarts the free trial clock for the selected user. Super Admin only. */
+  freeTrial?: unknown;
 };
 
 export async function PATCH(request: Request) {
@@ -84,9 +102,99 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { id, plan, role, emailVerified, subscription } = body;
+  const { id, plan, role, emailVerified, subscription, passwordReset, freeTrial } = body;
   if (typeof id !== "string" || !id) {
     return NextResponse.json({ error: "A user id is required." }, { status: 400 });
+  }
+
+  if (passwordReset === "send") {
+    if (!isSuperAdmin(admin)) {
+      logSecurityEvent({
+        level: "warn",
+        useCase: "Security & Access: password recovery administration",
+        operation: "password_reset.admin.denied",
+        message: "Admin without super-admin rights attempted to send a password reset link.",
+        userId: admin.id,
+        statusCode: 403,
+        path,
+        method: request.method,
+        metadata: { targetUserId: id, role: admin.role ?? null },
+      });
+      return NextResponse.json({ error: "Only the super admin can send password reset links." }, { status: 403 });
+    }
+
+    const target = await findUserById(id);
+    if (!target) {
+      return NextResponse.json({ error: "No such user." }, { status: 404 });
+    }
+
+    const issued = await issuePasswordResetToken(target.email);
+    if (!issued) {
+      return NextResponse.json({ error: "Unable to create a reset link for that account." }, { status: 500 });
+    }
+
+    const resetUrl = `${appOrigin()}/signin?reset=${issued.token}`;
+    const mail = await sendMail({ to: issued.user.email, ...passwordResetEmail({ name: issued.user.name, resetUrl }) });
+
+    logAuditEvent({
+      useCase: "User account administration",
+      operation: "password_reset.admin_sent",
+      message: "Super admin sent a password reset link.",
+      userId: admin.id,
+      statusCode: 200,
+      path,
+      method: request.method,
+      metadata: {
+        targetUserId: issued.user.id,
+        targetEmail: issued.user.email,
+        mailTransport: mail.transport,
+        mailDelivered: mail.ok,
+      },
+    });
+
+    return rosterResponse(admin, {
+      ok: true,
+      message: `Password reset link sent to ${issued.user.email}.`,
+      mailTransport: mail.transport,
+    });
+  }
+
+  if (freeTrial === "grant5d") {
+    if (!isSuperAdmin(admin)) {
+      logSecurityEvent({
+        level: "warn",
+        useCase: "Security & Access: trial administration",
+        operation: "free_trial.admin.denied",
+        message: "Admin without super-admin rights attempted to grant a free trial.",
+        userId: admin.id,
+        statusCode: 403,
+        path,
+        method: request.method,
+        metadata: { targetUserId: id, role: admin.role ?? null },
+      });
+      return NextResponse.json({ error: "Only the super admin can grant a 5-day free trial." }, { status: 403 });
+    }
+
+    const updated = await updateUser(id, { trialStartedAt: new Date().toISOString() });
+    if (!updated) {
+      return NextResponse.json({ error: "No such user." }, { status: 404 });
+    }
+
+    logAuditEvent({
+      useCase: "User account administration",
+      operation: "free_trial.grant5d",
+      message: "Super admin granted a 5-day free trial.",
+      userId: admin.id,
+      statusCode: 200,
+      path,
+      method: request.method,
+      metadata: { targetUserId: updated.id, targetEmail: updated.email, trialDays: TRIAL_DAYS },
+    });
+
+    return rosterResponse(admin, {
+      ok: true,
+      message: `${TRIAL_DAYS}-day free trial approved for ${updated.email}.`,
+    });
   }
 
   // An admin removing their own admin rights would be locked out of this page immediately, with no

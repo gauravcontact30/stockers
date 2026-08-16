@@ -1,16 +1,7 @@
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { listClientReviews } from "../lib/client-reviews";
 import { ClientReviewsCarousel } from "./client-reviews-carousel";
-
-/**
- * The tag the admin review editor already revalidates by.
- *
- * `app/api/admin/client-reviews/route.ts` calls `revalidatePath("/")` after a write, which still
- * covers this. The tag is here so a future write path can drop just the reviews rather than the
- * whole landing page.
- */
-const REVIEWS_TAG = "client-reviews";
 
 /**
  * The chrome the section holds while the reviews are still being read off disk.
@@ -45,9 +36,7 @@ export function ClientReviewsFallback() {
 }
 
 export async function ClientReviewsPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(REVIEWS_TAG);
+  await io();
 
   return <ClientReviewsCarousel reviews={await listClientReviews()} />;
 }

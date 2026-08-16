@@ -47,6 +47,11 @@ type StoredPerformanceCache = {
   values: Record<string, StockPerformance>;
 };
 
+const afterEffect = (work: () => void) => {
+  if (typeof queueMicrotask === "function") queueMicrotask(work);
+  else void Promise.resolve().then(work);
+};
+
 function readStoredPerformance(symbol: string): StockPerformance | null {
   if (typeof window === "undefined") return null;
 
@@ -138,8 +143,7 @@ export function useStockPerformance(symbol: string | null, initialPerformance: S
   const [resolved, setResolved] = useState<{ symbol: string; data: StockPerformance | null } | null>(() => {
     if (!symbol) return null;
     if (initialPerformance?.symbol === symbol) return { symbol, data: initialPerformance };
-    const stored = readStoredPerformance(symbol);
-    return stored ? { symbol, data: stored } : null;
+    return null;
   });
 
   useEffect(() => {
@@ -151,6 +155,14 @@ export function useStockPerformance(symbol: string | null, initialPerformance: S
     }
 
     let cancelled = false;
+    const stored = readStoredPerformance(symbol);
+    if (stored) {
+      cache.set(symbol, stored);
+      afterEffect(() => {
+        if (!cancelled) setResolved({ symbol, data: stored });
+      });
+    }
+
     requestPerformance(symbol).then((data) => {
       if (cancelled) return;
       setResolved((current) => {

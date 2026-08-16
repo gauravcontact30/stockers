@@ -131,6 +131,10 @@ export function welcomeSms(name: string): string {
   return `Welcome to StockersAI, ${name}. Your ${TRIAL_DAYS}-day free trial of every AI feature has started. Check your email to confirm your address.`;
 }
 
+export function mfaOtpSms(code: string): string {
+  return `Your StockersAI sign-in code is ${code}. It expires in 5 minutes.`;
+}
+
 /** The message sent once a subscription payment has been captured. */
 export function subscriptionSms(params: { name: string; plan: string; until: string }): string {
   return `Hi ${params.name}, your StockersAI ${params.plan} subscription is active until ${params.until}. Thank you for subscribing.`;

@@ -69,7 +69,7 @@ export type BseMoverPage = {
 type Direction = MoverDirection;
 
 /** Categories shown per page in the list itself. */
-export const CATEGORIES_PER_PAGE = 10;
+export const CATEGORIES_PER_PAGE = 5;
 
 // Re-exported from ../lib/market-urls, where the server can reach it too; every existing import of
 // it from this module still resolves.
@@ -513,7 +513,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
     [data, sort, show],
   );
 
-  // Ten a page. The exchange publishes over twenty categories and each one opens into two paged
+  // Five a page. The exchange publishes over twenty categories and each one opens into two paged
   // boards of its own, so the whole list at once was a long scroll before the reader reached the
   // one they came for. The key resets to page one whenever the list underneath becomes a
   // different list — otherwise a search that narrows to three rows leaves you on an empty page 3.

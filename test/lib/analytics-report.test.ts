@@ -487,3 +487,36 @@ describe("the activity feed", () => {
     expect(report([]).backend).toBe("file");
   });
 });
+
+describe("monitored email activity", () => {
+  it("always reports the watched emails with account details, session time and feature time", () => {
+    const watched = account({ email: "garvcontact30@gmail.com", name: "Garv Contact" });
+    const built = report(
+      [
+        event({ type: "visit", userId: watched.id, sessionId: "saaaaaaaaaaa", at: `${TODAY}T10:00:00.000Z`, path: "/overview" }),
+        event({ type: "feature", feature: "intel", userId: watched.id, sessionId: "saaaaaaaaaaa", at: `${TODAY}T10:05:00.000Z` }),
+        event({ type: "action", action: "stock.open", label: "RELIANCE", userId: watched.id, sessionId: "saaaaaaaaaaa", at: `${TODAY}T10:12:00.000Z` }),
+      ],
+      [watched],
+      1,
+    );
+
+    expect(built.monitoredUsers).toHaveLength(2);
+    expect(built.monitoredUsers[0]).toMatchObject({
+      email: "garvcontact30@gmail.com",
+      found: true,
+      name: "Garv Contact",
+      sessions: 1,
+      visits: 1,
+      featureOpens: 1,
+      estimatedSeconds: 720,
+      topFeature: "AI intelligence search",
+    });
+    expect(built.monitoredUsers[0].features[0]).toMatchObject({
+      label: "AI intelligence search",
+      opens: 1,
+      estimatedSeconds: 420,
+    });
+    expect(built.monitoredUsers[1]).toMatchObject({ email: "gauravcontact66@gmail.com", found: false, estimatedSeconds: 0 });
+  });
+});

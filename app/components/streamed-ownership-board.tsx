@@ -13,9 +13,8 @@
 // asking something the server was never asked, and the client goes to the network as before.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { getBseMarketSnapshot } from "../lib/bse-market-snapshot";
-import { CACHE_TAGS } from "../lib/cache";
 // Not from ./ownership-board: that file is `"use client"`, and a plain value imported from one of
 // those across the RSC boundary arrives as a client reference rather than the string itself.
 import { OPENING_SYMBOL } from "../lib/ownership-defaults";
@@ -39,9 +38,7 @@ export function OwnershipFallback() {
 }
 
 export async function OwnershipPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse);
+  await io();
 
   // Both halves of what the route returns, in one place, so the seeded board is the same shape the
   // client would have received. A failure on either side falls back to null and the board fetches

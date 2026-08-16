@@ -20,12 +20,11 @@
 // shell, on the same sixty-second window `revalidate = 60` used to give the whole page.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { BseMoversBoard, type BseMoverPage } from "./bse-movers-board";
 import { BseSectorMovers, type BseSectorBoardResponse } from "./bse-sector-movers";
 import { SectionSkeleton } from "./market-section";
 import { getBseMovers, getBseSectorBoard } from "../lib/bse-market";
-import { CACHE_TAGS } from "../lib/cache";
 import { MOVERS_PAGE_SIZE, buildMoversUrl } from "../lib/market-urls";
 
 /** The board's own chrome around a skeleton, so the streamed-in board doesn't shift the page. */
@@ -50,9 +49,7 @@ export function BoardFallback({ rows, height }: { rows: number; height: string }
 const OPENING_MOVERS = { tier: "all", direction: "gainers", period: "overall", term: "", move: "0", page: 1 } as const;
 
 export async function MoversBoard() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse);
+  await io();
 
   const movers = await getBseMovers({
     tier: OPENING_MOVERS.tier,
@@ -75,9 +72,7 @@ export async function MoversBoard() {
 }
 
 export async function SectorBoard() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse);
+  await io();
 
   const board = await getBseSectorBoard();
   return <BseSectorMovers prefetched={{ url: "/api/market/bse/sectors", data: board as BseSectorBoardResponse }} />;

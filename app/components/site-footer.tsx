@@ -29,6 +29,17 @@ async function copyrightYear(): Promise<number> {
  */
 const footerColumns: { heading: string; links: { href: string; label: string }[] }[] = [
   {
+    heading: "Company",
+    links: [
+      { href: "/pricing", label: "AI stock research pricing" },
+      { href: "/getting-started", label: "Getting Started" },
+      { href: "/contact", label: "Contact Us" },
+      { href: "/about", label: "About Us" },
+      { href: "/signup", label: "Sign up" },
+      { href: "/signin", label: "Sign in" },
+    ],
+  },
+  {
     heading: "Markets & Data",
     links: [
       { href: "/live-market", label: "Live BSE market" },
@@ -40,17 +51,6 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
       { href: "/top-picks", label: "AI top stock picks" },
       { href: "/ipos", label: "Indian IPO watch" },
       { href: "/etf-board", label: "Indian ETF board" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { href: "/about", label: "About Us" },
-      { href: "/contact", label: "Contact Us" },
-      { href: "/pricing", label: "AI stock research pricing" },
-      { href: "/getting-started", label: "Getting Started" },
-      { href: "/signin", label: "Sign in" },
-      { href: "/signup", label: "Sign up" },
     ],
   },
   {
@@ -67,9 +67,9 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
 /**
  * The site footer.
  *
- * Reworked for weight and finish rather than for content — every link, heading and legal line is
- * the one that was here before, in the same order. What changed is the things that were making a
- * considered page end on an unconsidered note:
+ * Reworked for weight and finish rather than for content — every link and legal line is still
+ * here, with the visitor's next likely decisions moved into the first footer column. What changed
+ * is the things that were making a considered page end on an unconsidered note:
  *
  *   - it opened with nothing. The header carries a 3px emerald-to-teal hairline across the top of
  *     the page; the footer began at a plain border, so the two ends of a long scroll did not look

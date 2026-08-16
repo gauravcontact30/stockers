@@ -22,6 +22,7 @@ export type AdminUser = {
   subscribedUntil?: string | null;
   emailVerifiedAt?: string | null;
   verificationSentAt?: string | null;
+  passwordResetSentAt?: string | null;
   emailVerified: boolean;
 };
 
@@ -36,6 +37,8 @@ export type AdminSummary = {
 
 type AdminPermissions = {
   canDeleteUsers?: boolean;
+  canSendPasswordReset?: boolean;
+  canGrantFreeTrial?: boolean;
 };
 
 export type UserFilter = "all" | "unverified" | "subscribed" | "trial" | "admins";
@@ -307,6 +310,7 @@ export function AdminUsers({
   const [searchFocused, setSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
 
@@ -342,6 +346,7 @@ export function AdminUsers({
   const patch = async (id: string, body: Record<string, unknown>) => {
     setBusyId(id);
     setError(null);
+    setNotice(null);
     try {
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
@@ -356,6 +361,7 @@ export function AdminUsers({
       setUsers(data.users ?? []);
       if (data.summary) setSummary(data.summary);
       if (data.permissions) setPermissions(data.permissions);
+      if (typeof data.message === "string") setNotice(data.message);
     } catch {
       setError("Couldn't reach the server.");
     } finally {
@@ -372,6 +378,7 @@ export function AdminUsers({
     if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL) return false;
     setBusyId(user.id);
     setError(null);
+    setNotice(null);
     try {
       const response = await fetch(`/api/admin/users?id=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
@@ -445,6 +452,8 @@ export function AdminUsers({
   }, [users, query, mode]);
   const showSuggestions = searchFocused && searchSuggestions.length > 0;
   const canDeleteUsers = permissions.canDeleteUsers ?? status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const canSendPasswordReset = permissions.canSendPasswordReset ?? status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const canGrantFreeTrial = permissions.canGrantFreeTrial ?? status?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
 
   // The API is the real guard; this only decides what to render while it is being asked.
   if (statusLoading || loading) {
@@ -638,6 +647,12 @@ export function AdminUsers({
         </p>
       )}
 
+      {notice && (
+        <p className="rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {notice}
+        </p>
+      )}
+
       {visible.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">No account matches this search.</p>
       ) : (
@@ -664,6 +679,16 @@ export function AdminUsers({
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-900 dark:text-white">{user.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                      {user.passwordResetSentAt && (
+                        <p className="mt-1 text-[11px] font-medium text-sky-600 dark:text-sky-300">
+                          Reset sent {formatDay(user.passwordResetSentAt)}
+                        </p>
+                      )}
+                      {user.trialStartedAt && (
+                        <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
+                          Trial started {formatDay(user.trialStartedAt)}
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-4 py-3">
@@ -730,6 +755,26 @@ export function AdminUsers({
                         >
                           {user.role === "admin" ? "Remove admin" : "Make admin"}
                         </button>
+                        {canSendPasswordReset && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => patch(user.id, { passwordReset: "send" })}
+                            className="h-8 rounded-full border border-sky-200 px-3 text-xs font-semibold text-sky-700 transition hover:border-sky-400 disabled:opacity-40 dark:border-sky-500/30 dark:text-sky-400"
+                          >
+                            {busy ? "Sending..." : "Send reset"}
+                          </button>
+                        )}
+                        {canGrantFreeTrial && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => patch(user.id, { freeTrial: "grant5d" })}
+                            className="h-8 rounded-full border border-emerald-200 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 disabled:opacity-40 dark:border-emerald-500/30 dark:text-emerald-400"
+                          >
+                            {busy ? "Approving..." : "Grant 5d trial"}
+                          </button>
+                        )}
                         {canDeleteUsers && user.email.toLowerCase() !== SUPER_ADMIN_EMAIL && (
                           <button
                             type="button"

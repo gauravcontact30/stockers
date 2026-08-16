@@ -13,9 +13,8 @@
 // the requested name.
 
 import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { io } from "next/cache";
 import { getBseMovers, type BseMoverPage } from "../lib/bse-market";
-import { CACHE_TAGS } from "../lib/cache";
 import { MoverList } from "./mover-list";
 import { MarketRefresher } from "./market-refresher";
 import { SectionSkeleton } from "./market-section";
@@ -57,9 +56,7 @@ function MoverPanel({
 }
 
 export async function LiveMarketPayload() {
-  "use cache";
-  cacheLife("market");
-  cacheTag(CACHE_TAGS.bse);
+  await io();
 
   // The per-tier lists have their own landing section now, so this block stays focused on whole-exchange weekly moves.
   //

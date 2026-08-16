@@ -3,6 +3,7 @@ import { isSuperAdminEmail } from "../../../lib/admin-access";
 import { analyticsBackendName, dayBefore, istDay, listEvents, ANALYTICS_RETENTION_DAYS } from "../../../lib/analytics";
 import { isAnalyticsExcludedEmail } from "../../../lib/analytics-exclusions";
 import { buildReport } from "../../../lib/analytics-report";
+import { listPresence } from "../../../lib/presence";
 import { listUsers, userFromRequest, type AppUser } from "../../../lib/store";
 
 /** The windows the dashboard offers. Anything else is snapped to the nearest of these. */
@@ -45,13 +46,17 @@ export async function GET(request: Request) {
   try {
     // Both are needed to answer a single row of the table — the event says what happened and the
     // account says who it happened to — so they are fetched together rather than one after the other.
-    const [events, users] = await Promise.all([listEvents(dayBefore(today, Math.max(days, 2) - 1)), listUsers()]);
+    const [events, users, presence] = await Promise.all([
+      listEvents(dayBefore(today, Math.max(days, 2) - 1)),
+      listUsers(),
+      listPresence().catch(() => []),
+    ]);
     const excludedUserIds = new Set(users.filter((user) => isAnalyticsExcludedEmail(user.email)).map((user) => user.id));
     const visibleUsers = users.filter((user) => !excludedUserIds.has(user.id));
     const visibleEvents = events.filter((event) => !(event.userId && excludedUserIds.has(event.userId)));
 
     return NextResponse.json(
-      buildReport({ events: visibleEvents, users: visibleUsers, today, days, backend: analyticsBackendName() }),
+      buildReport({ events: visibleEvents, users: visibleUsers, today, days, backend: analyticsBackendName(), presence }),
       // Never cached, and never by a shared cache: this is one admin's view of everyone's data.
       { headers: { "Cache-Control": "no-store" } },
     );

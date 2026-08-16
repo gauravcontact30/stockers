@@ -423,6 +423,7 @@ export function OwnershipBoard({
               key={pick.symbol}
               type="button"
               onClick={() => choose(pick.symbol, pick)}
+              aria-label={pick.symbol}
               aria-pressed={pick.symbol === symbol}
               className={`group flex min-h-[68px] items-center gap-3 rounded-2xl border p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
                 pick.symbol === symbol

@@ -147,9 +147,9 @@ describe("HeroPayload", () => {
     expect(element.props.investorFavourites).toBe(FAVOURITES);
   });
 
-  it("opens the slider on the data-centre slide", async () => {
+  it("opens the slider on the one-year gainers slide", async () => {
     render(await HeroPayload());
-    expect(screen.getByText("Compare three data-centre stocks by market performance")).toBeInTheDocument();
+    expect(screen.getByText("The three biggest one-year runs on the board")).toBeInTheDocument();
   });
 
   /**

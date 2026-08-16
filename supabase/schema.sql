@@ -54,7 +54,20 @@ create table if not exists public.users (
 
   email_verified_at text,
   verification_token text,
-  verification_sent_at text
+  verification_sent_at text,
+
+  password_reset_token text,
+  password_reset_expires_at text,
+  password_reset_sent_at text,
+
+  mfa_mode text not null default 'off' check (mfa_mode in ('off', 'sms', 'totp')),
+  mfa_enforced boolean not null default false,
+  mfa_totp_secret text,
+  mfa_otp_hash text,
+  mfa_otp_expires_at text,
+
+  social_providers text[] not null default '{}',
+  social_provider_ids jsonb not null default '{}'::jsonb
 );
 
 -- Sign-in looks an account up by address on every attempt. The unique constraint above already
@@ -65,6 +78,10 @@ create table if not exists public.users (
 create index if not exists users_verification_token_idx
   on public.users (verification_token)
   where verification_token is not null;
+
+create index if not exists users_password_reset_token_idx
+  on public.users (password_reset_token)
+  where password_reset_token is not null;
 
 -- The admin dashboard lists newest first.
 create index if not exists users_created_at_idx on public.users (created_at desc);

@@ -30,6 +30,7 @@ import path from "node:path";
 import { adminEmails } from "./admin-access";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { normaliseMobile, type PlanName } from "./auth-validation";
+import type { MfaMode, SocialProvider } from "./auth-security";
 import { eq, isUniqueViolation, supabaseConfigured, supabaseRequest } from "./supabase";
 
 export type UserRole = "admin" | "user";
@@ -81,6 +82,26 @@ export type AppUser = {
   verificationToken?: string | null;
   /** When the most recent verification mail was dispatched â€” throttles resends. */
   verificationSentAt?: string | null;
+  /** Single-use password reset token, or null once spent/expired. */
+  passwordResetToken?: string | null;
+  /** Expiry for the current reset token, as an ISO string. */
+  passwordResetExpiresAt?: string | null;
+  /** When the most recent password reset mail was dispatched. */
+  passwordResetSentAt?: string | null;
+  /** Second-factor mode selected for the account. */
+  mfaMode?: MfaMode;
+  /** Admin-controlled switch that forces a second factor for the account. */
+  mfaEnforced?: boolean;
+  /** Base32 TOTP secret for authenticator-app MFA. */
+  mfaTotpSecret?: string | null;
+  /** Hash of the most recently issued SMS OTP. */
+  mfaOtpHash?: string | null;
+  /** Expiry for the current SMS OTP, as an ISO string. */
+  mfaOtpExpiresAt?: string | null;
+  /** Federated providers linked to this account. */
+  socialProviders?: SocialProvider[];
+  /** Provider subject ids, keyed by provider name. */
+  socialProviderIds?: Partial<Record<SocialProvider, string>>;
 };
 
 /**
@@ -139,6 +160,7 @@ type StoreBackend = {
   byId(id: string): Promise<AppUser | null>;
   byEmail(email: string): Promise<AppUser | null>;
   byVerificationToken(token: string): Promise<AppUser | null>;
+  byPasswordResetToken(token: string): Promise<AppUser | null>;
   /** Returns null when the email is already registered. */
   insert(user: AppUser): Promise<AppUser | null>;
   /** Returns null when the id is unknown. */
@@ -197,6 +219,10 @@ const fileBackend: StoreBackend = {
 
   async byVerificationToken(token) {
     return (await readUsers()).find((user) => user.verificationToken === token) ?? null;
+  },
+
+  async byPasswordResetToken(token) {
+    return (await readUsers()).find((user) => user.passwordResetToken === token) ?? null;
   },
 
   async insert(user) {
@@ -273,6 +299,16 @@ type UserRow = {
   email_verified_at: string | null;
   verification_token: string | null;
   verification_sent_at: string | null;
+  password_reset_token: string | null;
+  password_reset_expires_at: string | null;
+  password_reset_sent_at: string | null;
+  mfa_mode: string | null;
+  mfa_enforced: boolean | null;
+  mfa_totp_secret: string | null;
+  mfa_otp_hash: string | null;
+  mfa_otp_expires_at: string | null;
+  social_providers: string[] | null;
+  social_provider_ids: Partial<Record<SocialProvider, string>> | null;
 };
 
 const COLUMN: Record<keyof AppUser, keyof UserRow> = {
@@ -290,6 +326,16 @@ const COLUMN: Record<keyof AppUser, keyof UserRow> = {
   emailVerifiedAt: "email_verified_at",
   verificationToken: "verification_token",
   verificationSentAt: "verification_sent_at",
+  passwordResetToken: "password_reset_token",
+  passwordResetExpiresAt: "password_reset_expires_at",
+  passwordResetSentAt: "password_reset_sent_at",
+  mfaMode: "mfa_mode",
+  mfaEnforced: "mfa_enforced",
+  mfaTotpSecret: "mfa_totp_secret",
+  mfaOtpHash: "mfa_otp_hash",
+  mfaOtpExpiresAt: "mfa_otp_expires_at",
+  socialProviders: "social_providers",
+  socialProviderIds: "social_provider_ids",
 };
 
 function fromRow(row: UserRow): AppUser {
@@ -312,6 +358,16 @@ function fromRow(row: UserRow): AppUser {
     emailVerifiedAt: row.email_verified_at,
     verificationToken: row.verification_token,
     verificationSentAt: row.verification_sent_at,
+    passwordResetToken: row.password_reset_token,
+    passwordResetExpiresAt: row.password_reset_expires_at,
+    passwordResetSentAt: row.password_reset_sent_at,
+    mfaMode: (row.mfa_mode as MfaMode | null) ?? "off",
+    mfaEnforced: Boolean(row.mfa_enforced),
+    mfaTotpSecret: row.mfa_totp_secret,
+    mfaOtpHash: row.mfa_otp_hash,
+    mfaOtpExpiresAt: row.mfa_otp_expires_at,
+    socialProviders: (row.social_providers as SocialProvider[] | null) ?? [],
+    socialProviderIds: row.social_provider_ids ?? {},
   };
 }
 
@@ -324,6 +380,34 @@ function toRow(patch: Partial<AppUser>): Partial<UserRow> {
     if (column && value !== undefined) row[column] = value;
   }
   return row as Partial<UserRow>;
+}
+
+const OPTIONAL_AUTH_EXTENSION_COLUMNS: (keyof UserRow)[] = [
+  "password_reset_token",
+  "password_reset_expires_at",
+  "password_reset_sent_at",
+  "mfa_mode",
+  "mfa_enforced",
+  "mfa_totp_secret",
+  "mfa_otp_hash",
+  "mfa_otp_expires_at",
+  "social_providers",
+  "social_provider_ids",
+];
+
+let supabaseUsersMissingAuthExtensions = false;
+
+function withoutOptionalAuthExtensionColumns(row: Partial<UserRow>): Partial<UserRow> {
+  const legacy = { ...row };
+  for (const column of OPTIONAL_AUTH_EXTENSION_COLUMNS) delete legacy[column];
+  return legacy;
+}
+
+function isMissingOptionalAuthColumn(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  if (!message.includes("schema cache") && !message.includes("column")) return false;
+  return OPTIONAL_AUTH_EXTENSION_COLUMNS.some((column) => message.includes(`'${column}'`) || message.includes(`"${column}"`) || message.includes(column));
 }
 
 async function selectOne(filter: string): Promise<AppUser | null> {
@@ -340,13 +424,16 @@ const supabaseBackend: StoreBackend = {
   byId: (id) => selectOne(`id=${eq(id)}`),
   byEmail: (email) => selectOne(`email=${eq(email)}`),
   byVerificationToken: (token) => selectOne(`verification_token=${eq(token)}`),
+  byPasswordResetToken: (token) => selectOne(`password_reset_token=${eq(token)}`),
 
   async insert(user) {
+    const body = toRow(user);
+    const insertBody = supabaseUsersMissingAuthExtensions ? withoutOptionalAuthExtensionColumns(body) : body;
     try {
       const rows = await supabaseRequest<UserRow>({
         method: "POST",
         path: "users",
-        body: toRow(user),
+        body: insertBody,
         returnRepresentation: true,
       });
       return rows.length > 0 ? fromRow(rows[0]) : null;
@@ -354,6 +441,16 @@ const supabaseBackend: StoreBackend = {
       // The unique index on `email` is what decides whether an address is taken â€” not a read
       // beforehand, which two simultaneous sign-ups for the same address would both pass.
       if (isUniqueViolation(error)) return null;
+      if (!supabaseUsersMissingAuthExtensions && isMissingOptionalAuthColumn(error)) {
+        supabaseUsersMissingAuthExtensions = true;
+        const rows = await supabaseRequest<UserRow>({
+          method: "POST",
+          path: "users",
+          body: withoutOptionalAuthExtensionColumns(body),
+          returnRepresentation: true,
+        });
+        return rows.length > 0 ? fromRow(rows[0]) : null;
+      }
       throw error;
     }
   },
@@ -456,6 +553,16 @@ export async function createUser(user: {
     emailVerifiedAt: null,
     verificationToken: newVerificationToken(),
     verificationSentAt: null,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    passwordResetSentAt: null,
+    mfaMode: "off",
+    mfaEnforced: false,
+    mfaTotpSecret: null,
+    mfaOtpHash: null,
+    mfaOtpExpiresAt: null,
+    socialProviders: [],
+    socialProviderIds: {},
   };
 
   return backend().insert(newUser);
@@ -498,7 +605,10 @@ export async function refreshVerificationToken(id: string): Promise<{ user: AppU
  * neither has any business leaving the server, and removing them at the single point where the
  * list is produced means a future caller cannot forget to.
  */
-export type AdminUserView = Omit<AppUser, "passwordHash" | "verificationToken"> & {
+export type AdminUserView = Omit<
+  AppUser,
+  "passwordHash" | "verificationToken" | "passwordResetToken" | "mfaTotpSecret" | "mfaOtpHash"
+> & {
   emailVerified: boolean;
 };
 
@@ -509,9 +619,12 @@ export async function listUsers(): Promise<AdminUserView[]> {
   // records â€” Postgres would otherwise sort by its collation and the file by JavaScript's.
   return users
     .map((user) => {
-      const { passwordHash, verificationToken, ...rest } = user;
+      const { passwordHash, verificationToken, passwordResetToken, mfaTotpSecret, mfaOtpHash, ...rest } = user;
       void passwordHash;
       void verificationToken;
+      void passwordResetToken;
+      void mfaTotpSecret;
+      void mfaOtpHash;
       return {
         ...rest,
         emailVerified: Boolean(rest.emailVerifiedAt),
@@ -546,6 +659,89 @@ export async function authenticateUser(email: string, password: string) {
     return null;
   }
   return user;
+}
+
+export function newPasswordResetToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+export async function issuePasswordResetToken(email: string): Promise<{ user: AppUser; token: string } | null> {
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+
+  const token = newPasswordResetToken();
+  const updated = await backend().patch(user.id, {
+    passwordResetToken: token,
+    passwordResetExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    passwordResetSentAt: new Date().toISOString(),
+  });
+
+  return updated ? { user: updated, token } : null;
+}
+
+export async function resetPasswordWithToken(token: string, password: string): Promise<AppUser | null> {
+  if (!token) return null;
+  const user = await backend().byPasswordResetToken(token);
+  if (!user?.passwordResetToken || user.passwordResetToken !== token) return null;
+  if (!user.passwordResetExpiresAt || Date.parse(user.passwordResetExpiresAt) < Date.now()) return null;
+
+  return backend().patch(user.id, {
+    passwordHash: hashPassword(password),
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    passwordResetSentAt: null,
+    mfaOtpHash: null,
+    mfaOtpExpiresAt: null,
+  });
+}
+
+export async function findOrCreateSocialUser(params: {
+  provider: SocialProvider;
+  providerId: string;
+  email: string;
+  name: string;
+}): Promise<AppUser | null> {
+  const normalizedEmail = params.email.trim().toLowerCase();
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    const providers = new Set<SocialProvider>(existing.socialProviders ?? []);
+    providers.add(params.provider);
+    return backend().patch(existing.id, {
+      socialProviders: Array.from(providers),
+      socialProviderIds: { ...(existing.socialProviderIds ?? {}), [params.provider]: params.providerId },
+      emailVerifiedAt: existing.emailVerifiedAt ?? new Date().toISOString(),
+    });
+  }
+
+  const now = new Date().toISOString();
+  const user: AppUser = {
+    id: `user_${Date.now().toString(36)}_${randomBytes(4).toString("hex")}`,
+    name: params.name.trim() || normalizedEmail.split("@")[0],
+    email: normalizedEmail,
+    passwordHash: hashPassword(randomBytes(32).toString("hex")),
+    plan: null,
+    createdAt: now,
+    mobile: null,
+    role: ADMIN_EMAILS.has(normalizedEmail) ? "admin" : "user",
+    trialStartedAt: now,
+    subscribedUntil: null,
+    lastPaymentId: null,
+    emailVerifiedAt: now,
+    verificationToken: null,
+    verificationSentAt: null,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    passwordResetSentAt: null,
+    mfaMode: "off",
+    mfaEnforced: false,
+    mfaTotpSecret: null,
+    mfaOtpHash: null,
+    mfaOtpExpiresAt: null,
+    socialProviders: [params.provider],
+    socialProviderIds: { [params.provider]: params.providerId },
+  };
+
+  return backend().insert(user);
 }
 
 function tokenSecret(): string {

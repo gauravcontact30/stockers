@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { recordEvent, visitorIdFromRequest } from "../../../lib/analytics";
 import { firstError, normaliseMobile, validateSignup, type SignupFields } from "../../../lib/auth-validation";
 import { appOrigin, sendMail, verificationEmail } from "../../../lib/mailer";
@@ -17,6 +17,16 @@ function trialEndsOnFor(user: { trialStartedAt?: string | null; createdAt: strin
   const startedAt = user.trialStartedAt ?? user.createdAt;
   const startDate = istDateOf(startedAt);
   return startDate ? addTrialDays(startDate) : null;
+}
+
+function runAfterSignup(task: () => Promise<void>): void {
+  const run = () => void task().catch((error) => console.error("signup side effect failed", error));
+  try {
+    after(run);
+  } catch (error) {
+    if (!String(error).includes("outside a request scope")) throw error;
+    run();
+  }
 }
 
 /** Whatever arrived, as strings, so the shared validator can judge it rather than the parser. */
@@ -93,9 +103,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Recorded before the mail goes out, because the account exists from this point on and the
-    // sign-up figure should not depend on whether a provider was reachable.
-    await recordEvent({ type: "signup", userId: user.id, userEmail: user.email, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
+    const visitorId = visitorIdFromRequest(request);
+    const userAgent = request.headers.get("user-agent");
     recordPlatformLog({
       category: "security",
       severity: "info",
@@ -119,14 +128,18 @@ export async function POST(request: Request) {
     // Both go out together — neither waits on the other, and neither can fail the sign-up. The SMS
     // is sent to the number just registered; `sendSms` degrades to a local outbox when no gateway
     // is configured, exactly as the mailer does.
-    const [delivery, text] = await Promise.all([
-      sendMail({ to: user.email, ...verificationEmail({ name: user.name, verifyUrl }) }),
-      user.mobile ? sendSms({ to: user.mobile, body: welcomeSms(user.name) }) : Promise.resolve(null),
-    ]);
+    runAfterSignup(async () => {
+      await recordEvent({ type: "signup", userId: user.id, userEmail: user.email, visitorId, userAgent });
 
-    if (delivery.ok) {
-      await updateUser(user.id, { verificationSentAt: new Date().toISOString() });
-    }
+      const [delivery] = await Promise.all([
+        sendMail({ to: user.email, ...verificationEmail({ name: user.name, verifyUrl }) }),
+        user.mobile ? sendSms({ to: user.mobile, body: welcomeSms(user.name) }) : Promise.resolve(null),
+      ]);
+
+      if (delivery.ok) {
+        await updateUser(user.id, { verificationSentAt: new Date().toISOString() });
+      }
+    });
 
     /**
      * When this account's free trial runs out, as an IST calendar date.
@@ -148,10 +161,9 @@ export async function POST(request: Request) {
       token: createToken(user),
       trialDays: TRIAL_DAYS,
       trialEndsOn,
-      // Lets the sign-up page say "check your inbox" only when something was really sent.
-      verificationEmailSent: delivery.ok && delivery.transport === "resend",
-      // Lets the page say "we've texted you" only when a gateway really accepted it.
-      welcomeSmsSent: text?.ok === true && text.transport === "twilio",
+      // Delivery now runs after the response so sign-up stays fast even when providers are slow.
+      verificationEmailSent: false,
+      welcomeSmsSent: false,
     });
   } catch (error) {
     console.error(error);
