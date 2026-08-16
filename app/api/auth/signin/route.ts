@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     // Counted here rather than from the browser, so the sign-in figure on the admin dashboard is
     // one that only a successful authentication can move. A failed attempt is not a sign-in and is
     // deliberately not recorded — this is a usage measure, not an audit log.
-    await recordEvent({ type: "signin", userId: user.id, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
+    await recordEvent({ type: "signin", userId: user.id, userEmail: user.email, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
 
     return NextResponse.json({
       ok: true,

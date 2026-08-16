@@ -57,6 +57,20 @@ const isDev = process.env.NODE_ENV === "development";
  *   images.dhan.co          the ticker logo store — app/lib/company-logos.ts
  *   logo.clearbit.com       logos in the AI report — app/components/ai-report-modal.tsx
  *   www.google.com          the s2 favicon fallback in app/components/company-logo.tsx
+ *   *.gstatic.com           where that s2 favicon request *lands*. `www.google.com/s2/favicons`
+ *                           answers with a 302 to `t0`–`t3.gstatic.com`, and a redirect is checked
+ *                           against `img-src` again at its destination — naming only the origin the
+ *                           request was addressed to blocks every one of these at the second hop.
+ *                           Measured on the landing page: every hand-checked domain in
+ *                           app/lib/indian-stocks.ts (bosch.in, lg.com, hitachienergy.com,
+ *                           myvi.in, solargroup.com …) failed this way, each one logging a CSP
+ *                           violation to the console and leaving the company's logo undrawn.
+ *                           Wildcarded because Google picks the `tN` subdomain per request.
+ *   assets-netstorage.groww.in,
+ *   static.tickertape.in    the two extra logo sources `preferReal` tries in
+ *                           app/components/company-logo.tsx before falling back to a monogram.
+ *                           Referenced in that file since it was written, never named here, so
+ *                           the `preferReal` path could not draw anything but a monogram.
  *
  * `blob:` in `img-src` is the profile-picture preview in app/components/admin-client-reviews.tsx,
  * which calls `URL.createObjectURL`. `data:` covers inlined SVG and the font subsets.
@@ -69,7 +83,7 @@ const csp = [
   // 'unsafe-eval' is React's dev-only error overlay reconstructing server stacks. Never in prod.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https://images.dhan.co https://logo.clearbit.com https://www.google.com https://*.razorpay.com`,
+  `img-src 'self' data: blob: https://images.dhan.co https://logo.clearbit.com https://www.google.com https://*.gstatic.com https://assets-netstorage.groww.in https://static.tickertape.in https://*.razorpay.com`,
   `font-src 'self' data: https://checkout.razorpay.com`,
   // ws: is the dev server's HMR socket, and is not emitted in production.
   `connect-src 'self' https://api.razorpay.com https://*.razorpay.com${isDev ? " ws: http://localhost:*" : ""}`,
@@ -170,30 +184,58 @@ const nextConfig: NextConfig = {
    * `stale` is the half that did not exist before: under Cache Components it also governs how long
    * a client-side navigation may reuse what it already has, which is why there is no
    * `experimental.staleTimes` block here. One lever, not two that can disagree.
+   *
+   * ---------------------------------------------------------------------------
+   * Why every `expire` below is a day, and why it is not a freshness setting
+   * ---------------------------------------------------------------------------
+   *
+   * `expire` is the one field here that does not mean what its name suggests. From the Next docs
+   * (`cacheLife.md`): "After this time with no requests, the next one waits for fresh content."
+   * It is not how long data may be served — that is `revalidate` — it is how long an *idle* entry
+   * survives before the cache gives up on it and the next visitor is made to wait for a full
+   * regeneration in the foreground.
+   *
+   * These used to be 5 minutes to 90 minutes, and on a site with the traffic this one has that is
+   * a trap. A page nobody has requested for five minutes was hard-expired, so the next arrival —
+   * a first-time visitor, a crawler, or a Lighthouse run, all of which arrive into exactly that
+   * silence — paid for a cold render of the whole landing page: nine BSE reads, the ownership
+   * board, and a hero that waits up to `HERO_DEADLINE_MS` (4s) on three feeds this app does not
+   * own. Measured on this build, same server, same page: **first contentful paint 7.2s cold
+   * against 1.8s warm**, and a reported LCP of 3.7s that lines up with the hero's 4s deadline
+   * almost to the tick. No amount of bundle trimming touches that number, because the browser is
+   * not the thing that is slow — it is waiting on an origin that threw its work away.
+   *
+   * A day means an idle entry is instead served immediately from cache and refreshed in the
+   * background, so nobody ever waits on a cold render. Freshness is unchanged: `revalidate` still
+   * says how old data may be before it is refetched, and it is untouched on all four profiles.
+   * The one thing given up is that data older than `revalidate` but younger than `expire` may now
+   * be *served once* while the refresh runs, rather than being regenerated in front of the reader
+   * — which for a market board is the right trade, and the same trade `stale-while-revalidate` has
+   * always made.
    */
   cacheLife: {
     market: {
       stale: 30,
       revalidate: 60,
-      expire: 300,
+      expire: 86_400,
     },
     /** The NSE boards — sector rotation, most-traded, ETFs, stock news. Was `revalidate = 300`. */
     board: {
       stale: 150,
       revalidate: 300,
-      expire: 1_800,
+      expire: 86_400,
     },
     /** The IPO calendar. A window opens or closes on a date, not on a tick. Was `revalidate = 600`. */
     calendar: {
       stale: 300,
       revalidate: 600,
-      expire: 3_600,
+      expire: 86_400,
     },
     /** Dividends and corporate actions, which move when a company files. Was `revalidate = 900`. */
     filings: {
       stale: 450,
       revalidate: 900,
-      expire: 5_400,
+      expire: 86_400,
     },
   },
 
@@ -297,6 +339,25 @@ const nextConfig: NextConfig = {
         headers: isDev
           ? securityHeaders.filter((header) => header.key !== "Strict-Transport-Security")
           : securityHeaders,
+      },
+      {
+        /**
+         * The reviewer photos and signatures, cached for a year.
+         *
+         * Anything under `public/` is served by Next with `Cache-Control: public, max-age=0`, so
+         * every visitor re-fetched these on every visit — measured at `max-age=0` on the landing
+         * page's two signature files, and what Lighthouse reports as "use efficient cache
+         * lifetimes". `public/` gets that default because Next cannot know whether a file at a
+         * fixed path is stable, and for most of `public/` it is right to be careful.
+         *
+         * It is safe *here* because these names now carry a hash of the file's own bytes — see
+         * `saveImage` in app/lib/client-reviews.ts. Replacing a reviewer's photo writes a new
+         * filename and the stored review points at it, so no URL's content ever changes and
+         * `immutable` cannot serve a stale one. Scoped to `/uploads/` rather than all of `public/`
+         * for exactly that reason: it is the only directory where that guarantee holds.
+         */
+        source: "/uploads/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];
   },

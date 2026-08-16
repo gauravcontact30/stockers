@@ -166,20 +166,33 @@ function StarRankBadge({ stars }: { stars: number }) {
   );
 }
 
-export function PlanFeatureCards({ compact = false }: { compact?: boolean }) {
+/**
+ * The access matrix inside the pricing section: what each plan actually unlocks.
+ *
+ * This used to be a `<section>` of its own, with its own "Plan access" eyebrow and its own heading,
+ * nested inside the pricing `<section>` — so the page carried two section headers stacked on top of
+ * each other describing one subject. A reader met "Pricing / Flexible plans for every investor",
+ * three priced cards, and then immediately a second titled block, which reads as a new topic rather
+ * than as the rest of the one above it.
+ *
+ * It is one section now. Both halves are still here and neither lost anything: the prices answer
+ * "what does it cost", these answer "what do I get", and they are two answers about the same three
+ * tiers. What changed is that the eyebrow is gone and the heading is demoted to an `h4` behind a
+ * rule — a hinge inside a section rather than the start of another one.
+ *
+ * The `compact` prop went with it. It existed to give this block its own card chrome when rendered
+ * standalone, and nothing has ever rendered it standalone.
+ */
+function PlanFeatureCards() {
   return (
-    <section
-      aria-labelledby="plan-ai-features"
-      className={`${compact ? "rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900" : "mt-8"}`}
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Plan access</p>
-          <h3 id="plan-ai-features" className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
-            AI features by plan
-          </h3>
-        </div>
-        <p className="max-w-xl text-sm text-slate-600 dark:text-slate-400">
+    <div aria-labelledby="plan-ai-features" className="mt-10">
+      {/* The hinge. A rule with the heading sitting on it says "same subject, second part" in a way
+          that a second eyebrow-and-title pair cannot. */}
+      <div className="flex flex-col gap-2 border-t border-slate-200 pt-6 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800">
+        <h4 id="plan-ai-features" className="text-lg font-semibold text-slate-900 dark:text-white">
+          AI access by tier
+        </h4>
+        <p className="max-w-xl text-sm text-slate-600 dark:text-slate-400 sm:text-right">
           Pro includes every Starter AI tool. Elite includes every Starter and Pro AI tool, plus its own advanced features.
         </p>
       </div>
@@ -233,7 +246,7 @@ export function PlanFeatureCards({ compact = false }: { compact?: boolean }) {
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -248,10 +261,13 @@ export function PricingPlans() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Pricing</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Flexible plans for every investor</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Plans, and what each one unlocks</h3>
+          {/* Covers both halves of the section now — the prices and the access — because the
+              "Plan access" header that used to introduce the second half is gone. */}
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             Priced for the Indian market and quoted per month on both cycles, so the only thing that changes when you
-            switch is what you pay — not what you are comparing.
+            switch is what you pay — not what you are comparing. Every plan reads the same exchange data; what a plan
+            buys is the AI layer over it, listed tier by tier below.
           </p>
         </div>
 

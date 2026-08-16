@@ -6,6 +6,9 @@ import {
   buildMoversUrl,
   type RankedMoverRow,
 } from "../../app/components/bse-movers-board";
+// Through the constant rather than as a literal, so the page size can move in one place — the
+// server prefetch reads the same one, and the two must never disagree.
+import { MOVERS_PAGE_SIZE } from "../../app/lib/market-urls";
 
 jest.setTimeout(30000);
 
@@ -113,7 +116,7 @@ function mockFeed(ok = true, table: Record<string, RankedMoverRow[]> = MOVERS) {
 describe("buildMoversUrl", () => {
   it("asks for one page of a tier's movers, in one direction, ranked over one period", () => {
     expect(buildMoversUrl("small", "losers", "overall", "", "0", 3)).toBe(
-      "/api/market/bse/movers?tier=small&direction=losers&period=overall&page=3&pageSize=10",
+      `/api/market/bse/movers?tier=small&direction=losers&period=overall&page=3&pageSize=${MOVERS_PAGE_SIZE}`,
     );
   });
 
@@ -121,7 +124,7 @@ describe("buildMoversUrl", () => {
   // and the cleared board request exactly the same URL — and hit the same cache entry.
   it("carries the search term and the move floor only when they are set", () => {
     expect(buildMoversUrl("all", "gainers", "1y", "tata steel", "5", 1)).toBe(
-      "/api/market/bse/movers?tier=all&direction=gainers&period=1y&page=1&pageSize=10&q=tata+steel&min=5",
+      `/api/market/bse/movers?tier=all&direction=gainers&period=1y&page=1&pageSize=${MOVERS_PAGE_SIZE}&q=tata+steel&min=5`,
     );
   });
 });
@@ -137,7 +140,7 @@ describe("MoverTableRow", () => {
     );
 
     expect(screen.getByLabelText("Rank 4 in this segment")).toBeInTheDocument();
-    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
+    expect(screen.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
     expect(screen.getByText("RELIANCE")).toBeInTheDocument();
     expect(screen.getByText("Reliance Industries Ltd · 500325")).toBeInTheDocument();
     expect(screen.getByText("Energy")).toBeInTheDocument();
@@ -377,7 +380,7 @@ describe("BseMoversBoard", () => {
 
     const option = await screen.findByRole("option", { name: /SECOND/ });
     expect(search).toHaveAttribute("aria-expanded", "true");
-    expect(within(option).getByAltText("SECOND logo")).toBeInTheDocument();
+    expect(within(option).getByAltText(/\(SECOND\) logo$/)).toBeInTheDocument();
     expect(within(option).getByText("Second Best Ltd")).toBeInTheDocument();
     expect(within(option).getByLabelText("Rank 1 in this segment")).toBeInTheDocument();
     expect(within(option).getByText("Energy")).toBeInTheDocument();

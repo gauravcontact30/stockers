@@ -46,6 +46,8 @@ export async function guardFeature(request: Request, feature: FeatureKey): Promi
     type: "feature",
     feature,
     userId: user?.id ?? null,
+    // The operators exercise every AI feature while testing them; that is not audience interest.
+    userEmail: user?.email ?? null,
     visitorId: visitorIdFromRequest(request),
     userAgent: request.headers.get("user-agent"),
     blocked: !allowed,

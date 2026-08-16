@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { OPENING_SYMBOL } from "../lib/ownership-defaults";
+import { FALLBACK_QUICK_PICKS } from "../lib/suggestion-defaults";
 import { CompanyLogo } from "./company-logo";
 import { PromoterTrendChart } from "./promoter-trend-chart";
 import { StockCombobox } from "./stock-combobox";
@@ -49,8 +50,6 @@ export type Ownership = {
   source: string;
 };
 
-/** Names a visitor is likely to want first, and every one of them files with the NSE. */
-const QUICK_PICKS = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "ITC", "INFY"];
 
 /**
  * One colour per bucket, used by the bar, its legend and the cards alike so a colour means the
@@ -254,7 +253,18 @@ function MarketSnapshot({ market }: { market: NonNullable<Ownership["market"]> }
  * portfolio investors, domestic institutions, government, individual shareholders — so nothing
  * here is inferred from price or volume.
  */
-export function OwnershipBoard({ prefetched = null }: { prefetched?: PrefetchedOwnership }) {
+export function OwnershipBoard({
+  prefetched = null,
+  quickPicks = FALLBACK_QUICK_PICKS,
+}: {
+  prefetched?: PrefetchedOwnership;
+  /**
+   * The tickers offered under the search box. Resolved on the server so the same set is in the
+   * prerendered HTML and in the hydrated board — see `../lib/daily-picks` for why these cannot be
+   * drawn in the browser.
+   */
+  quickPicks?: readonly string[];
+}) {
   const [symbol, setSymbol] = useState(OPENING_SYMBOL);
   const [query, setQuery] = useState(OPENING_SYMBOL);
   // Seeded from the server when the opening company was resolved there, so the board paints filled
@@ -344,7 +354,7 @@ export function OwnershipBoard({ prefetched = null }: { prefetched?: PrefetchedO
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          {QUICK_PICKS.map((pick) => (
+          {quickPicks.map((pick) => (
             <button
               key={pick}
               type="button"

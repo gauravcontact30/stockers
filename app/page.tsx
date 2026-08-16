@@ -157,9 +157,23 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
 
           <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto whitespace-nowrap rounded-full border border-slate-200/70 bg-slate-50/80 p-1 lg:flex dark:border-slate-800 dark:bg-slate-950/50 [scrollbar-width:thin]">
             {navLinks.map((link) => (
+              /* Not prefetched on sight, for the same reason the footer's links are not — and here
+                 it costs far more. Every one of these seven routes renders this entire page through
+                 `../lib/home-section-page`, by design, for SEO. They all sit in the header, so they
+                 are in the viewport from the first frame and their prefetches fire together: seven
+                 RSC payloads of ~136KB each, measured, or ~950KB of near-identical copies of the
+                 document the reader is already looking at — a third of the landing page's total
+                 weight, downloaded and parsed before anybody has clicked anything.
+
+                 `partialPrefetching` in next.config.ts does not save this. It shares one shell
+                 across links pointing at the *same* route; these are seven different routes.
+
+                 `false` rather than absent keeps the prefetch on hover, which is the point at which
+                 somebody has actually shown an interest in one of them. */
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className="shrink-0 rounded-full px-2.5 py-1.5 text-[13px] font-medium whitespace-nowrap text-slate-600 transition hover:bg-white hover:text-emerald-600 hover:shadow-sm dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
               >
                 {link.label}

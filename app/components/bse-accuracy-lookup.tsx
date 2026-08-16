@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FALLBACK_EXAMPLES, type SuggestionPick } from "../lib/suggestion-defaults";
 import { CompanyLogo } from "./company-logo";
 import { TopPerformers } from "./top-performers";
 
@@ -60,14 +61,6 @@ type AccuracyResponse = {
   result?: BseStockAccuracy | null;
 };
 
-const EXAMPLES = [
-  { symbol: "AUBANK", name: "AU Bank" },
-  { symbol: "ANGELONE", name: "Angel One" },
-  { symbol: "RELIANCE", name: "Reliance" },
-  { symbol: "TCS", name: "TCS" },
-  { symbol: "SBIN", name: "SBI" },
-  { symbol: "ACCURACY", name: "Accuracy" },
-];
 
 const COMPETITOR_PAGE_SIZE = 5;
 const RETURN_FILTERS = [
@@ -645,7 +638,15 @@ function AccuracyProfile({ result }: { result: BseStockAccuracy }) {
   );
 }
 
-export function BseAccuracyLookup() {
+export function BseAccuracyLookup({
+  examples = FALLBACK_EXAMPLES,
+}: {
+  /**
+   * The companies offered under the search box. Resolved on the server, for the reason set out in
+   * `../lib/daily-picks`: a set drawn in the browser would not match the prerendered HTML.
+   */
+  examples?: readonly SuggestionPick[];
+} = {}) {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<BseAccuracyMatch[]>([]);
   const [result, setResult] = useState<BseStockAccuracy | null>(null);
@@ -770,7 +771,7 @@ export function BseAccuracyLookup() {
             <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">{statusLine}</p>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {EXAMPLES.map((example) => (
+              {examples.map((example) => (
                 <button
                   key={example.symbol}
                   type="button"

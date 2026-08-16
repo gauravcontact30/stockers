@@ -18,32 +18,28 @@ import {
 // Values from ./bse-platform, types from ./bse-market: the latter reaches the network and Next's
 // cache, so a client component may only ever take erased types from it.
 import { BSE_PLATFORMS, PLATFORM_NOTE, bsePlatform, type BsePlatform } from "../lib/bse-platform";
-import { PUBLISHING_BROKERS, type BrokerId, type PublishingBroker } from "../lib/brokers";
 import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
 import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow, TrendingRank } from "../lib/bse-market";
 
 /**
- * The tab's wording for the broker ranking.
+ * The three rankings, all of them the exchange's own.
  *
- * One publishing broker means the tab can name it outright — "Most bought on Groww" says exactly
- * what the board is. Two or more cannot be named in a tab, so it generalises. Either way the verb
- * is the broker's own: bought, never searched.
+ * A fourth used to lead this list: a "most bought" tab ordered by a retail broker's published
+ * buying list, with a row of broker pills under the filters and a broker tag on every matching
+ * company. It is gone, and the section is now what its heading has always said it is — BSE, ranked
+ * by BSE's figures, naming no other platform.
  *
- * Exported because which arm applies depends on the registry, and only one of them can be reached
- * at a time from the app itself.
+ * That ranking was the one thing here that did not come from the exchange. It was honest about its
+ * source, which is exactly why it had to name that source everywhere it appeared; the alternative —
+ * keeping the ordering and dropping the attribution — would have presented one broker's customers
+ * as retail at large. The three below need no such footnote: turnover, trade count and share volume
+ * are published by the exchange for every scrip that traded.
+ *
+ * `TrendingRank` in ../lib/bse-market still admits "brokers" and the endpoint still serves it —
+ * `investorFavouriteTrio` in ../lib/hero-trios ranks the hero's fourth slide on it, under its own
+ * attribution. Nothing was removed from the data layer; this board just no longer offers it.
  */
-export function brokerRankLabel(brokers: readonly PublishingBroker[]): string {
-  return brokers.length === 1 ? brokers[0].feed.label : "Most bought on brokers";
-}
-
-const BROKER_RANK_LABEL = brokerRankLabel(PUBLISHING_BROKERS);
-
 const RANK_OPTIONS: { key: TrendingRank; label: string; note: string }[] = [
-  {
-    key: "brokers",
-    label: BROKER_RANK_LABEL,
-    note: `where ${PUBLISHING_BROKERS.map((each) => each.name).join(" and ")} place each company on their own published buying lists, most bought first`,
-  },
   { key: "turnover", label: "By turnover (₹)", note: "the rupees that changed hands" },
   { key: "trades", label: "By trade count", note: "how many separate transactions were struck" },
   { key: "volume", label: "By volume (shares)", note: "the number of shares that moved" },
@@ -66,36 +62,11 @@ const MOVE_OPTIONS = [
 type TierKey = (typeof TIER_OPTIONS)[number]["key"];
 type MoveKey = (typeof MOVE_OPTIONS)[number]["key"];
 type PlatformKey = BsePlatform | "all";
-type BrokerKey = BrokerId | "all";
 
 // Both now live in ../lib/market-urls, so the server can build the same URL this board asks for
 // when it prefetches the opening payload. Re-exported so existing importers are unaffected.
 export { buildTrendingUrl };
 const PAGE_SIZE = TRENDING_PAGE_SIZE;
-
-/** A light background per broker, so each platform reads as itself across the board. */
-const BROKER_TONE: Record<BrokerId, { pill: string; selected: string }> = {
-  groww: {
-    pill: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30",
-    selected: "bg-emerald-600 text-white border-emerald-600 dark:bg-emerald-500 dark:border-emerald-500",
-  },
-  zerodha: {
-    pill: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30",
-    selected: "bg-sky-600 text-white border-sky-600 dark:bg-sky-500 dark:border-sky-500",
-  },
-  "angel-one": {
-    pill: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30",
-    selected: "bg-amber-600 text-white border-amber-600 dark:bg-amber-500 dark:border-amber-500",
-  },
-  upstox: {
-    pill: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:border-violet-500/30",
-    selected: "bg-violet-600 text-white border-violet-600 dark:bg-violet-500 dark:border-violet-500",
-  },
-  "icici-direct": {
-    pill: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30",
-    selected: "bg-rose-600 text-white border-rose-600 dark:bg-rose-500 dark:border-rose-500",
-  },
-};
 
 const PLATFORM_TONE: Record<BsePlatform, string> = {
   "Main Board": "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
@@ -107,7 +78,6 @@ const PLATFORM_TONE: Record<BsePlatform, string> = {
 
 /** The figure the board is currently ranked by, drawn as the row's headline number. */
 function rankValue(row: BseTrendingRow, rank: TrendingRank): string {
-  if (rank === "brokers") return row.brokerRank === null ? "—" : `#${row.brokerRank}`;
   if (rank === "turnover") return row.turnoverCr === null ? "—" : formatCrore(row.turnoverCr * 1e7);
   if (rank === "volume") return formatQuantity(row.volume);
   return formatQuantity(row.trades);
@@ -158,16 +128,6 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
                   {row.capTier} cap
                 </span>
               )}
-              {/* The broker's own label and its own placing — "most bought", because that is what
-                  Groww publishes. Never restated as "most searched", which nobody publishes. */}
-              {row.brokers.map((pick) => (
-                <span
-                  key={pick.broker}
-                  className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                >
-                  {pick.label} #{pick.rank}
-                </span>
-              ))}
             </div>
           </div>
         </div>
@@ -214,44 +174,46 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
 /**
  * The BSE stocks the session actually crowded into, searchable across the traded exchange.
  *
- * This is deliberately not a "most searched on Groww / Angel One / Zerodha" board. No broker
- * publishes its search or order flow, so ranking by it would mean inventing the numbers;
- * `MostTraded` hit the same wall on the NSE side. The platform shown against each company is the
- * BSE segment it is listed and traded on — main board, SME, X, T or Z — which the exchange does
- * state, through the group letter carried on every scrip.
+ * Every figure on this board is the exchange's own, and no other platform is named anywhere on it.
+ * The only "platform" a row carries is the BSE segment it is listed and traded on — main board,
+ * SME, X, T or Z — which the exchange states through the group letter on every scrip.
+ *
+ * It is also deliberately not a "most searched" board. No venue publishes its search or order flow,
+ * so ranking by it would mean inventing the numbers; `MostTraded` hit the same wall on the NSE side.
  *
  * Searching, filtering and paging are all server-side, because the traded universe is thousands of
  * rows and each rendered row costs an upstream sector lookup.
  */
 export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTrendingPayload> }) {
-  // Opens on what retail is buying rather than on exchange turnover: the turnover board is led by
-  // whichever institutions moved size today, which is not the question a visitor to the landing
-  // page is asking. The exchange rankings are one tab away.
-  const [rank, setRank] = useState<TrendingRank>("brokers");
+  // Turnover leads: of the three figures the exchange publishes it is the one that answers "where
+  // did the session's money actually go", which is what this board is for. The opening rank is
+  // mirrored by `OPENING` in ./streamed-trending-board — change one and the other must follow, or
+  // the prefetched payload is not the page this board first renders.
+  const [rank, setRank] = useState<TrendingRank>("turnover");
   const [term, setTerm] = useState("");
   const [platform, setPlatform] = useState<PlatformKey>("all");
-  const [broker, setBroker] = useState<BrokerKey>("all");
   const [tier, setTier] = useState<TierKey>("all");
   const [move, setMove] = useState<MoveKey>("0");
 
   // Same cursor derivation as `BseMoversBoard`: change any input and the reader is looking at a
   // different list, so the page falls back to 1 rather than being reset in an effect — the new list
   // never renders at the stale page first.
-  const listKey = `${rank}|${term}|${platform}|${broker}|${tier}|${move}`;
+  const listKey = `${rank}|${term}|${platform}|${tier}|${move}`;
   const [cursor, setCursor] = useState({ key: listKey, page: 1 });
   const page = cursor.key === listKey ? cursor.page : 1;
 
-  const url = buildTrendingUrl(rank, term, platform, broker, tier, move, page);
+  // "all" for the broker facet the endpoint still accepts: this board no longer filters by one, and
+  // passing "all" is what keeps it out of the query string entirely — see `buildTrendingUrl`.
+  const url = buildTrendingUrl(rank, term, platform, "all", tier, move, page);
   const { data, loading, error } = useMarketFeed<BseTrendingPayload>(url, prefetched);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
   const active = RANK_OPTIONS.find((option) => option.key === rank);
-  const filtered = term.length > 0 || platform !== "all" || broker !== "all" || tier !== "all" || move !== "0";
+  const filtered = term.length > 0 || platform !== "all" || tier !== "all" || move !== "0";
 
   const clearFilters = () => {
     setTerm("");
     setPlatform("all");
-    setBroker("all");
     setTier("all");
     setMove("0");
   };
@@ -282,7 +244,7 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       id="bse-trending"
       eyebrow="Trending on BSE"
       title="What BSE crowded into today"
-      blurb="What retail is buying on BSE, most bought first, taken from the brokers' own published lists — or ranked instead by the exchange's figures for rupee turnover, transaction count and share volume. Every company carries the BSE platform it is listed on."
+      blurb="Where the session's money actually went, ranked by the exchange's own figures — rupee turnover, transaction count and share volume. Every company carries the BSE platform it is listed on."
       aside={
         <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
           {data ? `${data.total.toLocaleString("en-IN")} traded` : "Loading BSE…"}
@@ -404,53 +366,6 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
         })}
       </div>
 
-      {/* Broker coverage, stated in full rather than only where it exists. Every tracked platform
-          is named; the four that publish nothing say so, because a platform silently missing from
-          this row would read as an oversight rather than as a fact about the platform. */}
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Broker lists
-          </span>
-          <button
-            type="button"
-            onClick={() => setBroker("all")}
-            aria-pressed={broker === "all"}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-              broker === "all"
-                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            }`}
-          >
-            All BSE
-          </button>
-          {/* Only the platforms that actually publish a list. The rest are tracked in ./brokers
-              with the reason each carries no data, but a pill that can never be selected is not
-              worth the row it takes. */}
-          {PUBLISHING_BROKERS.map((each) => {
-            const tone = BROKER_TONE[each.id];
-            return (
-              <button
-                key={each.id}
-                type="button"
-                title={`${each.feed?.label} · ${each.blurb}`}
-                onClick={() => setBroker(each.id)}
-                aria-pressed={broker === each.id}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                  broker === each.id ? tone.selected : tone.pill
-                }`}
-              >
-                {each.name}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-          Shown under each broker&apos;s own wording for its list. No broker publishes a most-<em>searched</em> ranking —
-          that is in-app telemetry nobody exposes — so nothing on this board is presented as one.
-        </p>
-      </div>
 
       {summary && <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{summary}</p>}
 
@@ -472,13 +387,11 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       {!loading && rows.length === 0 && !error && (
         <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">
           {filtered && "No traded BSE stock matches those filters this session."}
-          {/* Distinct from the exchange boards being empty: here the exchange file may be fine and
-              it is the broker's own page that could not be read, which is a different failure and
-              a different thing for the reader to do about it. */}
+          {/* One empty state now, rather than two. Every ranking this board offers is read from the
+              same exchange file, so there is only one thing that can be missing and one thing to
+              say about it — the broker-feed arm went with the broker ranking. */}
           {!filtered &&
-            (rank === "brokers"
-              ? `No broker list could be read this session — ${BROKER_RANK_LABEL} is published on the broker's own site, and that page did not answer. The exchange rankings above are unaffected.`
-              : "BSE hasn't published a complete session file yet — this board fills in once the day's Bhavcopy lands.")}
+            "BSE hasn't published a complete session file yet — this board fills in once the day's Bhavcopy lands."}
         </p>
       )}
 

@@ -70,12 +70,26 @@ describe("PlanPill", () => {
 });
 
 describe("PlanRibbon", () => {
-  it("labels the corner with the plan, once, for a screen reader", () => {
+  /**
+   * Two labelled elements, not one, and that is correct rather than a duplicate announcement.
+   *
+   * `PlanRibbon` draws the tier two ways: a pill in the corner on a phone (`sm:hidden`) and the
+   * rotated corner banner from `sm` up (`hidden sm:block`). Exactly one of them is displayed at any
+   * width, so a screen reader — which honours `display: none` — announces the tier once. jsdom
+   * applies no stylesheet, so both are in the tree here and both have to be accounted for.
+   *
+   * What the "once" in this test's name is really about is the *inner* banner: it is `aria-hidden`,
+   * so the visible variant announces its tier a single time rather than once for the wrapper and
+   * again for the rotated text inside it.
+   */
+  it("labels both responsive variants, and announces each one's tier only once", () => {
     render(<PlanRibbon tier="starter" />);
 
-    // The outer element carries the label; the rotated inner banner is hidden so the tier is not
-    // announced twice.
-    const ribbon = screen.getByLabelText("Starter plan");
+    const [pill, ribbon] = screen.getAllByLabelText("Starter plan");
+    expect(screen.getAllByLabelText("Starter plan")).toHaveLength(2);
+
+    expect(pill).toHaveClass("sm:hidden");
+    expect(ribbon).toHaveClass("hidden", "sm:block");
     expect(ribbon).toHaveAttribute("title", "Starter plan");
     expect(ribbon.querySelector("[aria-hidden='true']")).toBeInTheDocument();
   });
@@ -85,13 +99,17 @@ describe("PlanRibbon", () => {
     // The star path is the filled mark; the padlock is drawn as a rect plus a shackle path.
     expect(unlocked.querySelectorAll("rect")).toHaveLength(0);
 
+    // Two, one per responsive variant — the phone pill and the wide-screen corner banner both draw
+    // the padlock, and CSS decides which of them is on screen. See the note above.
     const { container: locked } = render(<PlanRibbon tier="pro" locked />);
-    expect(locked.querySelectorAll("rect")).toHaveLength(1);
+    expect(locked.querySelectorAll("rect")).toHaveLength(2);
   });
 
+  // The frame is the wide-screen corner banner, which is the second of the two variants above.
   it.each(TIERS)("wears the %s frame and banner", (tier) => {
     render(<PlanRibbon tier={tier} />);
-    expect(screen.getByLabelText(`${TIER_LABEL[tier]} plan`)).toHaveClass(...TIER_CHROME[tier].ribbonFrame.split(" "));
+    const [, ribbon] = screen.getAllByLabelText(`${TIER_LABEL[tier]} plan`);
+    expect(ribbon).toHaveClass(...TIER_CHROME[tier].ribbonFrame.split(" "));
   });
 });
 

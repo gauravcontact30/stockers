@@ -99,7 +99,8 @@ describe("PricingPlans", () => {
   it("shows AI feature categories with top-three star ranks", () => {
     render(<PricingPlans />);
 
-    expect(screen.getByRole("heading", { name: "AI features by plan" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Plans, and what each one unlocks" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI access by tier" })).toBeInTheDocument();
     expect(screen.getByText("All Starter AI features included")).toBeInTheDocument();
     expect(screen.getByText("All Starter + Pro AI features included.")).toBeInTheDocument();
     expect(screen.getByLabelText("6 Starter AI features. Starter AI features")).toBeInTheDocument();

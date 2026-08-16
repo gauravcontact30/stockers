@@ -7,7 +7,10 @@ import {
   StreamedMoversBoard,
   StreamedSectorMovers,
 } from "../../app/components/streamed-boards";
-import { buildMoversUrl } from "../../app/lib/market-urls";
+// The page size is asserted through the constant rather than as a literal: the whole point of it
+// living in one module is that the server prefetch and the client board cannot disagree, and a
+// hard-coded 10 here would have to be found and changed by hand every time that number moves.
+import { MOVERS_PAGE_SIZE, buildMoversUrl } from "../../app/lib/market-urls";
 
 jest.mock("../../app/lib/bse-market", () => ({
   getBseMovers: jest.fn(),
@@ -48,7 +51,7 @@ const moverPage = {
   total: 1,
   page: 1,
   pages: 1,
-  pageSize: 10,
+  pageSize: MOVERS_PAGE_SIZE,
   sessionDate: "2026-08-07",
 };
 
@@ -84,7 +87,7 @@ describe("MoversBoard", () => {
       direction: "gainers",
       period: "overall",
       page: 1,
-      pageSize: 10,
+      pageSize: MOVERS_PAGE_SIZE,
     });
   });
 

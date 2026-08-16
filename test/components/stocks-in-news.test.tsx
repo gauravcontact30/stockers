@@ -68,7 +68,7 @@ describe("StocksInNews", () => {
     expect(within(link).getByText("Shareholders meeting")).toBeInTheDocument();
     expect(within(link).getByText("20m ago")).toBeInTheDocument();
     expect(within(link).getByText("Bharat Electronics Limited")).toBeInTheDocument();
-    expect(within(link).getByAltText("BEL logo")).toBeInTheDocument();
+    expect(within(link).getByAltText(/\(BEL\) logo$/)).toBeInTheDocument();
     expect(within(link).getByText("Read the filing ↗")).toBeInTheDocument();
 
     expect(screen.getByText("3 announcements")).toBeInTheDocument();
@@ -95,17 +95,17 @@ describe("StocksInNews", () => {
     mockFeed(board);
     render(<StocksInNews />);
 
-    await screen.findByAltText("BEL logo");
+    await screen.findByAltText(/\(BEL\) logo$/);
 
     // There is more than one real source for a mark now — the ticker store, then the company's
     // own favicon — so the tile only appears once every source has been tried and failed.
     for (let attempt = 0; attempt < 4; attempt++) {
-      const logo = screen.queryByAltText("BEL logo");
+      const logo = screen.queryByAltText(/\(BEL\) logo$/);
       if (!logo) break;
       fireEvent.error(logo);
     }
 
-    expect(screen.queryByAltText("BEL logo")).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/\(BEL\) logo$/)).not.toBeInTheDocument();
     // The ticker now appears twice: once as the heading, once inside the monogram tile.
     expect(screen.getAllByText("BEL")).toHaveLength(2);
   });

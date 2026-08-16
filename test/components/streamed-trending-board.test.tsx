@@ -54,14 +54,15 @@ beforeEach(() => {
 
 describe("TrendingPayload", () => {
   /**
-   * The board opens on the broker ranking rather than on exchange turnover — what retail is buying
-   * is the question a landing-page visitor is asking — so that is the tab the server prefetches.
+   * The board opens on exchange turnover. It used to open on a broker's published buying list; that
+   * ranking is gone from the board entirely, so this section names no platform but the exchange —
+   * and the tab the server prefetches has to follow the tab the client opens on.
    */
   it("asks the data layer for the tab the board opens on", async () => {
     await TrendingPayload();
 
     expect(bseMarket.getBseTrending).toHaveBeenCalledWith({
-      rank: "brokers",
+      rank: "turnover",
       page: 1,
       pageSize: 10,
     });
@@ -70,7 +71,7 @@ describe("TrendingPayload", () => {
   it("labels the payload with the URL the client asks for on its first render", async () => {
     const element = await TrendingPayload();
 
-    expect(element.props.prefetched.url).toBe(buildTrendingUrl("brokers", "", "all", "all", "all", "0", 1));
+    expect(element.props.prefetched.url).toBe(buildTrendingUrl("turnover", "", "all", "all", "all", "0", 1));
     expect(element.props.prefetched.data).toBe(board);
   });
 

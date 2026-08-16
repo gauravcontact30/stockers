@@ -240,10 +240,10 @@ describe("IpoListings", () => {
     mockListFetch({ ...feed, ipos: [ipos[0]] });
     render(<IpoListings />);
 
-    const img = await screen.findByAltText("ARDEE logo");
+    const img = await screen.findByAltText(/\(ARDEE\) logo$/);
     fireEvent.error(img);
 
-    expect(screen.queryByAltText("ARDEE logo")).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/\(ARDEE\) logo$/)).not.toBeInTheDocument();
     expect(screen.getByText("ARD")).toBeInTheDocument();
   });
 
@@ -253,7 +253,7 @@ describe("IpoListings", () => {
     mockListFetch({ ...feed, ipos: [], anticipated });
     render(<IpoListings />);
 
-    expect(await screen.findByAltText("Delta Logistics logo")).toHaveAttribute("src", "https://logo.test/delta.png");
+    expect(await screen.findByAltText(/\(DELTA LOGISTICS\) logo$/)).toHaveAttribute("src", "https://logo.test/delta.png");
   });
 
   it("renders IPO cards as static entries, with no AI research call", async () => {

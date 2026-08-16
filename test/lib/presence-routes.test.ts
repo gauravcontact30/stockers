@@ -38,6 +38,7 @@ function account(overrides: Partial<AppUser> = {}): AppUser {
 }
 
 const superAdmin = account({ id: "user_super", name: "Garv Tuts", email: SUPER_ADMIN_EMAIL, role: "admin" });
+const excludedOperator = account({ id: "user_operator", name: "Gaurav Contact", email: "gauravcontact66@gmail.com", role: "admin" });
 const regular = account();
 
 async function writeRoster(users: AppUser[]) {
@@ -201,6 +202,17 @@ describe("POST /api/analytics/presence", () => {
     expect(session.userId).toBe("user_regular");
   });
 
+  it("records no live sitting for excluded operator accounts", async () => {
+    await writeRoster([superAdmin]);
+
+    const response = await POST(
+      beat({ sessionId: "tab_abcdefgh", visitorId: "browser_abcdefgh", path: "/analytics" }, { Authorization: `Bearer ${createToken(superAdmin)}` }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(await listPresence()).toEqual([]);
+  });
+
   it("shrugs off a body that is not JSON at all", async () => {
     const response = await POST(
       new Request("http://localhost/api/analytics/presence", { method: "POST", body: "not json" }),
@@ -238,6 +250,21 @@ describe("GET /api/admin/presence", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ available: true, summary: { online: 1, signedIn: 1, guests: 0 } });
     expect(body.rows[0]).toMatchObject({ name: "Regular User", email: "regular@example.com", path: "/overview" });
+  });
+
+  it("keeps excluded operator accounts out of the admin live presence report even when old rows exist", async () => {
+    await writeRoster([superAdmin, excludedOperator, regular]);
+    await touchPresence({ sessionId: "tab_regular", userId: regular.id, path: "/overview", userAgent: "Mozilla" });
+    await touchPresence({ sessionId: "tab_super", userId: superAdmin.id, path: "/analytics", userAgent: "Mozilla" });
+    await touchPresence({ sessionId: "tab_operator", userId: excludedOperator.id, path: "/analytics", userAgent: "Mozilla" });
+
+    const response = await GET(adminRead(superAdmin));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ available: true, summary: { online: 1, signedIn: 1, guests: 0 } });
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0]).toMatchObject({ email: regular.email, path: "/overview" });
   });
 
   it("never lets a cache hold one admin's view of where everyone is", async () => {

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { type ClientReview } from "./client-review";
@@ -53,16 +53,38 @@ function imageSlug(value: string): string {
   );
 }
 
-async function saveImage(file: File, id: string, kind: "profile" | "signature", label: string): Promise<string> {
+async function saveImage(file: File, kind: "profile" | "signature", label: string): Promise<string> {
   const extension = extensionFor(file);
   if (!extension) throw new Error(`${kind} image must be JPG, PNG, WebP, GIF or SVG.`);
   if (file.size <= 0) throw new Error(`${kind} image is empty.`);
   if (file.size > MAX_IMAGE_BYTES) throw new Error(`${kind} image must be 3 MB or smaller.`);
 
   await fs.mkdir(uploadDir, { recursive: true });
-  const filename = `${imageSlug(`${label} stockersai review`)}-${id.slice(-8)}-${kind}.${extension}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  /**
+   * The eight hex characters that let these be cached for a year.
+   *
+   * Everything under `public/uploads` used to be served with `Cache-Control: public, max-age=0`
+   * — the Next default for `public/` — because the name was derived from the reviewer and the
+   * review id alone. Replacing a reviewer's photo rewrote the *same* path with different bytes, so
+   * a long cache would have pinned the old picture on every browser that had already seen it, and
+   * a short one meant re-downloading unchanged images on every visit. Lighthouse reports the second
+   * half of that as "use efficient cache lifetimes".
+   *
+   * Hashing the bytes into the name settles it: different bytes are a different URL, so nothing is
+   * ever stale at a given path and `immutable` in next.config.ts is honest rather than a gamble.
+   * The slug stays in front of the hash — these end up in page source, and a filename that says
+   * whose signature it is beats one that says `a3f9c1d4`.
+   *
+   * The review id is no longer part of the name: the hash already distinguishes two files, and
+   * keeping the id would have tied one image to one review for no benefit while making the same
+   * uploaded picture occupy two paths.
+   */
+  const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 8);
+  const filename = `${imageSlug(`${label} stockersai review`)}-${kind}-${digest}.${extension}`;
   const target = path.join(uploadDir, filename);
-  await fs.writeFile(target, Buffer.from(await file.arrayBuffer()));
+  await fs.writeFile(target, bytes);
   return `${publicPrefix}/${filename}`;
 }
 
@@ -125,11 +147,11 @@ export async function createClientReview(form: FormData): Promise<ClientReview> 
     name,
     location: location || "India",
     role: role || "Investor",
-    photo: await saveImage(profile, id, "profile", name),
+    photo: await saveImage(profile, "profile", name),
     accent: ACCENTS[uploaded.length % ACCENTS.length],
     comment,
     signature,
-    signatureImage: signatureImage instanceof File && signatureImage.size > 0 ? await saveImage(signatureImage, id, "signature", signature) : null,
+    signatureImage: signatureImage instanceof File && signatureImage.size > 0 ? await saveImage(signatureImage, "signature", signature) : null,
     rating,
     createdAt: new Date().toISOString(),
   };

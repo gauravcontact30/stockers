@@ -16,6 +16,21 @@ function keyFor(symbol: string): string {
   return symbol.trim().toUpperCase();
 }
 
+/**
+ * Empties both maps. For tests, and named the way `resetCacheWritability` in ../lib/data-cache is.
+ *
+ * These live at module scope, which is what makes the cache shared across every board on the page —
+ * and, under Jest, shared across every test in a file, because a module is instantiated once per
+ * suite rather than once per test. A test that opened a company's report left that company cached
+ * for whatever ran next, so the next test's report resolved instantly and never passed through its
+ * loading state. That is an ordering dependency rather than a behaviour, and this is how a suite
+ * opts out of it.
+ */
+export function resetResearchCache(): void {
+  cache.clear();
+  inFlight.clear();
+}
+
 export async function fetchResearch(symbol: string): Promise<AnalysisResponse> {
   const key = keyFor(symbol);
   const cached = cache.get(key);

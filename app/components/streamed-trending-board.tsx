@@ -27,11 +27,17 @@ import { BoardFallback } from "./streamed-boards";
  *
  * They have to match: the payload is only spent when the URL the client builds on its first render
  * is the one named here, so a board that opened on different defaults would simply fetch as it
- * always did rather than render the wrong figures. `brokers` is the opening tab because that is
- * what retail is buying, which is the question a landing-page visitor is actually asking.
+ * always did rather than render the wrong figures.
+ *
+ * `turnover` is the opening tab. It was `brokers` — a retail broker's published buying list — and
+ * that ranking has been taken off the board entirely, so that this section names no platform but
+ * the exchange it is about. See the note on `RANK_OPTIONS` in ./bse-trending-board.
+ *
+ * `broker` stays in this object only because `buildTrendingUrl` still takes the facet; at "all" it
+ * is omitted from the query string, so the URL built here is the one the client builds.
  */
 const OPENING = {
-  rank: "brokers",
+  rank: "turnover",
   term: "",
   platform: "all",
   broker: "all",

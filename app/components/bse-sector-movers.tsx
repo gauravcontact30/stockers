@@ -280,9 +280,9 @@ function Metric({ label, value, tone }: { label: string; value: number; tone: st
   const displayLabel = label.includes("leading") ? "leaders" : label.includes("lagging") ? "laggards" : label;
 
   return (
-    <span className="flex min-w-[50px] flex-col items-end gap-0.5 border-l border-slate-200 px-2 first:border-l-0 first:pl-0 dark:border-slate-800">
-      <span className={`text-sm font-bold tabular-nums ${tone}`}>{count(value)}</span>
-      <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+    <span className="flex min-w-11 flex-col items-end border-l border-slate-200 px-1.5 first:border-l-0 first:pl-0 dark:border-slate-800">
+      <span className={`text-sm font-bold leading-tight tabular-nums ${tone}`}>{count(value)}</span>
+      <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.12em] text-slate-400 dark:text-slate-500">
         {displayLabel}
       </span>
     </span>
@@ -335,7 +335,7 @@ function RankIcon({ icon }: { icon: (typeof RANK_STYLES)[number]["icon"] }) {
   };
 
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" data-rank-icon={icon} className="h-4 w-4">
+    <svg viewBox="0 0 20 20" aria-hidden="true" data-rank-icon={icon} className="h-3.5 w-3.5">
       {icon === "trophy" && <path d="M6 3.5h8v3.8c0 2.8-1.7 4.7-4 5.2-2.3-.5-4-2.4-4-5.2V3.5ZM7.5 16.5h5M10 12.5v4M6 5H3.5c.1 2.4 1 3.9 3 4.4M14 5h2.5c-.1 2.4-1 3.9-3 4.4" {...stroke} />}
       {icon === "medal" && <path d="m7 3.5 3 4 3-4M6 3.5h8M10 7.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4ZM10 11l.7 1.4 1.5.2-1.1 1.1.3 1.5-1.4-.8-1.4.8.3-1.5-1.1-1.1 1.5-.2L10 11Z" {...stroke} />}
       {icon === "spark" && <path d="M10 2.8 11.7 8l5.1 1.7-5.1 1.7L10 16.6l-1.7-5.2-5.1-1.7L8.3 8 10 2.8ZM15.6 3.8l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5Z" {...stroke} />}
@@ -366,8 +366,17 @@ function CategoryBlock({
   const rankVisual = rankStyle(rank);
 
   return (
+    /* Sized so a reader can see more than three categories at once.
+     *
+     * This board pages twenty-odd categories and its whole value is comparison down the column, so
+     * the closed row is the thing that matters and it was costing ~72px of height for one line of
+     * text and a figure strip. Every detail it carried is still here — rank, glyph, name, the "our
+     * grouping" note, the mapped-stock count, the breadth bar and all five figures. What changed is
+     * only the space around them: the two tiles come down to 28px, the row's padding halves, and
+     * the figures lose their inter-line gap in favour of tighter leading. The radius comes down
+     * with the height, because a 16px corner on a ~44px row reads as a lozenge rather than a card. */
     <div
-      className={`overflow-hidden rounded-2xl border bg-white transition-colors dark:bg-slate-950/40 ${
+      className={`overflow-hidden rounded-xl border bg-white transition-colors dark:bg-slate-950/40 ${
         open
           ? "border-violet-300 shadow-[0_18px_44px_-30px_rgba(109,40,217,0.55)] dark:border-violet-500/40"
           : "border-slate-200 shadow-[0_14px_38px_-30px_rgba(15,23,42,0.55)] hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700"
@@ -378,15 +387,15 @@ function CategoryBlock({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className={`grid w-full grid-cols-1 gap-3 px-3 py-2.5 text-left transition md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
+        className={`grid w-full grid-cols-1 gap-x-3 gap-y-1.5 px-2.5 py-1.5 text-left transition md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
           open ? "bg-violet-50/40 dark:bg-violet-500/5" : "hover:bg-slate-50/80 dark:hover:bg-slate-900/60"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-2.5">
+        <span className="flex min-w-0 items-center gap-2">
           <Chevron open={open} />
           <span
             aria-label={`Rank ${rank}`}
-            className={`flex h-9 w-10 shrink-0 items-center justify-center gap-0.5 rounded-xl border shadow-sm ${rankVisual.tone}`}
+            className={`flex h-7 w-9 shrink-0 items-center justify-center gap-0.5 rounded-lg border shadow-sm ${rankVisual.tone}`}
           >
             <RankIcon icon={rankVisual.icon} />
             <span className="flex flex-col leading-none">
@@ -399,9 +408,9 @@ function CategoryBlock({
               which industry it is before the name is read. */}
           <span
             aria-hidden="true"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${sectorTone(summary.sector)}`}
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${sectorTone(summary.sector)}`}
           >
-            <CategoryIcon category={summary.sector} className="h-4 w-4" />
+            <CategoryIcon category={summary.sector} className="h-3.5 w-3.5" />
           </span>
           <span className="min-w-0">
             <span className="flex flex-wrap items-center gap-1.5">
@@ -442,7 +451,7 @@ function CategoryBlock({
       </button>
 
       {open && (
-        <div id={panelId} className="border-t border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+        <div id={panelId} className="border-t border-slate-200 bg-slate-50/60 p-2.5 dark:border-slate-800 dark:bg-slate-950/60">
           {summary.stocks === 0 ? (
             // Nothing to ask the endpoint for yet, so it is not asked.
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -453,7 +462,7 @@ function CategoryBlock({
             // track is sized `auto`, so it grew to its rows' min-content (357px) and was then
             // cropped by the card's `overflow-hidden`. `grid-cols-1` is `minmax(0, 1fr)`, which
             // caps the track at the card's width and lets the rows truncate as they were built to.
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
               <CategoryList category={summary.sector} direction="gainers" />
               <CategoryList category={summary.sector} direction="losers" />
             </div>
@@ -592,7 +601,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
             {query && <> matching &ldquo;{query}&rdquo;</>}
           </p>
 
-          <div className="mt-2 space-y-1.5">
+          <div className="mt-2 space-y-1">
             {paged.slice.map((summary, index) => (
               <CategoryBlock
                 key={summary.sector}

@@ -119,7 +119,7 @@ describe("StockCombobox", () => {
     expect(reliance.getByText("Energy & Petrochemicals · Large cap")).toBeInTheDocument();
     expect(reliance.getByText("₹1,487.60")).toBeInTheDocument();
     expect(reliance.getByText("+1.24%")).toBeInTheDocument();
-    expect(reliance.getByAltText("RELIANCE logo")).toBeInTheDocument();
+    expect(reliance.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
 
     // A faller is tinted the other way, and both directions carry the sign.
     expect(within(rows[1]).getByText("-0.87%")).toBeInTheDocument();
@@ -345,13 +345,13 @@ describe("StockCombobox", () => {
     const rows = await screen.findAllByRole("option");
 
     // Nothing picked yet: the logo exists on its list row only, and the field shows no company.
-    expect(screen.getAllByAltText("RELIANCE logo")).toHaveLength(1);
+    expect(screen.getAllByAltText(/\(RELIANCE\) logo$/)).toHaveLength(1);
     expect(screen.queryByText("Reliance Industries · Energy & Petrochemicals")).not.toBeInTheDocument();
 
     await user.click(within(rows[0]).getByRole("button"));
 
     expect(input).toHaveValue("RELIANCE");
-    expect(screen.getByAltText("RELIANCE logo")).toBeInTheDocument();
+    expect(screen.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
     expect(screen.getByText("Reliance Industries · Energy & Petrochemicals")).toBeInTheDocument();
     expect(screen.getByText("₹1,487.60")).toBeInTheDocument();
     expect(screen.getByText("+1.24%")).toBeInTheDocument();

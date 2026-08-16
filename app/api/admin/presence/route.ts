@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSuperAdminEmail } from "../../../lib/admin-access";
+import { isAnalyticsExcludedEmail } from "../../../lib/analytics-exclusions";
 import { listPresence } from "../../../lib/presence";
 import { buildPresenceReport, type LivePresenceState } from "../../../lib/presence-report";
 import { listUsers, userFromRequest } from "../../../lib/store";
@@ -28,8 +29,11 @@ export async function GET(request: Request) {
     // The sittings say who is here and the accounts say who they are; both are needed for a single
     // row, so they are fetched together rather than one after the other.
     const [sessions, users] = await Promise.all([listPresence(now), listUsers()]);
+    const excludedUserIds = new Set(users.filter((account) => isAnalyticsExcludedEmail(account.email)).map((account) => account.id));
+    const visibleUsers = users.filter((account) => !excludedUserIds.has(account.id));
+    const visibleSessions = sessions.filter((session) => !(session.userId && excludedUserIds.has(session.userId)));
 
-    return NextResponse.json(buildPresenceReport({ sessions, users, now }) satisfies LivePresenceState, {
+    return NextResponse.json(buildPresenceReport({ sessions: visibleSessions, users: visibleUsers, now }) satisfies LivePresenceState, {
       // One admin's view of where everyone currently is. Never stored, and never by a shared cache.
       headers: { "Cache-Control": "no-store" },
     });

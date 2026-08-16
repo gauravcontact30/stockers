@@ -20,6 +20,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
+import { isAnalyticsExcludedEmail } from "./analytics-exclusions";
 import { isFeatureKey } from "./plan-tiers";
 import { supabaseConfigured, supabaseRequest } from "./supabase";
 
@@ -412,6 +413,17 @@ function fromRow(row: EventRow): AnalyticsEvent {
 export type RecordEventInput = {
   type: AnalyticsEventType;
   userId?: string | null;
+  /**
+   * The account's address, when the caller already has it — which every caller does, because each
+   * resolves the session before it records anything.
+   *
+   * Present purely so `recordEvent` can drop operator accounts before they are written; see
+   * ./analytics-exclusions. It is never stored: `buildEvent` does not read it, and no row on the
+   * events table has an email column. Optional because a signed-out visit has no account at all,
+   * and because omitting it must fail open — an event that cannot be attributed is still a real
+   * visit and is counted.
+   */
+  userEmail?: string | null;
   visitorId?: unknown;
   sessionId?: unknown;
   feature?: unknown;
@@ -463,6 +475,11 @@ export function buildEvent(input: RecordEventInput, now = new Date()): Analytics
  */
 export async function recordEvent(input: RecordEventInput): Promise<void> {
   try {
+    // The operators' own accounts are not audience. Dropped here rather than filtered out of the
+    // dashboard, so the row never exists to be counted by anything later — see
+    // ./analytics-exclusions for why it is this list and not "every admin".
+    if (isAnalyticsExcludedEmail(input.userEmail)) return;
+
     // An `action` event whose action this build does not know is not stored at all. Writing it
     // with a null action would leave a row that counts towards traffic and names nothing.
     if (input.type === "action" && !isActionKey(input.action)) return;

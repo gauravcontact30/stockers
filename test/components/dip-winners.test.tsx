@@ -1,6 +1,14 @@
 import { render, screen, fireEvent, within, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DipWinners } from "../../app/components/dip-winners";
+import { resetResearchCache } from "../../app/components/research-cache";
+
+// The research cache lives at module scope and is therefore shared by every test in this file. One
+// test opening a company's report would otherwise leave it cached for the next, which then resolves
+// instantly and never shows the loading state it is asserting on.
+beforeEach(() => {
+  resetResearchCache();
+});
 
 // Only the data layer behind the price/returns strip is stubbed — the real LiveMarketValue and
 // StockReturns still render, so these tests keep asserting that each row is actually wired to

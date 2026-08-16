@@ -16,8 +16,24 @@ export type MoverPeriodKey = "1d" | "1w" | "3m" | "6m" | "1y" | "3y" | "5y" | "o
 /** The size of move a reader is willing to look at, as a percentage. "0" means show everything. */
 export type MoverMoveKey = "0" | "2" | "5" | "10" | "20" | "50" | "100" | "200" | "300" | "500";
 
-/** Ten a page: a readable list, and ten sector lookups rather than fifty per page turn. */
-export const MOVERS_PAGE_SIZE = 10;
+/**
+ * Five a page, for the two whole-exchange boards — "every BSE stock that closed higher" and its
+ * losing half.
+ *
+ * Was ten. These two sit near the bottom of a landing page that is already a long stack of boards,
+ * and a ten-row table is a screen and a half on a phone before the next section starts. Five is the
+ * page the tier and category boards above it already use, so the whole page turns at one rhythm
+ * rather than this one being twice the others.
+ *
+ * Halving it halves the work behind a page turn as well: each row costs a sector lookup, so this is
+ * five per turn rather than ten, and a correspondingly smaller response.
+ *
+ * Read by `buildMoversUrl` below *and* by the server prefetch in
+ * `../components/streamed-boards.tsx`. It has to stay one constant — the server has to ask the data
+ * layer for the same size the client asks the endpoint for, or the payload it prefetched is not the
+ * page the board renders and the board refetches on mount.
+ */
+export const MOVERS_PAGE_SIZE = 5;
 
 /**
  * Five a side inside an open category. Both boards sit next to each other in one accordion, so ten

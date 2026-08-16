@@ -58,6 +58,18 @@ function Signature({ review }: { review: ClientReview }) {
         <img
           src={review.signatureImage}
           alt={`${review.name} signature`}
+          /* The same 180×48 the drawn fallback below is built on, and stated for the same reason
+             that fallback carries a viewBox: an uploaded scan has no dimensions the browser can
+             know before it arrives, so the box was laid out at zero width and reserved nothing.
+             Lighthouse flags exactly these two review signatures under "image elements do not have
+             explicit width and height" — they are the only images on the landing page without them.
+
+             These are a ratio, not a size. `h-9 w-auto max-w-full` still decides what is drawn; all
+             the attributes do is give the browser an aspect ratio to hold the space with until the
+             file lands, and make the uploaded and drawn cases reserve the identical box, which is
+             what the layout note above is trying to achieve in the first place. */
+          width={180}
+          height={48}
           className="h-9 w-auto max-w-full object-contain object-bottom mix-blend-multiply dark:mix-blend-screen dark:invert"
           fetchPriority="low"
         />

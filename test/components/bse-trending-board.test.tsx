@@ -1,8 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BseTrendingBoard, TrendingRow, brokerRankLabel, buildTrendingUrl } from "../../app/components/bse-trending-board";
+import { BseTrendingBoard, TrendingRow, buildTrendingUrl } from "../../app/components/bse-trending-board";
 import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow } from "../../app/lib/bse-market";
-import type { PublishingBroker } from "../../app/lib/brokers";
 
 jest.setTimeout(30000);
 
@@ -128,7 +127,7 @@ function payload(rank: string, overrides: Partial<BseTrendingPayload> = {}): Bse
   };
 }
 
-function mockFeed(build: (url: URL) => BseTrendingPayload = (url) => payload(url.searchParams.get("rank") ?? "brokers")) {
+function mockFeed(build: (url: URL) => BseTrendingPayload = (url) => payload(url.searchParams.get("rank") ?? "turnover")) {
   const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input), "http://localhost");
     return { ok: true, json: async () => build(url) } as Response;
@@ -147,21 +146,6 @@ describe("buildTrendingUrl", () => {
   it("carries the search, platform, tier and move filters when they are set", () => {
     expect(buildTrendingUrl("trades", "hdfc", "SME", "groww", "large", "5", 3)).toBe(
       "/api/market/bse/trending?rank=trades&page=3&pageSize=10&q=hdfc&platform=SME&broker=groww&tier=large&min=5",
-    );
-  });
-});
-
-describe("brokerRankLabel", () => {
-  const broker = (name: string, label: string) =>
-    ({ id: "groww", name, standing: 1, blurb: "", feed: { label, url: "" } }) as PublishingBroker;
-
-  it("names the broker outright when only one publishes a list", () => {
-    expect(brokerRankLabel([broker("Groww", "Most bought on Groww")])).toBe("Most bought on Groww");
-  });
-
-  it("generalises once more than one broker publishes, since a tab cannot name them all", () => {
-    expect(brokerRankLabel([broker("Groww", "Most bought on Groww"), broker("Zerodha", "Most bought on Zerodha")])).toBe(
-      "Most bought on brokers",
     );
   });
 });
@@ -205,38 +189,43 @@ describe("BSE trending board", () => {
     expect(screen.getByText("3 traded")).toBeInTheDocument();
   });
 
-  it("opens on what retail is buying, most bought first, not on exchange turnover", async () => {
+  it("opens on exchange turnover, which is where the session's money went", async () => {
     const fetchMock = mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=brokers&page=1&pageSize=10");
-    expect(
-      screen.getByText(
-        "Ranked by where Groww place each company on their own published buying lists, most bought first.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Most bought on Groww" })).toHaveAttribute("aria-pressed", "true");
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10");
+    expect(screen.getByText("Ranked by the rupees that changed hands.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "By turnover (₹)" })).toHaveAttribute("aria-pressed", "true");
 
-    // The placing is the row's headline figure, and an unplaced row draws a dash for it.
-    const top = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
-    expect(within(top).getByText("#1")).toBeInTheDocument();
-
+    // A row the exchange published no turnover for draws a dash rather than a zero.
     const unplaced = (await screen.findByText("Leap India Ltd")).closest("li") as HTMLElement;
     expect(within(unplaced).getAllByText("—").length).toBeGreaterThan(0);
   });
 
-  it("still offers the exchange rankings behind the broker one", async () => {
+  it("names no platform but the exchange — no broker ranking, and no broker filter", async () => {
+    mockFeed();
+    render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
+
+    for (const name of ["Groww", "Zerodha", "Angel One", "Upstox", "ICICI Direct", "All BSE"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/most bought/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Broker lists/i)).not.toBeInTheDocument();
+  });
+
+  it("offers the other two exchange rankings", async () => {
     const fetchMock = mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    await userEvent.click(screen.getByRole("button", { name: "By turnover (₹)" }));
+    await userEvent.click(screen.getByRole("button", { name: "By trade count" }));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10"),
+      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=trades&page=1&pageSize=10"),
     );
-    expect(screen.getByText("Ranked by the rupees that changed hands.")).toBeInTheDocument();
+    expect(screen.getByText("Ranked by how many separate transactions were struck.")).toBeInTheDocument();
   });
 
   it("puts the rank under the logo rather than beside it", async () => {
@@ -304,13 +293,13 @@ describe("BSE trending board", () => {
     await userEvent.type(screen.getByPlaceholderText(/Search any BSE company/), "hdfc");
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=brokers&page=1&pageSize=10&q=hdfc"),
+      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=hdfc"),
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=brokers&page=1&pageSize=10"),
+      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10"),
     );
     expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
   });
@@ -323,7 +312,7 @@ describe("BSE trending board", () => {
     await userEvent.click(screen.getByRole("button", { name: /BSE SME/ }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=brokers&page=1&pageSize=10&platform=SME",
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&platform=SME",
       ),
     );
 
@@ -332,7 +321,7 @@ describe("BSE trending board", () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=brokers&page=1&pageSize=10&platform=SME&tier=small&min=5",
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&platform=SME&tier=small&min=5",
       ),
     );
 
@@ -340,12 +329,12 @@ describe("BSE trending board", () => {
     await userEvent.click(screen.getByRole("button", { name: "All platforms" }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=brokers&page=1&pageSize=10&tier=small&min=5",
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&tier=small&min=5",
       ),
     );
   });
 
-  it("badges a row with the broker's own label and placing", async () => {
+  it("does not badge a row with a broker's list, even when the feed still carries one", async () => {
     mockFeed(() =>
       payload("turnover", {
         rows: [row({ brokers: [{ broker: "groww", brokerName: "Groww", label: "Most bought on Groww", rank: 3 }] })],
@@ -354,38 +343,8 @@ describe("BSE trending board", () => {
     render(<BseTrendingBoard />);
 
     const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
-    // The broker's wording, not "most searched" — which nobody publishes.
-    expect(within(card).getByText("Most bought on Groww #3")).toBeInTheDocument();
-  });
-
-  it("offers only the brokers that publish a list, and no others", async () => {
-    mockFeed();
-    render(<BseTrendingBoard />);
-    await screen.findByText("HDFC Bank Ltd");
-
-    expect(screen.getByRole("button", { name: "Groww" })).toBeEnabled();
-    for (const name of ["Zerodha", "Angel One", "Upstox", "ICICI Direct"]) {
-      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
-    }
-  });
-
-  it("filters to one broker's published list", async () => {
-    const fetchMock = mockFeed();
-    render(<BseTrendingBoard />);
-    await screen.findByText("HDFC Bank Ltd");
-
-    await userEvent.click(screen.getByRole("button", { name: "Groww" }));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=brokers&page=1&pageSize=10&broker=groww",
-      ),
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "All BSE" }));
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=brokers&page=1&pageSize=10"),
-    );
+    // The endpoint still serves the facet for the hero's slide; this board simply never draws it.
+    expect(within(card).queryByText("Most bought on Groww #3")).not.toBeInTheDocument();
   });
 
   it("disables a platform chip that nothing on the board matches", async () => {
@@ -409,21 +368,20 @@ describe("BSE trending board", () => {
     await userEvent.click(screen.getByRole("button", { name: "Next →" }));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=brokers&page=2&pageSize=10"),
+      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=2&pageSize=10"),
     );
     const card = (await screen.findByText("Small Enterprise Co Ltd")).closest("li") as HTMLElement;
     expect(within(card).getByText("11")).toBeInTheDocument();
   });
 
-  it("tells an unreadable broker list apart from an unpublished session and from empty filters", async () => {
-    mockFeed((url) => payload(url.searchParams.get("rank") ?? "brokers", { rows: [], total: 0, platforms: [] }));
+  it("tells an unpublished session apart from empty filters", async () => {
+    mockFeed((url) => payload(url.searchParams.get("rank") ?? "turnover", { rows: [], total: 0, platforms: [] }));
     render(<BseTrendingBoard />);
 
-    // Opening board is the broker one, so an empty result means the broker's page did not answer —
-    // which says nothing about the exchange, and the message must not claim otherwise.
-    expect(await screen.findByText(/No broker list could be read this session/)).toBeInTheDocument();
+    // Every ranking here is read from the same exchange file, so an empty board means one thing.
+    expect(await screen.findByText(/hasn't published a complete session file yet/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "By turnover (₹)" }));
+    await userEvent.click(screen.getByRole("button", { name: "By trade count" }));
     expect(await screen.findByText(/hasn't published a complete session file yet/)).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Minimum move"), "10");
@@ -441,7 +399,7 @@ describe("BSE trending board", () => {
 
   it("uses a server-rendered payload without going to the network", async () => {
     const fetchMock = mockFeed();
-    const url = "/api/market/bse/trending?rank=brokers&page=1&pageSize=10";
+    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
 
     render(<BseTrendingBoard prefetched={{ url, data: payload("brokers") }} />);
 

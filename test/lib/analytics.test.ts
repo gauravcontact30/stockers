@@ -189,6 +189,16 @@ describe("recording and reading back", () => {
     expect(events[0]).toMatchObject({ type: "signup", userId: "user_1" });
   });
 
+  it("does not store events for excluded operator accounts", async () => {
+    await recordEvent({ type: "visit", userId: "operator_1", userEmail: "garvcontact30@gmail.com", path: "/" });
+    await recordEvent({ type: "signin", userId: "operator_2", userEmail: "GAURAVCONTACT66@gmail.com" });
+    await recordEvent({ type: "visit", userId: "reader_1", userEmail: "reader@example.com", path: "/news" });
+
+    const events = await listEvents("1970-01-01");
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ userId: "reader_1", path: "/news" });
+  });
+
   it("reports which backend is in use", () => {
     expect(analyticsBackendName()).toBe("file");
   });

@@ -19,7 +19,11 @@ import { CACHE_TAGS } from "../lib/cache";
 // Not from ./ownership-board: that file is `"use client"`, and a plain value imported from one of
 // those across the RSC boundary arrives as a client reference rather than the string itself.
 import { OPENING_SYMBOL } from "../lib/ownership-defaults";
+import { dailyPicks } from "../lib/daily-picks";
 import { getOwnership } from "../lib/shareholding";
+// Same boundary rule as OPENING_SYMBOL above: the fallback list lives in its own import-free module
+// because this is a Server Component and ./ownership-board is not.
+import { FALLBACK_QUICK_PICKS } from "../lib/suggestion-defaults";
 import { OwnershipBoard, type Ownership } from "./ownership-board";
 import { SectionSkeleton } from "./market-section";
 
@@ -42,14 +46,28 @@ export async function OwnershipPayload() {
   // Both halves of what the route returns, in one place, so the seeded board is the same shape the
   // client would have received. A failure on either side falls back to null and the board fetches
   // for itself — an unreachable exchange must not take the whole page down with it.
-  const [ownership, market] = await Promise.all([
+  const [ownership, market, picks] = await Promise.all([
     getOwnership(OPENING_SYMBOL).catch(() => null),
     getBseMarketSnapshot(OPENING_SYMBOL).catch(() => null),
+    // Large and mid caps only, and six of them: a register worth opening belongs to a company with
+    // institutions on it, which is not what a randomly surfaced micro cap files. See ../lib/daily-picks.
+    dailyPicks({
+      count: 6,
+      tiers: ["Large", "Mid"],
+      fallback: FALLBACK_QUICK_PICKS.map((symbol) => ({ symbol, name: symbol })),
+    }).catch(() => []),
   ]);
 
-  if (!ownership) return <OwnershipBoard />;
+  const quickPicks = picks.length ? picks.map((pick) => pick.symbol) : FALLBACK_QUICK_PICKS;
 
-  return <OwnershipBoard prefetched={{ symbol: OPENING_SYMBOL, data: { ...ownership, market } as Ownership }} />;
+  if (!ownership) return <OwnershipBoard quickPicks={quickPicks} />;
+
+  return (
+    <OwnershipBoard
+      quickPicks={quickPicks}
+      prefetched={{ symbol: OPENING_SYMBOL, data: { ...ownership, market } as Ownership }}
+    />
+  );
 }
 
 export function StreamedOwnershipBoard() {

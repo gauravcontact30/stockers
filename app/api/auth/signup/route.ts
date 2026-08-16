@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     // Recorded before the mail goes out, because the account exists from this point on and the
     // sign-up figure should not depend on whether a provider was reachable.
-    await recordEvent({ type: "signup", userId: user.id, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
+    await recordEvent({ type: "signup", userId: user.id, userEmail: user.email, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
 
     // The account exists and the session below is valid whether or not this mail goes out. A
     // provider outage must not turn a successful sign-up into an error the visitor has to retry —

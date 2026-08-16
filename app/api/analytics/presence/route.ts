@@ -37,6 +37,8 @@ export async function POST(request: Request) {
 
   await touchPresence({
     userId: user?.id ?? null,
+    // Carried so an operator's own open tab is not counted as somebody on the site.
+    userEmail: user?.email ?? null,
     visitorId: body?.visitorId,
     sessionId: body?.sessionId,
     path: body?.path,

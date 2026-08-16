@@ -20,6 +20,11 @@ import {
 jest.mock("../../app/lib/hero-trios", () => ({
   topYearGainerTrio: jest.fn(),
   investorFavouriteTrio: jest.fn(),
+  // The fourth read the hero makes: the week's strongest large caps, which feed the rail and tape
+  // that frame every slide. Added to `HeroPayload` after this mock was first written, and a mocked
+  // module replaces the whole thing — so leaving it out made the real export unreachable and the
+  // component threw "topWeeklyGainers is not a function" before any assertion could run.
+  topWeeklyGainers: jest.fn(),
 }));
 
 jest.mock("../../app/lib/stock-performance", () => ({
@@ -30,6 +35,7 @@ jest.mock("../../app/lib/stock-performance", () => ({
 const trios = require("../../app/lib/hero-trios") as {
   topYearGainerTrio: jest.Mock;
   investorFavouriteTrio: jest.Mock;
+  topWeeklyGainers: jest.Mock;
 };
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- as above.
 const performance = require("../../app/lib/stock-performance") as {
@@ -55,6 +61,7 @@ beforeEach(() => {
   performance.getCachedPerformanceSummaries.mockResolvedValue([]);
   trios.topYearGainerTrio.mockResolvedValue(GAINERS);
   trios.investorFavouriteTrio.mockResolvedValue(FAVOURITES);
+  trios.topWeeklyGainers.mockResolvedValue([]);
   // The scenes fetch live figures on mount; left unstubbed they reject against jsdom and push a
   // state update through outside act(), which is noise rather than a finding.
   global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;

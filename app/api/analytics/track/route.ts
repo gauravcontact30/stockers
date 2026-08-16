@@ -43,6 +43,8 @@ export async function POST(request: Request) {
   await recordEvent({
     type: isAction ? "action" : "visit",
     userId: user?.id ?? null,
+    // Carried so `recordEvent` can drop the operators' own page views — see ../../../lib/analytics-exclusions.
+    userEmail: user?.email ?? null,
     visitorId: body?.visitorId,
     sessionId: body?.sessionId,
     action: body?.action,

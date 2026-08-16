@@ -26,6 +26,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { cleanPath, cleanVisitorId, deviceFrom } from "./analytics";
+import { isAnalyticsExcludedEmail } from "./analytics-exclusions";
 import { PRESENCE_RETENTION_MS, type PresenceSession } from "./presence-report";
 import { supabaseConfigured, supabaseRequest } from "./supabase";
 
@@ -44,6 +45,11 @@ const MAX_SESSIONS = 5_000;
 export type TouchPresenceInput = {
   /** The signed-in account, resolved from the session — never taken from the request body. */
   userId?: string | null;
+  /**
+   * The account's address, when there is one. Never stored — it exists so an operator's own open
+   * tab is not counted as somebody on the site. See ./analytics-exclusions.
+   */
+  userEmail?: string | null;
   visitorId?: unknown;
   sessionId?: unknown;
   path?: unknown;
@@ -157,6 +163,11 @@ function cutoff(now: Date): string {
  */
 export async function touchPresence(input: TouchPresenceInput, now = new Date()): Promise<void> {
   try {
+    // A dashboard left open on the operator's second monitor is not a visitor, and it heartbeats
+    // once a minute forever. Dropped before the row is written, for the same reason `recordEvent`
+    // drops their events rather than filtering them later.
+    if (isAnalyticsExcludedEmail(input.userEmail)) return;
+
     const key = presenceKey(input);
     if (!key) return;
 

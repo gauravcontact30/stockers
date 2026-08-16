@@ -30,6 +30,7 @@ function account(overrides: Partial<AppUser> = {}): AppUser {
 }
 
 const superAdmin = account({ id: "user_super", name: "Garv Tuts", email: SUPER_ADMIN_EMAIL, role: "admin" });
+const excludedOperator = account({ id: "user_operator", name: "Gaurav Contact", email: "gauravcontact66@gmail.com", role: "admin" });
 const regular = account();
 
 async function writeRoster(users: AppUser[]) {
@@ -92,6 +93,17 @@ describe("POST /api/analytics/track", () => {
 
     const [event] = await listEvents("1970-01-01");
     expect(event.userId).toBe(regular.id);
+  });
+
+  it("records nothing for excluded operator accounts", async () => {
+    await writeRoster([superAdmin]);
+
+    const response = await POST(
+      trackRequest({ path: "/analytics", visitorId: "vabc12345678" }, { Authorization: `Bearer ${createToken(superAdmin)}` }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(await listEvents("1970-01-01")).toEqual([]);
   });
 
   it("answers 204 and records nothing for a body it cannot read", async () => {
@@ -197,6 +209,29 @@ describe("GET /api/admin/analytics", () => {
     // against the events themselves.
     expect(payload.users[0]).toMatchObject({ name: regular.name, email: regular.email, mobile: regular.mobile });
     expect(payload.recent).toHaveLength(4);
+  });
+
+  it("keeps excluded operator accounts out of the admin traffic report even when old rows exist", async () => {
+    await writeRoster([superAdmin, excludedOperator, regular]);
+    const day = istDay();
+    await fs.writeFile(
+      eventsPath,
+      JSON.stringify([
+        { id: "e1", type: "visit", at: `${day}T04:00:00.000Z`, day, userId: superAdmin.id, visitorId: null, feature: null, action: null, label: null, path: "/analytics", referrer: null, device: "desktop", blocked: false },
+        { id: "e2", type: "action", at: `${day}T04:10:00.000Z`, day, userId: excludedOperator.id, visitorId: null, feature: null, action: "stock.open", label: "RELIANCE", path: "/overview", referrer: null, device: "desktop", blocked: false },
+        { id: "e3", type: "visit", at: `${day}T04:15:00.000Z`, day, userId: regular.id, visitorId: null, feature: null, action: null, label: null, path: "/news", referrer: null, device: "mobile", blocked: false },
+      ]),
+      "utf8",
+    );
+
+    const response = await GET(adminRequest(superAdmin, "?days=7"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.today).toMatchObject({ views: 1, visitors: 1, activeUsers: 1 });
+    expect(payload.users.map((user: { email: string }) => user.email)).toEqual([regular.email]);
+    expect(payload.recent).toHaveLength(1);
+    expect(payload.recent[0]).toMatchObject({ email: regular.email, path: "/news" });
   });
 
   it("answers an empty store with zeroes rather than an error", async () => {
