@@ -68,7 +68,8 @@ export function seededShuffle<T>(items: readonly T[], seed: number): T[] {
   return shuffled;
 }
 
-export type DailyPick = { symbol: string; name: string };
+export type DailyPick = { symbol: string; name: string; sector?: string; capTier?: CapTier };
+type RankedDailyPick = { symbol: string; name: string; sector: string; capTier: CapTier; move: number };
 
 type PickOptions = {
   /** How many chips the board draws. */
@@ -120,8 +121,8 @@ export async function dailyPicks({
   const allowed = tiers ? new Set(tiers) : null;
   const ranked = indianStocks
     .filter((stock) => !allowed || allowed.has(stock.capTier))
-    .map((stock) => ({ symbol: stock.symbol, name: stock.name, move: table.returns[stock.symbol] }))
-    .filter((entry): entry is DailyPick & { move: number } => typeof entry.move === "number" && entry.move > 0)
+    .map((stock) => ({ symbol: stock.symbol, name: stock.name, sector: stock.sector, capTier: stock.capTier, move: table.returns[stock.symbol] }))
+    .filter((entry): entry is RankedDailyPick => typeof entry.move === "number" && entry.move > 0)
     .sort((left, right) => right.move - left.move)
     .slice(0, pool);
 
@@ -131,5 +132,5 @@ export async function dailyPicks({
   // them, rather than holding yesterday's order over a new ranking.
   return seededShuffle(ranked, seedFrom(`${day}|${table.date}`))
     .slice(0, count)
-    .map(({ symbol, name }) => ({ symbol, name }));
+    .map(({ symbol, name, sector, capTier }) => ({ symbol, name, sector, capTier }));
 }

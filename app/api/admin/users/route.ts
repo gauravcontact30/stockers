@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSuperAdminEmail, SUPER_ADMIN_EMAIL } from "../../../lib/admin-access";
+import { logAuditEvent, logSecurityEvent } from "../../../lib/application-logger";
 import { deleteUser, findUserById, listUsers, updateUser, userFromRequest, type AppUser, type AdminUserView } from "../../../lib/store";
 import { renewedUntil, SUBSCRIPTION_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
@@ -74,6 +75,7 @@ type Patch = {
 export async function PATCH(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin) return forbidden();
+  const path = new URL(request.url).pathname;
 
   let body: Patch;
   try {
@@ -122,6 +124,23 @@ export async function PATCH(request: Request) {
   if (!updated) {
     return NextResponse.json({ error: "No such user." }, { status: 404 });
   }
+  logAuditEvent({
+    useCase: "User account administration",
+    operation: "user.update",
+    message: "Admin updated a user account.",
+    userId: admin.id,
+    statusCode: 200,
+    path,
+    method: request.method,
+    metadata: {
+      targetUserId: updated.id,
+      changedFields: Object.keys(patch),
+      planChanged: Object.prototype.hasOwnProperty.call(patch, "plan"),
+      roleChanged: Object.prototype.hasOwnProperty.call(patch, "role"),
+      subscriptionChanged: Object.prototype.hasOwnProperty.call(patch, "subscribedUntil"),
+      emailVerificationChanged: Object.prototype.hasOwnProperty.call(patch, "emailVerifiedAt"),
+    },
+  });
 
   return rosterResponse(admin, { ok: true });
 }
@@ -129,8 +148,20 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin) return forbidden();
+  const path = new URL(request.url).pathname;
 
   if (!isSuperAdmin(admin)) {
+    logSecurityEvent({
+      level: "warn",
+      useCase: "Security & Access: user deletion access",
+      operation: "user.delete.denied",
+      message: "Admin without super-admin rights attempted to delete a user.",
+      userId: admin.id,
+      statusCode: 403,
+      path,
+      method: request.method,
+      metadata: { role: admin.role ?? null },
+    });
     return NextResponse.json({ error: "Only the super admin can delete users." }, { status: 403 });
   }
 
@@ -156,5 +187,15 @@ export async function DELETE(request: Request) {
   }
 
   await deleteUser(id);
+  logAuditEvent({
+    useCase: "User account administration",
+    operation: "user.delete",
+    message: "Super admin deleted a user account.",
+    userId: admin.id,
+    statusCode: 200,
+    path,
+    method: request.method,
+    metadata: { targetUserId: id },
+  });
   return rosterResponse(admin, { ok: true });
 }

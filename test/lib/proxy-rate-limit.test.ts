@@ -48,8 +48,8 @@ async function loadProxy(env: Record<string, string | undefined> = {}) {
 
 const event = { waitUntil: jest.fn() } as unknown as import("next/server").NextFetchEvent;
 
-function request(headers: Record<string, string>) {
-  return new NextRequest("https://www.stockersai.com/api/research", { method: "POST", headers });
+function request(headers: Record<string, string>, url = "https://www.stockersai.com/api/research", method = "POST") {
+  return new NextRequest(url, { method, headers });
 }
 
 beforeEach(() => {
@@ -136,6 +136,68 @@ describe("what a caller over the limit is told", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("X-RateLimit-Remaining")).toBe("7");
+    expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
+  });
+});
+
+describe("request-layer security checks", () => {
+  it("adds security headers to non-API requests without applying API rate limits", async () => {
+    const proxy = await loadProxy();
+
+    const response = await proxy(request({ "x-forwarded-for": "9.9.9.9" }, "https://www.stockersai.com/console", "GET"), event);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(response.headers.get("Content-Security-Policy")).toContain("object-src 'none'");
+    expect(limit).not.toHaveBeenCalled();
+  });
+
+  it("blocks cross-site API mutations before they reach a route handler", async () => {
+    const proxy = await loadProxy();
+
+    const response = await proxy(
+      request({
+        origin: "https://evil.example",
+        "sec-fetch-site": "cross-site",
+        "x-forwarded-for": "9.9.9.9",
+      }),
+      event,
+    );
+
+    expect(response.status).toBe(403);
+    expect(limit).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({ error: "Forbidden" });
+  });
+
+  it("allows Razorpay webhooks to arrive without browser origin headers", async () => {
+    const proxy = await loadProxy();
+
+    const response = await proxy(
+      request(
+        { "x-forwarded-for": "9.9.9.9", "content-length": "256" },
+        "https://www.stockersai.com/api/payments/razorpay/webhook",
+      ),
+      event,
+    );
+
+    expect(response.status).toBe(200);
+    expect(limit).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized mutating API requests before body parsing", async () => {
+    const proxy = await loadProxy();
+
+    const response = await proxy(
+      request(
+        { origin: "https://www.stockersai.com", "content-length": "1000001" },
+        "https://www.stockersai.com/api/contact",
+      ),
+      event,
+    );
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ error: "Payload too large" });
   });
 });
 

@@ -1,14 +1,16 @@
+﻿import "server-only";
+
 // Talking to Supabase.
 //
 // There is no `@supabase/supabase-js` here, and that is deliberate. Supabase serves every table
 // over PostgREST, which is an ordinary HTTP+JSON API, and this project reaches Resend, Twilio,
-// OpenRouter, NSE and Razorpay the same way — over `fetch`, with three production dependencies in
+// OpenRouter, NSE and Razorpay the same way â€” over `fetch`, with three production dependencies in
 // total. A client library would add a dependency tree to do what twenty lines of `fetch` already
 // do, and it would be the only service in the app that needed one.
 //
 // Required environment to use Supabase as the account store:
 //   SUPABASE_URL                 the project URL, e.g. https://abcdefgh.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY    the service_role key from Settings → API
+//   SUPABASE_SERVICE_ROLE_KEY    the service_role key from Settings â†’ API
 //
 // Without them the account store falls back to its JSON file, so a checkout of this repo still runs
 // with no credentials at all. See `supabase/schema.sql` for the table these calls expect.
@@ -23,13 +25,12 @@
 //
 // The `users` table must have RLS enabled with no policies granting the `anon` role anything. It
 // holds password hashes and live verification tokens, and a Supabase project's anon key is public
-// by design — it ships in the browser bundle of any app that uses one. RLS on with no policy is
+// by design â€” it ships in the browser bundle of any app that uses one. RLS on with no policy is
 // what makes the anon key useless against this table. `supabase/schema.sql` does this; if you
 // create the table by hand, do it there too.
 
 // Reads SUPABASE_SERVICE_ROLE_KEY, which bypasses row-level security. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
-import "server-only";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -46,10 +47,10 @@ function env(name: string): string | undefined {
 }
 
 /**
- * The project credentials, or null when the environment has none — which is not an error.
+ * The project credentials, or null when the environment has none â€” which is not an error.
  *
  * `NEXT_PUBLIC_SUPABASE_URL` is accepted as an alias for the URL because that is the name
- * Supabase's own guides use, and the URL is not a secret — it is in the browser bundle of every
+ * Supabase's own guides use, and the URL is not a secret â€” it is in the browser bundle of every
  * Supabase app. The *key* has no public alias, for the reason in the header.
  */
 export function supabaseConfig(): SupabaseConfig | null {
@@ -66,7 +67,7 @@ export function supabaseConfigured(): boolean {
  * Raised when Supabase is configured but a request to it did not succeed.
  *
  * This throws rather than degrading to the JSON file, which is the opposite of what `sendMail` and
- * `sendSms` do, and the difference is on purpose. A dropped email is recoverable — the account
+ * `sendSms` do, and the difference is on purpose. A dropped email is recoverable â€” the account
  * exists and the mail can be resent. A write that silently lands in a different store is not: the
  * two copies diverge from that moment on, and the one the next deploy reads is missing an account
  * whose owner was told they had signed up. Better a 500 the visitor can retry than a sign-up that
@@ -85,7 +86,7 @@ export class SupabaseError extends Error {
   }
 }
 
-/** PostgREST's error body. Every field is optional — a gateway error has none of them. */
+/** PostgREST's error body. Every field is optional â€” a gateway error has none of them. */
 type PostgrestError = {
   message?: unknown;
   code?: unknown;
@@ -120,7 +121,7 @@ export function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * True when the table itself is not in the project — the schema has not been applied.
+ * True when the table itself is not in the project â€” the schema has not been applied.
  *
  * Worth telling apart from every other failure because it is not transient and retrying will never
  * fix it: somebody has to run `supabase/schema.sql`. PostgREST reports it as PGRST205 ("could not
@@ -142,7 +143,7 @@ export function isMissingTable(error: unknown): boolean {
  * the instruction stays correct if the schema file is ever renamed.
  */
 export function missingTableMessage(table: string): string {
-  return `The \`${table}\` table has not been created in Supabase yet. Apply supabase/schema.sql in the SQL editor — it is safe to run more than once — then reload.`;
+  return `The \`${table}\` table has not been created in Supabase yet. Apply supabase/schema.sql in the SQL editor â€” it is safe to run more than once â€” then reload.`;
 }
 
 type RequestOptions = {
@@ -159,8 +160,8 @@ type RequestOptions = {
    * Turn a POST into an upsert: a row that collides with a unique constraint updates it instead of
    * being refused.
    *
-   * Postgres decides the winner, which is the point. The alternative — read, then insert or update
-   * — has a gap between the two statements that two simultaneous writes from the same account (two
+   * Postgres decides the winner, which is the point. The alternative â€” read, then insert or update
+   * â€” has a gap between the two statements that two simultaneous writes from the same account (two
    * tabs, a double-tap) both fit through. Pair it with `?on_conflict=<columns>` in the path so
    * PostgREST knows which constraint it is resolving against.
    */
@@ -170,7 +171,7 @@ type RequestOptions = {
 /**
  * One PostgREST call, returning the rows it produced.
  *
- * Always throws a `SupabaseError` on anything other than success — see the class comment for why
+ * Always throws a `SupabaseError` on anything other than success â€” see the class comment for why
  * this does not fall back to anything.
  */
 export async function supabaseRequest<T>(options: RequestOptions): Promise<T[]> {
@@ -211,12 +212,15 @@ export async function supabaseRequest<T>(options: RequestOptions): Promise<T[]> 
 
   if (!response.ok) throw await failureFrom(response);
 
-  // A DELETE or PATCH without `Prefer: return=representation` answers 204 with an empty body,
-  // which is not JSON and must not be parsed as it.
+  // A DELETE/PATCH without `Prefer: return=representation` answers 204 with an empty body. PostgREST
+  // inserts can also answer 201 with an empty body when no representation was requested. Either
+  // way, there is nothing to parse.
   if (response.status === 204) return [];
 
   try {
-    const payload = (await response.json()) as T[] | T | null;
+    const text = await response.text();
+    if (!text.trim()) return [];
+    const payload = JSON.parse(text) as T[] | T | null;
     if (payload === null) return [];
     return Array.isArray(payload) ? payload : [payload];
   } catch (error) {

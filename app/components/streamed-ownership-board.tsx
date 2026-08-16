@@ -54,11 +54,16 @@ export async function OwnershipPayload() {
     dailyPicks({
       count: 6,
       tiers: ["Large", "Mid"],
-      fallback: FALLBACK_QUICK_PICKS.map((symbol) => ({ symbol, name: symbol })),
+      fallback: FALLBACK_QUICK_PICKS,
     }).catch(() => []),
   ]);
 
-  const quickPicks = picks.length ? picks.map((pick) => pick.symbol) : FALLBACK_QUICK_PICKS;
+  const quickPicks = (picks.length ? picks : FALLBACK_QUICK_PICKS).map((pick) => ({
+    symbol: pick.symbol,
+    name: pick.name,
+    sector: pick.sector ?? "Listed company",
+    capTier: pick.capTier ?? "Large",
+  }));
 
   if (!ownership) return <OwnershipBoard quickPicks={quickPicks} />;
 

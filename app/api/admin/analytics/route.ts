@@ -8,7 +8,7 @@ import { listUsers, userFromRequest, type AppUser } from "../../../lib/store";
 /** The windows the dashboard offers. Anything else is snapped to the nearest of these. */
 export const RANGE_OPTIONS = [1, 7, 30, 90] as const;
 
-const DEFAULT_DAYS = 30;
+const DEFAULT_DAYS = 1;
 
 /**
  * Reads the requested window, refusing to be talked into an unbounded one.
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   try {
     // Both are needed to answer a single row of the table — the event says what happened and the
     // account says who it happened to — so they are fetched together rather than one after the other.
-    const [events, users] = await Promise.all([listEvents(dayBefore(today, days - 1)), listUsers()]);
+    const [events, users] = await Promise.all([listEvents(dayBefore(today, Math.max(days, 2) - 1)), listUsers()]);
     const excludedUserIds = new Set(users.filter((user) => isAnalyticsExcludedEmail(user.email)).map((user) => user.id));
     const visibleUsers = users.filter((user) => !excludedUserIds.has(user.id));
     const visibleEvents = events.filter((event) => !(event.userId && excludedUserIds.has(event.userId)));

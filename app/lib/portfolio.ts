@@ -1,6 +1,8 @@
+﻿import "server-only";
+
 // The reader's own portfolio.
 //
-// One module, two backends, decided by configuration alone — the same split as `./store` and
+// One module, two backends, decided by configuration alone â€” the same split as `./store` and
 // `./analytics`:
 //
 //   * Supabase (Postgres, over PostgREST) when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.
@@ -25,7 +27,7 @@ export type Holding = {
   userId: string;
   /** The exchange ticker, upper-cased. */
   symbol: string;
-  /** Units held. Zero is allowed and means "tracked, not owned" — a candidate rather than a position. */
+  /** Units held. Zero is allowed and means "tracked, not owned" â€” a candidate rather than a position. */
   quantity: number;
   /** What they paid per unit, in rupees. Zero when they are only tracking it. */
   avgPrice: number;
@@ -193,7 +195,7 @@ export type SaveResult =
  * Adds a holding, or updates the one already held in that symbol.
  *
  * Upsert rather than insert-or-error because "add RELIANCE" when RELIANCE is already there is a
- * top-up, not a mistake — and the unique index on (user_id, symbol) is what makes it one row
+ * top-up, not a mistake â€” and the unique index on (user_id, symbol) is what makes it one row
  * either way, including when two tabs submit at the same instant.
  */
 export async function saveHolding(userId: string, input: HoldingInput): Promise<SaveResult> {
@@ -225,7 +227,7 @@ export async function saveHolding(userId: string, input: HoldingInput): Promise<
         path: "portfolio_holdings?on_conflict=user_id,symbol",
         body: toRow(holding),
         returnRepresentation: true,
-        // Postgres decides which row wins, not a read we did beforehand — two tabs adding the same
+        // Postgres decides which row wins, not a read we did beforehand â€” two tabs adding the same
         // symbol at once would both pass a check-then-insert.
         merge: true,
       });
@@ -279,7 +281,7 @@ export function portfolioBackendName(): "supabase" | "file" {
  * The one store failure worth explaining rather than re-raising: the table does not exist.
  *
  * This is the state a fresh Supabase project is in until `supabase/schema.sql` has been applied. It
- * is permanent until somebody applies it, so a 500 that invites a retry is actively misleading —
+ * is permanent until somebody applies it, so a 500 that invites a retry is actively misleading â€”
  * every endpoint that touches holdings routes through here so they all say the same thing.
  *
  * Returns null for every other error, which the caller must re-raise. Falling back to the JSON file

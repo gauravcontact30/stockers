@@ -1,7 +1,9 @@
+﻿import "server-only";
+
 // The live-presence store: one row per open tab, overwritten in place.
 //
-// The same two backends as `./analytics`, decided by configuration alone — Supabase when it is
-// configured, a JSON file on disk when it is not — and the same rule about failure: writing a
+// The same two backends as `./analytics`, decided by configuration alone â€” Supabase when it is
+// configured, a JSON file on disk when it is not â€” and the same rule about failure: writing a
 // heartbeat is an observation, and an observation must never be able to fail the thing it is
 // observing. `touchPresence` resolves either way and reports nothing back.
 //
@@ -19,8 +21,8 @@
 // bounded by *concurrent* traffic rather than by total traffic, which is what makes a
 // once-a-minute write from every open tab an affordable thing to do at all.
 //
-// What is stored is what `analytics_events` already stores about a visit — an account id or a
-// random browser id, a path, a device bucket — and nothing else. No name, no address, no number:
+// What is stored is what `analytics_events` already stores about a visit â€” an account id or a
+// random browser id, a path, a device bucket â€” and nothing else. No name, no address, no number:
 // those are read back out of the account store when the dashboard renders, never copied in here.
 
 import { promises as fs } from "node:fs";
@@ -43,10 +45,10 @@ const filePath = process.env.STOCKERS_PRESENCE_FILE || path.join(process.cwd(), 
 const MAX_SESSIONS = 5_000;
 
 export type TouchPresenceInput = {
-  /** The signed-in account, resolved from the session — never taken from the request body. */
+  /** The signed-in account, resolved from the session â€” never taken from the request body. */
   userId?: string | null;
   /**
-   * The account's address, when there is one. Never stored — it exists so an operator's own open
+   * The account's address, when there is one. Never stored â€” it exists so an operator's own open
    * tab is not counted as somebody on the site. See ./analytics-exclusions.
    */
   userEmail?: string | null;
@@ -157,7 +159,7 @@ function cutoff(now: Date): string {
 /**
  * Records that one tab is still there, or quietly does nothing.
  *
- * Never throws and never reports failure — see the header. The endpoint behind it is called by
+ * Never throws and never reports failure â€” see the header. The endpoint behind it is called by
  * every open tab once a minute, and none of those callers has anything useful to do about a
  * telemetry write that did not land.
  */

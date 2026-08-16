@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { csrfFailureReason, isMutatingMethod } from "./app/lib/request-security";
 import { recordPlatformLog } from "./app/lib/platform-logs";
 
 /**
@@ -40,8 +41,60 @@ import { recordPlatformLog } from "./app/lib/platform-logs";
 const WINDOW = "60 s";
 const LIMIT = 20;
 const RATE_LIMITED_PREFIXES = ["/api/ai/", "/api/research", "/api/compare"] as const;
-const TELEMETRY_PREFIXES = ["/api/analytics/", "/api/admin/presence"] as const;
-const STAR_SAMPLE_MODULO = 20;
+const TELEMETRY_PREFIXES = ["/api/analytics/", "/api/admin/presence", "/api/admin/logs", "/api/admin/platform-logs"] as const;
+const WEBHOOK_PREFIXES = ["/api/payments/razorpay/webhook"] as const;
+const DEFAULT_MUTATION_BODY_LIMIT = 1_000_000;
+const BODY_LIMITS = [
+  { prefixes: ["/api/admin/client-reviews"], limit: 8_000_000 },
+  { prefixes: ["/api/payments/razorpay/webhook"], limit: 1_000_000 },
+] as const;
+
+const LOCAL_RATE_WINDOWS = [
+  { key: "auth", prefixes: ["/api/auth/signin", "/api/auth/signup"], limit: 10, windowMs: 5 * 60_000 },
+  { key: "verify", prefixes: ["/api/auth/verify"], limit: 30, windowMs: 5 * 60_000 },
+  { key: "admin-write", prefixes: ["/api/admin/"], limit: 120, windowMs: 60_000 },
+  { key: "payment", prefixes: ["/api/payments/razorpay/order", "/api/payments/razorpay/verify"], limit: 30, windowMs: 60_000 },
+  { key: "contact", prefixes: ["/api/contact"], limit: 8, windowMs: 10 * 60_000 },
+  { key: "portfolio-write", prefixes: ["/api/portfolio"], limit: 90, windowMs: 60_000 },
+] as const;
+
+const localBuckets = new Map<string, { count: number; resetAt: number }>();
+const isDev = process.env.NODE_ENV === "development";
+const boundaryCsp = [
+  `default-src 'self'`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
+  `style-src 'self' 'unsafe-inline'`,
+  `img-src 'self' data: blob: https://images.dhan.co https://logo.clearbit.com https://www.google.com https://*.gstatic.com https://assets-netstorage.groww.in https://static.tickertape.in https://*.razorpay.com`,
+  `font-src 'self' data: https://checkout.razorpay.com`,
+  `connect-src 'self' https://api.razorpay.com https://*.razorpay.com${isDev ? " ws: http://localhost:*" : ""}`,
+  `frame-src https://api.razorpay.com https://checkout.razorpay.com`,
+  `worker-src 'self' blob:`,
+  `media-src 'self'`,
+  `manifest-src 'self'`,
+  `object-src 'none'`,
+  `base-uri 'self'`,
+  `form-action 'self' https://api.razorpay.com`,
+  `frame-ancestors 'none'`,
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
+].join("; ");
+
+const BOUNDARY_SECURITY_HEADERS = [
+  ["Content-Security-Policy", boundaryCsp],
+  ...(isDev ? [] : [["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"]]),
+  ["X-Frame-Options", "DENY"],
+  ["X-Content-Type-Options", "nosniff"],
+  ["Referrer-Policy", "strict-origin-when-cross-origin"],
+  ["X-DNS-Prefetch-Control", "off"],
+  ["X-Permitted-Cross-Domain-Policies", "none"],
+  ["Origin-Agent-Cluster", "?1"],
+  ["Permissions-Policy", 'camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(self "https://api.razorpay.com")'],
+  ["Cross-Origin-Opener-Policy", "same-origin-allow-popups"],
+] as const;
+
+function withBoundarySecurityHeaders<T extends NextResponse>(response: T): T {
+  for (const [key, value] of BOUNDARY_SECURITY_HEADERS) response.headers.set(key, value);
+  return response;
+}
 
 /**
  * Which forwarded-IP header to believe.
@@ -167,14 +220,110 @@ function isRateLimitedPath(pathname: string): boolean {
   return RATE_LIMITED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
+function isApiPath(pathname: string): boolean {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
 function isTelemetryPath(pathname: string): boolean {
   return TELEMETRY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
-function shouldSampleStar(pathname: string): boolean {
-  let hash = 0;
-  for (let index = 0; index < pathname.length; index++) hash = (hash * 31 + pathname.charCodeAt(index)) % 1_000_003;
-  return Math.abs(hash + Math.floor(Date.now() / 60_000)) % STAR_SAMPLE_MODULO === 0;
+function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
+  return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
+function localRateWindow(pathname: string): (typeof LOCAL_RATE_WINDOWS)[number] | null {
+  return LOCAL_RATE_WINDOWS.find((window) => hasPrefix(pathname, window.prefixes)) ?? null;
+}
+
+function bodyLimit(pathname: string): number {
+  return BODY_LIMITS.find((rule) => hasPrefix(pathname, rule.prefixes))?.limit ?? DEFAULT_MUTATION_BODY_LIMIT;
+}
+
+function selectedRequestHeaders(request: NextRequest): Record<string, string> {
+  const allowed = ["accept", "content-type", "origin", "referer", "sec-fetch-site", "user-agent", "x-forwarded-for", "cf-connecting-ip"];
+  return Object.fromEntries(allowed.map((key) => [key, request.headers.get(key) ?? ""]).filter(([, value]) => value));
+}
+
+function stockSymbolFrom(url: URL): string | null {
+  for (const key of ["stock", "symbol", "ticker", "securityCode", "scripCode", "q"]) {
+    const value = url.searchParams.get(key);
+    if (value && /^[A-Za-z0-9&.-]{1,16}$/.test(value)) return value.toUpperCase();
+  }
+  return null;
+}
+
+function suspiciousRequest(request: NextRequest): { threatType: "injection" | "exfiltration"; severity: "warning" | "critical"; message: string } | null {
+  const url = request.nextUrl;
+  const raw = `${url.pathname} ${url.search}`.slice(0, 1_500);
+  if (/(\bunion\b\s+\bselect\b|\bdrop\b\s+\btable\b|\$where\b|\$ne\b|\$regex\b|--|\/\*|\b(or|and)\b\s+1\s*=\s*1)/i.test(raw)) {
+    return { threatType: "injection", severity: "critical", message: "Injection-shaped query payload detected at the request boundary." };
+  }
+
+  const agent = request.headers.get("user-agent") ?? "";
+  if ((/curl|python-requests|sqlmap|nikto|masscan|nmap|scrapy|wget/i.test(agent) || url.search.length > 700) && isApiPath(url.pathname)) {
+    return { threatType: "exfiltration", severity: "warning", message: "Automated bot scan or bulk collection pattern detected at the request boundary." };
+  }
+
+  return null;
+}
+
+function recordSecuritySignal(input: {
+  request: NextRequest;
+  started: number;
+  threatType: "rate-limit" | "injection" | "privilege" | "exfiltration";
+  severity: "warning" | "critical";
+  message: string;
+}) {
+  const url = input.request.nextUrl;
+  recordPlatformLog({
+    category: "security",
+    severity: input.severity,
+    source: "Next.js proxy",
+    useCase: "Security & Access: App Hackers threat monitor",
+    operation: `${input.request.method} ${url.pathname}`,
+    message: input.message,
+    durationMs: Date.now() - input.started,
+    path: url.pathname,
+    method: input.request.method,
+    metadata: {
+      threatType: input.threatType,
+      threatSeverity: input.severity === "critical" ? "red" : "orange",
+      sourceIp: clientIp(input.request),
+      userAgent: input.request.headers.get("user-agent") ?? "",
+      stockSymbol: stockSymbolFrom(url) ?? "",
+      payload: url.search ? url.search.slice(0, 600) : "",
+      headers: selectedRequestHeaders(input.request),
+    },
+  });
+}
+
+function contentLengthFailure(request: NextRequest): string | null {
+  if (!isMutatingMethod(request.method)) return null;
+  const value = request.headers.get("content-length");
+  if (!value) return null;
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return "Invalid Content-Length header.";
+  const limit = bodyLimit(request.nextUrl.pathname);
+  return bytes > limit ? `Request body is too large. Limit is ${limit} bytes.` : null;
+}
+
+function checkLocalRateLimit(request: NextRequest): { ok: true } | { ok: false; limit: number; retryAfter: number; key: string } {
+  if (!isMutatingMethod(request.method)) return { ok: true };
+  const window = localRateWindow(request.nextUrl.pathname);
+  if (!window) return { ok: true };
+
+  const now = Date.now();
+  const key = `${window.key}:${clientIp(request)}`;
+  const bucket = localBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    localBuckets.set(key, { count: 1, resetAt: now + window.windowMs });
+    return { ok: true };
+  }
+
+  bucket.count += 1;
+  if (bucket.count <= window.limit) return { ok: true };
+  return { ok: false, limit: window.limit, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)), key: window.key };
 }
 
 function recordApiIngress(input: {
@@ -207,18 +356,103 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const pathname = request.nextUrl.pathname;
   const shouldLimit = isRateLimitedPath(pathname);
 
-  if (isTelemetryPath(pathname)) return NextResponse.next();
+  if (!isApiPath(pathname)) return withBoundarySecurityHeaders(NextResponse.next());
+
+  const suspicious = suspiciousRequest(request);
+  if (suspicious) {
+    recordSecuritySignal({
+      request,
+      started,
+      threatType: suspicious.threatType,
+      severity: suspicious.severity,
+      message: suspicious.message,
+    });
+  }
+
+  const lengthReason = contentLengthFailure(request);
+  if (lengthReason) {
+    recordApiIngress({
+      request,
+      statusCode: 413,
+      started,
+      message: lengthReason,
+      useCase: "Security & Access: request size limits",
+    });
+    recordSecuritySignal({
+      request,
+      started,
+      threatType: "exfiltration",
+      severity: "warning",
+      message: lengthReason,
+    });
+    return withBoundarySecurityHeaders(
+      NextResponse.json({ error: "Payload too large", message: lengthReason }, { status: 413, headers: { "Cache-Control": "no-store" } }),
+    );
+  }
+
+  const csrfReason = hasPrefix(pathname, WEBHOOK_PREFIXES) ? null : csrfFailureReason(request);
+  if (csrfReason) {
+    recordApiIngress({
+      request,
+      statusCode: 403,
+      started,
+      message: csrfReason,
+      useCase: "Security & Access: CSRF and origin protection",
+    });
+    recordSecuritySignal({
+      request,
+      started,
+      threatType: "privilege",
+      severity: "critical",
+      message: csrfReason,
+    });
+    return withBoundarySecurityHeaders(
+      NextResponse.json({ error: "Forbidden", message: csrfReason }, { status: 403, headers: { "Cache-Control": "no-store" } }),
+    );
+  }
+
+  const localLimit = checkLocalRateLimit(request);
+  if (!localLimit.ok) {
+    recordApiIngress({
+      request,
+      statusCode: 429,
+      started,
+      message: `${localLimit.key} rate limit blocked the request before it reached the handler.`,
+      useCase: "Security & Access: abuse throttling",
+    });
+    recordSecuritySignal({
+      request,
+      started,
+      threatType: "rate-limit",
+      severity: "warning",
+      message: `${localLimit.key} rate limit blocked the request before it reached the handler.`,
+    });
+    return withBoundarySecurityHeaders(
+      NextResponse.json(
+        { error: "Too many requests", message: "Too many requests. Try again shortly.", retryAfter: localLimit.retryAfter },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(localLimit.retryAfter),
+            "RateLimit-Limit": String(localLimit.limit),
+            "RateLimit-Remaining": "0",
+            "Cache-Control": "no-store",
+          },
+        },
+      ),
+    );
+  }
+
+  if (isTelemetryPath(pathname)) return withBoundarySecurityHeaders(NextResponse.next());
 
   if (!shouldLimit) {
-    if (shouldSampleStar(pathname)) {
-      recordApiIngress({
-        request,
-        statusCode: 202,
-        started,
-        message: "API request accepted by the application proxy.",
-      });
-    }
-    return NextResponse.next();
+    recordApiIngress({
+      request,
+      statusCode: 202,
+      started,
+      message: "API request accepted by the application proxy.",
+    });
+    return withBoundarySecurityHeaders(NextResponse.next());
   }
 
   const ratelimit = rateLimiter();
@@ -230,7 +464,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       message: "API request accepted; AI rate limiting is not configured.",
       useCase: "Application API rate-limit state",
     });
-    return NextResponse.next();
+    return withBoundarySecurityHeaders(NextResponse.next());
   }
 
   const ip = clientIp(request);
@@ -257,7 +491,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       message: "Rate-limit backend failed; request was allowed open.",
       useCase: "Application API alerting",
     });
-    return NextResponse.next();
+    return withBoundarySecurityHeaders(NextResponse.next());
   }
 
   const { success, limit, remaining, reset, pending } = result;
@@ -278,22 +512,31 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       message: "AI API request was rate limited before it reached the handler.",
       useCase: "Application API failing and alerting",
     });
+    recordSecuritySignal({
+      request,
+      started,
+      threatType: "rate-limit",
+      severity: "warning",
+      message: "AI API request was rate limited before it reached the handler.",
+    });
 
-    return NextResponse.json(
-      {
-        error: "Too many requests",
-        message: `You've made more than ${LIMIT} AI requests in a minute. Try again in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`,
-        retryAfter,
-      },
-      {
-        status: 429,
-        headers: {
-          ...headers,
-          "Retry-After": String(retryAfter),
-          // This response is specific to one caller at one moment; nothing may cache it.
-          "Cache-Control": "no-store",
+    return withBoundarySecurityHeaders(
+      NextResponse.json(
+        {
+          error: "Too many requests",
+          message: `You've made more than ${LIMIT} AI requests in a minute. Try again in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`,
+          retryAfter,
         },
-      },
+        {
+          status: 429,
+          headers: {
+            ...headers,
+            "Retry-After": String(retryAfter),
+            // This response is specific to one caller at one moment; nothing may cache it.
+            "Cache-Control": "no-store",
+          },
+        },
+      ),
     );
   }
 
@@ -308,9 +551,18 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     message: "AI API request accepted with rate-limit budget headers.",
     useCase: "Application API loading performance",
   });
-  return response;
+  return withBoundarySecurityHeaders(response);
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: [
+    "/api/:path*",
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|json)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
 };

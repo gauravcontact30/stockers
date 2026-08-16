@@ -2,7 +2,7 @@
 //
 // `app/(dashboard)` and `app/(admin)` are route groups, so neither folder appears in the URL: the
 // workspace sections sit at `/portfolio`, `/market-pulse`, `/ipos`, and the admin pages at `/users`,
-// `/analytics`, `/logs`. That is what was asked for, and it has one structural consequence worth a
+// `/analytics`, `/platform-logs`. That is what was asked for, and it has one structural consequence worth a
 // test rather than a comment — every one of those now shares a namespace with the marketing pages
 // (`/pricing`, `/news`, `/about`) and with each other.
 //
@@ -15,7 +15,7 @@
 // what every link and the sidebar are built from; the folders are what Next actually serves. Either
 // drifting from the other is a broken link, so both halves are asserted.
 
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   ADMIN_ROUTE_PATHS,
@@ -107,6 +107,33 @@ describe("the flat route namespace", () => {
     const onDisk = filesystemRoutes();
 
     expect(new Set(onDisk).size).toBe(onDisk.length);
+  });
+
+  it("keeps every rendered super-admin page inside the shared admin shell", () => {
+    const adminDir = join(APP_DIR, "(admin)");
+    const pages: string[] = [];
+
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(fullPath);
+          continue;
+        }
+        if (entry.name === "page.tsx") pages.push(fullPath);
+      }
+    };
+
+    walk(adminDir);
+
+    for (const page of pages) {
+      const source = readFileSync(page, "utf8");
+      const redirectsToAnotherAdminPage = source.includes("redirect(");
+
+      if (redirectsToAnotherAdminPage) continue;
+
+      expect(source).toContain("SuperAdminDashboard");
+    }
   });
 });
 

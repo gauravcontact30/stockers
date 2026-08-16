@@ -1,7 +1,9 @@
+﻿import "server-only";
+
 // Product analytics: who arrives, who signs in, who signs up, and which AI feature the audience
 // actually opens.
 //
-// One module, two backends, decided by configuration alone — the same split as `./store`:
+// One module, two backends, decided by configuration alone â€” the same split as `./store`:
 //
 //   * Supabase (Postgres, over PostgREST) when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.
 //   * A JSON file on disk when they are not.
@@ -13,7 +15,7 @@
 // therefore resolves either way and reports nothing back to its caller.
 //
 // What is *not* stored here is as deliberate. An event carries a user id, never a name, address or
-// number — those are read back out of the account store at the moment the dashboard is rendered.
+// number â€” those are read back out of the account store at the moment the dashboard is rendered.
 // Denormalising them onto every row would scatter personal data across a table nobody thinks of as
 // holding any, and would leave a deleted account's details behind in it forever.
 
@@ -27,7 +29,7 @@ import { supabaseConfigured, supabaseRequest } from "./supabase";
 /**
  * The five things worth counting.
  *
- * `visit` is a page view and `action` is something the reader did on it — both reported by the
+ * `visit` is a page view and `action` is something the reader did on it â€” both reported by the
  * browser. The other three are recorded on the server at the moment the thing itself happens, so
  * they cannot be inflated by anyone posting at the ingest endpoint: sign-ins and sign-ups from the
  * auth routes, feature opens from the paywall guard that every AI route already calls.
@@ -37,8 +39,8 @@ export type AnalyticsEventType = "visit" | "signin" | "signup" | "feature" | "ac
 /**
  * Every interaction the app reports, and what each one means.
  *
- * A closed list, not free text. The ingest endpoint is unauthenticated by necessity — a signed-out
- * visitor is the most interesting thing it counts — so anything it stores has to be something this
+ * A closed list, not free text. The ingest endpoint is unauthenticated by necessity â€” a signed-out
+ * visitor is the most interesting thing it counts â€” so anything it stores has to be something this
  * build already knows the name of. An unrecognised action is dropped rather than written, which
  * keeps the dashboard's "what people do" table a list of real product events instead of whatever
  * somebody decided to POST.
@@ -59,7 +61,7 @@ export const ACTIONS = {
   "portfolio.add": "Added a portfolio holding",
   "portfolio.remove": "Removed a portfolio holding",
   // Which of the seven portfolio views people actually open is the argument for what that section
-  // should look like next — and a tab change is not a page view, so nothing else would record it.
+  // should look like next â€” and a tab change is not a page view, so nothing else would record it.
   "portfolio.tab": "Opened a portfolio view",
   "portfolio.screen": "Ran a portfolio screen",
   "watchlist.add": "Added to the watchlist",
@@ -82,7 +84,7 @@ export type AnalyticsEvent = {
   type: AnalyticsEventType;
   /** Exact instant, ISO-8601 UTC. */
   at: string;
-  /** The IST calendar date `at` falls on — what "daily" means everywhere in this app. */
+  /** The IST calendar date `at` falls on â€” what "daily" means everywhere in this app. */
   day: string;
   /** The signed-in account, or null for a visitor who has not signed in. */
   userId: string | null;
@@ -97,7 +99,7 @@ export type AnalyticsEvent = {
   /**
    * A random per-tab id, so a run of events can be read back as one sitting.
    *
-   * This is what makes "how many sessions" and "pages per session" answerable at all — without it
+   * This is what makes "how many sessions" and "pages per session" answerable at all â€” without it
    * a person who came back three times in a day is indistinguishable from three page views.
    */
   sessionId: string | null;
@@ -105,15 +107,15 @@ export type AnalyticsEvent = {
   feature: string | null;
   /** What the reader did, on `action` events: one of the keys of ACTIONS. */
   action: string | null;
-  /** What they did it to — a ticker, a section, a plan name. Never free text from a form. */
+  /** What they did it to â€” a ticker, a section, a plan name. Never free text from a form. */
   label: string | null;
   /** The path visited, on `visit` events. Query strings are stripped before it reaches here. */
   path: string | null;
-  /** The referring host, on `visit` events. Host only — never the full URL someone came from. */
+  /** The referring host, on `visit` events. Host only â€” never the full URL someone came from. */
   referrer: string | null;
   device: DeviceKind | null;
   /**
-   * True when a `feature` event was a refusal rather than an open — the caller reached for a
+   * True when a `feature` event was a refusal rather than an open â€” the caller reached for a
    * feature their plan does not include, or one an admin has locked.
    *
    * Worth keeping: the features people are turned away from most are the ones with the clearest
@@ -151,7 +153,7 @@ const filePath = process.env.STOCKERS_ANALYTICS_FILE || path.join(process.cwd(),
  * The IST calendar date an instant falls on.
  *
  * Defined here rather than imported from `./subscription` so this module pulls in neither the
- * market client nor the NSE holiday calendar — analytics is written to on the hot path of every
+ * market client nor the NSE holiday calendar â€” analytics is written to on the hot path of every
  * gated request, and it has no business dragging that in. "en-CA" formats as YYYY-MM-DD.
  */
 export function istDay(at: Date | string = new Date()): string {
@@ -200,8 +202,8 @@ export function deviceFrom(userAgent: string | null | undefined): DeviceKind | n
 /**
  * A path we are willing to store: same-origin, query string removed, length capped.
  *
- * The query string goes because it is where the personal data is — a search term, a referral code,
- * an email in a verification link — and none of it is needed to count a page view.
+ * The query string goes because it is where the personal data is â€” a search term, a referral code,
+ * an email in a verification link â€” and none of it is needed to count a page view.
  */
 export function cleanPath(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -230,7 +232,7 @@ export function cleanVisitorId(value: unknown): string | null {
 /**
  * What an action was done to, reduced to something safe to store.
  *
- * A ticker, a section id, a plan name — short, and from a fixed alphabet. Anything else becomes
+ * A ticker, a section id, a plan name â€” short, and from a fixed alphabet. Anything else becomes
  * null rather than being stored, because the one thing a label must never carry is what somebody
  * typed into a form.
  */
@@ -244,7 +246,7 @@ export function cleanLabel(value: unknown): string | null {
  * The cookie the visit tracker mirrors its visitor id into.
  *
  * The id itself lives in localStorage, but a cookie is what lets the *server* attribute an event
- * to a signed-out browser — the paywall guard sees a request, not a React tree, and without this a
+ * to a signed-out browser â€” the paywall guard sees a request, not a React tree, and without this a
  * visitor exploring locked features would be a hundred anonymous rows rather than one person.
  * SameSite=Lax and not HttpOnly, because the client mints and reads it; it carries no authority.
  */
@@ -277,7 +279,7 @@ export function visitorIdFromRequest(request: Request): string | null {
  * The last time a given subject was recorded doing a given thing.
  *
  * Needed because several panels poll. The market pulse refreshes itself on a timer, and every one
- * of those refreshes calls the paywall guard — so without this, one reader who leaves a tab open
+ * of those refreshes calls the paywall guard â€” so without this, one reader who leaves a tab open
  * would out-count a hundred who actually read something, and the "most explored feature" ranking
  * would measure refresh intervals rather than interest.
  *
@@ -407,20 +409,20 @@ function fromRow(row: EventRow): AnalyticsEvent {
  * The fields that can arrive from a request body are typed `unknown` on purpose.
  *
  * Everything a browser sends is sanitised on the way in by the `clean*` functions above, and typing
- * these as strings would only mean a caller had to assert them into shape first — moving the lie
+ * these as strings would only mean a caller had to assert them into shape first â€” moving the lie
  * one line up rather than removing it.
  */
 export type RecordEventInput = {
   type: AnalyticsEventType;
   userId?: string | null;
   /**
-   * The account's address, when the caller already has it — which every caller does, because each
+   * The account's address, when the caller already has it â€” which every caller does, because each
    * resolves the session before it records anything.
    *
    * Present purely so `recordEvent` can drop operator accounts before they are written; see
    * ./analytics-exclusions. It is never stored: `buildEvent` does not read it, and no row on the
    * events table has an email column. Optional because a signed-out visit has no account at all,
-   * and because omitting it must fail open — an event that cannot be attributed is still a real
+   * and because omitting it must fail open â€” an event that cannot be attributed is still a real
    * visit and is counted.
    */
   userEmail?: string | null;
@@ -436,7 +438,7 @@ export type RecordEventInput = {
   /**
    * Fold a repeat from the same subject within this window into the first one.
    *
-   * Zero for the events that are already once-per-action — a sign-in is a sign-in even if the same
+   * Zero for the events that are already once-per-action â€” a sign-in is a sign-in even if the same
    * person signs in twice in a minute.
    */
   throttleMs?: number;
@@ -476,7 +478,7 @@ export function buildEvent(input: RecordEventInput, now = new Date()): Analytics
 export async function recordEvent(input: RecordEventInput): Promise<void> {
   try {
     // The operators' own accounts are not audience. Dropped here rather than filtered out of the
-    // dashboard, so the row never exists to be counted by anything later — see
+    // dashboard, so the row never exists to be counted by anything later â€” see
     // ./analytics-exclusions for why it is this list and not "every admin".
     if (isAnalyticsExcludedEmail(input.userEmail)) return;
 
@@ -492,7 +494,7 @@ export async function recordEvent(input: RecordEventInput): Promise<void> {
       // event with neither is not throttled at all, because there is nothing to throttle it by.
       const subject = input.userId ?? cleanVisitorId(input.visitorId);
       // Scoped to the thing done, so throttling a repeat of one action never swallows a different
-      // one — opening two stocks in a minute is two events, not one.
+      // one â€” opening two stocks in a minute is two events, not one.
       const scope =
         (typeof input.feature === "string" ? input.feature : "") ||
         (isActionKey(input.action) ? `${input.action}:${cleanLabel(input.label) ?? ""}` : "") ||

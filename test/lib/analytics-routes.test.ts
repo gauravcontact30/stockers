@@ -242,16 +242,16 @@ describe("GET /api/admin/analytics", () => {
     expect(payload.totals).toMatchObject({ visitors: 0, views: 0, signins: 0, signups: 0 });
     expect(payload.features).toEqual([]);
     expect(payload.trending).toBeNull();
-    expect(payload.daily).toHaveLength(30);
+    expect(payload.daily).toHaveLength(1);
   });
 
   it("clamps the window rather than letting a URL choose how much to scan", () => {
-    expect(rangeFrom(null)).toBe(30);
+    expect(rangeFrom(null)).toBe(1);
     expect(rangeFrom("7")).toBe(7);
     expect(rangeFrom("7.4")).toBe(7);
-    expect(rangeFrom("0")).toBe(30);
-    expect(rangeFrom("-5")).toBe(30);
-    expect(rangeFrom("banana")).toBe(30);
+    expect(rangeFrom("0")).toBe(1);
+    expect(rangeFrom("-5")).toBe(1);
+    expect(rangeFrom("banana")).toBe(1);
     expect(rangeFrom("100000")).toBe(120);
   });
 

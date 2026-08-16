@@ -16,6 +16,7 @@
  */
 
 export type SuggestionPick = { symbol: string; name: string };
+export type OwnershipQuickPick = { symbol: string; name: string; sector: string; capTier: "Large" | "Mid" | "Small" };
 
 /**
  * The ownership board's row.
@@ -24,7 +25,14 @@ export type SuggestionPick = { symbol: string; name: string };
  * pattern with the exchange — which is the whole point of that board, and why this list is not
  * simply the largest companies by market cap.
  */
-export const FALLBACK_QUICK_PICKS: readonly string[] = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "ITC", "INFY"];
+export const FALLBACK_QUICK_PICKS: readonly OwnershipQuickPick[] = [
+  { symbol: "RELIANCE", name: "Reliance Industries", sector: "Energy & Petrochemicals", capTier: "Large" },
+  { symbol: "TCS", name: "Tata Consultancy Services", sector: "Information Technology", capTier: "Large" },
+  { symbol: "HDFCBANK", name: "HDFC Bank", sector: "Banking", capTier: "Large" },
+  { symbol: "SBIN", name: "State Bank of India", sector: "Banking", capTier: "Large" },
+  { symbol: "ITC", name: "ITC", sector: "FMCG", capTier: "Large" },
+  { symbol: "INFY", name: "Infosys", sector: "Information Technology", capTier: "Large" },
+];
 
 /**
  * The accuracy lookup's row.

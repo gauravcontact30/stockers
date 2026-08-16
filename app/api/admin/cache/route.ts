@@ -11,6 +11,8 @@ import {
 import { buildCacheReport, loadCacheCatalogue } from "../../../lib/cache-report";
 import { clearBoardReads } from "../../../lib/board-read";
 import { clearStockVerdictCache } from "../../../lib/stock-verdicts";
+import { isSuperAdminEmail } from "../../../lib/admin-access";
+import { logAuditEvent, logSecurityEvent } from "../../../lib/application-logger";
 import { userFromRequest } from "../../../lib/store";
 
 /**
@@ -64,7 +66,7 @@ const PREFIXES: Record<CacheTag, string[]> = {
 
 async function requireAdmin(request: Request) {
   const user = await userFromRequest(request);
-  return user?.role === "admin" ? user : null;
+  return user && (user.role === "admin" || isSuperAdminEmail(user.email)) ? user : null;
 }
 
 /** Drops whole families from both layers, and the two stores that sit outside the shared cache. */
@@ -129,7 +131,21 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await requireAdmin(request))) {
+  const admin = await requireAdmin(request);
+  const path = new URL(request.url).pathname;
+  if (!admin) {
+    const user = await userFromRequest(request).catch(() => null);
+    logSecurityEvent({
+      level: "warn",
+      useCase: "Security & Access: cache administration access",
+      operation: "cache.denied",
+      message: "Non-admin caller attempted to change cache state.",
+      userId: user?.id ?? null,
+      statusCode: 403,
+      path,
+      method: request.method,
+      metadata: { role: user?.role ?? null },
+    });
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 
@@ -154,6 +170,23 @@ export async function POST(request: Request) {
   // cache colder than doing neither. A feed that fails to reload is reported rather than thrown —
   // warming eight and having one upstream refuse is a partial success, not a 500.
   const warmed = warm.length > 0 ? await warmCacheKeys(warm) : [];
+  logAuditEvent({
+    useCase: "Cache configuration update",
+    operation: "cache.update",
+    message: "Admin changed application cache state.",
+    userId: admin.id,
+    statusCode: 200,
+    path,
+    method: request.method,
+    metadata: {
+      tags,
+      keys,
+      warm,
+      purgedKeys,
+      alsoRevalidated: collateral,
+      warmed: warmed.length,
+    },
+  });
 
   return NextResponse.json({
     revalidated: tags,

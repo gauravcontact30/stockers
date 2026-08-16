@@ -1,11 +1,13 @@
+﻿import "server-only";
+
 import { createHash, randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { type ClientReview } from "./client-review";
 
-const dataPath = path.join(process.cwd(), "app", "data", "client-reviews.json");
-const uploadDir = path.join(process.cwd(), "public", "uploads", "client-reviews");
-const publicPrefix = "/uploads/client-reviews";
+const dataPath = process.env.STOCKERS_CLIENT_REVIEWS_FILE || path.join(process.cwd(), "app", "data", "client-reviews.json");
+const uploadDir = process.env.STOCKERS_CLIENT_REVIEWS_UPLOAD_DIR || path.join(process.cwd(), "public", "uploads", "client-reviews");
+const publicPrefix = process.env.STOCKERS_CLIENT_REVIEWS_PUBLIC_PREFIX || "/uploads/client-reviews";
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 const ACCENTS = [
@@ -20,9 +22,9 @@ const ACCENTS = [
 async function ensureStore() {
   await fs.mkdir(path.dirname(dataPath), { recursive: true });
   try {
-    await fs.access(dataPath);
+    await fs.access(/* turbopackIgnore: true */ dataPath);
   } catch {
-    await fs.writeFile(dataPath, "[]", "utf8");
+    await fs.writeFile(/* turbopackIgnore: true */ dataPath, "[]", "utf8");
   }
   await fs.mkdir(uploadDir, { recursive: true });
 }
@@ -38,9 +40,16 @@ function extensionFor(file: File): string | null {
     "image/png": "png",
     "image/webp": "webp",
     "image/gif": "gif",
-    "image/svg+xml": "svg",
   };
   return byType[file.type] ?? null;
+}
+
+function hasImageSignature(bytes: Buffer, extension: string): boolean {
+  if (extension === "jpg") return bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (extension === "png") return bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (extension === "gif") return bytes.subarray(0, 4).toString("ascii") === "GIF8";
+  if (extension === "webp") return bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+  return false;
 }
 
 function imageSlug(value: string): string {
@@ -55,18 +64,19 @@ function imageSlug(value: string): string {
 
 async function saveImage(file: File, kind: "profile" | "signature", label: string): Promise<string> {
   const extension = extensionFor(file);
-  if (!extension) throw new Error(`${kind} image must be JPG, PNG, WebP, GIF or SVG.`);
+  if (!extension) throw new Error(`${kind} image must be JPG, PNG, WebP or GIF.`);
   if (file.size <= 0) throw new Error(`${kind} image is empty.`);
   if (file.size > MAX_IMAGE_BYTES) throw new Error(`${kind} image must be 3 MB or smaller.`);
 
   await fs.mkdir(uploadDir, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
+  if (!hasImageSignature(bytes, extension)) throw new Error(`${kind} image file contents do not match its type.`);
 
   /**
    * The eight hex characters that let these be cached for a year.
    *
    * Everything under `public/uploads` used to be served with `Cache-Control: public, max-age=0`
-   * — the Next default for `public/` — because the name was derived from the reviewer and the
+   * â€” the Next default for `public/` â€” because the name was derived from the reviewer and the
    * review id alone. Replacing a reviewer's photo rewrote the *same* path with different bytes, so
    * a long cache would have pinned the old picture on every browser that had already seen it, and
    * a short one meant re-downloading unchanged images on every visit. Lighthouse reports the second
@@ -74,7 +84,7 @@ async function saveImage(file: File, kind: "profile" | "signature", label: strin
    *
    * Hashing the bytes into the name settles it: different bytes are a different URL, so nothing is
    * ever stale at a given path and `immutable` in next.config.ts is honest rather than a gamble.
-   * The slug stays in front of the hash — these end up in page source, and a filename that says
+   * The slug stays in front of the hash â€” these end up in page source, and a filename that says
    * whose signature it is beats one that says `a3f9c1d4`.
    *
    * The review id is no longer part of the name: the hash already distinguishes two files, and
@@ -84,7 +94,7 @@ async function saveImage(file: File, kind: "profile" | "signature", label: strin
   const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 8);
   const filename = `${imageSlug(`${label} stockersai review`)}-${kind}-${digest}.${extension}`;
   const target = path.join(uploadDir, filename);
-  await fs.writeFile(target, bytes);
+  await fs.writeFile(/* turbopackIgnore: true */ target, bytes);
   return `${publicPrefix}/${filename}`;
 }
 
@@ -93,15 +103,15 @@ async function saveImage(file: File, kind: "profile" | "signature", label: strin
  *
  * There was a module-level cache here, and it was the reason a freshly published review did not
  * appear on the site. It was populated on first read and never expired: the only thing that ever
- * refreshed it was a write in the *same* process. A deployment runs more than one process — and
- * serverless runs many — so an instance that had already served the landing page went on serving
+ * refreshed it was a write in the *same* process. A deployment runs more than one process â€” and
+ * serverless runs many â€” so an instance that had already served the landing page went on serving
  * the old list indefinitely, and whether a visitor saw a new review came down to which instance
  * answered them. Reading a small JSON file is cheap next to that, and freshness is now controlled
  * where it belongs: Next caches the rendered page, and publishing revalidates it.
  */
 async function readUploadedReviews(): Promise<ClientReview[]> {
   await ensureStore();
-  const raw = await fs.readFile(dataPath, "utf8");
+  const raw = await fs.readFile(/* turbopackIgnore: true */ dataPath, "utf8");
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -117,7 +127,7 @@ async function readUploadedReviews(): Promise<ClientReview[]> {
 
 async function writeUploadedReviews(reviews: ClientReview[]) {
   await ensureStore();
-  await fs.writeFile(dataPath, JSON.stringify(reviews, null, 2), "utf8");
+  await fs.writeFile(/* turbopackIgnore: true */ dataPath, JSON.stringify(reviews, null, 2), "utf8");
 }
 
 /** Every review the admin has published, newest first. Nothing is invented to pad the list. */
@@ -171,7 +181,7 @@ export async function deleteClientReview(id: string): Promise<boolean> {
   for (const url of [target.photo, target.signatureImage].filter(Boolean) as string[]) {
     if (!url.startsWith(publicPrefix)) continue;
     const file = path.join(process.cwd(), "public", url);
-    await fs.unlink(file).catch(() => undefined);
+    await fs.unlink(/* turbopackIgnore: true */ file).catch(() => undefined);
   }
 
   return true;

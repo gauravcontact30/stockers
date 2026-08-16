@@ -566,9 +566,30 @@ create table if not exists public.platform_logs (
 create index if not exists platform_logs_day_idx on public.platform_logs (day desc, at desc);
 create index if not exists platform_logs_category_idx on public.platform_logs (category, day desc, at desc);
 create index if not exists platform_logs_severity_idx on public.platform_logs (severity, day desc, at desc);
+create index if not exists platform_logs_source_idx on public.platform_logs (source, day desc, at desc);
+create index if not exists platform_logs_status_idx
+  on public.platform_logs (status_code, day desc, at desc)
+  where status_code is not null;
+create index if not exists platform_logs_duration_idx
+  on public.platform_logs (duration_ms desc, day desc)
+  where duration_ms is not null;
 create index if not exists platform_logs_user_idx
   on public.platform_logs (user_id, day desc)
   where user_id is not null;
 
 alter table public.platform_logs enable row level security;
 revoke all on public.platform_logs from anon, authenticated;
+
+create table if not exists public.blocked_ips (
+  id text primary key,
+  ip text not null unique,
+  reason text not null,
+  blocked_at timestamptz not null,
+  blocked_by text not null
+);
+
+create index if not exists blocked_ips_blocked_at_idx
+  on public.blocked_ips (blocked_at desc);
+
+alter table public.blocked_ips enable row level security;
+revoke all on public.blocked_ips from anon, authenticated;

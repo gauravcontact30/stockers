@@ -113,12 +113,43 @@ function finiteOrNull(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
 }
 
+const SENSITIVE_KEY = /password|passcode|token|secret|key|authorization|cookie|session|otp|mfa|card|cvv|pan|aadhaar|mobile|phone|email/i;
+const EMAIL_VALUE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const CARD_VALUE = /\b(?:\d[ -]*?){13,19}\b/g;
+const PHONE_VALUE = /\b(?:\+?91[- ]?)?[6-9]\d{9}\b/g;
+
+function redactText(value: string): string {
+  return value
+    .replace(EMAIL_VALUE, "[redacted-email]")
+    .replace(CARD_VALUE, "[redacted-card]")
+    .replace(PHONE_VALUE, "[redacted-phone]");
+}
+
+function redactNestedMetadata(value: Record<string, unknown>): Record<string, unknown> {
+  const entries = Object.entries(value).slice(0, 48).map(([key, item]) => {
+    const safeKey = key.slice(0, 64);
+    return [safeKey, redactMetadataValue(safeKey, item)] as const;
+  });
+  return Object.fromEntries(entries);
+}
+
+function metadataValueLimit(key: string): number {
+  return /payload|headers|userAgent|stack|query|search|route|threat|vulnerability/i.test(key) ? 2_000 : 240;
+}
+
+function redactMetadataValue(key: string, item: unknown): unknown {
+  if (SENSITIVE_KEY.test(key)) return "[redacted]";
+  if (typeof item === "string") return redactText(item).slice(0, metadataValueLimit(key));
+  if (typeof item === "number" || typeof item === "boolean" || item === null) return item;
+  if (item && typeof item === "object" && !Array.isArray(item)) return redactNestedMetadata(item as Record<string, unknown>);
+  return redactText(JSON.stringify(item)).slice(0, metadataValueLimit(key));
+}
+
 function compactMetadata(value: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!value) return {};
   const entries = Object.entries(value).slice(0, 24).map(([key, item]) => {
-    if (typeof item === "string") return [key.slice(0, 48), item.slice(0, 240)] as const;
-    if (typeof item === "number" || typeof item === "boolean" || item === null) return [key.slice(0, 48), item] as const;
-    return [key.slice(0, 48), JSON.stringify(item).slice(0, 240)] as const;
+    const safeKey = key.slice(0, 48);
+    return [safeKey, redactMetadataValue(safeKey, item)] as const;
   });
   return Object.fromEntries(entries);
 }
@@ -143,7 +174,7 @@ export function buildPlatformLog(input: PlatformLogInput, now = new Date()): Pla
     source: clip(input.source, 80),
     useCase: clip(input.useCase, 120),
     operation: clip(input.operation, 160),
-    message: clip(input.message, 320),
+    message: clip(redactText(input.message), 320),
     statusCode,
     durationMs,
     userId: input.userId ?? null,
@@ -206,6 +237,11 @@ export function resetPlatformLogs(): void {
   flushing = false;
   lastPruneAt = 0;
   tableMissing = false;
+}
+
+export function clearPlatformLogsWhere(predicate: (log: PlatformLog) => boolean): void {
+  memory = memory.filter((log) => !predicate(log));
+  pendingRows = pendingRows.filter((row) => !predicate(fromRow(row)));
 }
 
 function handlePersistError(error: unknown): void {

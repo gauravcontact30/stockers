@@ -892,7 +892,7 @@ function DailyTable({ daily }: { daily: DailyPoint[] }) {
 }
 
 export function AdminAnalytics() {
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(1);
   const [metric, setMetric] = useState<keyof Omit<DailyPoint, "day">>("visitors");
   const [report, setReport] = useState<AnalyticsReport | null>(null);
   const [error, setError] = useState<string | null>(null);

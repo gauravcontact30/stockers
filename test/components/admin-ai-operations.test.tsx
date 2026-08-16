@@ -218,12 +218,13 @@ describe("AdminAiOperations", () => {
     await screen.findByText("The model is answering, with 10% falling back");
   });
 
-  it("reads the seven-day window on mount", async () => {
+  it("reads today's window on mount", async () => {
     const fetchMock = serve();
     render(<AdminAiOperations />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/admin/ai-usage?days=7");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/admin/ai-usage?days=1");
+    expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
     expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toEqual({ Authorization: "Bearer test-token" });
   });
 

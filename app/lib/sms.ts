@@ -1,6 +1,8 @@
+﻿import "server-only";
+
 // Sending an SMS, with the same contract as ./mailer.
 //
-// One transport is implemented — Twilio's REST API — because it needs nothing but `fetch` and this
+// One transport is implemented â€” Twilio's REST API â€” because it needs nothing but `fetch` and this
 // project carries three production dependencies on purpose. Everything else about the shape here
 // mirrors the mailer deliberately: it never throws, it degrades to a local outbox when nothing is
 // configured, and it reports which of the two happened. A sign-up must not fail because an SMS
@@ -14,7 +16,6 @@
 
 // Reads TWILIO_AUTH_TOKEN. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
-import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -38,7 +39,7 @@ export type SmsResult = {
 
 type TwilioConfig = { accountSid: string; authToken: string; from: string };
 
-/** The gateway credentials, or null when the environment has none — which is not an error. */
+/** The gateway credentials, or null when the environment has none â€” which is not an error. */
 export function twilioConfig(): TwilioConfig | null {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -71,7 +72,7 @@ async function recordToOutbox(message: SmsMessage, reason: string): Promise<SmsR
       existing = JSON.parse(await fs.readFile(outboxPath, "utf8")) as unknown[];
     } catch {
       // No outbox yet, or an unreadable one. Either way this message starts a fresh list rather
-      // than failing — losing an old development log is not worth failing a sign-up over.
+      // than failing â€” losing an old development log is not worth failing a sign-up over.
       existing = [];
     }
 
@@ -86,8 +87,8 @@ async function recordToOutbox(message: SmsMessage, reason: string): Promise<SmsR
 /**
  * Sends one SMS. Never throws.
  *
- * Every failure — an unconfigured gateway, a number that is not a mobile, a refused request, a
- * network fault — resolves rather than rejecting, because every caller is doing something more
+ * Every failure â€” an unconfigured gateway, a number that is not a mobile, a refused request, a
+ * network fault â€” resolves rather than rejecting, because every caller is doing something more
  * important than this and none of them should be brought down by it.
  */
 export async function sendSms(message: SmsMessage): Promise<SmsResult> {

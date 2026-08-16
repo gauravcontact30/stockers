@@ -73,10 +73,10 @@ type Payload = AiUsageReport & { configured: boolean; model: string | null };
 
 describe("rangeFrom", () => {
   it("defaults to a week", () => {
-    expect(rangeFrom(null)).toBe(7);
-    expect(rangeFrom("not a number")).toBe(7);
-    expect(rangeFrom("0")).toBe(7);
-    expect(rangeFrom("-5")).toBe(7);
+    expect(rangeFrom(null)).toBe(1);
+    expect(rangeFrom("not a number")).toBe(1);
+    expect(rangeFrom("0")).toBe(1);
+    expect(rangeFrom("-5")).toBe(1);
   });
 
   it("takes a window it is given", () => {

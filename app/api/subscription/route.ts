@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSuperAdminEmail } from "../../lib/admin-access";
 import { referralCodeForUser, referralShareUrl } from "../../lib/checkout-discounts";
 import { userFromRequest } from "../../lib/store";
 import { AI_FEATURES, getAccessStatus, readFeatureLocks } from "../../lib/subscription";
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     locks,
     features: AI_FEATURES,
     signedIn: user !== null,
+    isSuperAdmin: isSuperAdminEmail(user?.email),
     name: user?.name ?? null,
     email: user?.email ?? null,
     referralCode: user ? referralCodeForUser(user) : null,

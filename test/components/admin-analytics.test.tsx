@@ -597,13 +597,14 @@ describe("the activity feed's controls", () => {
 });
 
 describe("AdminAnalytics", () => {
-  it("asks for thirty days and renders the whole report", async () => {
+  it("selects today by default and renders the whole report", async () => {
     const fetchMock = serve(report());
 
     render(<AdminAnalytics />);
     await painted();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/admin/analytics?days=30", expect.anything());
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/analytics?days=1", expect.anything());
+    expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Today — 2026-08-12")).toBeInTheDocument();
     expect(screen.getByText("What people do")).toBeInTheDocument();
     expect(screen.getByText("Companies they look into")).toBeInTheDocument();

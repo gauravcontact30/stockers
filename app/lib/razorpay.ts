@@ -1,10 +1,12 @@
+﻿import "server-only";
+
 // Taking money, through Razorpay.
 //
 // Two things about this file are worth knowing before reading it.
 //
 // Where the money lands is not decided here. Razorpay settles into whichever bank account is
-// verified on the Razorpay account itself — that is set once, in the Razorpay dashboard under
-// Account & Settings → Banking details, and it is what KYC is run against. No bank account number
+// verified on the Razorpay account itself â€” that is set once, in the Razorpay dashboard under
+// Account & Settings â†’ Banking details, and it is what KYC is run against. No bank account number
 // belongs in this repository or in an environment variable, and none is written here: a settlement
 // account that could be changed by editing code would be a fraud waiting to happen.
 //
@@ -15,7 +17,7 @@
 //
 // Required environment:
 //   RAZORPAY_KEY_ID          the public key id, also sent to the browser
-//   RAZORPAY_KEY_SECRET      the secret — server only, never sent anywhere
+//   RAZORPAY_KEY_SECRET      the secret â€” server only, never sent anywhere
 //   RAZORPAY_WEBHOOK_SECRET  the secret configured on the webhook in the dashboard
 //
 // Without them every entry point here reports "not configured" and the app carries on with its
@@ -23,7 +25,6 @@
 
 // Reads RAZORPAY_KEY_SECRET. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
-import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { discountedAmount, discountFromPaymentNotes, type AppliedDiscount } from "./checkout-discounts";
@@ -48,7 +49,7 @@ export type { BillingCycle, PlanKey };
 /**
  * What each plan costs, in rupees a month, and what the annual cycle multiplies that by.
  *
- * These are the same figures the pricing table renders — a test asserts the two agree, because a
+ * These are the same figures the pricing table renders â€” a test asserts the two agree, because a
  * price that differs between the page and the charge is the worst bug this file could have.
  */
 /**
@@ -78,11 +79,11 @@ function env(name: string): string | undefined {
 }
 
 /**
- * The API credentials, or null when the environment has none — which is not an error.
+ * The API credentials, or null when the environment has none â€” which is not an error.
  *
  * `NEXT_PUBLIC_RAZORPAY_KEY_ID` is accepted as an alias for the key id because that is the name
  * Razorpay's own guides use and the one an operator reaches for first. It is a genuine alias and
- * not a second key: the id is public by design — the browser needs it to open checkout, and this
+ * not a second key: the id is public by design â€” the browser needs it to open checkout, and this
  * app already sends it down in the order response. Only the *secret* must stay server-side, and it
  * has no public alias for exactly that reason.
  *
@@ -288,7 +289,7 @@ export type RazorpayPayment = {
   notes?: Record<string, string>;
 };
 
-/** One payment as Razorpay itself has it — the only version of it this app trusts. */
+/** One payment as Razorpay itself has it â€” the only version of it this app trusts. */
 export async function fetchPayment(paymentId: string): Promise<RazorpayPayment | null> {
   const keys = razorpayKeys();
   if (!keys) return null;
@@ -378,7 +379,7 @@ export function verifyPaymentSignature(input: {
  * Whether a webhook body really came from Razorpay.
  *
  * Signed over the raw request body with the webhook secret, which is a different secret from the
- * API key — so the body must be read as text and verified before it is parsed as JSON.
+ * API key â€” so the body must be read as text and verified before it is parsed as JSON.
  */
 export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
   const secret = env("STOCKERS_RAZORPAY_WEBHOOK_SECRET") || env("RAZORPAY_WEBHOOK_SECRET");
@@ -391,7 +392,7 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
 /**
  * Whether a captured payment actually pays for the plan it claims to.
  *
- * Status and amount are both checked against Razorpay's own record: a real payment for ₹299
+ * Status and amount are both checked against Razorpay's own record: a real payment for â‚¹299
  * cannot be redeemed as a year of Elite.
  */
 export function paymentCovers(payment: RazorpayPayment, plan: PlanKey, cycle: BillingCycle): boolean {

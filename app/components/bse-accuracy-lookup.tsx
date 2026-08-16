@@ -776,9 +776,9 @@ export function BseAccuracyLookup({
                   key={example.symbol}
                   type="button"
                   onClick={() => selectStock(example.symbol)}
-                  className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
+                  className="inline-flex max-w-full items-center gap-3 rounded-full border border-slate-200 bg-white py-2 pl-2 pr-4 text-sm font-semibold text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
                 >
-                  <CompanyLogo symbol={example.symbol} size={22} />
+                  <CompanyLogo symbol={example.symbol} size={34} />
                   <span className="truncate">{example.name}</span>
                 </button>
               ))}

@@ -1,7 +1,9 @@
+﻿import "server-only";
+
 // The daily JSON caches under app/data, read and rewritten at request time.
 //
-// Each of them is the same shape of thing: an expensive answer — a hundred and fifty price
-// histories, a batch of model calls — computed once per IST day and kept so the next reader does
+// Each of them is the same shape of thing: an expensive answer â€” a hundred and fifty price
+// histories, a batch of model calls â€” computed once per IST day and kept so the next reader does
 // not pay for it again. The committed copy in the repository is the seed, which is what makes a
 // fresh clone useful before anything has been fetched.
 //
@@ -12,13 +14,13 @@
 // Writing the refreshed cache back over the committed file works locally and cannot work on a
 // serverless host: everything outside the temporary directory is read-only there, so `writeFile`
 // raises EROFS. Each cache module used to let that reject travel, which meant a route that had
-// already done all of its work — the returns were fetched, the answer was in hand — threw on the
+// already done all of its work â€” the returns were fetched, the answer was in hand â€” threw on the
 // last line and answered 500. Saving the answer had become a precondition for giving it out.
 //
 // So: a failed save is not a failed request, and the writable temporary directory is used as the
 // runtime home for these files. A warm instance still reads its own refreshed copy, a cold one
 // falls back to the committed seed, and a host that permits neither write still serves every
-// request — it just recomputes more often.
+// request â€” it just recomputes more often.
 
 import { promises as fs } from "node:fs";
 import os from "node:os";
@@ -100,7 +102,7 @@ export async function writeJsonCache(fileName: string, value: unknown): Promise<
     await fs.writeFile(path.join(RUNTIME_DIR, fileName), contents, "utf8");
     return "runtime";
   } catch {
-    // Nowhere to keep it. The answer is still an answer — the caller returns it and the next
+    // Nowhere to keep it. The answer is still an answer â€” the caller returns it and the next
     // reader recomputes.
     return "none";
   }

@@ -15,9 +15,6 @@ import {
   type Paged,
   type Prefetched,
 } from "./market-section";
-// Values from ./bse-platform, types from ./bse-market: the latter reaches the network and Next's
-// cache, so a client component may only ever take erased types from it.
-import { BSE_PLATFORMS, PLATFORM_NOTE, bsePlatform, type BsePlatform } from "../lib/bse-platform";
 import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
 import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow, TrendingRank } from "../lib/bse-market";
 
@@ -61,20 +58,11 @@ const MOVE_OPTIONS = [
 
 type TierKey = (typeof TIER_OPTIONS)[number]["key"];
 type MoveKey = (typeof MOVE_OPTIONS)[number]["key"];
-type PlatformKey = BsePlatform | "all";
 
 // Both now live in ../lib/market-urls, so the server can build the same URL this board asks for
 // when it prefetches the opening payload. Re-exported so existing importers are unaffected.
 export { buildTrendingUrl };
 const PAGE_SIZE = TRENDING_PAGE_SIZE;
-
-const PLATFORM_TONE: Record<BsePlatform, string> = {
-  "Main Board": "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-  SME: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
-  "X Group": "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
-  "Trade-to-Trade": "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  "Z Group": "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-};
 
 /** The figure the board is currently ranked by, drawn as the row's headline number. */
 function rankValue(row: BseTrendingRow, rank: TrendingRank): string {
@@ -83,9 +71,48 @@ function rankValue(row: BseTrendingRow, rank: TrendingRank): string {
   return formatQuantity(row.trades);
 }
 
-export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank: TrendingRank; position: number }) {
-  const platform = bsePlatform(row.group);
+function shortcutName(name: string): string {
+  return name.replace(/\s+(Limited|Ltd\.?|Company Ltd\.?)$/i, "").trim();
+}
 
+function StockShortcut({ row, active, onSelect }: { row: BseTrendingRow; active: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={active}
+      className={`group flex min-h-[74px] min-w-[240px] max-w-[280px] flex-1 items-center gap-3 rounded-2xl border p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        active
+          ? "border-emerald-300 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/15 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100"
+          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-500/40"
+      }`}
+    >
+      <CompanyLogo symbol={row.ticker} size={40} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{shortcutName(row.name)}</span>
+          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">{row.ticker}</span>
+        </span>
+        <span className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          {row.sector && <span className="truncate">{row.sector}</span>}
+          {row.capTier && (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              {row.capTier}
+            </span>
+          )}
+        </span>
+        <span className="mt-1 flex items-center gap-2">
+          <span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">{formatRupee(row.price)}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${chipFor(row.changePercent)}`}>
+            {formatSignedPercent(row.changePercent)}
+          </span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank: TrendingRank; position: number }) {
   return (
     <li className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700">
       <div className="flex items-start justify-between gap-3">
@@ -110,14 +137,6 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
               </p>
             </StockDetailTrigger>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {platform && (
-                <span
-                  title={PLATFORM_NOTE[platform]}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PLATFORM_TONE[platform]}`}
-                >
-                  BSE {platform}
-                </span>
-              )}
               {row.sector && (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sectorTone(row.sector)}`}>
                   {row.sector}
@@ -174,9 +193,7 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
 /**
  * The BSE stocks the session actually crowded into, searchable across the traded exchange.
  *
- * Every figure on this board is the exchange's own, and no other platform is named anywhere on it.
- * The only "platform" a row carries is the BSE segment it is listed and traded on — main board,
- * SME, X, T or Z — which the exchange states through the group letter on every scrip.
+ * Every figure on this board is the exchange's own, with segment labels kept out of the landing UI.
  *
  * It is also deliberately not a "most searched" board. No venue publishes its search or order flow,
  * so ranking by it would mean inventing the numbers; `MostTraded` hit the same wall on the NSE side.
@@ -191,29 +208,27 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
   // the prefetched payload is not the page this board first renders.
   const [rank, setRank] = useState<TrendingRank>("turnover");
   const [term, setTerm] = useState("");
-  const [platform, setPlatform] = useState<PlatformKey>("all");
   const [tier, setTier] = useState<TierKey>("all");
   const [move, setMove] = useState<MoveKey>("0");
 
   // Same cursor derivation as `BseMoversBoard`: change any input and the reader is looking at a
   // different list, so the page falls back to 1 rather than being reset in an effect — the new list
   // never renders at the stale page first.
-  const listKey = `${rank}|${term}|${platform}|${tier}|${move}`;
+  const listKey = `${rank}|${term}|${tier}|${move}`;
   const [cursor, setCursor] = useState({ key: listKey, page: 1 });
   const page = cursor.key === listKey ? cursor.page : 1;
 
   // "all" for the broker facet the endpoint still accepts: this board no longer filters by one, and
   // passing "all" is what keeps it out of the query string entirely — see `buildTrendingUrl`.
-  const url = buildTrendingUrl(rank, term, platform, "all", tier, move, page);
+  const url = buildTrendingUrl(rank, term, "all", "all", tier, move, page);
   const { data, loading, error } = useMarketFeed<BseTrendingPayload>(url, prefetched);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
   const active = RANK_OPTIONS.find((option) => option.key === rank);
-  const filtered = term.length > 0 || platform !== "all" || tier !== "all" || move !== "0";
+  const filtered = term.length > 0 || tier !== "all" || move !== "0";
 
   const clearFilters = () => {
     setTerm("");
-    setPlatform("all");
     setTier("all");
     setMove("0");
   };
@@ -244,7 +259,7 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       id="bse-trending"
       eyebrow="Trending on BSE"
       title="What BSE crowded into today"
-      blurb="Where the session's money actually went, ranked by the exchange's own figures — rupee turnover, transaction count and share volume. Every company carries the BSE platform it is listed on."
+      blurb="Where the session's money actually went, ranked by the exchange's own figures — rupee turnover, transaction count and share volume."
       aside={
         <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
           {data ? `${data.total.toLocaleString("en-IN")} traded` : "Loading BSE…"}
@@ -326,44 +341,18 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
         </div>
       </div>
 
-      {/* Faceted platform chips, each carrying how many of the current matches it would leave. */}
-      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="BSE platform">
+      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Popular stock shortcuts">
         <button
           type="button"
-          onClick={() => setPlatform("all")}
-          aria-pressed={platform === "all"}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-            platform === "all"
-              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-              : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          }`}
+          onClick={() => setTerm("")}
+          aria-pressed={term === ""}
+          className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
         >
-          All platforms
+          All Platform
         </button>
-        {BSE_PLATFORMS.map((each) => {
-          const facet = data?.platforms.find((entry) => entry.platform === each);
-          // A platform nothing matches is still drawn, disabled, so the set of segments the
-          // exchange has does not appear to change as the reader filters.
-          const count = facet?.count ?? 0;
-          return (
-            <button
-              key={each}
-              type="button"
-              disabled={count === 0}
-              title={PLATFORM_NOTE[each]}
-              onClick={() => setPlatform(each)}
-              aria-pressed={platform === each}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                platform === each
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
-            >
-              BSE {each}
-              <span className="ml-1.5 tabular-nums opacity-60">{count.toLocaleString("en-IN")}</span>
-            </button>
-          );
-        })}
+        {rows.slice(0, 6).map((row) => (
+          <StockShortcut key={row.code} row={row} active={term.toUpperCase() === row.ticker.toUpperCase()} onSelect={() => setTerm(row.ticker)} />
+        ))}
       </div>
 
 
@@ -396,8 +385,7 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       )}
 
       <SectionFootnote>
-        Ranked from BSE&apos;s own end-of-session Bhavcopy across all ~4,900 listed scrips, with each company&apos;s BSE
-        segment taken from its exchange group letter. No broker publishes its search or order flow, so
+        Ranked from BSE&apos;s own end-of-session Bhavcopy across all ~4,900 listed scrips. No broker publishes its search or order flow, so
         &quot;trending&quot; here means traded activity on the exchange rather than searches on any one platform · not
         investment advice.
       </SectionFootnote>

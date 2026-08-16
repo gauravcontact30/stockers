@@ -9,7 +9,7 @@ import { userFromRequest } from "../../../lib/store";
 /** The windows the dashboard offers. Anything else is snapped into range. */
 export const RANGE_OPTIONS = [1, 7, 30] as const;
 
-const DEFAULT_DAYS = 7;
+const DEFAULT_DAYS = 1;
 
 /**
  * How far back this will look, whatever is asked for.

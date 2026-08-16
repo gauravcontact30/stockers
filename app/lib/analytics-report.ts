@@ -538,7 +538,7 @@ export function buildReport({
     range: { from, to: today, days: calendar.length },
     totals,
     today: totalsFor(inRange.filter((event) => event.day === today)),
-    yesterday: totalsFor(inRange.filter((event) => event.day === previousDay)),
+    yesterday: totalsFor(events.filter((event) => event.day === previousDay)),
     daily: dailyFrom(inRange, calendar),
     features,
     funnel: funnelFrom(inRange, totals),

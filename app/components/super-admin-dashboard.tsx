@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 import { buildAttentionQueue, daysUntil, expiringSoon, type AttentionItem, type Urgency } from "../lib/admin-attention";
 import type { HealthReport, CheckState } from "../lib/admin-health";
 import type { FeatureUsage } from "../lib/analytics-report";
@@ -54,6 +54,7 @@ export type SuperAdminSectionId =
   | "overview"
   | "analytics"
   | "ai"
+  | "hackers"
   | "logs"
   | "live"
   | "users"
@@ -272,10 +273,17 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
     icon: AiIcon,
   },
   {
+    id: "hackers",
+    label: "App Hackers",
+    description: "Threat monitor for rate-limit abuse, injection probes, privilege escalation and bot scans.",
+    href: "/hackers",
+    icon: LogsIcon,
+  },
+  {
     id: "logs",
     label: "Platform Logs",
-    description: "Operational logs for dashboard usability, APIs, AI features, upstream data, billing and security.",
-    href: "/logs",
+    description: "Dashboard usability, API, AI, upstream data, billing, security and system logs with sanitized storage.",
+    href: "/platform-logs",
     icon: LogsIcon,
   },
   {
@@ -752,7 +760,7 @@ function RevenuePanel({ ledger }: { ledger: LedgerState | null }) {
   );
 }
 
-function AdminAccessGate({ children }: { children: React.ReactNode }) {
+function AdminAccessGate({ children, requireSuperAdmin = false }: { children: React.ReactNode; requireSuperAdmin?: boolean }) {
   const { status, loading } = useSubscription();
 
   if (loading) {
@@ -766,6 +774,18 @@ function AdminAccessGate({ children }: { children: React.ReactNode }) {
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">This dashboard controls application access, subscriptions and cache state.</p>
         <Link href="/overview" className="mt-4 inline-block rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
           Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  if (status && requireSuperAdmin && !status.isSuperAdmin) {
+    return (
+      <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 dark:border-rose-500/30 dark:bg-rose-500/10">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Super admin only</h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Platform logs contain security and operational signals restricted to the super admin role.</p>
+        <Link href="/console" className="mt-4 inline-block rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-950">
+          Back to console
         </Link>
       </div>
     );
@@ -813,8 +833,7 @@ function SuperAdminOverview() {
     };
 
     void pull<RosterPayload>("/api/admin/users", setPayload, () => setError("Couldn't load admin totals."));
-    // Two days, not one: yesterday is what lets every tile carry a direction rather than a bare number.
-    void pull<TrafficPayload>("/api/admin/analytics?days=2", setTraffic);
+    void pull<TrafficPayload>("/api/admin/analytics?days=1", setTraffic);
 
     // These two are checked for shape before they are kept. A route behind a proxy that answers
     // with a login page, or an endpoint that changes, would otherwise reach a panel as an object
@@ -1504,8 +1523,20 @@ function SectionContent({ active }: { active: SuperAdminSectionId }) {
       );
     case "logs":
       return (
-        <AdminAccessGate>
+        <AdminAccessGate requireSuperAdmin>
           <AdminPlatformLogs />
+        </AdminAccessGate>
+      );
+    case "hackers":
+      return (
+        <AdminAccessGate requireSuperAdmin>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">App Hackers & Threat Monitor</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">This security monitor runs as a dedicated RSC-backed page.</p>
+            <Link href="/hackers" className="mt-4 inline-flex rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-950">
+              Open threat monitor
+            </Link>
+          </div>
         </AdminAccessGate>
       );
     case "users":
@@ -1541,7 +1572,7 @@ function SectionContent({ active }: { active: SuperAdminSectionId }) {
   }
 }
 
-export function SuperAdminDashboard({ active }: { active: SuperAdminSectionId }) {
+export function SuperAdminDashboard({ active, children }: { active: SuperAdminSectionId; children?: ReactNode }) {
   const router = useRouter();
   const { status, refresh } = useSubscription();
   const section = SECTION_BY_ID[active];
@@ -1587,7 +1618,7 @@ export function SuperAdminDashboard({ active }: { active: SuperAdminSectionId })
             </header>
 
             <SuperAdminTabs active={active} />
-            <SectionContent active={active} />
+            {children ?? <SectionContent active={active} />}
           </div>
         </div>
       </div>

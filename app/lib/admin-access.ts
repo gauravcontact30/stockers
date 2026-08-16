@@ -1,4 +1,4 @@
-// Reads the admin allowlist. The `server-only` import makes a client component that pulls this in a
+﻿// Reads the admin allowlist. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
 import "server-only";
 
@@ -44,7 +44,7 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 //
 // Two things this deliberately is not:
 //
-//   * It is not admin. These accounts get Elite-level *access* and nothing else — no user list, no
+//   * It is not admin. These accounts get Elite-level *access* and nothing else â€” no user list, no
 //     revenue page, no feature switches. Comping a tester by promoting them to admin would hand
 //     over the whole back office to test a screener.
 //   * It is not open-ended. `TEST_ACCESS_UNTIL` is a real date and the grant simply stops on it.
@@ -64,7 +64,7 @@ const TEST_ACCOUNT_EMAILS = [
 ];
 
 /**
- * Last IST day the grant covers, inclusive — one month from 14 August 2026.
+ * Last IST day the grant covers, inclusive â€” one month from 14 August 2026.
  *
  * Compared as a string against `todayIST()`, which is the same YYYY-MM-DD comparison
  * `subscribedUntil` uses everywhere else, so this expires exactly the way a real subscription does.

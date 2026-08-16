@@ -123,10 +123,13 @@ const securityHeaders = [
     value: "max-age=63072000; includeSubDomains; preload",
   },
   { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
   // Stops the browser second-guessing a declared Content-Type — the trick that turns an uploaded
   // "image" into executable script.
   { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Origin-Agent-Cluster", value: "?1" },
   {
     // Nothing on this site needs a camera, a microphone or a location, so the surface is dropped
     // outright. `payment` is left to self and Razorpay, which is the one that is actually used.

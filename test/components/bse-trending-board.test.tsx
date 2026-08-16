@@ -176,13 +176,12 @@ describe("TrendingRow", () => {
 });
 
 describe("BSE trending board", () => {
-  it("leads each row with the company's real name and its BSE platform", async () => {
+  it("leads each row with the company's real name, sector and cap tier", async () => {
     mockFeed();
     render(<BseTrendingBoard />);
 
     const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
     expect(within(card).getByText("HDFCBANK · 500180")).toBeInTheDocument();
-    expect(within(card).getByText("BSE Main Board")).toBeInTheDocument();
     expect(within(card).getByText("Financial Services")).toBeInTheDocument();
     expect(within(card).getByText("Large cap")).toBeInTheDocument();
 
@@ -239,12 +238,14 @@ describe("BSE trending board", () => {
     expect(badge.previousElementSibling).not.toBeNull();
   });
 
-  it("names the SME platform against an SME listing", async () => {
+  it("keeps exchange segment names out of SME listings", async () => {
     mockFeed();
     render(<BseTrendingBoard />);
 
     const card = (await screen.findByText("Small Enterprise Co Ltd")).closest("li") as HTMLElement;
-    expect(within(card).getByText("BSE SME")).toBeInTheDocument();
+    expect(within(card).queryByText("BSE SME")).not.toBeInTheDocument();
+    expect(within(card).getByText("Capital Goods")).toBeInTheDocument();
+    expect(within(card).getByText("Small cap")).toBeInTheDocument();
   });
 
   it("re-ranks by trade count and makes that figure the row's headline", async () => {
@@ -304,15 +305,15 @@ describe("BSE trending board", () => {
     expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
   });
 
-  it("filters by platform, by cap tier and by the size of the move", async () => {
+  it("filters by stock shortcut, by cap tier and by the size of the move", async () => {
     const fetchMock = mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    await userEvent.click(screen.getByRole("button", { name: /BSE SME/ }));
+    await userEvent.click(screen.getByRole("button", { name: /HDFC Bank\s+HDFCBANK/i }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&platform=SME",
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=HDFCBANK",
       ),
     );
 
@@ -321,17 +322,18 @@ describe("BSE trending board", () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&platform=SME&tier=small&min=5",
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=HDFCBANK&tier=small&min=5",
       ),
     );
 
     // Back to every platform, with the other two filters left alone.
-    await userEvent.click(screen.getByRole("button", { name: "All platforms" }));
+    await userEvent.click(screen.getByRole("button", { name: "All Platform" }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenLastCalledWith(
         "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&tier=small&min=5",
       ),
     );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("platform="))).toBe(false);
   });
 
   it("does not badge a row with a broker's list, even when the feed still carries one", async () => {
@@ -347,14 +349,16 @@ describe("BSE trending board", () => {
     expect(within(card).queryByText("Most bought on Groww #3")).not.toBeInTheDocument();
   });
 
-  it("disables a platform chip that nothing on the board matches", async () => {
+  it("shows stock shortcuts instead of exchange segment chips", async () => {
     mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    // The fixture facets list only Main Board and SME, so the surveillance segments read zero.
-    expect(screen.getByRole("button", { name: /BSE Z Group/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /BSE SME/ })).toBeEnabled();
+    expect(screen.getByRole("group", { name: "Popular stock shortcuts" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All Platform" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /HDFC Bank\s+HDFCBANK/i })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /BSE Z Group/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /BSE SME/ })).not.toBeInTheDocument();
   });
 
   it("pages through the board and starts page two at the eleventh rank", async () => {

@@ -8,6 +8,8 @@ import { SubscriptionProvider } from "./components/subscription-provider";
 import { PresenceTracker } from "./components/presence-tracker";
 import { SubscriptionReminderLazy } from "./components/subscription-reminder-lazy";
 import { VisitTracker } from "./components/visit-tracker";
+import { ClientLogCapture } from "./components/client-log-capture";
+import { WebVitalsReporter } from "./components/web-vitals-reporter";
 import { JsonLd } from "./components/json-ld";
 import {
   absoluteUrl,
@@ -153,6 +155,8 @@ export default function RootLayout({
               {/* Renders nothing — reports one page view per page per tab, so the admin dashboard
                   can say how many people arrived today rather than how many accounts exist. */}
               <VisitTracker />
+              <ClientLogCapture />
+              <WebVitalsReporter />
               {/* Renders nothing either — says once a minute that this tab is still open, which is
                   what lets the admin dashboard answer how many people are on the site right now
                   rather than how many arrived today. */}

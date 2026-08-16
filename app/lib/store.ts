@@ -1,3 +1,5 @@
+﻿import "server-only";
+
 // The account store.
 //
 // One module, two backends. Which one is used is decided by configuration alone:
@@ -9,7 +11,7 @@
 // this repo still clones and works with no credentials. It is not suitable for production: on a
 // serverless host the application directory is read-only, so every write fails, and on any host it
 // is wiped by the next deploy because it lives inside the deployed tree. That is the whole reason
-// the Supabase backend exists — see `supabase/README.md`.
+// the Supabase backend exists â€” see `supabase/README.md`.
 //
 // Everything above the backend split is shared: password hashing, session tokens, the admin-email
 // promotion rule, and the shape of every record. The two backends differ only in where rows are
@@ -22,7 +24,6 @@
 
 // Reads AUTH_TOKEN_SECRET, and holds the user table. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
-import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -43,7 +44,7 @@ export type AppUser = {
    *
    * Null is the state every account starts in and returns to nothing but a purchase moves it out
    * of. It used to default to "Starter", which meant a brand-new account and a paying Starter
-   * subscriber were indistinguishable in the record — the admin's user list could not tell them
+   * subscriber were indistinguishable in the record â€” the admin's user list could not tell them
    * apart, and neither could anything else. Access is still decided by `subscribedUntil` and the
    * trial clock, not by this field; this names *what* was bought, not *whether* it is live.
    */
@@ -78,7 +79,7 @@ export type AppUser = {
    * exactly once and a resend can invalidate the previous link.
    */
   verificationToken?: string | null;
-  /** When the most recent verification mail was dispatched — throttles resends. */
+  /** When the most recent verification mail was dispatched â€” throttles resends. */
   verificationSentAt?: string | null;
 };
 
@@ -95,9 +96,9 @@ const filePath = process.env.STOCKERS_USERS_FILE || path.join(process.cwd(), "ap
 const SCRYPT_KEY_LENGTH = 64;
 
 // Session tokens now gate paid features, so they carry an HMAC and can no longer be forged by
-// anyone who knows a user's id and email. Set AUTH_TOKEN_SECRET in the environment; the
-// development fallback is deliberately obvious so an unset secret is caught before deploy.
-const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || "stockers-dev-only-insecure-secret";
+// anyone who knows a user's id and email. Set AUTH_TOKEN_SECRET in production; development gets an
+// obvious fallback so a fresh checkout still runs locally.
+const DEV_TOKEN_SECRET = "stockers-dev-only-insecure-secret";
 
 /** Emails listed here are promoted to admin on sign-up, so the first admin needs no seeding. */
 const ADMIN_EMAILS = adminEmails();
@@ -130,7 +131,7 @@ function verifyPassword(password: string, storedHash: string) {
  *
  * Deliberately row-at-a-time rather than "read everything, write everything back". The JSON file
  * has no choice but to rewrite the whole array, but expressing the interface that way would have
- * forced the Postgres backend to do the same — turning every verification into a full table read
+ * forced the Postgres backend to do the same â€” turning every verification into a full table read
  * and a full table write, and making two concurrent sign-ups silently drop one of the accounts.
  */
 type StoreBackend = {
@@ -350,7 +351,7 @@ const supabaseBackend: StoreBackend = {
       });
       return rows.length > 0 ? fromRow(rows[0]) : null;
     } catch (error) {
-      // The unique index on `email` is what decides whether an address is taken — not a read
+      // The unique index on `email` is what decides whether an address is taken â€” not a read
       // beforehand, which two simultaneous sign-ups for the same address would both pass.
       if (isUniqueViolation(error)) return null;
       throw error;
@@ -394,7 +395,7 @@ const supabaseBackend: StoreBackend = {
 
   async reissueVerificationToken(id, token) {
     // `email_verified_at=is.null` carries the "not already verified" rule into the statement, so an
-    // unknown id and a confirmed address both come back as zero rows — which is what the caller
+    // unknown id and a confirmed address both come back as zero rows â€” which is what the caller
     // has to treat as "nothing to do" anyway.
     const rows = await supabaseRequest<UserRow>({
       method: "PATCH",
@@ -410,7 +411,7 @@ const supabaseBackend: StoreBackend = {
  * The backend in force, resolved per call rather than once at import.
  *
  * Route handlers are long-lived, and reading the environment at module scope means the first
- * import of this file for the process fixes the answer forever — which is exactly the bug where
+ * import of this file for the process fixes the answer forever â€” which is exactly the bug where
  * setting the Supabase variables appears to do nothing until the whole server restarts.
  */
 function backend(): StoreBackend {
@@ -423,7 +424,7 @@ export function storeBackendName(): "supabase" | "file" {
 }
 
 // ---------------------------------------------------------------------------
-// The store itself — backend-independent from here down
+// The store itself â€” backend-independent from here down
 // ---------------------------------------------------------------------------
 
 export async function createUser(user: {
@@ -450,8 +451,8 @@ export async function createUser(user: {
     // The trial clock starts at sign-up and is measured in IST calendar days.
     trialStartedAt: now,
     subscribedUntil: null,
-    // Unverified until the link in the welcome mail is followed. Nothing is gated on this yet —
-    // the trial starts either way — so a mail that never arrives cannot lock anyone out.
+    // Unverified until the link in the welcome mail is followed. Nothing is gated on this yet â€”
+    // the trial starts either way â€” so a mail that never arrives cannot lock anyone out.
     emailVerifiedAt: null,
     verificationToken: newVerificationToken(),
     verificationSentAt: null,
@@ -468,7 +469,7 @@ export function newVerificationToken(): string {
 /**
  * Spends a verification token.
  *
- * Returns the user it belonged to, or null when the token is unknown — which is also what a token
+ * Returns the user it belonged to, or null when the token is unknown â€” which is also what a token
  * that has already been used looks like, since verifying clears it. Verifying twice is therefore
  * not an error the caller has to distinguish; the route reports it as "already verified" by
  * checking the address separately.
@@ -481,7 +482,7 @@ export async function verifyEmailToken(token: string): Promise<AppUser | null> {
 /**
  * Issues a new verification token for one user, invalidating any previous link.
  *
- * Returns null when the id is unknown or the address is already verified — there is nothing to
+ * Returns null when the id is unknown or the address is already verified â€” there is nothing to
  * confirm in either case.
  */
 export async function refreshVerificationToken(id: string): Promise<{ user: AppUser; token: string } | null> {
@@ -505,7 +506,7 @@ export async function listUsers(): Promise<AdminUserView[]> {
   const users = await backend().all();
 
   // Sorted here rather than in the query, so both backends produce the same order from the same
-  // records — Postgres would otherwise sort by its collation and the file by JavaScript's.
+  // records â€” Postgres would otherwise sort by its collation and the file by JavaScript's.
   return users
     .map((user) => {
       const { passwordHash, verificationToken, ...rest } = user;
@@ -521,7 +522,7 @@ export async function listUsers(): Promise<AdminUserView[]> {
 
 /** Persists changes to one user, matched by id. Returns null when the id is unknown. */
 export async function updateUser(id: string, patch: Partial<AppUser>): Promise<AppUser | null> {
-  // id and passwordHash are never patchable through this path — changing either here would let a
+  // id and passwordHash are never patchable through this path â€” changing either here would let a
   // caller reassign an account or overwrite a credential without going through sign-up.
   const safe = { ...patch };
   delete safe.id;
@@ -547,8 +548,17 @@ export async function authenticateUser(email: string, password: string) {
   return user;
 }
 
+function tokenSecret(): string {
+  const configured = process.env.AUTH_TOKEN_SECRET?.trim();
+  if (configured && configured.length >= 32) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_TOKEN_SECRET must be set to at least 32 characters in production.");
+  }
+  return DEV_TOKEN_SECRET;
+}
+
 function signPayload(payload: string) {
-  return createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex");
+  return createHmac("sha256", tokenSecret()).update(payload).digest("hex");
 }
 
 export function createToken(user: AppUser) {
@@ -560,7 +570,7 @@ export function createToken(user: AppUser) {
  * Verifies a session token and returns the user id it names, or null.
  *
  * The signature is compared in constant time so the check can't be probed byte by byte, and an
- * unsigned or tampered token is rejected outright — this is what stops a paywalled endpoint from
+ * unsigned or tampered token is rejected outright â€” this is what stops a paywalled endpoint from
  * being unlocked by hand-writing a token.
  */
 export function verifyToken(token: string | null | undefined): string | null {
@@ -601,7 +611,7 @@ function tokenFromCookie(request: Request): string | null {
  * cookie.
  *
  * The cookie exists so the dozen existing client components that call gated endpoints don't each
- * have to attach a header — the browser sends it automatically on same-origin requests. It is
+ * have to attach a header â€” the browser sends it automatically on same-origin requests. It is
  * SameSite=Lax rather than HttpOnly because the client also needs to read it; the token already
  * lives in localStorage, so this adds no new exposure.
  */

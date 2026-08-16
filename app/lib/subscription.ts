@@ -1,3 +1,5 @@
+﻿import "server-only";
+
 import { CACHE_TAGS } from "./cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -17,7 +19,7 @@ import {
 import type { AppUser } from "./store";
 import { eq, supabaseConfigured, supabaseRequest } from "./supabase";
 
-// The feature table itself lives in ./plan-tiers, which imports nothing from Node — the browser
+// The feature table itself lives in ./plan-tiers, which imports nothing from Node â€” the browser
 // needs the same tiers to decide what to blur. Re-exported here so the routes and pages that have
 // always imported them from this module keep working.
 export {
@@ -53,7 +55,7 @@ export type AccessState = "admin" | "trial" | "active" | "expired";
 export type AccessStatus = {
   state: AccessState;
   /**
-   * True when the account has any AI entitlement at all — an admin, or a live paid plan.
+   * True when the account has any AI entitlement at all â€” an admin, or a live paid plan.
    *
    * This is a summary, not the gate. Which *particular* features are usable depends on the tier
    * below, because a Starter subscriber is `allowed` and still cannot open a Pro screener.
@@ -137,7 +139,7 @@ function nextDay(iso: string): string {
 /**
  * Open market days from `fromIso` to `toIso` inclusive: weekdays that are not NSE holidays.
  *
- * Counting is capped so a long-dormant account can't walk the calendar a day at a time — the
+ * Counting is capped so a long-dormant account can't walk the calendar a day at a time â€” the
  * caller only ever needs to know whether the allowance is used up.
  */
 export function countMarketDays(fromIso: string, toIso: string, holidays: Set<string>, cap = 400): number {
@@ -179,13 +181,13 @@ export function istDateOf(iso: string): string | null {
 /**
  * Works out what a user may currently access.
  *
- * A live trial grants *every* AI feature — Starter, Pro and Elite alike — for `TRIAL_DAYS` IST
+ * A live trial grants *every* AI feature â€” Starter, Pro and Elite alike â€” for `TRIAL_DAYS` IST
  * calendar days. A trial that only opened the cheapest tier was arguing for the cheapest plan;
  * showing the whole product and then stepping down from it is what makes the choice at the end a
  * real one. Paid plans use the stored plan tier, and admins are unconditional above the top tier.
  *
  * When those days are spent and nothing has been bought, the account falls to `expired` and settles
- * on `POST_TRIAL_TIER` — Starter. Pro and Elite lock; Starter features and the public market boards
+ * on `POST_TRIAL_TIER` â€” Starter. Pro and Elite lock; Starter features and the public market boards
  * keep working, so the account stays useful and the decision stays open.
  */
 export function accessStatusFor(user: AppUser | null, today: string, _holidays: Set<string> = new Set()): AccessStatus {
@@ -227,7 +229,7 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
   // Checked after the admin branch and before the trial clock, so it cannot be cut short by a
   // trial that ran out and does not need a payment on the record. Reported as `active` with an
   // Elite tier and a real end date, which means the countdown, the plan pill and the paywall all
-  // read it the same way they read a paid subscription — no separate state for them to mishandle.
+  // read it the same way they read a paid subscription â€” no separate state for them to mishandle.
   if (hasTestAccess(user.email, today)) {
     return {
       ...base,
@@ -273,7 +275,7 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
       state: "trial",
       allowed: true,
       // The top tier, so nothing in the dashboard is locked while the trial is live. `state` is
-      // what the UI reads to say "free trial" rather than "Elite subscriber" — the tier is the
+      // what the UI reads to say "free trial" rather than "Elite subscriber" â€” the tier is the
       // access granted, not a claim about what they have paid for.
       tier: "elite",
       planName: "Elite",
@@ -289,7 +291,7 @@ export function accessStatusFor(user: AppUser | null, today: string, _holidays: 
   //
   // `state` stays `expired` because the trial genuinely did end and every message about it should
   // keep saying so; `tier` is what the paywall reads, and it is what has changed. A Starter feature
-  // opens, a Pro or Elite one does not — see `canUse` in ../components/subscription-provider, which
+  // opens, a Pro or Elite one does not â€” see `canUse` in ../components/subscription-provider, which
   // gates on `tierAtLeast(status.tier, requiredTier)` before it looks at `allowed`.
   //
   // `subscribedUntil` is deliberately left as it was, which for a never-subscribed account is null:
@@ -351,7 +353,7 @@ function readLocksFile(): Promise<string> {
 }
 
 /**
- * One row of `public.feature_locks`. Only locked features are stored — an absent row is open,
+ * One row of `public.feature_locks`. Only locked features are stored â€” an absent row is open,
  * which is what a feature added to AI_FEATURES tomorrow should be without anybody writing a row.
  */
 type LockRow = { feature: string; locked: boolean | null };
@@ -363,7 +365,7 @@ type LockRow = { feature: string; locked: boolean | null };
  * application directory is read-only, so the admin's toggle failed silently, and anywhere else the
  * next deploy wiped it. An admin turning a feature off and finding it back on an hour later was
  * that bug. Supabase now holds them wherever it is configured, on the same rule as the account
- * store — configuration alone decides, and the two backends produce the same object.
+ * store â€” configuration alone decides, and the two backends produce the same object.
  *
  * A failure reads as "nothing is locked" rather than throwing. That direction is deliberate: the
  * alternative is a database blip taking every AI surface off the site at once, which is a far
@@ -395,7 +397,7 @@ export async function readFeatureLocks(): Promise<FeatureLocks> {
     }
     return locks;
   } catch {
-    // No file yet, or unreadable — nothing is locked.
+    // No file yet, or unreadable â€” nothing is locked.
     return {};
   }
 }
@@ -448,7 +450,7 @@ export function canUseFeature(status: AccessStatus, locks: FeatureLocks, feature
   if (locks[feature]) return false;
 
   const required = featureTier(feature);
-  // Not a key this app tiers — fall back to "holds any plan" rather than inventing a price for it.
+  // Not a key this app tiers â€” fall back to "holds any plan" rather than inventing a price for it.
   if (!required) return status.allowed;
 
   return tierAtLeast(status.tier, required);
@@ -457,7 +459,7 @@ export function canUseFeature(status: AccessStatus, locks: FeatureLocks, feature
 /**
  * The plan a caller would have to be on to use a feature they currently cannot.
  *
- * Null when the refusal has nothing to do with money — an admin lock, or a key with no tier — so a
+ * Null when the refusal has nothing to do with money â€” an admin lock, or a key with no tier â€” so a
  * caller can tell "buy this" apart from "this is switched off", which are not the same message.
  */
 export function requiredPlanFor(feature: string, locks: FeatureLocks): PlanName | null {

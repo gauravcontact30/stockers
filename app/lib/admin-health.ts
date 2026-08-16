@@ -1,8 +1,10 @@
+﻿import "server-only";
+
 // Is this deployment wired up?
 //
 // The app degrades rather than fails when a service is missing: no Supabase and the account store
 // falls back to a JSON file, no OpenRouter key and the AI reads are composed from the figures
-// instead, no Razorpay and checkout cannot open. Each of those is deliberate and each is silent —
+// instead, no Razorpay and checkout cannot open. Each of those is deliberate and each is silent â€”
 // which is right for a visitor and wrong for the person running it. An admin looking at a quiet
 // dashboard cannot currently tell "nobody subscribed today" from "payments were never configured".
 //
@@ -13,7 +15,7 @@
 // ---------------------------------------------------------------------------
 //
 // Nothing here returns a key, a secret, a token or a connection string, and the one value it does
-// return — the Supabase project URL — is not a secret: it ships in the browser bundle of every app
+// return â€” the Supabase project URL â€” is not a secret: it ships in the browser bundle of every app
 // that uses one. Everything else is "configured: true". A health endpoint that echoed its own
 // credentials back would be a far worse bug than the misconfiguration it was built to find.
 
@@ -27,14 +29,14 @@ export type HealthCheck = {
   state: CheckState;
   /** What is true right now, in one line. */
   detail: string;
-  /** What the app does in this state — the reason `degraded` is not always a problem. */
+  /** What the app does in this state â€” the reason `degraded` is not always a problem. */
   consequence: string;
   /**
    * How long this check's probe took, in milliseconds. Null for a check that has nothing to probe.
    *
    * The measured half of the panel. A configuration flag can only ever say "set" or "not set",
    * which is enough to find a missing key and useless for finding a database that answers in two
-   * seconds — and a store that is technically reachable but slow is the failure an admin actually
+   * seconds â€” and a store that is technically reachable but slow is the failure an admin actually
    * has to catch, because nothing else in the app reports it.
    */
   latencyMs: number | null;
@@ -44,7 +46,7 @@ export type HealthCheck = {
  * The measured figures behind the panel: how this process is doing, not merely how it is set up.
  *
  * Everything here is read at the moment the report is built and is true only of the instance that
- * answered — on a serverless host the next request may land on a different one, which is why the
+ * answered â€” on a serverless host the next request may land on a different one, which is why the
  * panel labels the process figures as belonging to "this instance" rather than to the deployment.
  */
 export type HealthStats = {
@@ -71,9 +73,9 @@ export type HealthReport = {
   worst: CheckState;
   /** Which store the account data is actually in. */
   backend: "supabase" | "file";
-  /** The project URL, or null. Not a secret — see the header. */
+  /** The project URL, or null. Not a secret â€” see the header. */
   projectUrl: string | null;
-  /** The measured half — see `HealthStats`. */
+  /** The measured half â€” see `HealthStats`. */
   stats: HealthStats;
   checkedAt: string;
 };
@@ -82,7 +84,7 @@ function configured(name: string): boolean {
   return Boolean(process.env[name]?.trim());
 }
 
-/** True when any of the names is set — for a service with more than one accepted variable. */
+/** True when any of the names is set â€” for a service with more than one accepted variable. */
 function anyConfigured(...names: string[]): boolean {
   return names.some(configured);
 }
@@ -94,14 +96,14 @@ type Probe = { ok: boolean; ms: number };
 const NOT_PROBED: Probe = { ok: false, ms: 0 };
 
 /**
- * Whether a table is actually reachable, not merely configured — and how quickly.
+ * Whether a table is actually reachable, not merely configured â€” and how quickly.
  *
  * A zero-row read rather than a count: this runs on every load of the overview, and the question is
  * "does PostgREST answer for this table", which one row settles as well as ten thousand.
  *
  * The duration is kept because the panel refreshes itself now, and a number that moves is the only
  * way a reader can tell a healthy store from one that is answering but struggling. It is measured
- * around the call rather than taken from the response, so it includes the network — which is the
+ * around the call rather than taken from the response, so it includes the network â€” which is the
  * part that actually goes wrong.
  */
 async function tableReachable(table: string): Promise<Probe> {
@@ -123,7 +125,7 @@ function megabytes(bytes: number): number {
  * The process figures.
  *
  * Guarded rather than read straight off `process`, because this module is also loaded in a jsdom
- * test environment and on runtimes where `memoryUsage` is not implemented — and a health panel
+ * test environment and on runtimes where `memoryUsage` is not implemented â€” and a health panel
  * that throws while reporting how healthy things are would be the worst possible failure here.
  */
 export function processStats(): Pick<HealthStats, "uptimeSeconds" | "memoryMb" | "heapUsedMb" | "heapTotalMb" | "nodeVersion" | "environment"> {
@@ -135,7 +137,7 @@ export function processStats(): Pick<HealthStats, "uptimeSeconds" | "memoryMb" |
     memory = { rss: usage.rss, heapUsed: usage.heapUsed, heapTotal: usage.heapTotal };
     uptime = process.uptime();
   } catch {
-    // Left at zero, which the panel renders as "—" rather than as a healthy-looking nought.
+    // Left at zero, which the panel renders as "â€”" rather than as a healthy-looking nought.
   }
 
   return {
@@ -167,7 +169,7 @@ export function worstOf(checks: HealthCheck[]): CheckState {
 /**
  * Every integration, and what the app does without it.
  *
- * The table reads run together rather than in sequence — there are three of them and they are
+ * The table reads run together rather than in sequence â€” there are three of them and they are
  * independent, so doing them one after another would put three round trips in front of a panel
  * that is meant to be a glance.
  */
@@ -338,7 +340,7 @@ export async function buildHealthReport(): Promise<HealthReport> {
       probeMs,
       // The slowest probe rather than the total: the total grows with the number of tables and
       // says nothing about any of them, while the slowest is the one that is actually holding a
-      // page up. Null when nothing was probed, which the panel renders as "—".
+      // page up. Null when nothing was probed, which the panel renders as "â€”".
       slowestMs: probes.length > 0 ? Math.max(...probes.map((probe) => probe.ms)) : null,
       counts: countStates(checks),
     },

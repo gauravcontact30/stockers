@@ -232,7 +232,7 @@ const FAILURE_COLUMNS: Column<AiCallRecord>[] = [
 ];
 
 export function AdminAiOperations() {
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(1);
   const [report, setReport] = useState<AiUsageState | null>(null);
   const [error, setError] = useState<string | null>(null);
 

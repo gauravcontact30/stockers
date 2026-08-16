@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { recordEvent, visitorIdFromRequest } from "../../../lib/analytics";
 import { firstError, validateSignin } from "../../../lib/auth-validation";
+import { recordPlatformLog } from "../../../lib/platform-logs";
 import { authenticateUser, createToken } from "../../../lib/store";
 
 export async function POST(request: Request) {
@@ -18,11 +19,35 @@ export async function POST(request: Request) {
      */
     const errors = validateSignin({ email, password });
     if (Object.keys(errors).length > 0) {
+      recordPlatformLog({
+        category: "security",
+        severity: "warning",
+        source: "Auth",
+        useCase: "Security & Access: failed login attempts",
+        operation: "signin.validation_failed",
+        message: "A sign-in attempt failed input validation.",
+        statusCode: 400,
+        path: "/api/auth/signin",
+        method: "POST",
+        metadata: { email },
+      });
       return NextResponse.json({ error: firstError(errors), errors }, { status: 400 });
     }
 
     const user = await authenticateUser(email, password);
     if (!user) {
+      recordPlatformLog({
+        category: "security",
+        severity: "warning",
+        source: "Auth",
+        useCase: "Security & Access: failed login attempts",
+        operation: "signin.failed",
+        message: "A sign-in attempt failed because the credentials were invalid.",
+        statusCode: 401,
+        path: "/api/auth/signin",
+        method: "POST",
+        metadata: { email },
+      });
       /**
        * One message for a wrong address and a wrong password alike.
        *
@@ -40,6 +65,19 @@ export async function POST(request: Request) {
     // one that only a successful authentication can move. A failed attempt is not a sign-in and is
     // deliberately not recorded — this is a usage measure, not an audit log.
     await recordEvent({ type: "signin", userId: user.id, userEmail: user.email, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
+    recordPlatformLog({
+      category: "security",
+      severity: "info",
+      source: "Auth",
+      useCase: "Security & Access: successful logins",
+      operation: "signin.success",
+      message: "User signed in successfully.",
+      statusCode: 200,
+      userId: user.id,
+      path: "/api/auth/signin",
+      method: "POST",
+      metadata: { email: user.email },
+    });
 
     return NextResponse.json({
       ok: true,

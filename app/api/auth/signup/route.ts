@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { recordEvent, visitorIdFromRequest } from "../../../lib/analytics";
 import { firstError, normaliseMobile, validateSignup, type SignupFields } from "../../../lib/auth-validation";
 import { appOrigin, sendMail, verificationEmail } from "../../../lib/mailer";
+import { recordPlatformLog } from "../../../lib/platform-logs";
 import { sendSms, welcomeSms } from "../../../lib/sms";
 import { createToken, createUser, updateUser } from "../../../lib/store";
 import { TRIAL_DAYS, addTrialDays, istDateOf } from "../../../lib/subscription";
@@ -47,6 +48,18 @@ export async function POST(request: Request) {
      */
     const errors = validateSignup(fields);
     if (Object.keys(errors).length > 0) {
+      recordPlatformLog({
+        category: "security",
+        severity: "warning",
+        source: "Auth",
+        useCase: "Security & Access: account creation validation",
+        operation: "signup.validation_failed",
+        message: "A sign-up attempt failed input validation.",
+        statusCode: 400,
+        path: "/api/auth/signup",
+        method: "POST",
+        metadata: { email: fields.email, mobile: fields.mobile },
+      });
       return NextResponse.json({ error: firstError(errors), errors }, { status: 400 });
     }
 
@@ -62,6 +75,18 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
+      recordPlatformLog({
+        category: "security",
+        severity: "warning",
+        source: "Auth",
+        useCase: "Security & Access: account creation conflicts",
+        operation: "signup.duplicate",
+        message: "A sign-up attempt used an email address that already exists.",
+        statusCode: 409,
+        path: "/api/auth/signup",
+        method: "POST",
+        metadata: { email: fields.email },
+      });
       return NextResponse.json(
         { error: "An account already exists for this email.", errors: { email: "This email is already registered." } },
         { status: 409 },
@@ -71,6 +96,19 @@ export async function POST(request: Request) {
     // Recorded before the mail goes out, because the account exists from this point on and the
     // sign-up figure should not depend on whether a provider was reachable.
     await recordEvent({ type: "signup", userId: user.id, userEmail: user.email, visitorId: visitorIdFromRequest(request), userAgent: request.headers.get("user-agent") });
+    recordPlatformLog({
+      category: "security",
+      severity: "info",
+      source: "Auth",
+      useCase: "Security & Access: account creation",
+      operation: "signup.success",
+      message: "New account created.",
+      statusCode: 200,
+      userId: user.id,
+      path: "/api/auth/signup",
+      method: "POST",
+      metadata: { email: user.email, mobile: user.mobile },
+    });
 
     // The account exists and the session below is valid whether or not this mail goes out. A
     // provider outage must not turn a successful sign-up into an error the visitor has to retry —

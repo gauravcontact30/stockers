@@ -9,6 +9,7 @@ export type SubscriptionStatus = {
   state: AccessState;
   allowed: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   tier: "starter" | "pro" | "elite" | null;
   planName: "Starter" | "Pro" | "Elite" | null;
   marketDaysUsed: number;
@@ -65,6 +66,10 @@ export function authHeaders(): Record<string, string> {
 
 const SESSION_COOKIE = "stockers_session";
 
+function secureCookieFlag(): string {
+  return window.location.protocol === "https:" ? "; Secure" : "";
+}
+
 /**
  * Mirrors the stored token into a same-site cookie.
  *
@@ -76,8 +81,8 @@ export function syncSessionCookie() {
   try {
     const token = readToken();
     document.cookie = token
-      ? `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`
-      : `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+      ? `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax${secureCookieFlag()}`
+      : `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax${secureCookieFlag()}`;
   } catch {
     // Cookies disabled — the Authorization header path still works for the status call.
   }

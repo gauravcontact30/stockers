@@ -30,6 +30,10 @@ function mint(): string {
   return `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
+function secureCookieFlag(): string {
+  return window.location.protocol === "https:" ? "; Secure" : "";
+}
+
 /**
  * This browser's visitor id, minting and storing one the first time.
  *
@@ -41,7 +45,7 @@ export function visitorId(): string | null {
     const stored = window.localStorage.getItem(VISITOR_KEY) ?? "";
     const id = ID_PATTERN.test(stored) ? stored : mint();
     window.localStorage.setItem(VISITOR_KEY, id);
-    document.cookie = `${VISITOR_COOKIE}=${id}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `${VISITOR_COOKIE}=${id}; path=/; max-age=31536000; SameSite=Lax${secureCookieFlag()}`;
     return id;
   } catch {
     return null;

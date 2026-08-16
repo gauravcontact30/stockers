@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { OPENING_SYMBOL } from "../lib/ownership-defaults";
-import { FALLBACK_QUICK_PICKS } from "../lib/suggestion-defaults";
+import { FALLBACK_QUICK_PICKS, type OwnershipQuickPick } from "../lib/suggestion-defaults";
 import { CompanyLogo } from "./company-logo";
 import { PromoterTrendChart } from "./promoter-trend-chart";
-import { StockCombobox } from "./stock-combobox";
+import { StockCombobox, type Suggestion } from "./stock-combobox";
 
 /** The opening company's filing, resolved on the server. Null when it could not be. */
 export type PrefetchedOwnership = { symbol: string; data: Ownership } | null;
@@ -171,6 +171,57 @@ function GroupIcon({ group, className }: { group: OwnerGroup | undefined; classN
   );
 }
 
+function sectorGlyph(sector: string): React.ReactNode {
+  const key = sector.toLowerCase();
+  if (/bank|financial|nbfc|insurance/.test(key)) return <path d="M3.5 9.5 12 4l8.5 5.5M5 10v8m4-8v8m6-8v8m4-8v8M3.5 20.5h17" {...iconStroke} />;
+  if (/technology|software|data/.test(key)) {
+    return (
+      <>
+        <rect x="5" y="5" width="14" height="14" rx="2.5" {...iconStroke} />
+        <path d="M9 9h6v6H9zM9 2.8v2.2M15 2.8v2.2M9 19v2.2M15 19v2.2M2.8 9H5M2.8 15H5M19 9h2.2M19 15h2.2" {...iconStroke} />
+      </>
+    );
+  }
+  if (/energy|petro|power|utilities/.test(key)) return <path d="M12.5 3.5 6 12h5l-1 8.5 7-10h-5l.5-7Z" {...iconStroke} />;
+  if (/fmcg|consumer|retail|durables/.test(key)) {
+    return (
+      <>
+        <path d="M6.5 8.5h11l-1.2 10h-8.6l-1.2-10Z" {...iconStroke} />
+        <path d="M9 8.5a3 3 0 0 1 6 0" {...iconStroke} />
+      </>
+    );
+  }
+  if (/auto|aviation|ports|logistics/.test(key)) return <path d="M4 15.5h16M6 15.5l2-6h8l2 6M7 18.5h.01M17 18.5h.01M9 9.5V6h6v3.5" {...iconStroke} />;
+  if (/pharma|healthcare/.test(key)) return <path d="M12 5v14M5 12h14M7.5 7.5l9 9M16.5 7.5l-9 9" {...iconStroke} />;
+  if (/metal|mining|cement|construction|infra|capital/.test(key)) return <path d="M4 19h16M6 19V9l6-4 6 4v10M9 19v-6h6v6" {...iconStroke} />;
+  return (
+    <>
+      <circle cx="12" cy="12" r="8.5" {...iconStroke} />
+      <path d="M8 13.2 10.6 16 16 8" {...iconStroke} />
+    </>
+  );
+}
+
+function SectorIcon({ sector, className }: { sector: string; className: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      {sectorGlyph(sector)}
+    </svg>
+  );
+}
+
+function pickSuggestion(pick: OwnershipQuickPick): Suggestion {
+  return {
+    symbol: pick.symbol,
+    name: pick.name,
+    sector: pick.sector,
+    capTier: pick.capTier,
+    scripCode: "",
+    price: null,
+    changePercent: null,
+  };
+}
+
 export function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
 }
@@ -263,10 +314,13 @@ export function OwnershipBoard({
    * prerendered HTML and in the hydrated board — see `../lib/daily-picks` for why these cannot be
    * drawn in the browser.
    */
-  quickPicks?: readonly string[];
+  quickPicks?: readonly OwnershipQuickPick[];
 }) {
   const [symbol, setSymbol] = useState(OPENING_SYMBOL);
   const [query, setQuery] = useState(OPENING_SYMBOL);
+  const [selectedPick, setSelectedPick] = useState<Suggestion | null>(
+    pickSuggestion(quickPicks.find((pick) => pick.symbol === OPENING_SYMBOL) ?? FALLBACK_QUICK_PICKS[0]),
+  );
   // Seeded from the server when the opening company was resolved there, so the board paints filled
   // in rather than fetching what the page already knows.
   const [data, setData] = useState<Ownership | null>(prefetched?.data ?? null);
@@ -321,9 +375,10 @@ export function OwnershipBoard({
   const error = settled?.error ?? null;
   const shown = !loading && !error ? data : null;
 
-  const choose = (next: string) => {
+  const choose = (next: string, pick?: OwnershipQuickPick) => {
     const wanted = next.trim().toUpperCase();
     setQuery(wanted);
+    setSelectedPick(pick ? pickSuggestion(pick) : null);
     if (wanted) setSymbol(wanted);
     setOpenGroup(null);
   };
@@ -350,23 +405,50 @@ export function OwnershipBoard({
         </div>
 
         <div className="mt-5">
-          <StockCombobox value={query} onChange={setQuery} onSelect={choose} placeholder="Search any listed company" />
+          <StockCombobox
+            value={query}
+            onChange={(next) => {
+              setQuery(next);
+              setSelectedPick(null);
+            }}
+            onSelect={choose}
+            selectedSuggestion={selectedPick}
+            placeholder="Search any listed company"
+          />
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {quickPicks.map((pick) => (
             <button
-              key={pick}
+              key={pick.symbol}
               type="button"
-              onClick={() => choose(pick)}
-              aria-pressed={pick === symbol}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                pick === symbol
-                  ? "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-500/40 dark:bg-violet-500/20 dark:text-violet-200"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 hover:text-violet-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              onClick={() => choose(pick.symbol, pick)}
+              aria-pressed={pick.symbol === symbol}
+              className={`group flex min-h-[68px] items-center gap-3 rounded-2xl border p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                pick.symbol === symbol
+                  ? "border-violet-300 bg-white text-violet-800 ring-2 ring-violet-500/15 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-100"
+                  : "border-slate-200 bg-white/85 text-slate-700 hover:border-violet-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-300 dark:hover:border-violet-500/40"
               }`}
             >
-              {pick}
+              <CompanyLogo symbol={pick.symbol} size={38} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline gap-2">
+                  <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{pick.name}</span>
+                  <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">{pick.symbol}</span>
+                </span>
+                <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 transition group-hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-300"
+                  >
+                    <SectorIcon sector={pick.sector} className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="truncate">{pick.sector}</span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    {pick.capTier}
+                  </span>
+                </span>
+              </span>
             </button>
           ))}
         </div>
