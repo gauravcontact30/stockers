@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import type { DynamicTrio } from "../lib/hero-trios";
-import { HeroTickerProvider, TopMoversTape, type HeroTickerStock } from "./hero-ticker";
+import type { MostBoughtBoard } from "../lib/most-bought";
+import { MostBoughtRibbon } from "./most-bought-ribbon";
 import {
   DataCentreScene,
   DefenceStocksScene,
@@ -36,13 +37,13 @@ export type HeroCarouselProps = {
   /** The three names brokers place highest on their own most-bought lists. Same contract. */
   investorFavourites?: DynamicTrio | null;
   /**
-   * The week's strongest large caps, for the rail and tape that frame every slide.
+   * Today's buying board, for the ribbon under the slider.
    *
-   * Handed to a provider rather than into `slidesFor`, because the strips are drawn by `SceneCard`
-   * and shared by every scene — see `./hero-ticker`. An empty list is what the strips get when the
-   * exchange could not be read, and they render nothing rather than inventing a row.
+   * A prop for the same reason the rankings above are: the ribbon is in the server's HTML before
+   * it ever polls, so the first paint carries real rows instead of an empty rail. Null when the
+   * board could not be read, which the ribbon renders as nothing rather than as an invented row.
    */
-  topWeekly?: readonly HeroTickerStock[];
+  mostBought?: MostBoughtBoard | null;
 };
 
 /**
@@ -93,7 +94,7 @@ export function HeroCarousel({
   initialPerformance = [],
   yearGainers = null,
   investorFavourites = null,
-  topWeekly = [],
+  mostBought = null,
 }: HeroCarouselProps) {
   const slides = slidesFor({ initialPerformance, yearGainers, investorFavourites });
   const [activeSlide, setActiveSlide] = useState(0);
@@ -129,7 +130,7 @@ export function HeroCarousel({
   }, [activeSlide]);
 
   return (
-    <HeroTickerProvider stocks={topWeekly}>
+    <>
       {/* The page still needs exactly one h1 for a screen reader and for search, but the visible
           headline was cut, so the site name carries it out of sight instead. */}
       <h1 className="sr-only">StockersAI — AI stock research for Indian investors</h1>
@@ -192,8 +193,8 @@ export function HeroCarousel({
         </div>
       </section>
       <div className="w-full bg-slate-100 px-3 pb-4 text-slate-900 sm:px-5 dark:bg-slate-950 dark:text-white">
-        <TopMoversTape palette={MINT} />
+        <MostBoughtRibbon initial={mostBought} />
       </div>
-    </HeroTickerProvider>
+    </>
   );
 }

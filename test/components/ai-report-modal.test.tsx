@@ -321,67 +321,35 @@ describe("AiReportModal", () => {
     });
   });
 
-  describe("ModalLogo fallback cycle", () => {
-    it("renders the display-name initial immediately when there is no logoUrl", () => {
-      render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} />);
+  describe("the company mark in the modal chrome", () => {
+    it("asks the symbol store for the stock's own logo", () => {
+      const { baseElement } = render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} />);
+
+      expect(baseElement.querySelector('img[src="https://images.dhan.co/symbol/TCS.png"]')).not.toBeNull();
+      // The host that no longer serves logos is never asked, here or anywhere else.
+      expect(baseElement.querySelector('img[src*="clearbit"]')).toBeNull();
+    });
+
+    it("falls back to the display-name initial when there is no stock to look up", () => {
+      render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={null} companyName="Tata Consultancy" />);
       expect(screen.getByText("T")).toBeInTheDocument();
     });
 
-    it("falls back to '?' when there is neither a logo nor any display name", () => {
+    it("falls back to '?' when there is neither a stock nor any display name", () => {
       render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={null} />);
       expect(screen.getByText("?")).toBeInTheDocument();
     });
 
-    it("cycles clearbit -> google favicon -> initial letter on repeated image errors", () => {
-      const { baseElement } = render(
-        <AiReportModal
-          open={true}
-          onClose={jest.fn()}
-          loading={false}
-          analysis={baseAnalysis}
-          logoUrl="https://www.google.com/s2/favicons?domain=tcs.com&sz=64"
-        />
-      );
+    it("draws a monogram once every real source has failed", () => {
+      const { baseElement } = render(<AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} />);
 
-      const clearbitImg = baseElement.querySelector('img[src="https://logo.clearbit.com/tcs.com?size=128"]');
-      expect(clearbitImg).not.toBeNull();
-      fireEvent.error(clearbitImg as HTMLImageElement);
+      let image = baseElement.querySelector('img[alt$="(TCS) logo"]');
+      while (image) {
+        fireEvent.error(image);
+        image = baseElement.querySelector('img[alt$="(TCS) logo"]');
+      }
 
-      const googleImg = baseElement.querySelector('img[src="https://www.google.com/s2/favicons?domain=tcs.com&sz=64"]');
-      expect(googleImg).not.toBeNull();
-      fireEvent.error(googleImg as HTMLImageElement);
-
-      expect(screen.getByText("T")).toBeInTheDocument();
-    });
-
-    it("falls straight to the initial letter after one error when there is no clearbit candidate", () => {
-      const { baseElement } = render(
-        <AiReportModal
-          open={true}
-          onClose={jest.fn()}
-          loading={false}
-          analysis={baseAnalysis}
-          logoUrl="https://www.google.com/s2/favicons?sz=64"
-        />
-      );
-
-      const img = baseElement.querySelector('img[src="https://www.google.com/s2/favicons?sz=64"]');
-      expect(img).not.toBeNull();
-      fireEvent.error(img as HTMLImageElement);
-
-      expect(screen.getByText("T")).toBeInTheDocument();
-    });
-
-    it("treats an unparseable logoUrl as having no clearbit candidate (catch branch)", () => {
-      const { baseElement } = render(
-        <AiReportModal open={true} onClose={jest.fn()} loading={false} analysis={baseAnalysis} logoUrl="not-a-valid-url" />
-      );
-
-      const img = baseElement.querySelector('img[src="not-a-valid-url"]');
-      expect(img).not.toBeNull();
-      fireEvent.error(img as HTMLImageElement);
-
-      expect(screen.getByText("T")).toBeInTheDocument();
+      expect(screen.getAllByText("TCS").length).toBeGreaterThan(0);
     });
   });
 

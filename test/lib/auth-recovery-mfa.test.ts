@@ -7,17 +7,21 @@ import { POST as resetPassword } from "../../app/api/auth/reset-password/route";
 import { POST as signin } from "../../app/api/auth/signin/route";
 import { POST as verifyMfa } from "../../app/api/auth/mfa/verify/route";
 import { authenticateUser, createUser, updateUser } from "../../app/lib/store";
-import { sendMail } from "../../app/lib/mailer";
-import { sendSms } from "../../app/lib/sms";
+import { mailConfigured, passwordResetCodeEmail, passwordResetEmail, sendMail } from "../../app/lib/mailer";
+import { passwordResetSms, sendSms } from "../../app/lib/sms";
 
 jest.mock("../../app/lib/mailer", () => ({
   appOrigin: () => "http://localhost:3000",
+  mailConfigured: jest.fn(() => true),
   passwordResetEmail: jest.fn(({ resetUrl }) => ({ subject: "reset", html: resetUrl, text: resetUrl })),
+  passwordResetCodeEmail: jest.fn(({ code }) => ({ subject: `${code} is your code`, html: code, text: code })),
   sendMail: jest.fn(async () => ({ ok: true, transport: "resend" })),
 }));
 
 jest.mock("../../app/lib/sms", () => ({
   mfaOtpSms: jest.fn((code: string) => `Your code is ${code}`),
+  passwordResetSms: jest.fn((code: string) => `Your reset code is ${code}`),
+  smsConfigured: jest.fn(() => true),
   sendSms: jest.fn(async () => ({ ok: true, transport: "twilio" })),
 }));
 
@@ -53,19 +57,36 @@ function postJson(route: (request: Request) => Promise<Response>, pathName: stri
 }
 
 describe("password recovery", () => {
-  it("emails a reset link and lets the user sign in with the new password", async () => {
+  /** The six digits, as they were handed to the mailer. */
+  function codeFromMail(): string {
+    const call = (passwordResetCodeEmail as jest.Mock).mock.calls[0][0] as { code: string };
+    return call.code;
+  }
+
+  it("sends one code over every channel the account has, and takes it back to set a password", async () => {
     await createUser({ name: "Aarav Sharma", email: "aarav@example.com", password: "Oldpass123", mobile: "9876543210" });
 
     const forgot = await postJson(forgotPassword, "/api/auth/forgot-password", { email: "aarav@example.com" });
     expect(forgot.status).toBe(200);
-    expect(sendMail).toHaveBeenCalledTimes(1);
 
-    const message = (sendMail as jest.Mock).mock.calls[0][0] as { text: string };
-    const token = new URL(message.text.trim().split("\n").find((line) => line.startsWith("http://")) ?? "").searchParams.get("reset");
-    expect(token).toEqual(expect.any(String));
+    // The code mail and the courtesy link mail, plus the SMS.
+    expect(sendMail).toHaveBeenCalledTimes(2);
+    expect(sendSms).toHaveBeenCalledTimes(1);
+    const code = codeFromMail();
+    expect(code).toMatch(/^\d{6}$/);
+    expect((passwordResetSms as jest.Mock).mock.calls[0][0]).toBe(code);
+
+    // Both destinations come back masked, and neither is the raw address.
+    const body = (await forgot.json()) as { channels: { kind: string; target: string; state: string }[] };
+    expect(body.channels).toEqual([
+      { kind: "email", target: expect.stringContaining("@example.com"), state: "sent" },
+      { kind: "sms", target: expect.stringContaining("3210"), state: "sent" },
+    ]);
+    expect(body.channels[0].target).not.toBe("aarav@example.com");
 
     const reset = await postJson(resetPassword, "/api/auth/reset-password", {
-      token,
+      email: "aarav@example.com",
+      code,
       password: "Newpass123",
       confirmPassword: "Newpass123",
     });
@@ -75,11 +96,73 @@ describe("password recovery", () => {
     await expect(authenticateUser("aarav@example.com", "Newpass123")).resolves.toMatchObject({ email: "aarav@example.com" });
   });
 
+  it("still accepts the link from the email, which carries the same code", async () => {
+    await createUser({ name: "Aarav Sharma", email: "aarav@example.com", password: "Oldpass123" });
+    await postJson(forgotPassword, "/api/auth/forgot-password", { email: "aarav@example.com" });
+
+    const link = (passwordResetEmail as jest.Mock).mock.calls[0][0] as { resetUrl: string };
+    const url = new URL(link.resetUrl);
+    expect(url.searchParams.get("email")).toBe("aarav@example.com");
+
+    const reset = await postJson(resetPassword, "/api/auth/reset-password", {
+      email: url.searchParams.get("email"),
+      code: url.searchParams.get("reset"),
+      password: "Newpass123",
+      confirmPassword: "Newpass123",
+    });
+
+    expect(reset.status).toBe(200);
+  });
+
+  it("refuses a wrong code, and destroys the code after five wrong guesses", async () => {
+    await createUser({ name: "Aarav Sharma", email: "aarav@example.com", password: "Oldpass123" });
+    await postJson(forgotPassword, "/api/auth/forgot-password", { email: "aarav@example.com" });
+    const code = codeFromMail();
+    const wrong = code === "000000" ? "111111" : "000000";
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const bad = await postJson(resetPassword, "/api/auth/reset-password", {
+        email: "aarav@example.com",
+        code: wrong,
+        password: "Newpass123",
+        confirmPassword: "Newpass123",
+      });
+      expect(bad.status).toBe(400);
+    }
+
+    // The real code is worthless now: guessing burned it.
+    const late = await postJson(resetPassword, "/api/auth/reset-password", {
+      email: "aarav@example.com",
+      code,
+      password: "Newpass123",
+      confirmPassword: "Newpass123",
+    });
+
+    expect(late.status).toBe(400);
+    await expect(authenticateUser("aarav@example.com", "Oldpass123")).resolves.toMatchObject({ email: "aarav@example.com" });
+  });
+
+  it("reports a channel that could not deliver rather than claiming it was sent", async () => {
+    (sendMail as jest.Mock).mockResolvedValue({ ok: true, transport: "outbox" });
+    (mailConfigured as jest.Mock).mockReturnValue(false);
+    await createUser({ name: "Aarav Sharma", email: "aarav@example.com", password: "Oldpass123" });
+
+    const response = await postJson(forgotPassword, "/api/auth/forgot-password", { email: "aarav@example.com" });
+    const body = (await response.json()) as { channels: { state: string }[]; message: string };
+
+    expect(body.channels[0].state).toBe("unconfigured");
+    expect(body.message).toContain("couldn't deliver");
+
+    // These two are module-level mocks: left as they are, the next test inherits a broken mailer.
+    (sendMail as jest.Mock).mockResolvedValue({ ok: true, transport: "resend" });
+    (mailConfigured as jest.Mock).mockReturnValue(true);
+  });
+
   it("does not reveal whether an unknown email exists", async () => {
     const response = await postJson(forgotPassword, "/api/auth/forgot-password", { email: "missing@example.com" });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(await response.json()).toMatchObject({ ok: true, channels: [] });
     expect(sendMail).not.toHaveBeenCalled();
   });
 });

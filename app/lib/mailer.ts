@@ -1,18 +1,19 @@
 ﻿// Sending mail.
 //
-// There is deliberately no SMTP client and no new dependency here. This app ships with three
-// production dependencies (next, react, react-dom) and reaches every other service â€” OpenRouter,
-// NSE, Razorpay â€” over plain `fetch`. Mail is no different: Resend's HTTP API takes a JSON POST,
-// which is the whole transport.
+// Still no new dependency: this app ships with three production dependencies (next, react,
+// react-dom) and reaches every other service â€” OpenRouter, NSE, Razorpay â€” over plain `fetch`.
+// Three of the four providers below are a JSON POST, and the fourth is ./smtp, ~120 lines of
+// `node:tls` rather than a megabyte of nodemailer.
 //
-// Required environment to actually deliver:
-//   RESEND_API_KEY   the API key from resend.com
-//   MAIL_FROM        the verified sender, e.g. "StockersAI <hello@yourdomain.com>"
+// Four providers rather than one, because a deployment with none configured is not a hypothetical:
+// it is what "the password reset email never arrives" turned out to mean. See the note on the
+// provider order below for what each one costs (nothing, at this volume) and what it needs.
 //
-// Without them nothing is sent and nothing throws: the message is appended to a local outbox file
-// instead, so the sign-up flow can be developed and tested end to end with no credentials and no
-// mail leaving the machine. `transport` on the result says which of the two happened, so a caller
-// (and a test) can tell a real delivery from a recorded one.
+// With none of them configured nothing is sent and nothing throws: the message is appended to a
+// local outbox file instead, so the sign-up flow can be developed and tested end to end with no
+// credentials and no mail leaving the machine. `transport` on the result says which happened, so a
+// caller (and a test, and the recovery panel on the sign-in page) can tell a real delivery from a
+// recorded one.
 //
 // Sending must never be able to fail a sign-up. Every entry point here resolves to a result object
 // rather than throwing, and the caller treats a failure as "the account still exists, the mail
@@ -24,6 +25,7 @@ import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { sendSmtpMail, smtpConfig } from "./smtp";
 import { TRIAL_DAYS } from "./subscription-policy";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
@@ -38,15 +40,74 @@ export type MailMessage = {
   text: string;
 };
 
+/** Where a message actually went. Anything but "outbox" means it left this server. */
+export type MailTransport = "resend" | "brevo" | "sendgrid" | "smtp" | "outbox";
+
 export type MailResult = {
   ok: boolean;
-  /** "resend" when it really went out, "outbox" when it was only recorded locally. */
-  transport: "resend" | "outbox";
+  transport: MailTransport;
   error?: string;
 };
 
+/**
+ * The mail providers, in the order they are tried.
+ *
+ * More than one, because "no mail is arriving" was a real report against a deployment that had
+ * none configured, and the fix has to be something the operator can complete in five minutes. Each
+ * of these has a free tier that comfortably covers this app's volume, and the last one needs no
+ * new account at all — just a mailbox the operator already owns:
+ *
+ *   resend     RESEND_API_KEY + MAIL_FROM        3,000/month free, needs a verified domain
+ *   brevo      BREVO_API_KEY + MAIL_FROM         300/day free, sends from any verified address
+ *   sendgrid   SENDGRID_API_KEY + MAIL_FROM      100/day free
+ *   smtp       SMTP_HOST/USER/PASSWORD           a Gmail app password, or the domain's own mailbox
+ *
+ * The first one configured wins; a configured provider that *fails* falls through to the next, so
+ * a provider having a bad afternoon costs a retry rather than a locked-out account. What none of
+ * them can be is keyless — there is no service that will send mail on behalf of an anonymous
+ * server, and pretending otherwise is what an empty outbox looks like.
+ */
+const MAIL_ENV_HINT =
+  "Set RESEND_API_KEY, BREVO_API_KEY, SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASSWORD (with MAIL_FROM) to deliver mail.";
+
+const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+const SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send";
+
+function mailFrom(): string {
+  return process.env.MAIL_FROM?.trim() || process.env.SMTP_USER?.trim() || "";
+}
+
+export function resendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim() && mailFrom());
+}
+
+export function brevoConfigured(): boolean {
+  return Boolean(process.env.BREVO_API_KEY?.trim() && mailFrom());
+}
+
+export function sendgridConfigured(): boolean {
+  return Boolean(process.env.SENDGRID_API_KEY?.trim() && mailFrom());
+}
+
+/** True when *some* provider can deliver, which is the only question the callers ask. */
 export function mailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+  return resendConfigured() || brevoConfigured() || sendgridConfigured() || smtpConfig() !== null;
+}
+
+/** Which provider is doing the sending, for the admin health report. */
+export function mailTransportName(): MailTransport | null {
+  if (resendConfigured()) return "resend";
+  if (brevoConfigured()) return "brevo";
+  if (sendgridConfigured()) return "sendgrid";
+  if (smtpConfig()) return "smtp";
+  return null;
+}
+
+/** `Name <address>` split into the pair the JSON APIs want. */
+function fromParts(): { email: string; name?: string } {
+  const value = mailFrom();
+  const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value);
+  return match ? { name: match[1] || undefined, email: match[2] } : { email: value };
 }
 
 /**
@@ -81,45 +142,114 @@ async function recordToOutbox(message: MailMessage, reason: string): Promise<Mai
   }
 }
 
-/**
- * Sends one message, or records it if no provider is configured.
- *
- * Never throws and never rejects.
- */
-export async function sendMail(message: MailMessage): Promise<MailResult> {
-  if (!mailConfigured()) {
-    return recordToOutbox(message, "RESEND_API_KEY or MAIL_FROM not set");
-  }
+/** One provider attempt: the reason string is what lands in the outbox if everything fails. */
+type Attempt = { transport: MailTransport; send: () => Promise<{ ok: boolean; error?: string }> };
 
+async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(RESEND_ENDPOINT, {
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.MAIL_FROM,
-        to: [message.to],
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-      }),
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15_000),
     });
 
-    if (!response.ok) {
-      // The provider refused it. Keep the message rather than dropping it on the floor, so the
-      // body can be inspected and resent once the configuration is fixed.
-      const detail = await response.text().catch(() => "");
-      await recordToOutbox(message, `resend responded ${response.status}: ${detail.slice(0, 200)}`);
-      return { ok: false, transport: "resend", error: `Mail provider returned ${response.status}.` };
-    }
-
-    return { ok: true, transport: "resend" };
+    if (response.ok) return { ok: true };
+    const detail = await response.text().catch(() => "");
+    return { ok: false, error: `responded ${response.status}: ${detail.slice(0, 200)}` };
   } catch (error) {
-    await recordToOutbox(message, `network error: ${String(error).slice(0, 200)}`);
-    return { ok: false, transport: "resend", error: "Could not reach the mail provider." };
+    return { ok: false, error: String(error).slice(0, 200) };
   }
+}
+
+function attemptsFor(message: MailMessage): Attempt[] {
+  const from = fromParts();
+  const attempts: Attempt[] = [];
+
+  if (resendConfigured()) {
+    attempts.push({
+      transport: "resend",
+      send: () =>
+        postJson(
+          RESEND_ENDPOINT,
+          { Authorization: `Bearer ${process.env.RESEND_API_KEY?.trim()}` },
+          { from: mailFrom(), to: [message.to], subject: message.subject, html: message.html, text: message.text },
+        ),
+    });
+  }
+
+  if (brevoConfigured()) {
+    attempts.push({
+      transport: "brevo",
+      send: () =>
+        postJson(
+          BREVO_ENDPOINT,
+          { "api-key": process.env.BREVO_API_KEY?.trim() ?? "" },
+          {
+            sender: { email: from.email, ...(from.name ? { name: from.name } : {}) },
+            to: [{ email: message.to }],
+            subject: message.subject,
+            htmlContent: message.html,
+            textContent: message.text,
+          },
+        ),
+    });
+  }
+
+  if (sendgridConfigured()) {
+    attempts.push({
+      transport: "sendgrid",
+      send: () =>
+        postJson(
+          SENDGRID_ENDPOINT,
+          { Authorization: `Bearer ${process.env.SENDGRID_API_KEY?.trim()}` },
+          {
+            personalizations: [{ to: [{ email: message.to }] }],
+            from: { email: from.email, ...(from.name ? { name: from.name } : {}) },
+            subject: message.subject,
+            content: [
+              { type: "text/plain", value: message.text },
+              { type: "text/html", value: message.html },
+            ],
+          },
+        ),
+    });
+  }
+
+  const smtp = smtpConfig();
+  if (smtp) {
+    attempts.push({
+      transport: "smtp",
+      send: () => sendSmtpMail(smtp, { from: mailFrom() || smtp.user, to: message.to, subject: message.subject, html: message.html, text: message.text }),
+    });
+  }
+
+  return attempts;
+}
+
+/**
+ * Sends one message through the first provider that takes it.
+ *
+ * Never throws and never rejects: a caller in the middle of a sign-up or a password reset must not
+ * fail because a mail server did. A message no provider accepted is recorded to the local outbox
+ * with every provider's complaint attached, which is what makes a misconfiguration diagnosable
+ * instead of merely silent.
+ */
+export async function sendMail(message: MailMessage): Promise<MailResult> {
+  const attempts = attemptsFor(message);
+  if (attempts.length === 0) {
+    return recordToOutbox(message, `No mail provider configured. ${MAIL_ENV_HINT}`);
+  }
+
+  const failures: string[] = [];
+  for (const attempt of attempts) {
+    const result = await attempt.send();
+    if (result.ok) return { ok: true, transport: attempt.transport };
+    failures.push(`${attempt.transport} ${result.error ?? "failed"}`);
+  }
+
+  await recordToOutbox(message, failures.join(" | "));
+  return { ok: false, transport: attempts[attempts.length - 1].transport, error: `Mail provider rejected the message: ${failures[0]}` };
 }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +367,56 @@ export function passwordResetEmail(params: { name: string; resetUrl: string }): 
 </html>`;
 
   return { subject: `Reset your StockersAI password`, html, text };
+}
+
+/**
+ * The six-digit recovery code, as mail.
+ *
+ * Deliberately linkless. A code can be read off a locked phone's notification and typed into the
+ * page the reader already has open, which is the whole point of it: it survives a mail client that
+ * strips links, a forwarded message, and a reader on a different device from the one they asked
+ * from. It is also the half of recovery that still works when a link never arrives at all.
+ *
+ * The code is in the subject line too, so it can be read without opening the message.
+ */
+export function passwordResetCodeEmail(params: { name: string; code: string; minutes: number }): Omit<MailMessage, "to"> {
+  const name = escapeHtml(params.name);
+  const code = escapeHtml(params.code);
+
+  const text = [
+    `Hi ${params.name},`,
+    "",
+    `Your StockersAI password reset code is ${params.code}`,
+    "",
+    `Type it on the sign-in page to choose a new password. It expires in ${params.minutes} minutes.`,
+    "If you did not ask to reset your password, you can ignore this message — your password has not changed.",
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0f172a">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px">
+      <tr>
+        <td style="height:4px;background:linear-gradient(90deg,#38bdf8,#22c55e,#f59e0b);border-radius:16px 16px 0 0"></td>
+      </tr>
+      <tr>
+        <td style="padding:32px">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0284c7">${BRAND}</p>
+          <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25">Your password reset code</h1>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569">
+            Hi ${name}, type this code on the sign-in page to choose a new password.
+          </p>
+          <p style="margin:0;padding:16px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;font-size:32px;font-weight:800;letter-spacing:.35em;text-align:center">${code}</p>
+          <p style="margin:24px 0 0;font-size:12px;color:#94a3b8">
+            The code expires in ${params.minutes} minutes. If you did not ask for it, you can ignore this message — your password has not changed.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject: `${params.code} is your StockersAI password reset code`, html, text };
 }
 
 /**

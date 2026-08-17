@@ -484,4 +484,143 @@ describe("AuthForm", () => {
       expect(screen.queryByText("This email is already registered.")).not.toBeInTheDocument();
     });
   });
+
+  /**
+   * Recovery, which is the flow that had a reader pasting a token out of an email that never
+   * arrived. It now runs entirely on the sign-in page: ask for a code, type the code, done.
+   */
+  describe("forgot password", () => {
+    const CODE_SENT = {
+      ok: true,
+      body: {
+        ok: true,
+        expiresInMinutes: 15,
+        channels: [
+          { kind: "email", target: "g••••••30@gmail.com", state: "sent" },
+          { kind: "sms", target: "••••••0871", state: "sent" },
+        ],
+        message: "Code sent to g••••••30@gmail.com and SMS to ••••••0871.",
+      },
+    };
+
+    it("asks for the code first, then names every channel it actually reached", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "reader@example.com");
+      await user.click(screen.getByText("Forgot password?"));
+      expect(screen.getByText("Step 1 of 2 - where should the code go?")).toBeInTheDocument();
+
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByText("Step 2 of 2 - enter the code and a new password")).toBeInTheDocument();
+      expect(screen.getByText("g••••••30@gmail.com")).toBeInTheDocument();
+      expect(screen.getByText("••••••0871")).toBeInTheDocument();
+      expect(screen.getAllByText("sent")).toHaveLength(2);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/auth/forgot-password",
+        expect.objectContaining({ body: JSON.stringify({ email: "reader@example.com" }) }),
+      );
+    });
+
+    it("says plainly when a channel could not deliver, instead of asking the reader to keep waiting", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce({
+        ok: true,
+        body: {
+          ok: true,
+          channels: [{ kind: "email", target: "g••••••30@gmail.com", state: "unconfigured" }],
+          message: "We couldn't deliver a code on this deployment.",
+        },
+      });
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByText("not set up on this site yet")).toBeInTheDocument();
+    });
+
+    it("sends the typed code with the new password, then hands the reader back a filled-in sign-in", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.type(screen.getByPlaceholderText("you@example.com"), "reader@example.com");
+      await user.click(screen.getByText("Forgot password?"));
+      await user.click(screen.getByText("Send me a code"));
+      await screen.findByPlaceholderText("000000");
+
+      mockFetchOnce({ ok: true, body: { ok: true, email: "reader@example.com", message: "Password updated." } });
+      await user.type(screen.getByPlaceholderText("000000"), "123456");
+      await user.type(screen.getByPlaceholderText("New password"), "market2026");
+      await user.type(screen.getByPlaceholderText("Confirm new password"), "market2026");
+      await user.click(screen.getByText("Update password"));
+
+      expect(await screen.findByText("Password updated. Sign in with your new password.")).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/auth/reset-password",
+        expect.objectContaining({
+          body: JSON.stringify({
+            email: "reader@example.com",
+            code: "123456",
+            password: "market2026",
+            confirmPassword: "market2026",
+          }),
+        }),
+      );
+      // The panel closes and the sign-in form knows who they are.
+      expect(screen.queryByPlaceholderText("000000")).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText("you@example.com")).toHaveValue("reader@example.com");
+    });
+
+    it("keeps the panel open and says why when the code is wrong", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+      await screen.findByPlaceholderText("000000");
+
+      mockFetchOnce({ ok: false, body: { error: "That code is wrong or has expired. Send a new one and try again." } });
+      await user.type(screen.getByPlaceholderText("000000"), "000111");
+      await user.type(screen.getByPlaceholderText("New password"), "market2026");
+      await user.type(screen.getByPlaceholderText("Confirm new password"), "market2026");
+      await user.click(screen.getByText("Update password"));
+
+      expect(await screen.findByText("That code is wrong or has expired. Send a new one and try again.")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("000000")).toBeInTheDocument();
+    });
+
+    it("holds the resend button for a cooldown, and can go back to a different email", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByText("Resend code in 45s")).toBeDisabled();
+
+      await user.click(screen.getByText("Use a different email"));
+      expect(screen.getByText("Step 1 of 2 - where should the code go?")).toBeInTheDocument();
+    });
+
+    it("survives the network dropping mid-request", async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockRejectedValue(new Error("offline")) as unknown as typeof fetch;
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByText("Network error. Please check your connection and try again.")).toBeInTheDocument();
+    });
+  });
 });

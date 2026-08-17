@@ -1,8 +1,16 @@
+import type { PredictionPerformance } from "../../app/lib/bse-ai-prediction-accuracy";
 import {
   calculateAccuracy,
   getBseAiPredictionAccuracy,
+  marketSessionState,
+  scoreCap,
   isBeforePredictionCutoff,
+  isBeforePredictionLock,
+  isTradingDay,
+  nextPredictionLockAt,
   predictionCutoffAt,
+  predictionLockAt,
+  runDailyPredictionLock,
   tradingDayKey,
 } from "../../app/lib/bse-ai-prediction-accuracy";
 import { readJsonCache, writeJsonCache } from "../../app/lib/data-cache";
@@ -172,6 +180,33 @@ describe("IST cutoff", () => {
     expect(isBeforePredictionCutoff(new Date("2026-08-16T03:44:00.000Z"))).toBe(true);
     expect(isBeforePredictionCutoff(new Date("2026-08-16T03:45:00.000Z"))).toBe(false);
   });
+
+  it("locks at 8:50 AM IST, 25 minutes before the open", () => {
+    expect(predictionLockAt("2026-08-17")).toBe("2026-08-17T08:50:00+05:30");
+    // 03:19 UTC is 8:49 IST; 03:20 UTC is 8:50 IST.
+    expect(isBeforePredictionLock(new Date("2026-08-17T03:19:00.000Z"))).toBe(true);
+    expect(isBeforePredictionLock(new Date("2026-08-17T03:20:00.000Z"))).toBe(false);
+  });
+
+  it("treats weekends and configured holidays as non-trading days", () => {
+    expect(isTradingDay("2026-08-17")).toBe(true);
+    expect(isTradingDay("2026-08-15")).toBe(false);
+    expect(isTradingDay("2026-08-16")).toBe(false);
+
+    process.env.BSE_MARKET_HOLIDAYS = "2026-08-17, 2026-08-18";
+    expect(isTradingDay("2026-08-17")).toBe(false);
+    expect(isTradingDay("2026-08-19")).toBe(true);
+    delete process.env.BSE_MARKET_HOLIDAYS;
+  });
+
+  it("points at the next 8:50 AM IST lock, skipping the weekend", () => {
+    // Monday, before the lock: today's own 8:50.
+    expect(nextPredictionLockAt(new Date("2026-08-17T02:00:00.000Z"))).toBe("2026-08-17T08:50:00+05:30");
+    // Monday, after the lock: tomorrow's.
+    expect(nextPredictionLockAt(new Date("2026-08-17T05:00:00.000Z"))).toBe("2026-08-18T08:50:00+05:30");
+    // Saturday: the following Monday.
+    expect(nextPredictionLockAt(new Date("2026-08-15T05:00:00.000Z"))).toBe("2026-08-17T08:50:00+05:30");
+  });
 });
 
 describe("calculateAccuracy", () => {
@@ -197,13 +232,159 @@ describe("calculateAccuracy", () => {
   });
 });
 
+describe("marketSessionState", () => {
+  it("reports where the BSE day stands", () => {
+    expect(marketSessionState(new Date("2026-08-16T05:00:00.000Z"))).toBe("holiday");
+    expect(marketSessionState(new Date("2026-08-17T03:00:00.000Z"))).toBe("pre-open");
+    expect(marketSessionState(new Date("2026-08-17T05:00:00.000Z"))).toBe("live");
+    expect(marketSessionState(new Date("2026-08-17T10:05:00.000Z"))).toBe("closed");
+  });
+});
+
+describe("scoreCap", () => {
+  function perf(overrides: Partial<PredictionPerformance> & Pick<PredictionPerformance, "symbol" | "rank">): PredictionPerformance {
+    return {
+      stockName: `${overrides.symbol} Ltd`,
+      bseCode: null,
+      sector: "Capital Goods",
+      capTier: "Large",
+      price: 100,
+      previousClose: 100,
+      change: 0,
+      changePercent: 0,
+      dayHigh: 101,
+      dayLow: 99,
+      volume: 100,
+      turnoverCr: 1,
+      live: true,
+      asOf: null,
+      priceSource: "BSE Bhavcopy",
+      matchedActualRank: null,
+      rankDifference: null,
+      ...overrides,
+    };
+  }
+
+  it("scores hits, rank precision, edge and confidence honesty from today's two lists", () => {
+    const predicted = [
+      perf({ symbol: "AAA", rank: 1, changePercent: 9, confidence: 80, matchedActualRank: 1, rankDifference: 0 }),
+      perf({ symbol: "BBB", rank: 2, changePercent: 5, confidence: 80, matchedActualRank: 3, rankDifference: -1 }),
+      perf({ symbol: "CCC", rank: 3, changePercent: 1, confidence: 80 }),
+      perf({ symbol: "DDD", rank: 4, changePercent: 1, confidence: 80 }),
+    ];
+    const actual = [
+      perf({ symbol: "AAA", rank: 1, changePercent: 9 }),
+      perf({ symbol: "ZZZ", rank: 2, changePercent: 6 }),
+      perf({ symbol: "BBB", rank: 3, changePercent: 5 }),
+      perf({ symbol: "YYY", rank: 4, changePercent: 4 }),
+    ];
+
+    const score = scoreCap(predicted, actual, 4);
+
+    expect(score.hitCount).toBe(2);
+    expect(score.hitRate).toBe(50);
+    // One exact rank (100) and one out by a single place (67), averaged.
+    expect(score.rankAccuracy).toBe(83);
+    expect(score.avgPickMovePercent).toBe(4);
+    expect(score.avgMarketMovePercent).toBe(6);
+    expect(score.edgePercent).toBe(-2);
+    expect(score.beatMarketCount).toBe(1);
+    expect(score.avgConfidence).toBe(80);
+    // Claimed 80%, delivered 50%: 30 points of over-confidence.
+    expect(score.confidenceCalibration).toBe(70);
+    expect(score.lockIntegrity).toBe(100);
+    // 50 hit rate, 83 rank accuracy, 70 calibration and a 30 edge score, blended 50/20/15/15.
+    expect(score.intelligenceScore).toBe(57);
+  });
+
+  it("scores nothing but the market average when no picks are locked", () => {
+    const score = scoreCap([], [perf({ symbol: "ZZZ", rank: 1, changePercent: 8 })]);
+
+    expect(score.avgMarketMovePercent).toBe(8);
+    expect(score.hitCount).toBe(0);
+    expect(score.intelligenceScore).toBe(0);
+    expect(score.lockIntegrity).toBe(0);
+  });
+
+  it("gives no rank or confidence credit when nothing matched", () => {
+    const score = scoreCap(
+      [perf({ symbol: "AAA", rank: 1, changePercent: 2 })],
+      [perf({ symbol: "ZZZ", rank: 1, changePercent: 8 })],
+      1,
+    );
+
+    expect(score.rankAccuracy).toBe(0);
+    expect(score.confidenceCalibration).toBe(0);
+    expect(score.hitRate).toBe(0);
+  });
+});
+
+describe("runDailyPredictionLock", () => {
+  it("locks ten picks per cap tier when the 8:50 AM IST run fires", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-14") : null));
+
+    const run = await runDailyPredictionLock(new Date("2026-08-17T03:20:00.000Z"));
+
+    expect(run).toEqual(
+      expect.objectContaining({
+        ok: true,
+        action: "generated",
+        date: "2026-08-17",
+        lockAt: "2026-08-17T08:50:00+05:30",
+        tradingDay: true,
+        picks: { Large: 10, Mid: 10, Small: 10 },
+      }),
+    );
+    expect(write).toHaveBeenCalledWith("bse-ai-locked-picks.json", expect.objectContaining({ date: "2026-08-17" }));
+  });
+
+  it("leaves a day that is already locked alone, so a retry cannot change the ten stocks", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-17") : null));
+
+    const run = await runDailyPredictionLock(new Date("2026-08-17T03:25:00.000Z"));
+
+    expect(run.action).toBe("already-locked");
+    expect(run.ok).toBe(true);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("re-locks the day when an admin forces it", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-17") : null));
+
+    const run = await runDailyPredictionLock(new Date("2026-08-17T03:25:00.000Z"), { force: true });
+
+    expect(run.action).toBe("generated");
+    expect(write).toHaveBeenCalledWith("bse-ai-locked-picks.json", expect.objectContaining({ date: "2026-08-17" }));
+  });
+
+  it("still locks the day when the scheduler fires a few minutes early", async () => {
+    // 03:17 UTC is 8:47 IST — inside the scheduler's grace window, still before the open.
+    const run = await runDailyPredictionLock(new Date("2026-08-17T03:17:00.000Z"));
+
+    expect(run.action).toBe("generated");
+    expect(run.date).toBe("2026-08-17");
+  });
+
+  it("skips a run that fires early, on a closed day, or after the session", async () => {
+    const early = await runDailyPredictionLock(new Date("2026-08-17T02:00:00.000Z"));
+    const holiday = await runDailyPredictionLock(new Date("2026-08-16T03:20:00.000Z"));
+    const late = await runDailyPredictionLock(new Date("2026-08-17T10:05:00.000Z"));
+
+    expect(early.action).toBe("skipped-early");
+    expect(holiday.action).toBe("skipped-holiday");
+    expect(late.action).toBe("skipped-closed");
+    expect([early, holiday, late].every((run) => run.ok)).toBe(true);
+    expect(write).not.toHaveBeenCalled();
+  });
+});
+
 describe("getBseAiPredictionAccuracy", () => {
   it("creates and stores a fixed prediction during the live session if none was locked pre-open", async () => {
-    const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T04:00:00.000Z"));
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T04:00:00.000Z"));
 
     expect(report.status).toBe("locked");
     expect(report.source).toBe("heuristic");
-    expect(report.message).toContain("initialized after the 9:15 AM IST cutoff");
+    expect(report.message).toContain("initialized after the 9:15 AM IST open");
     expect(report.predictionsByCap.Large).toHaveLength(10);
     expect(report.predictionsByCap.Mid).toHaveLength(10);
     expect(report.predictionsByCap.Small).toHaveLength(10);
@@ -216,7 +397,7 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(write).toHaveBeenCalledWith(
       "bse-ai-locked-picks.json",
       expect.objectContaining({
-        date: "2026-08-16",
+        date: "2026-08-17",
         generatedAfterCutoff: true,
         picksByCap: expect.objectContaining({
           Large: expect.any(Array),
@@ -230,7 +411,7 @@ describe("getBseAiPredictionAccuracy", () => {
   });
 
   it("does not create a new prediction after market close if none was locked", async () => {
-    const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T10:05:00.000Z"));
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T10:05:00.000Z"));
 
     expect(report.status).toBe("not-generated");
     expect(report.predictions).toEqual([]);
@@ -241,8 +422,8 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(news).not.toHaveBeenCalled();
   });
 
-  it("generates and stores a locked prediction before the cutoff", async () => {
-    const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T03:30:00.000Z"));
+  it("generates and stores a locked prediction between the 8:50 lock and the 9:15 open", async () => {
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T03:30:00.000Z"));
 
     expect(report.status).toBe("locked");
     expect(report.source).toBe("heuristic");
@@ -254,8 +435,8 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(write).toHaveBeenCalledWith(
       "bse-ai-locked-picks.json",
       expect.objectContaining({
-        date: "2026-08-16",
-        cutoffAt: "2026-08-16T09:15:00+05:30",
+        date: "2026-08-17",
+        cutoffAt: "2026-08-17T09:15:00+05:30",
         picksByCap: expect.objectContaining({
           Large: expect.any(Array),
           Mid: expect.any(Array),
@@ -354,6 +535,46 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(report.accuracy).toEqual({ matched: 3, total: 30, percent: 10 });
     expect(report.message).toContain("until the next pre-open AI lock is generated");
     expect(movers).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("holds yesterday's locked picks before the 8:50 AM IST lock instead of predicting early", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-14") : null));
+
+    // Monday 7:00 AM IST: the 8:50 run has not happened, so Friday's list is still the live one.
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T01:30:00.000Z"));
+
+    expect(report.status).toBe("locked");
+    expect(report.holdover).toBe(true);
+    expect(report.date).toBe("2026-08-17");
+    expect(report.lockDate).toBe("2026-08-14");
+    expect(report.nextLockAt).toBe("2026-08-17T08:50:00+05:30");
+    expect(report.message).toContain("Holding the 2026-08-14 locked picks");
+    expect(report.predictionsByCap.Large).toHaveLength(10);
+    expect(write).not.toHaveBeenCalled();
+    expect(news).not.toHaveBeenCalled();
+  });
+
+  it("replaces the held picks once the 8:50 AM IST lock comes round", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-14") : null));
+
+    // Monday 8:50 AM IST exactly.
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T03:20:00.000Z"));
+
+    expect(report.holdover).toBe(false);
+    expect(report.lockDate).toBe("2026-08-17");
+    expect(report.predictions[0].symbol).toBe("AAA");
+    expect(write).toHaveBeenCalledWith("bse-ai-locked-picks.json", expect.objectContaining({ date: "2026-08-17" }));
+  });
+
+  it("holds the previous list through a non-trading day rather than locking a new one", async () => {
+    read.mockImplementation(async (fileName) => (fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-14") : null));
+
+    // Sunday, mid-morning: no session to predict for.
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T04:00:00.000Z"));
+
+    expect(report.holdover).toBe(true);
+    expect(report.lockDate).toBe("2026-08-14");
     expect(write).not.toHaveBeenCalled();
   });
 

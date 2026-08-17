@@ -30,7 +30,7 @@ import path from "node:path";
 import { adminEmails } from "./admin-access";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { normaliseMobile, type PlanName } from "./auth-validation";
-import type { MfaMode, SocialProvider } from "./auth-security";
+import { hashOneTimeCode, newOtpCode, verifyOneTimeCode, type MfaMode, type SocialProvider } from "./auth-security";
 import { eq, isUniqueViolation, supabaseConfigured, supabaseRequest } from "./supabase";
 
 export type UserRole = "admin" | "user";
@@ -684,6 +684,98 @@ export async function resetPasswordWithToken(token: string, password: string): P
   const user = await backend().byPasswordResetToken(token);
   if (!user?.passwordResetToken || user.passwordResetToken !== token) return null;
   if (!user.passwordResetExpiresAt || Date.parse(user.passwordResetExpiresAt) < Date.now()) return null;
+
+  return backend().patch(user.id, {
+    passwordHash: hashPassword(password),
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    passwordResetSentAt: null,
+    mfaOtpHash: null,
+    mfaOtpExpiresAt: null,
+  });
+}
+
+/**
+ * The six-digit recovery code, and where it is kept.
+ *
+ * A code rather than only a link, because a link is useless to somebody whose mail is not arriving
+ * — which is the failure this exists for. The code is short enough to read off a phone and type
+ * into the page the reader is already on, and it is delivered over every channel the account has
+ * rather than email alone.
+ *
+ * It shares the `passwordResetToken` slot with the emailed link, under a prefix, and what is
+ * stored is the *hash* — the same treatment the sign-in OTP gets in `mfaOtpHash`, so a leaked
+ * database row cannot be replayed into somebody's account. Sharing the slot is deliberate: issuing
+ * a code invalidates any outstanding link and vice versa, so there is only ever one live way into
+ * an account at a time, and it needs no new column on a deployment that has already migrated.
+ */
+const RESET_CODE_PREFIX = "code:";
+const RESET_CODE_TTL_MS = 15 * 60 * 1000;
+/**
+ * Guesses allowed before the code is destroyed.
+ *
+ * Six digits is a million possibilities, which sounds like plenty and is not: unlimited guessing
+ * against a fifteen-minute window is a script's afternoon. Five attempts makes the code worth
+ * 1-in-200,000 to an attacker and costs a reader who fat-fingers it nothing, since asking for
+ * another one is a single click.
+ *
+ * The counter lives in the same field as the hash because it must be *stored* — a per-process
+ * counter resets on every deploy and is not shared between instances, which is the same as no
+ * counter at all — and this way it needs no column that a deployed database might not have.
+ */
+const RESET_CODE_MAX_ATTEMPTS = 5;
+
+export const PASSWORD_RESET_CODE_MINUTES = RESET_CODE_TTL_MS / 60_000;
+
+function storedCode(hash: string, attempts: number): string {
+  return `${RESET_CODE_PREFIX}${hash}:${attempts}`;
+}
+
+function readStoredCode(value: string | null | undefined): { hash: string; attempts: number } | null {
+  if (!value?.startsWith(RESET_CODE_PREFIX)) return null;
+  const [hash, attempts] = value.slice(RESET_CODE_PREFIX.length).split(":");
+  return hash ? { hash, attempts: Number(attempts) || 0 } : null;
+}
+
+export async function issuePasswordResetCode(email: string): Promise<{ user: AppUser; code: string } | null> {
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+
+  const code = newOtpCode();
+  const updated = await backend().patch(user.id, {
+    passwordResetToken: storedCode(hashOneTimeCode(code), 0),
+    passwordResetExpiresAt: new Date(Date.now() + RESET_CODE_TTL_MS).toISOString(),
+    passwordResetSentAt: new Date().toISOString(),
+  });
+
+  return updated ? { user: updated, code } : null;
+}
+
+/**
+ * Spends a recovery code, or spends one of its five attempts.
+ *
+ * Wrong codes are counted rather than merely refused, and the fifth wrong guess clears the code
+ * outright: the reader asks for a new one, and whoever was guessing starts again from a fresh
+ * million.
+ */
+export async function resetPasswordWithCode(email: string, code: string, password: string): Promise<AppUser | null> {
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+
+  const stored = readStoredCode(user.passwordResetToken);
+  if (!stored) return null;
+  if (!user.passwordResetExpiresAt || Date.parse(user.passwordResetExpiresAt) < Date.now()) return null;
+
+  if (!verifyOneTimeCode(code, stored.hash)) {
+    const attempts = stored.attempts + 1;
+    await backend().patch(
+      user.id,
+      attempts >= RESET_CODE_MAX_ATTEMPTS
+        ? { passwordResetToken: null, passwordResetExpiresAt: null, passwordResetSentAt: null }
+        : { passwordResetToken: storedCode(stored.hash, attempts) },
+    );
+    return null;
+  }
 
   return backend().patch(user.id, {
     passwordHash: hashPassword(password),

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppleModal } from "./apple-modal";
+import { CompanyLogo } from "./company-logo";
 import { AiAnalysisReport, type AnalysisResponse } from "./ai-analysis-report";
 import { usePerformance, useCompetitors, type Performance } from "./use-stock-insights";
 
@@ -22,19 +23,6 @@ function capTierBadgeClass(tier: string) {
   if (tier === "Large") return "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400";
   if (tier === "Mid") return "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400";
   return "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400";
-}
-
-// Every logo URL in this app is built from a Google favicon URL (`?domain=<company domain>`).
-// Clearbit's public logo API usually returns a cleaner, higher-res brand mark for the same
-// domain, so it's tried first — the favicon URL we already have is the guaranteed-real fallback.
-function clearbitUrlFrom(googleFaviconSrc?: string | null): string | null {
-  if (!googleFaviconSrc) return null;
-  try {
-    const domain = new URL(googleFaviconSrc).searchParams.get("domain");
-    return domain ? `https://logo.clearbit.com/${domain}?size=128` : null;
-  } catch {
-    return null;
-  }
 }
 
 function bestAndWorstPeriod(performance: Performance | null) {
@@ -60,12 +48,15 @@ function recommendationBadge(recommendation?: string) {
   return { label: "Outperform", className: "bg-emerald-600 text-white" };
 }
 
-function ModalLogo({ src, name }: { src?: string | null; name: string }) {
-  const clearbitSrc = clearbitUrlFrom(src);
-  const [stage, setStage] = useState<"clearbit" | "google" | "failed">(clearbitSrc ? "clearbit" : "google");
-  const currentSrc = stage === "clearbit" ? clearbitSrc : src;
-
-  if (!currentSrc || stage === "failed") {
+/**
+ * The company's own mark in the modal chrome, through the shared logo path.
+ *
+ * Same change as `CompetitorLogo` in ./ai-analysis-report, for the same reason: the first source
+ * this asked was `logo.clearbit.com`, which is gone. With a ticker in hand there is a store that
+ * answers, so the ticker is what this asks by.
+ */
+function ModalLogo({ symbol, name }: { symbol?: string | null; name: string }) {
+  if (!symbol) {
     return (
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-base font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
         {name.charAt(0)}
@@ -73,17 +64,7 @@ function ModalLogo({ src, name }: { src?: string | null; name: string }) {
     );
   }
 
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- external logo hosts, not part of the Next/Image domain allowlist
-    <img
-      src={currentSrc}
-      alt=""
-      width={44}
-      height={44}
-      onError={() => setStage((prev) => (prev === "clearbit" ? "google" : "failed"))}
-      className="h-11 w-11 shrink-0 rounded-2xl border border-slate-200 bg-white object-contain p-2 dark:border-slate-700 dark:bg-slate-900"
-    />
-  );
+  return <CompanyLogo symbol={symbol} size={44} preferReal />;
 }
 
 function FooterStat({
@@ -147,7 +128,7 @@ export function AiReportModal({
   // pattern a macOS/iOS sheet uses for its title bar.
   const header = (
     <div className="flex items-center gap-3">
-      <ModalLogo src={logoUrl} name={displayName ?? "?"} />
+      <ModalLogo symbol={symbol} name={displayName ?? "?"} />
       <div className="min-w-0">
         <p className="text-[10px] font-semibold tracking-[0.25em] text-slate-400 uppercase dark:text-slate-500">🤖 AI research report</p>
         <div className="flex flex-wrap items-center gap-1.5">

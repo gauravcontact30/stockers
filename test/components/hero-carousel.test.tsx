@@ -84,17 +84,37 @@ function trioOf(symbols: [string, string, string], sector: string): Trio {
 
 const GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
 const FAVOURITES = trioOf(["SUZLON", "IREDA", "YESBANK"], "Electric Utilities");
-const TOP_WEEKLY = [
-  {
-    symbol: "BOSCHLTD",
-    name: "Bosch Ltd",
-    weekPercent: 12.05,
-    sector: "Auto",
-    direction: "gainer" as const,
-    returnPercent: 12.05,
-    returns: { oneWeek: 12.05, threeMonth: 18.2, sixMonth: 31.4 },
-  },
-];
+const MOST_BOUGHT = {
+  rows: [
+    {
+      buyRank: 1,
+      buyScore: 88,
+      symbol: "BOSCHLTD",
+      name: "Bosch Ltd",
+      bseCode: "500530",
+      sector: "Auto",
+      capTier: "Large" as const,
+      price: 32000,
+      previousClose: 31500,
+      change: 500,
+      changePercent: 1.6,
+      volume: 12000,
+      trades: 24000,
+      turnoverCr: 380,
+      turnoverShare: 1.4,
+      averageTradeValue: 15000,
+      brokerRank: 3,
+      brokerNames: ["Groww"],
+      signals: ["broker-list" as const, "crowded-tape" as const],
+      live: true,
+      asOf: "2026-08-17T05:00:00.000Z",
+    },
+  ],
+  sessionDate: "2026-08-17",
+  marketSession: "live" as const,
+  liveSession: true,
+  asOf: "2026-08-17T05:00:00.000Z",
+};
 
 describe("HeroCarousel", () => {
   beforeEach(() => {
@@ -151,12 +171,14 @@ describe("HeroCarousel", () => {
     expect(screen.queryByRole("link", { name: "Explore dashboard" })).not.toBeInTheDocument();
   });
 
-  it("renders the stock ribbon below the slider, outside the carousel frame", () => {
-    const { container } = render(<HeroCarousel topWeekly={TOP_WEEKLY} />);
+  it("renders the most-bought ribbon below the slider, outside the carousel frame", () => {
+    const { container } = render(<HeroCarousel mostBought={MOST_BOUGHT} />);
     const frame = container.querySelector('[aria-roledescription="carousel"]')!;
 
-    expect(within(frame as HTMLElement).queryByText("Bosch Ltd")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Bosch Ltd").length).toBeGreaterThan(0);
+    expect(within(frame as HTMLElement).queryByText("Bosch")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Bosch").length).toBeGreaterThan(0);
+    // The buying rank is the point of the ribbon, so it is on the card itself.
+    expect(screen.getAllByText("#1").length).toBeGreaterThan(0);
   });
 
   // The page still needs one h1 even with the visible headline cut.

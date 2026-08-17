@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { sendSms, smsConfigured, subscriptionSms, toE164, twilioConfig, welcomeSms } from "../../app/lib/sms";
+import { passwordResetSms, sendSms, smsConfigured, smsTransportName, subscriptionSms, toE164, twilioConfig, welcomeSms } from "../../app/lib/sms";
 
 const outboxPath = path.join(process.cwd(), "app", "data", "sms-outbox.json");
 
@@ -12,7 +12,14 @@ async function readOutbox(): Promise<{ to: string; body: string; reason: string 
   }
 }
 
-const KEYS = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM"] as const;
+const KEYS = [
+  "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN",
+  "TWILIO_FROM",
+  "FAST2SMS_API_KEY",
+  "MSG91_AUTH_KEY",
+  "MSG91_SENDER_ID",
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(async () => {
@@ -144,5 +151,75 @@ describe("the message bodies", () => {
     expect(body).toContain("Pro");
     expect(body).toContain("2026-09-08");
     expect(body).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe("gateway selection", () => {
+  it("counts any one of the three gateways as configured, and names the one in use", () => {
+    expect(smsConfigured()).toBe(false);
+    expect(smsTransportName()).toBeNull();
+
+    process.env.FAST2SMS_API_KEY = "fast2sms-key";
+    expect(smsConfigured()).toBe(true);
+    expect(smsTransportName()).toBe("fast2sms");
+
+    // Twilio leads when both are set: see the gateway order in the module.
+    process.env.TWILIO_ACCOUNT_SID = "sid";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM = "+15550000000";
+    expect(smsTransportName()).toBe("twilio");
+
+    delete process.env.FAST2SMS_API_KEY;
+    delete process.env.TWILIO_ACCOUNT_SID;
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_SENDER_ID = "STOCKR";
+    expect(smsTransportName()).toBe("msg91");
+  });
+
+  it("sends the bare ten digits to an Indian gateway, not E.164", async () => {
+    process.env.FAST2SMS_API_KEY = "fast2sms-key";
+    const bodies: Record<string, unknown>[] = [];
+    global.fetch = jest.fn(async (_url: unknown, init: unknown) => {
+      bodies.push(JSON.parse((init as { body: string }).body));
+      return { ok: true, status: 200, text: async () => '{"return":true}' };
+    }) as unknown as typeof fetch;
+
+    await expect(sendSms({ to: "+91 98765 43210", body: "hello" })).resolves.toEqual({ ok: true, transport: "fast2sms" });
+    expect(bodies[0].numbers).toBe("9876543210");
+  });
+
+  it("treats a 200 that carries a refusal as a failure, and falls through to the next gateway", async () => {
+    process.env.FAST2SMS_API_KEY = "fast2sms-key";
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_SENDER_ID = "STOCKR";
+    const seen: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      seen.push(String(url));
+      const fast2sms = String(url).includes("fast2sms");
+      return { ok: true, status: 200, text: async () => (fast2sms ? '{"return":false,"message":"invalid key"}' : '{"type":"success"}') };
+    }) as unknown as typeof fetch;
+
+    await expect(sendSms({ to: "9876543210", body: "hello" })).resolves.toEqual({ ok: true, transport: "msg91" });
+    expect(seen).toHaveLength(2);
+  });
+
+  it("records the message with every gateway's complaint when none of them takes it", async () => {
+    process.env.FAST2SMS_API_KEY = "fast2sms-key";
+    global.fetch = jest.fn(async () => ({ ok: false, status: 401, text: async () => "bad key" })) as unknown as typeof fetch;
+
+    const result = await sendSms({ to: "9876543210", body: "hello" });
+
+    expect(result.transport).toBe("outbox");
+    expect((await readOutbox())[0].reason).toContain("fast2sms");
+  });
+});
+
+describe("passwordResetSms", () => {
+  it("is a fixed, linkless template with the code and its lifetime", () => {
+    const body = passwordResetSms("123456", 15);
+
+    expect(body).toContain("123456");
+    expect(body).toContain("15 minutes");
+    expect(body).not.toContain("http");
   });
 });

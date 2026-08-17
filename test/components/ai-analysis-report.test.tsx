@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { AiAnalysisReport, clearbitUrlFrom, type AnalysisResponse } from "../../app/components/ai-analysis-report";
+import { AiAnalysisReport, type AnalysisResponse } from "../../app/components/ai-analysis-report";
 import type { CompetitorsData, Performance } from "../../app/components/use-stock-insights";
 
 const baseAnalysis: AnalysisResponse = {
@@ -82,27 +82,6 @@ function renderReport(overrides: Partial<React.ComponentProps<typeof AiAnalysisR
     />
   );
 }
-
-describe("clearbitUrlFrom", () => {
-  it("returns null for an empty/undefined source", () => {
-    expect(clearbitUrlFrom(undefined)).toBeNull();
-    expect(clearbitUrlFrom("")).toBeNull();
-  });
-
-  it("builds a clearbit URL from a google favicon URL's domain query param", () => {
-    expect(clearbitUrlFrom("https://www.google.com/s2/favicons?domain=tcs.com&sz=64")).toBe(
-      "https://logo.clearbit.com/tcs.com?size=128"
-    );
-  });
-
-  it("returns null when the URL parses but has no domain query param", () => {
-    expect(clearbitUrlFrom("https://www.google.com/s2/favicons?sz=64")).toBeNull();
-  });
-
-  it("returns null when the source is not a parseable URL", () => {
-    expect(clearbitUrlFrom("not-a-valid-url")).toBeNull();
-  });
-});
 
 describe("AiAnalysisReport", () => {
   describe("outlook normalization", () => {
@@ -279,36 +258,35 @@ describe("AiAnalysisReport", () => {
       expect(screen.getByText("▼ 0.80%")).toBeInTheDocument();
     });
 
-    it("renders the initial-letter badge immediately when a peer has no logo at all", () => {
-      renderReport({ competitors: competitorsData, competitorsLoading: false });
+    it("asks the symbol store for each peer's own mark", () => {
+      const { container } = renderReport({ competitors: competitorsData, competitorsLoading: false });
+
+      expect(container.querySelector('img[src="https://images.dhan.co/symbol/TCS.png"]')).not.toBeNull();
+      expect(container.querySelector('img[src="https://images.dhan.co/symbol/INFY.png"]')).not.toBeNull();
+      // The host that no longer answers is never asked.
+      expect(container.querySelector('img[src*="clearbit"]')).toBeNull();
+    });
+
+    it("shows the initial-letter badge only for a peer with no ticker to look up", () => {
+      const nameless = {
+        ...competitorsData,
+        peers: [{ symbol: "", name: "Wipro", logo: "", price: null, changePercent: null, isSelf: false }],
+      };
+      renderReport({ competitors: nameless, competitorsLoading: false });
+
       expect(screen.getByText("W")).toBeInTheDocument();
     });
 
-    it("cycles a competitor logo through clearbit -> google favicon -> initial letter on repeated errors", () => {
+    it("draws a monogram once every real source for a peer has failed", () => {
       const { container } = renderReport({ competitors: competitorsData, competitorsLoading: false });
 
-      const clearbitImg = container.querySelector('img[src="https://logo.clearbit.com/tcs.com?size=128"]');
-      expect(clearbitImg).not.toBeNull();
+      let image = container.querySelector('img[alt$="(TCS) logo"]');
+      while (image) {
+        fireEvent.error(image);
+        image = container.querySelector('img[alt$="(TCS) logo"]');
+      }
 
-      fireEvent.error(clearbitImg as HTMLImageElement);
-
-      const googleImg = container.querySelector('img[src="https://www.google.com/s2/favicons?domain=tcs.com&sz=64"]');
-      expect(googleImg).not.toBeNull();
-
-      fireEvent.error(googleImg as HTMLImageElement);
-
-      expect(screen.getByText("T")).toBeInTheDocument();
-    });
-
-    it("falls straight to the initial letter after one error when there is no clearbit candidate", () => {
-      const { container } = renderReport({ competitors: competitorsData, competitorsLoading: false });
-
-      const infyImg = container.querySelector('img[src="https://www.google.com/s2/favicons?sz=64"]');
-      expect(infyImg).not.toBeNull();
-
-      fireEvent.error(infyImg as HTMLImageElement);
-
-      expect(screen.getByText("I")).toBeInTheDocument();
+      expect(screen.getAllByText("TCS").length).toBeGreaterThan(0);
     });
   });
 

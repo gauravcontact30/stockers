@@ -26,13 +26,8 @@ import { Suspense } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { HeroCarousel } from "./hero-carousel";
 import { CACHE_TAGS } from "../lib/cache";
-import {
-  investorFavouriteTrio,
-  topWeeklyGainers,
-  topYearGainerTrio,
-  type DynamicTrio,
-  type HeroTickerRow,
-} from "../lib/hero-trios";
+import { investorFavouriteTrio, topYearGainerTrio, type DynamicTrio } from "../lib/hero-trios";
+import { getMostBoughtToday, type MostBoughtBoard } from "../lib/most-bought";
 import { getCachedPerformanceSummaries, type PerformanceSummary } from "../lib/stock-performance";
 
 /** The six companies on the two fixed slides. Their live figures are prefetched for both. */
@@ -114,11 +109,13 @@ export async function HeroPayload() {
   cacheLife("market");
   cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes);
 
-  const [initialPerformance, yearGainers, investorFavourites, topWeekly] = await Promise.all([
+  const [initialPerformance, yearGainers, investorFavourites, mostBought] = await Promise.all([
     withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(HERO_PERFORMANCE_SYMBOLS), []),
     withDeadline<DynamicTrio | null>(topYearGainerTrio(), null),
     withDeadline<DynamicTrio | null>(investorFavouriteTrio(), null),
-    withDeadline<HeroTickerRow[]>(topWeeklyGainers(), []),
+    // The ribbon's opening board. It polls for itself after hydration, so a deadline miss here
+    // costs the first paint its rows and nothing more.
+    withDeadline<MostBoughtBoard | null>(getMostBoughtToday(), null),
   ]);
 
   return (
@@ -126,7 +123,7 @@ export async function HeroPayload() {
       initialPerformance={initialPerformance}
       yearGainers={yearGainers}
       investorFavourites={investorFavourites}
-      topWeekly={topWeekly}
+      mostBought={mostBought}
     />
   );
 }

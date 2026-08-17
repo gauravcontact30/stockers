@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import { CompanyLogo } from "./company-logo";
 import type { CompetitorsData, Performance } from "./use-stock-insights";
 
 export type AnalysisResponse = {
@@ -119,25 +120,17 @@ const ReturnsStrip = memo(function ReturnsStrip({ performance, loading }: { perf
   );
 });
 
-// Every logo URL in this app is built from a Google favicon URL (`?domain=<company domain>`).
-// Clearbit's public logo API usually returns a cleaner, higher-res brand mark for the same
-// domain, so it's tried first — the favicon URL we already have is the guaranteed-real fallback.
-export function clearbitUrlFrom(googleFaviconSrc?: string | null): string | null {
-  if (!googleFaviconSrc) return null;
-  try {
-    const domain = new URL(googleFaviconSrc).searchParams.get("domain");
-    return domain ? `https://logo.clearbit.com/${domain}?size=128` : null;
-  } catch {
-    return null;
-  }
-}
-
-const CompetitorLogo = memo(function CompetitorLogo({ src, name }: { src?: string; name: string }) {
-  const clearbitSrc = clearbitUrlFrom(src);
-  const [stage, setStage] = useState<"clearbit" | "google" | "failed">(clearbitSrc ? "clearbit" : "google");
-  const currentSrc = stage === "clearbit" ? clearbitSrc : src;
-
-  if (!currentSrc || stage === "failed") {
+/**
+ * A peer's own mark, through the one logo path the rest of the app uses.
+ *
+ * This used to build a `logo.clearbit.com` URL out of the Google favicon URL beside it and try
+ * that first. Clearbit's free logo API no longer answers at all, so every peer row opened by
+ * waiting on a host that was never going to reply. `CompanyLogo` asks the symbol store the
+ * exchange tickers are keyed by, which does answer, and falls back to the company's own favicon
+ * behind it — see the note on `logoSources` in ./company-logo.
+ */
+const CompetitorLogo = memo(function CompetitorLogo({ symbol, name }: { symbol?: string; name: string }) {
+  if (!symbol) {
     return (
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
         {name.charAt(0)}
@@ -145,22 +138,9 @@ const CompetitorLogo = memo(function CompetitorLogo({ src, name }: { src?: strin
     );
   }
 
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- external logo hosts, not part of the Next/Image domain allowlist
-    <img
-      src={currentSrc}
-      alt=""
-      width={32}
-      height={32}
-      loading="lazy"
-      onError={() => setStage((prev) => (prev === "clearbit" ? "google" : "failed"))}
-      className="h-8 w-8 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-700 dark:bg-slate-900"
-    />
-  );
+  return <CompanyLogo symbol={symbol} size={32} preferReal />;
 });
 
-// Ranks the stock against live peers in the same sector (or ETF category), self pinned and
-// highlighted, so "how are competitors performing" is a real, sorted, at-a-glance comparison.
 const CompetitorsPanel = memo(function CompetitorsPanel({ data, loading }: { data: CompetitorsData | null; loading: boolean }) {
   if (!loading && (!data || data.peers.length === 0)) return null;
 
@@ -194,7 +174,7 @@ const CompetitorsPanel = memo(function CompetitorsPanel({ data, loading }: { dat
                 className={`flex items-center gap-3 py-2.5 ${peer.isSelf ? "-mx-2 rounded-xl bg-emerald-50 px-2 dark:bg-emerald-500/10" : ""}`}
               >
                 <span className="w-4 shrink-0 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">{index + 1}</span>
-                <CompetitorLogo src={peer.logo} name={peer.name} />
+                <CompetitorLogo symbol={peer.symbol} name={peer.name} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{peer.symbol}</p>

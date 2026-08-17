@@ -94,28 +94,38 @@ describe("CompanyLogo", () => {
     expect(image).toHaveStyle({ width: "40px", height: "40px" });
   });
 
-  it("can prefer a checked real company mark before the ticker image", () => {
-    render(<CompanyLogo symbol="LGEINDIA" preferReal />);
-
-    expect(screen.getByAltText("LG Electronics India (LGEINDIA) logo")).toHaveAttribute(
-      "src",
-      "https://logo.clearbit.com/lg.com?size=128",
-    );
-  });
-
+  // The three that rendered as monograms on the landing page. Each has a real mark in the symbol
+  // store, and each used to ask two dead hosts for it first.
   it.each([
-    ["HAL", "Hindustan Aeronautics", "hal-india.co.in"],
-    ["BHEL", "Bharat Heavy Electricals", "bhel.com"],
-  ])("uses a checked brand logo first for %s actual performer rows", (symbol, name, domain) => {
+    ["HAL", "Hindustan Aeronautics"],
+    ["BHEL", "Bharat Heavy Electricals"],
+    ["POLYCAB", "Polycab India"],
+  ])("asks the symbol store first for %s, on real-mark rows too", (symbol, name) => {
     render(<CompanyLogo symbol={symbol} preferReal />);
 
     expect(screen.getByAltText(`${name} (${symbol}) logo`)).toHaveAttribute(
       "src",
-      `https://logo.clearbit.com/${domain}?size=128`,
+      `https://images.dhan.co/symbol/${symbol}.png`,
     );
   });
 
-  it("falls back from Clearbit to the checked favicon before ticker stores", () => {
+  it("never asks a host that no longer serves logos", () => {
+    render(<CompanyLogo symbol="LGEINDIA" preferReal />);
+    const image = screen.getByAltText("LG Electronics India (LGEINDIA) logo");
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const current = screen.queryByAltText("LG Electronics India (LGEINDIA) logo");
+      if (!current) break;
+      expect(current.getAttribute("src")).not.toContain("clearbit");
+      expect(current.getAttribute("src")).not.toContain("groww");
+      expect(current.getAttribute("src")).not.toContain("tickertape");
+      fireEvent.error(current);
+    }
+
+    expect(image).toBeDefined();
+  });
+
+  it("falls back from the symbol store to the company's own favicon", () => {
     render(<CompanyLogo symbol="HAL" preferReal />);
 
     fireEvent.error(screen.getByAltText("Hindustan Aeronautics (HAL) logo"));
@@ -126,7 +136,7 @@ describe("CompanyLogo", () => {
     );
   });
 
-  it("falls back from checked favicon to ticker logo stores", () => {
+  it("tries one more icon service before a monogram when a real mark is wanted", () => {
     render(<CompanyLogo symbol="BHEL" preferReal />);
 
     fireEvent.error(screen.getByAltText("Bharat Heavy Electricals (BHEL) logo"));
@@ -134,12 +144,12 @@ describe("CompanyLogo", () => {
 
     expect(screen.getByAltText("Bharat Heavy Electricals (BHEL) logo")).toHaveAttribute(
       "src",
-      "https://images.dhan.co/symbol/BHEL.png",
+      "https://icons.duckduckgo.com/ip3/bhel.com.ico",
     );
   });
 
-  it("uses Google favicon second for a checked real company mark", () => {
-    render(<CompanyLogo symbol="LGEINDIA" preferReal />);
+  it("stops at the company favicon when no real mark was asked for", () => {
+    render(<CompanyLogo symbol="LGEINDIA" />);
 
     fireEvent.error(screen.getByAltText("LG Electronics India (LGEINDIA) logo"));
 

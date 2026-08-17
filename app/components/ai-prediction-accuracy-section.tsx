@@ -62,27 +62,9 @@ function matchesSearch(row: PredictionPerformance, query: string) {
   return [row.symbol, row.stockName, sectorName(row), capName(row)].some((value) => value.toLowerCase().includes(term));
 }
 
-function averageConfidence(rows: PredictionPerformance[]) {
-  const values = rows.map((row) => row.confidence).filter((value): value is number => typeof value === "number");
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((total, value) => total + value, 0) / values.length);
-}
-
-function averageMove(rows: PredictionPerformance[]) {
-  if (rows.length === 0) return 0;
-  return rows.reduce((total, row) => total + (row.changePercent ?? 0), 0) / rows.length;
-}
-
 function formatTurnover(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "-";
   return `${formatRupee(value, value >= 100 ? 0 : 1)} Cr`;
-}
-
-function scoreRows(predicted: PredictionPerformance[], actual: PredictionPerformance[]) {
-  const actualSymbols = new Set(actual.map((row) => row.symbol));
-  const matched = predicted.filter((row) => actualSymbols.has(row.symbol)).length;
-  const total = predicted.length || 1;
-  return { matched, total: predicted.length, percent: Math.round((matched / total) * 100) };
 }
 
 function rowsForCap(rows: PredictionPerformance[], cap: CapTier) {
@@ -205,6 +187,20 @@ function ListCard({
 }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+
+  // The cap tier is owned by the section and shared with the other board, so it can change from
+  // outside this card. Either way it is a different set of ten stocks — page 2 of the old tier is
+  // not page 2 of the new one — so the pager goes back to the first page.
+  //
+  // Adjusted during render rather than in an effect: React re-runs this component with the new
+  // page before anything is painted, where an effect would paint the wrong page first and then
+  // correct it.
+  const [pagedCap, setPagedCap] = useState(cap);
+  if (pagedCap !== cap) {
+    setPagedCap(cap);
+    setPage(1);
+  }
+
   const filteredRows = rows.filter((row) => matchesSearch(row, query));
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -225,10 +221,7 @@ function ListCard({
           <select
             value={cap}
             aria-label={`${title} cap filter`}
-            onChange={(event) => {
-              setPage(1);
-              onCapChange(event.target.value as CapTier);
-            }}
+            onChange={(event) => onCapChange(event.target.value as CapTier)}
             className="bg-transparent text-[10px] font-black outline-none"
           >
             {CAP_TIERS.map((tier) => (
@@ -313,14 +306,34 @@ function metaLabel(data: BseAiPredictionAccuracy | null) {
   return `${data.accuracy.matched}/${data.accuracy.total} matched`;
 }
 
+/** What the lock is doing right now: fresh for today, or holding yesterday's until 8:50. */
+function lockStatusText(data: BseAiPredictionAccuracy) {
+  if (data.status !== "locked") return "No locked picks";
+  if (data.holdover) return `Holding ${data.lockDate} picks`;
+  if (data.persistedSession) return "Last session saved";
+  return "Locked for today";
+}
+
+function nextLockText(data: BseAiPredictionAccuracy) {
+  const at = new Date(data.nextLockAt);
+  const time = at.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+  const day = at.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
+  return `Next AI lock: ${time} IST, ${day}`;
+}
+
 function SummaryCard({
   label,
+  score,
+  scoreLabel,
   value,
   detail,
   foot,
   tone,
 }: {
   label: string;
+  /** Today's score for this card, 0-100, scored from the two lists below it. */
+  score: number;
+  scoreLabel: string;
   value: string;
   detail: string;
   foot: string;
@@ -334,7 +347,13 @@ function SummaryCard({
 
   return (
     <div className={`rounded-2xl border p-3 ${tones[tone]}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">{label}</p>
+        <p className="shrink-0 text-lg font-black tabular-nums text-slate-900 dark:text-white" aria-label={`${scoreLabel}: ${score}%`}>
+          {score}%
+        </p>
+      </div>
+      <p className="text-right text-[10px] font-bold uppercase tracking-wide opacity-70">{scoreLabel}</p>
       <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{value}</p>
       <p className="mt-1 text-[11px] font-bold">{detail}</p>
       <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{foot}</p>
@@ -342,12 +361,257 @@ function SummaryCard({
   );
 }
 
+/**
+ * The three cards, scored from the two boards underneath them.
+ *
+ * Every figure is today's: the scorecard the server sends is built from the list locked at 8:50
+ * this morning and the live top ten as it stands this minute, for the one cap tier both boards
+ * are showing. Yesterday contributes nothing to it.
+ */
+function SummaryCards({ data, cap, lockedCount }: { data: BseAiPredictionAccuracy; cap: CapTier; lockedCount: number }) {
+  const scored = data.scorecard.byCap[cap];
+
+  return (
+    <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <SummaryCard
+        label="Lock status"
+        score={scored.lockIntegrity}
+        scoreLabel="Lock integrity"
+        value={lockStatusText(data)}
+        detail={
+          data.status === "locked"
+            ? `${lockedCount}/10 locked ${cap} cap stocks for ${data.lockDate}`
+            : "No real 8:50 AM IST AI lock exists for this trading date"
+        }
+        foot={nextLockText(data)}
+        tone="sky"
+      />
+      <SummaryCard
+        label="Prediction engine"
+        score={scored.confidenceCalibration}
+        scoreLabel="Confidence calibration"
+        value={data.source === "ai" ? data.model ?? "AI model" : data.source === "heuristic" ? "Fallback heuristic" : "Waiting for lock"}
+        detail={
+          scored.avgConfidence > 0
+            ? `Claimed ${scored.avgConfidence}% confidence, delivered ${scored.hitRate}%`
+            : "AI score appears after real picks are locked"
+        }
+        foot={`AI picks ${formatSignedPercent(scored.avgPickMovePercent)} vs market ${formatSignedPercent(scored.avgMarketMovePercent)}`}
+        tone="violet"
+      />
+      <SummaryCard
+        label="Accuracy check"
+        score={scored.intelligenceScore}
+        scoreLabel="AI intelligence"
+        value={`${scored.hitCount}/10 in today's live top 10`}
+        detail={`Rank accuracy ${scored.rankAccuracy}% · ${scored.beatMarketCount}/10 picks beat the ${cap} cap average`}
+        foot={`Edge ${formatSignedPercent(scored.edgePercent)} vs the live ${cap} cap top 10`}
+        tone="emerald"
+      />
+    </div>
+  );
+}
+
+/** One figure on a scoreboard panel: a label, the number, and nothing else. */
+function Metric({ label, value, tone = "", note }: { label: string; value: string; tone?: string; note?: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className={`mt-0.5 truncate text-base font-black tabular-nums ${tone || "text-slate-900 dark:text-white"}`}>{value}</dd>
+      {note && <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500 dark:text-slate-400">{note}</p>}
+    </div>
+  );
+}
+
+/** One side of the comparison, in its own tint. */
+function ScorePanel({
+  title,
+  eyebrow,
+  score,
+  scoreLabel,
+  tone,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  score: string;
+  scoreLabel: string;
+  tone: "ai" | "market";
+  children: React.ReactNode;
+}) {
+  const tones = {
+    ai: "border-violet-200 bg-violet-50/60 dark:border-violet-500/25 dark:bg-violet-500/10",
+    market: "border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10",
+  };
+  const pills = {
+    ai: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
+    market: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
+  };
+
+  return (
+    <section className={`rounded-2xl border p-3.5 ${tones[tone]}`} aria-label={title}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{eyebrow}</p>
+          <p className="mt-0.5 truncate text-sm font-black text-slate-900 dark:text-white">{title}</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums ${pills[tone]}`}>
+          {score}
+          <span className="ml-1 font-bold uppercase tracking-wide opacity-70">{scoreLabel}</span>
+        </span>
+      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-3">{children}</dl>
+    </section>
+  );
+}
+
+/**
+ * The comparison, as two panels rather than one wide table.
+ *
+ * Twelve columns asked the reader to work out for themselves which numbers were the AI's claim and
+ * which were the exchange's record. They are two different things, so they now sit in two
+ * differently tinted panels — the AI's own figures on the left, what the market actually did on the
+ * right — and only the handful of numbers that mean something as a *comparison* sit between them.
+ *
+ * Every figure is arithmetic over the two lists below it, for the cap tier on screen. Nothing here
+ * is an opinion, and nothing that could not be recomputed from those rows is shown.
+ */
+function Scoreboard({
+  data,
+  cap,
+  predicted,
+  actual,
+}: {
+  data: BseAiPredictionAccuracy;
+  cap: CapTier;
+  predicted: PredictionPerformance[];
+  actual: PredictionPerformance[];
+}) {
+  const score = data.scorecard.byCap[cap];
+  const aiLeader = predicted[0];
+  const marketLeader = actual[0];
+  const advancers = actual.filter((row) => (row.changePercent ?? 0) > 0).length;
+
+  const verdicts = [
+    { label: "Edge vs market", value: formatSignedPercent(score.edgePercent), tone: toneFor(score.edgePercent) },
+    { label: "Picks in live top 10", value: `${score.hitCount}/10`, tone: "" },
+    { label: "Beat market average", value: `${score.beatMarketCount}/10`, tone: "" },
+    { label: "Confidence calibration", value: `${score.confidenceCalibration}%`, tone: "" },
+  ];
+
+  return (
+    <div className="mt-5 space-y-3" role="region" aria-label="AI versus live market scoreboard">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ScorePanel
+          eyebrow={`${cap} cap - AI side`}
+          title="AI locked picks"
+          score={`${score.intelligenceScore}%`}
+          scoreLabel="AI score"
+          tone="ai"
+        >
+          <Metric label="Locked at 8:50 AM" value={`${predicted.length}/10`} note={data.lockDate ?? undefined} />
+          <Metric label="Avg move" value={formatSignedPercent(score.avgPickMovePercent)} tone={toneFor(score.avgPickMovePercent)} />
+          <Metric label="Stated confidence" value={`${score.avgConfidence}%`} />
+          <Metric label="Hit rate" value={`${score.hitRate}%`} note={`${score.hitCount} of 10 in the live top 10`} />
+          <Metric label="Rank accuracy" value={`${score.rankAccuracy}%`} />
+          <Metric
+            label="Top pick"
+            value={aiLeader ? aiLeader.symbol : "-"}
+            note={aiLeader ? formatSignedPercent(aiLeader.changePercent) : undefined}
+          />
+        </ScorePanel>
+
+        <ScorePanel
+          eyebrow={`${cap} cap - market side`}
+          title="Live BSE market"
+          score={formatSignedPercent(score.avgMarketMovePercent)}
+          scoreLabel="Top 10 avg"
+          tone="market"
+        >
+          <Metric label="Session" value={SESSION_LABEL[data.marketSession]} note={data.sessionDate ?? undefined} />
+          <Metric
+            label="Top 10 avg move"
+            value={formatSignedPercent(score.avgMarketMovePercent)}
+            tone={toneFor(score.avgMarketMovePercent)}
+          />
+          <Metric label="Advancing in top 10" value={`${advancers}/${actual.length || 10}`} />
+          <Metric
+            label="Market leader"
+            value={marketLeader ? marketLeader.symbol : "-"}
+            note={marketLeader ? marketLeader.stockName : undefined}
+          />
+          <Metric
+            label="Leader move"
+            value={formatSignedPercent(marketLeader?.changePercent)}
+            tone={toneFor(marketLeader?.changePercent)}
+          />
+          <Metric label="Prices" value={marketLeader?.live ? "Live" : "BSE close"} />
+        </ScorePanel>
+      </div>
+
+      <section
+        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 dark:border-slate-800 dark:bg-slate-950/50"
+        aria-label="AI versus market verdict"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            AI versus market, {cap.toLowerCase()} cap
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {CAP_TIERS.map((tier) => (
+              <span
+                key={tier}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums ${
+                  tier === cap
+                    ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200"
+                    : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"
+                }`}
+              >
+                {tier} {data.scorecard.byCap[tier].intelligenceScore}%
+              </span>
+            ))}
+            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-black tabular-nums text-white dark:bg-white dark:text-slate-900">
+              All {data.scorecard.overall.intelligenceScore}%
+            </span>
+          </div>
+        </div>
+        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-4">
+          {verdicts.map((verdict) => (
+            <Metric key={verdict.label} label={verdict.label} value={verdict.value} tone={verdict.tone} />
+          ))}
+        </dl>
+        <p className="mt-2.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+          Edge is the picks&apos; average move minus the market top 10&apos;s. Calibration compares the confidence the AI stated with the hit
+          rate it delivered. AI score blends hit rate, rank accuracy, calibration and edge.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/** How the live board should describe itself: only a real session is "live". */
+const SESSION_LABEL: Record<BseAiPredictionAccuracy["marketSession"], string> = {
+  "pre-open": "Pre-open",
+  live: "Live session",
+  closed: "Session closed",
+  holiday: "No session today",
+};
+
+const SESSION_BLURB: Record<BseAiPredictionAccuracy["marketSession"], string> = {
+  "pre-open": "Ranked on the last completed BSE session until the 9:15 AM IST open, then re-ranked live all session.",
+  live: "Live BSE session: the top 10 of this cap tier is re-ranked from current performance every minute, so this board changes during the day.",
+  closed: "The 3:30 PM IST close: this is where the top 10 of this cap tier finished today.",
+  holiday: "No BSE session today. Showing the last completed session's top 10 for this cap tier.",
+};
+
 export function AiPredictionAccuracySection() {
   const [data, setData] = useState<BseAiPredictionAccuracy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [predictedCap, setPredictedCap] = useState<CapTier>("Large");
-  const [actualCap, setActualCap] = useState<CapTier>("Large");
+  // One cap tier for both boards. Scoring the AI's large caps against the market's small caps
+  // compares nothing, so the two selects are two handles on the same choice: changing either one
+  // moves both lists and the three cards with them.
+  const [cap, setCap] = useState<CapTier>("Large");
 
   const load = useCallback(async () => {
     try {
@@ -367,19 +631,27 @@ export function AiPredictionAccuracySection() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  // The minute refresh, paused while the tab is in the background: a section nobody is looking at
+  // does not need new prices, and the request, parse and re-render it skips is main-thread time
+  // charged to whatever the reader is actually looking at. Returning to the tab refreshes at once,
+  // so what is on screen is never stale.
   useEffect(() => {
-    const timer = window.setInterval(() => void load(), REFRESH_MS);
-    return () => window.clearInterval(timer);
+    const tick = () => {
+      if (!document.hidden) void load();
+    };
+
+    const timer = window.setInterval(tick, REFRESH_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [load]);
 
   const predictedRows = data?.predictions ?? [];
   const actualRows = data?.actualTop ?? [];
-  const predictedCapRows = capRowsFrom(data?.predictionsByCap, predictedRows, predictedCap);
-  const actualCapRows = capRowsFrom(data?.actualTopByCap, actualRows, actualCap);
-  const selectedScore = scoreRows(predictedCapRows, actualCapRows);
-  const selectedAccuracy = predictedCap === actualCap ? data?.accuracyByCap?.[predictedCap] ?? selectedScore : selectedScore;
-  const aiScore = averageConfidence(predictedCapRows);
-  const realMarketMove = averageMove(actualCapRows);
+  const predictedCapRows = capRowsFrom(data?.predictionsByCap, predictedRows, cap);
+  const actualCapRows = capRowsFrom(data?.actualTopByCap, actualRows, cap);
 
   return (
     <MarketSection
@@ -387,7 +659,7 @@ export function AiPredictionAccuracySection() {
       eyebrow="AI prediction accuracy"
       eyebrowClass="text-violet-600 dark:text-violet-400"
       title="Locked AI picks versus real BSE top performers"
-      blurb="Before the 9:15 AM IST open, the AI locks BSE-listed stocks from positive market coverage. During the session, this section refreshes live market-backed prices and compares those locked picks with the actual top performers."
+      blurb="At 8:50 AM IST each trading day, the AI reads that morning's positive market coverage and locks 10 BSE-listed stocks per cap tier. The list is then fixed from the 9:15 AM open to the 3:30 PM close — only live prices move — and the next 8:50 AM lock replaces all 10."
       aside={
         <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-bold text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300">
           {data?.status === "locked" ? `${data.accuracy.percent}% accurate` : metaLabel(data)}
@@ -399,52 +671,42 @@ export function AiPredictionAccuracySection() {
 
       {!loading && data && (
         <>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <SummaryCard
-              label="Lock status"
-              value={data.persistedSession ? "Last session saved" : data.status === "locked" ? "Locked for today" : "No locked picks"}
-              detail={
-                data.status === "locked"
-                  ? `${predictedCapRows.length}/10 locked ${predictedCap} cap stocks`
-                  : "No real pre-open AI lock exists for this trading date"
-              }
-              foot={data.persistedSession ? "Persists after 3:30 PM IST" : "Cutoff: 9:15 AM IST"}
-              tone="sky"
-            />
-            <SummaryCard
-              label="Prediction engine"
-              value={data.source === "ai" ? data.model ?? "AI model" : data.source === "heuristic" ? "Fallback heuristic" : "Waiting for lock"}
-              detail={aiScore > 0 ? `AI score: ${aiScore}% confidence` : "AI score appears after real picks are locked"}
-              foot={`Real market avg move: ${formatSignedPercent(realMarketMove)}`}
-              tone="violet"
-            />
-            <SummaryCard
-              label="Accuracy check"
-              value={`${selectedAccuracy.percent}% score`}
-              detail={`${selectedAccuracy.matched}/${selectedAccuracy.total} locked AI picks matched real movers`}
-              foot={`AI ${predictedCap} cap vs market ${actualCap} cap`}
-              tone="emerald"
-            />
-          </div>
+          <SummaryCards data={data} cap={cap} lockedCount={predictedCapRows.length} />
+
+          <Scoreboard data={data} cap={cap} predicted={predictedCapRows} actual={actualCapRows} />
+
+          {data.holdover && (
+            <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
+              {data.message}
+            </p>
+          )}
 
           <div className="mt-5 grid gap-4 xl:grid-cols-2">
             <ListCard
               title="AI locked picks before open"
-              blurb="The stock list is fixed for the day; only live price, move and return fields refresh."
+              blurb={
+                data.holdover
+                  ? `Locked at 8:50 AM IST on ${data.lockDate} and held until the next 8:50 AM lock replaces all 10.`
+                  : "Locked at 8:50 AM IST, 25 minutes before the open. The stock list is fixed for the day; only live price, move and return fields refresh."
+              }
               rows={predictedCapRows}
               empty={data.message}
               side="predicted"
-              cap={predictedCap}
-              onCapChange={setPredictedCap}
+              cap={cap}
+              onCapChange={setCap}
             />
             <ListCard
               title="Actual top performers live today"
-              blurb={data.persistedSession ? "Showing the saved market-close performers until the next session begins." : "This list can change during the session as live market performance changes."}
+              blurb={
+                data.persistedSession
+                  ? "Showing the saved market-close performers until the next session begins."
+                  : SESSION_BLURB[data.marketSession]
+              }
               rows={actualCapRows}
-              empty={`No ${actualCap} cap row is present in the current real top performers feed.`}
+              empty={`No ${cap} cap row is present in the current real top performers feed.`}
               side="actual"
-              cap={actualCap}
-              onCapChange={setActualCap}
+              cap={cap}
+              onCapChange={setCap}
             />
           </div>
         </>

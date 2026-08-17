@@ -61,24 +61,36 @@ function companyName(ticker: string): string {
   return namesBySymbol.get(ticker) ?? ticker;
 }
 
+/**
+ * The sources, best first — and "best" now means "the one that answers".
+ *
+ * This list used to open with `logo.clearbit.com` whenever a real mark was wanted, with two more
+ * ticker CDNs behind it. Measured against the live services, that order was the bug behind BHEL,
+ * HAL and Polycab rendering as monograms on the landing page:
+ *
+ *   logo.clearbit.com            the free Logo API is gone; the host does not answer at all, so
+ *                                every logo that asked it first waited for a connection to time
+ *                                out before trying anything else
+ *   groww / tickertape CDNs      404 and unreachable respectively for the same tickers
+ *   images.dhan.co/symbol        200, with a real mark, for every ticker checked — including all
+ *                                three of the ones that were failing
+ *
+ * So the symbol store leads for everybody, dead hosts are gone, and the company's own favicon —
+ * which 404s cleanly and quickly when it has nothing — sits behind it for names the store misses.
+ * `preferReal` now means "try one more icon service before drawing a monogram" rather than
+ * "reorder", because there is no longer a reason to put anything ahead of the store.
+ */
 function logoSources(symbol: string, override?: string | null, preferReal = false): string[] {
   if (override) return [override];
 
   const ticker = normaliseTicker(symbol);
   const domain = checkedDomain(ticker);
-  const clearbit = domain ? `https://logo.clearbit.com/${encodeURIComponent(domain)}?size=128` : null;
-  const favicon = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null;
-  const symbolLogo = stockLogoUrl(ticker);
-  const extraSymbolSources = preferReal
-    ? [
-        `https://assets-netstorage.groww.in/stock-assets/logos/${encodeURIComponent(ticker)}.png`,
-        `https://static.tickertape.in/stock-logos/${encodeURIComponent(ticker)}.png`,
-      ]
-    : [];
 
-  return [...(preferReal ? [clearbit, favicon, symbolLogo] : [symbolLogo, clearbit, favicon]), ...extraSymbolSources].filter(
-    (source): source is string => source !== null,
-  );
+  return [
+    stockLogoUrl(ticker),
+    domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null,
+    domain && preferReal ? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico` : null,
+  ].filter((source): source is string => source !== null);
 }
 
 /**

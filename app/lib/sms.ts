@@ -2,9 +2,9 @@
 
 // Sending an SMS, with the same contract as ./mailer.
 //
-// One transport is implemented â€” Twilio's REST API â€” because it needs nothing but `fetch` and this
-// project carries three production dependencies on purpose. Everything else about the shape here
-// mirrors the mailer deliberately: it never throws, it degrades to a local outbox when nothing is
+// Three gateways are implemented â€” Twilio, Fast2SMS and MSG91 â€” each of them nothing but a `fetch`,
+// because this project carries three production dependencies on purpose. Everything else about the
+// shape here mirrors the mailer deliberately: it never throws, it degrades to a local outbox when nothing is
 // configured, and it reports which of the two happened. A sign-up must not fail because an SMS
 // gateway is down, and a developer with no gateway at all must still be able to see what would
 // have been sent.
@@ -30,10 +30,12 @@ export type SmsMessage = {
   body: string;
 };
 
+/** Where a message actually went. Anything but "outbox" means it left this server. */
+export type SmsTransport = "twilio" | "fast2sms" | "msg91" | "outbox";
+
 export type SmsResult = {
   ok: boolean;
-  /** "twilio" when it really went out, "outbox" when it was only recorded locally. */
-  transport: "twilio" | "outbox";
+  transport: SmsTransport;
   error?: string;
 };
 
@@ -47,8 +49,41 @@ export function twilioConfig(): TwilioConfig | null {
   return accountSid && authToken && from ? { accountSid, authToken, from } : null;
 }
 
+/**
+ * The gateways, in the order they are tried.
+ *
+ * Twilio is the international default and needs a card even for its trial credit, which is exactly
+ * the wall an operator in India hits first. So two Indian gateways sit behind it, both with a free
+ * quota big enough for password recovery:
+ *
+ *   twilio     TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM
+ *   fast2sms   FAST2SMS_API_KEY                    free quota, no card, transactional route
+ *   msg91      MSG91_AUTH_KEY + MSG91_SENDER_ID    free trial credits
+ *
+ * The DLT caveat at the top of this file applies to all three: an Indian gateway will accept the
+ * call and drop the message if the sender id and template are not registered. Fast2SMS's "q"
+ * (quick) route is the exception that makes it the useful one to start with — it sends without a
+ * registered template, which is why it is tried before MSG91.
+ */
+export function fast2smsConfigured(): boolean {
+  return Boolean(process.env.FAST2SMS_API_KEY?.trim());
+}
+
+export function msg91Configured(): boolean {
+  return Boolean(process.env.MSG91_AUTH_KEY?.trim() && process.env.MSG91_SENDER_ID?.trim());
+}
+
+/** True when *some* gateway can deliver, which is the only question the callers ask. */
 export function smsConfigured(): boolean {
-  return twilioConfig() !== null;
+  return twilioConfig() !== null || fast2smsConfigured() || msg91Configured();
+}
+
+/** Which gateway is doing the sending, for the admin health report. */
+export function smsTransportName(): SmsTransport | null {
+  if (twilioConfig()) return "twilio";
+  if (fast2smsConfigured()) return "fast2sms";
+  if (msg91Configured()) return "msg91";
+  return null;
 }
 
 /** E.164, which is the only format a gateway will accept. Indian numbers, so +91. */
@@ -84,20 +119,9 @@ async function recordToOutbox(message: SmsMessage, reason: string): Promise<SmsR
   }
 }
 
-/**
- * Sends one SMS. Never throws.
- *
- * Every failure â€” an unconfigured gateway, a number that is not a mobile, a refused request, a
- * network fault â€” resolves rather than rejecting, because every caller is doing something more
- * important than this and none of them should be brought down by it.
- */
-export async function sendSms(message: SmsMessage): Promise<SmsResult> {
-  const to = toE164(message.to);
-  if (!to) return { ok: false, transport: "outbox", error: "Not a valid Indian mobile number." };
+type SmsAttempt = { transport: SmsTransport; send: () => Promise<{ ok: boolean; error?: string }> };
 
-  const config = twilioConfig();
-  if (!config) return recordToOutbox(message, "No SMS gateway configured");
-
+async function twilioSend(config: TwilioConfig, to: string, body: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`, {
       method: "POST",
@@ -105,19 +129,92 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
         Authorization: `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({ To: to, From: config.from, Body: message.body }),
+      body: new URLSearchParams({ To: to, From: config.from, Body: body }),
       signal: AbortSignal.timeout(10_000),
     });
 
-    if (!response.ok) {
-      const detail = await response.text();
-      return recordToOutbox(message, `Gateway responded ${response.status}: ${detail.slice(0, 200)}`);
-    }
-
-    return { ok: true, transport: "twilio" };
+    if (response.ok) return { ok: true };
+    const detail = await response.text().catch(() => "");
+    return { ok: false, error: `responded ${response.status}: ${detail.slice(0, 200)}` };
   } catch (error) {
-    return recordToOutbox(message, String(error));
+    return { ok: false, error: String(error).slice(0, 200) };
   }
+}
+
+/**
+ * Fast2SMS, which takes a ten-digit number rather than E.164 and answers 200 even for some
+ * refusals — hence the `return` field is checked and not just the status.
+ */
+async function fast2smsSend(nationalNumber: string, body: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+      method: "POST",
+      headers: { authorization: process.env.FAST2SMS_API_KEY?.trim() ?? "", "Content-Type": "application/json" },
+      body: JSON.stringify({ route: "q", message: body, language: "english", flash: 0, numbers: nationalNumber }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    const detail = await response.text().catch(() => "");
+    if (response.ok && /"return"\s*:\s*true/.test(detail)) return { ok: true };
+    return { ok: false, error: `responded ${response.status}: ${detail.slice(0, 200)}` };
+  } catch (error) {
+    return { ok: false, error: String(error).slice(0, 200) };
+  }
+}
+
+async function msg91Send(nationalNumber: string, body: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch("https://api.msg91.com/api/v2/sendsms", {
+      method: "POST",
+      headers: { authkey: process.env.MSG91_AUTH_KEY?.trim() ?? "", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender: process.env.MSG91_SENDER_ID?.trim(),
+        route: "4",
+        country: "91",
+        sms: [{ message: body, to: [nationalNumber] }],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    const detail = await response.text().catch(() => "");
+    if (response.ok && !/"type"\s*:\s*"error"/.test(detail)) return { ok: true };
+    return { ok: false, error: `responded ${response.status}: ${detail.slice(0, 200)}` };
+  } catch (error) {
+    return { ok: false, error: String(error).slice(0, 200) };
+  }
+}
+
+/**
+ * Sends one SMS through the first gateway that takes it. Never throws.
+ *
+ * Every failure — an unconfigured gateway, a number that is not a mobile, a refused request, a
+ * network fault — resolves rather than rejecting, because every caller is doing something more
+ * important than this and none of them should be brought down by it. A message no gateway accepted
+ * is recorded locally with each gateway's complaint attached.
+ */
+export async function sendSms(message: SmsMessage): Promise<SmsResult> {
+  const to = toE164(message.to);
+  if (!to) return { ok: false, transport: "outbox", error: "Not a valid Indian mobile number." };
+
+  // The Indian gateways address a subscriber by the bare ten digits, not by E.164.
+  const national = to.slice(3);
+  const config = twilioConfig();
+  const attempts: SmsAttempt[] = [];
+
+  if (config) attempts.push({ transport: "twilio", send: () => twilioSend(config, to, message.body) });
+  if (fast2smsConfigured()) attempts.push({ transport: "fast2sms", send: () => fast2smsSend(national, message.body) });
+  if (msg91Configured()) attempts.push({ transport: "msg91", send: () => msg91Send(national, message.body) });
+
+  if (attempts.length === 0) return recordToOutbox(message, "No SMS gateway configured");
+
+  const failures: string[] = [];
+  for (const attempt of attempts) {
+    const result = await attempt.send();
+    if (result.ok) return { ok: true, transport: attempt.transport };
+    failures.push(`${attempt.transport} ${result.error ?? "failed"}`);
+  }
+
+  return recordToOutbox(message, failures.join(" | "));
 }
 
 /**
@@ -133,6 +230,16 @@ export function welcomeSms(name: string): string {
 
 export function mfaOtpSms(code: string): string {
   return `Your StockersAI sign-in code is ${code}. It expires in 5 minutes.`;
+}
+
+/**
+ * The password reset code, as SMS.
+ *
+ * The second channel recovery runs on, and the one that still works when mail is the thing that is
+ * broken. Fixed template, no link, same as every other message here — see `welcomeSms`.
+ */
+export function passwordResetSms(code: string, minutes: number): string {
+  return `Your StockersAI password reset code is ${code}. It expires in ${minutes} minutes. Do not share this code with anyone.`;
 }
 
 /** The message sent once a subscription payment has been captured. */

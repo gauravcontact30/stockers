@@ -19,6 +19,8 @@
 // that uses one. Everything else is "configured: true". A health endpoint that echoed its own
 // credentials back would be a far worse bug than the misconfiguration it was built to find.
 
+import { mailTransportName } from "./mailer";
+import { smsTransportName } from "./sms";
 import { supabaseConfig, supabaseConfigured, supabaseRequest } from "./supabase";
 
 export type CheckState = "ok" | "degraded" | "off";
@@ -176,6 +178,8 @@ export function worstOf(checks: HealthCheck[]): CheckState {
 export async function buildHealthReport(): Promise<HealthReport> {
   const config = supabaseConfig();
   const hasSupabase = supabaseConfigured();
+  const mailTransport = mailTransportName();
+  const smsTransport = smsTransportName();
   const startedAt = Date.now();
 
   const [store, analytics, portfolio, ledger, presence] = hasSupabase
@@ -301,21 +305,23 @@ export async function buildHealthReport(): Promise<HealthReport> {
     {
       key: "mail",
       label: "Email",
-      state: configured("RESEND_API_KEY") ? "ok" : "degraded",
-      detail: configured("RESEND_API_KEY") ? "Resend is configured." : "RESEND_API_KEY is not set.",
-      consequence: configured("RESEND_API_KEY")
-        ? "Verification and contact mail is delivered."
-        : "Verification links are not sent, so new accounts cannot verify by email.",
+      // Any one of four providers counts: see the provider order in ./mailer. Naming the one in
+      // use matters here, because "mail is configured" and "mail is arriving" came apart once.
+      state: mailTransport ? "ok" : "degraded",
+      detail: mailTransport ? `Mail is sent through ${mailTransport}.` : "No mail provider is set (Resend, Brevo, SendGrid or SMTP).",
+      consequence: mailTransport
+        ? "Verification, recovery and contact mail is delivered."
+        : "Verification links and password reset codes are not sent, so nobody can verify an address or recover an account by email.",
       latencyMs: null,
     },
     {
       key: "sms",
       label: "SMS",
-      state: anyConfigured("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN") ? "ok" : "degraded",
-      detail: anyConfigured("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN") ? "Twilio is configured." : "Twilio is not set.",
-      consequence: anyConfigured("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN")
-        ? "SMS notifications can be sent."
-        : "No SMS is sent. Nothing else is affected.",
+      state: smsTransport ? "ok" : "degraded",
+      detail: smsTransport ? `SMS is sent through ${smsTransport}.` : "No SMS gateway is set (Twilio, Fast2SMS or MSG91).",
+      consequence: smsTransport
+        ? "Sign-in codes and password reset codes can be sent by SMS."
+        : "No SMS is sent, so email is the only way to recover an account.",
       latencyMs: null,
     },
     {

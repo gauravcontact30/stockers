@@ -16,6 +16,30 @@ import { SignupSuccessModal } from "./signup-success-modal";
 type AuthMode = "signin" | "signup";
 type MfaChallenge = { challengeToken: string; mode: "sms" | "totp" };
 
+/** What the server managed to send, and where. Mirrors `/api/auth/forgot-password`. */
+type ResetChannel = {
+  kind: "email" | "sms";
+  target: string;
+  state: "sent" | "recorded" | "unconfigured" | "failed";
+};
+
+/** How long before another code can be asked for. */
+const RESEND_COOLDOWN_SECONDS = 45;
+
+/**
+ * What each delivery outcome means to somebody who is waiting for a code.
+ *
+ * "recorded" and "unconfigured" both mean nothing left this server, and saying so is the entire
+ * point: the old flow's silence is what left a reader refreshing an inbox that was never going to
+ * fill. Where a second channel did work, the sentence points at it.
+ */
+const CHANNEL_NOTE: Record<ResetChannel["state"], string> = {
+  sent: "sent",
+  recorded: "not delivered - sending isn't switched on yet",
+  unconfigured: "not set up on this site yet",
+  failed: "could not be delivered",
+};
+
 type AuthFormProps = { mode: AuthMode };
 
 function readStoredAuthSession(): { token: string; user: unknown } | null {
@@ -129,7 +153,21 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [checkoutTarget] = useState<PendingSubscription | null>(() => checkoutTargetFromLocation());
+  /**
+   * Password recovery, as two steps on this page rather than a trip through an inbox.
+   *
+   * `step` is "ask" until a code has been requested and "code" afterwards. The reader never leaves
+   * the sign-in page, never pastes a token, and — because the code is sent by SMS as well as mail
+   * — never depends on an email arriving at all. `channels` is what the server says it managed to
+   * send and where, so the panel can name the destination instead of saying "check your email".
+   */
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState<"ask" | "code">("ask");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [resetChannels, setResetChannels] = useState<ResetChannel[]>([]);
+  const [resendIn, setResendIn] = useState(0);
+  const [resetCode, setResetCode] = useState("");
+  /** Only ever set by an older emailed link, whose token is not a six-digit code. */
   const [resetToken, setResetToken] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetConfirmPassword, setResetConfirmPassword] = useState("");
@@ -191,10 +229,17 @@ export function AuthForm({ mode }: AuthFormProps) {
     const social = params.get("social");
     const socialError = params.get("error");
 
-    if (email) setFields((current) => ({ ...current, email }));
+    if (email) {
+      setFields((current) => ({ ...current, email }));
+      setRecoveryEmail(email);
+    }
     if (reset) {
+      // The current link carries the six-digit code; anything else is a token from an older mail,
+      // which still works. Either way the reader lands on the second step with nothing to paste.
       setRecoveryOpen(true);
-      setResetToken(reset);
+      setRecoveryStep("code");
+      if (/^\d{6}$/.test(reset)) setResetCode(reset);
+      else setResetToken(reset);
     }
     if (socialError) {
       const provider = social ? `${social} ` : "";
@@ -206,6 +251,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       );
     }
   }, []);
+
+  // The resend cooldown, counted down a second at a time. The interval only exists while there is
+  // something to count, so an idle form holds no timer.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendIn]);
 
   const localErrors: FieldErrors =
     mode === "signup" ? validateSignup(fields) : validateSignin({ email: fields.email, password: fields.password });
@@ -266,6 +319,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   const requestPasswordReset = async () => {
+    const email = (recoveryEmail || fields.email).trim();
     setMessage(null);
     setSuccess(false);
     setLoading(true);
@@ -273,11 +327,19 @@ export function AuthForm({ mode }: AuthFormProps) {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fields.email.trim() }),
+        body: JSON.stringify({ email }),
       });
       const data = await response.json();
       setSuccess(response.ok);
-      setMessage(data.message || data.error || "Unable to request a reset link.");
+      setMessage(data.message || data.error || "Unable to send a code right now.");
+      if (response.ok) {
+        setRecoveryEmail(email);
+        setResetChannels(Array.isArray(data.channels) ? (data.channels as ResetChannel[]) : []);
+        setRecoveryStep("code");
+        // Long enough that a second click cannot outrun the first message, short enough that a
+        // reader who really did not get one is not left staring at a disabled button.
+        setResendIn(RESEND_COOLDOWN_SECONDS);
+      }
     } catch {
       setMessage("Network error. Please check your connection and try again.");
     } finally {
@@ -294,18 +356,31 @@ export function AuthForm({ mode }: AuthFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: resetToken.trim(),
+          // One or the other: the typed code, or a token from an older emailed link.
+          ...(resetToken ? { token: resetToken.trim() } : { email: (recoveryEmail || fields.email).trim(), code: resetCode }),
           password: resetPassword,
           confirmPassword: resetConfirmPassword,
         }),
       });
       const data = await response.json();
       setSuccess(response.ok);
-      setMessage(data.message || data.error || "Unable to reset password.");
+      setMessage(
+        response.ok
+          ? "Password updated. Sign in with your new password."
+          : data.error || data.message || "Unable to reset password.",
+      );
       if (response.ok) {
+        // Straight back to a sign-in form that already knows who they are: the only thing left to
+        // do is type the password they just chose.
         setRecoveryOpen(false);
+        setRecoveryStep("ask");
+        setResetChannels([]);
+        setResetCode("");
+        setResetToken("");
         setResetPassword("");
         setResetConfirmPassword("");
+        setResendIn(0);
+        if (typeof data.email === "string") setFields((current) => ({ ...current, email: data.email, password: "" }));
       }
     } catch {
       setMessage("Network error. Please check your connection and try again.");
@@ -580,51 +655,125 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       {!signup && recoveryOpen && (
         <div className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/30 dark:bg-sky-500/10">
-          <Field label="Reset token" hint="Paste the token from your email link, or use the link directly.">
-            <input
-              value={resetToken}
-              onChange={(event) => setResetToken(event.target.value)}
-              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
-              placeholder="Reset token"
-              autoComplete="one-time-code"
-            />
-          </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input
-              type="password"
-              value={resetPassword}
-              onChange={(event) => setResetPassword(event.target.value)}
-              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
-              placeholder="New password"
-              autoComplete="new-password"
-            />
-            <input
-              type="password"
-              value={resetConfirmPassword}
-              onChange={(event) => setResetConfirmPassword(event.target.value)}
-              className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
-              placeholder="Confirm new password"
-              autoComplete="new-password"
-            />
+          <div>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">
+              {recoveryStep === "ask" ? "Step 1 of 2 - where should the code go?" : "Step 2 of 2 - enter the code and a new password"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              {recoveryStep === "ask"
+                ? "We'll send a 6-digit code to your email, and by SMS as well if your account has a mobile number. You stay on this page - there is no link to wait for."
+                : "Type the code below, choose a new password, and you're back in. The code expires in 15 minutes."}
+            </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={requestPasswordReset}
-              className="rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-60 dark:border-sky-500/30 dark:bg-slate-950 dark:text-sky-300"
-            >
-              Email reset link
-            </button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={resetPasswordNow}
-              className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
-            >
-              Update password
-            </button>
-          </div>
+
+          {recoveryStep === "ask" ? (
+            <>
+              <Field label="Your account email">
+                <input
+                  type="email"
+                  value={recoveryEmail || fields.email}
+                  onChange={(event) => setRecoveryEmail(event.target.value)}
+                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </Field>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={requestPasswordReset}
+                className="w-full rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+              >
+                {loading ? "Sending code..." : "Send me a code"}
+              </button>
+            </>
+          ) : (
+            <>
+              {resetChannels.length > 0 && (
+                <ul className="space-y-1 rounded-xl border border-sky-200 bg-white/70 p-2.5 text-xs font-semibold text-slate-700 dark:border-sky-500/30 dark:bg-slate-950/60 dark:text-slate-200">
+                  {resetChannels.map((channel) => (
+                    <li key={channel.kind} className="flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
+                        {channel.kind === "sms" ? "SMS" : "Email"}
+                      </span>
+                      <span className="tabular-nums">{channel.target}</span>
+                      <span className={channel.state === "sent" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
+                        {CHANNEL_NOTE[channel.state]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {resetToken ? (
+                <p className="rounded-xl bg-white/70 p-2.5 text-xs font-semibold text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+                  Using the reset link from your email. Just choose a new password below.
+                </p>
+              ) : (
+                <Field label="6-digit code" hint="Check your SMS as well as your email inbox and spam folder.">
+                  <input
+                    value={resetCode}
+                    onChange={(event) => setResetCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className={`${FIELD_BASE} border-sky-200 text-center text-lg tracking-[0.4em] dark:border-sky-500/40`}
+                    placeholder="000000"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                  />
+                </Field>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={(event) => setResetPassword(event.target.value)}
+                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                />
+                <input
+                  type="password"
+                  value={resetConfirmPassword}
+                  onChange={(event) => setResetConfirmPassword(event.target.value)}
+                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+                  placeholder="Confirm new password"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={resetPasswordNow}
+                className="w-full rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+              >
+                {loading ? "Updating..." : "Update password"}
+              </button>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
+                <button
+                  type="button"
+                  disabled={loading || resendIn > 0}
+                  onClick={requestPasswordReset}
+                  className="text-sky-700 hover:text-sky-800 disabled:opacity-50 dark:text-sky-300"
+                >
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryStep("ask");
+                    setResetToken("");
+                    setResetCode("");
+                    setMessage(null);
+                  }}
+                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Use a different email
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

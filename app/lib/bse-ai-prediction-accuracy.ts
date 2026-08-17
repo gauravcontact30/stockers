@@ -21,6 +21,22 @@ const TIER_QUERY: Record<BseCapTier, "large" | "mid" | "small"> = { Large: "larg
 export type PredictionSource = "ai" | "heuristic";
 export type PredictionStatus = "locked" | "not-generated";
 
+/**
+ * The daily cycle this module runs on, in IST:
+ *
+ *   08:50  the AI reads the morning's positive coverage and locks ten stocks per cap tier
+ *   09:15  the exchange opens; the locked list stops changing and only prices refresh
+ *   15:30  the exchange closes; the day's accuracy is frozen into a session snapshot
+ *
+ * Between 15:30 and the next 08:50 the previous list is *held*, not cleared: replacing it is what
+ * the 08:50 run is for, so until that run happens the page keeps showing the picks it locked last.
+ */
+const PREDICTION_LOCK_TIME = "08:50";
+const MARKET_OPEN_TIME = "09:15";
+const MARKET_CLOSE_TIME = "15:30";
+/** How far ahead of 8:50 a scheduled run may fire and still be treated as that day's lock. */
+const SCHEDULE_GRACE_MS = 5 * 60_000;
+
 export type PredictionSourceLink = {
   title: string;
   url: string;
@@ -51,6 +67,9 @@ export type LockedPredictionCache = {
   /** Kept so an older cache file still reads without crashing. */
   picks?: LockedPredictionPick[];
 };
+
+/** A locked list plus whether it belongs to today or is yesterday's, still being held. */
+type ActiveLock = LockedPredictionCache & { holdover: boolean };
 
 export type PredictionPerformance = {
   symbol: string;
@@ -84,15 +103,60 @@ export type AccuracySummary = {
   percent: number;
 };
 
+/** Where the BSE day stands right now, which is what the live board's wording depends on. */
+export type MarketSessionState = "pre-open" | "live" | "closed" | "holiday";
+
+/**
+ * Today's AI marked against today's market, for one cap tier.
+ *
+ * Every number is derived from the two lists the page already shows — the 8:50 lock on one side,
+ * the live top ten on the other — so the score a reader sees is one they could recompute from the
+ * rows in front of them. Nothing here is an opinion, and nothing carries over from yesterday.
+ */
+export type CapScorecard = {
+  /** Locked picks that are in the live top ten right now. */
+  hitCount: number;
+  hitRate: number;
+  /** How close the matched picks landed to the rank the AI gave them, 0-100. */
+  rankAccuracy: number;
+  avgPickMovePercent: number;
+  avgMarketMovePercent: number;
+  /** Pick average minus market average, in percentage points: the AI's edge, or its cost. */
+  edgePercent: number;
+  beatMarketCount: number;
+  avgConfidence: number;
+  /** 100 when stated confidence matches the hit rate it actually delivered. */
+  confidenceCalibration: number;
+  /** Share of the ten slots that are locked and being held, 0-100. */
+  lockIntegrity: number;
+  /** The blend the cards headline: hit rate, rank accuracy, calibration and edge. */
+  intelligenceScore: number;
+};
+
+export type PredictionScorecard = {
+  byCap: Record<BseCapTier, CapScorecard>;
+  overall: CapScorecard;
+};
+
 export type BseAiPredictionAccuracy = {
   status: PredictionStatus;
   date: string;
+  /** The trading day the locked list belongs to, which is `date` unless a previous list is held. */
+  lockDate: string | null;
+  /** 8:50 AM IST of `lockDate`: when this list was, or was due to be, locked. */
+  lockAt: string | null;
+  /** 8:50 AM IST of the next trading day whose list has not been locked yet. */
+  nextLockAt: string;
+  /** True while yesterday's locked list is being held because today's 8:50 run has not run yet. */
+  holdover: boolean;
   cutoffAt: string;
   marketCloseAt: string;
   generatedAt: string | null;
   source: PredictionSource | null;
   model: string | null;
   message: string;
+  marketSession: MarketSessionState;
+  scorecard: PredictionScorecard;
   predictionsByCap: Record<BseCapTier, PredictionPerformance[]>;
   actualTopByCap: Record<BseCapTier, PredictionPerformance[]>;
   accuracyByCap: Record<BseCapTier, AccuracySummary>;
@@ -155,20 +219,79 @@ export function tradingDayKey(now = new Date()): string {
   return now.toLocaleDateString("en-CA", { timeZone: IST_TIME_ZONE });
 }
 
+function istInstant(day: string, time: string): string {
+  return `${day}T${time}:00+05:30`;
+}
+
+/** 8:50 AM IST — when the AI locks the ten picks for `day`, 25 minutes before the open. */
+export function predictionLockAt(day = tradingDayKey()): string {
+  return istInstant(day, PREDICTION_LOCK_TIME);
+}
+
 export function predictionCutoffAt(day = tradingDayKey()): string {
-  return `${day}T09:15:00+05:30`;
+  return istInstant(day, MARKET_OPEN_TIME);
 }
 
 export function marketCloseAt(day = tradingDayKey()): string {
-  return `${day}T15:30:00+05:30`;
+  return istInstant(day, MARKET_CLOSE_TIME);
 }
 
 export function isBeforePredictionCutoff(now = new Date()): boolean {
   return now.getTime() < new Date(predictionCutoffAt(tradingDayKey(now))).getTime();
 }
 
+/** Before 8:50 AM IST the day's list does not exist yet, so the previous one stays on screen. */
+export function isBeforePredictionLock(now = new Date()): boolean {
+  return now.getTime() < new Date(predictionLockAt(tradingDayKey(now))).getTime();
+}
+
 export function isAfterMarketClose(now = new Date()): boolean {
   return now.getTime() >= new Date(marketCloseAt(tradingDayKey(now))).getTime();
+}
+
+/**
+ * Exchange holidays, as `YYYY-MM-DD` in `BSE_MARKET_HOLIDAYS`.
+ *
+ * Unset, only weekends are skipped — which is the safe direction to be wrong in: a run on a
+ * holiday locks a list nobody trades against and the next real session replaces it anyway,
+ * whereas skipping a real session would leave the page holding a stale list all day.
+ */
+function marketHolidays(): Set<string> {
+  return new Set(
+    (process.env.BSE_MARKET_HOLIDAYS ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  );
+}
+
+export function isTradingDay(day: string): boolean {
+  // Noon IST rather than midnight: midnight IST is the *previous* date in UTC, and `getUTCDay`
+  // would then report the wrong weekday for every single day.
+  const weekday = new Date(istInstant(day, "12:00")).getUTCDay();
+  if (weekday === 0 || weekday === 6) return false;
+  return !marketHolidays().has(day);
+}
+
+function addDays(day: string, count: number): string {
+  const at = new Date(istInstant(day, "12:00"));
+  at.setUTCDate(at.getUTCDate() + count);
+  return tradingDayKey(at);
+}
+
+/** The next 8:50 AM IST lock still ahead of `now`, skipping weekends and configured holidays. */
+export function nextPredictionLockAt(now = new Date()): string {
+  const today = tradingDayKey(now);
+  if (isTradingDay(today) && now.getTime() < new Date(predictionLockAt(today)).getTime()) {
+    return predictionLockAt(today);
+  }
+
+  // A fortnight is longer than any BSE closure, so this always terminates on a real session.
+  for (let ahead = 1; ahead <= 14; ahead++) {
+    const day = addDays(today, ahead);
+    if (isTradingDay(day)) return predictionLockAt(day);
+  }
+  return predictionLockAt(addDays(today, 1));
 }
 
 function asPct(value: number): number {
@@ -355,6 +478,126 @@ export function calculateAccuracy(
       percent: asPct((matched / PICK_COUNT) * 100),
     },
   };
+}
+
+export function marketSessionState(now = new Date()): MarketSessionState {
+  const day = tradingDayKey(now);
+  if (!isTradingDay(day)) return "holiday";
+  if (isBeforePredictionCutoff(now)) return "pre-open";
+  if (isAfterMarketClose(now)) return "closed";
+  return "live";
+}
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.max(low, Math.min(high, value));
+}
+
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function moves(rows: readonly PredictionPerformance[]): number[] {
+  return rows.map((row) => row.changePercent).filter((value): value is number => typeof value === "number");
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+const EMPTY_SCORECARD: CapScorecard = {
+  hitCount: 0,
+  hitRate: 0,
+  rankAccuracy: 0,
+  avgPickMovePercent: 0,
+  avgMarketMovePercent: 0,
+  edgePercent: 0,
+  beatMarketCount: 0,
+  avgConfidence: 0,
+  confidenceCalibration: 0,
+  lockIntegrity: 0,
+  intelligenceScore: 0,
+};
+
+/**
+ * Marks one cap tier's locked picks against the live top ten of the same tier.
+ *
+ * The headline blend weights being *in* the top ten above everything else, because that is the
+ * claim the section makes; rank precision, honest confidence and the size of the edge are each
+ * worth less on their own but separate two engines with the same hit rate.
+ */
+export function scoreCap(
+  predicted: readonly PredictionPerformance[],
+  actual: readonly PredictionPerformance[],
+  expected = PICK_COUNT,
+): CapScorecard {
+  if (predicted.length === 0) return { ...EMPTY_SCORECARD, avgMarketMovePercent: round1(mean(moves(actual))) };
+
+  const matched = predicted.filter((row) => row.matchedActualRank !== null);
+  const hitCount = matched.length;
+  const hitRate = asPct((hitCount / predicted.length) * 100);
+
+  // A pick the AI ranked #1 that came in #1 scores 100; one that came in #10 scores less, and a
+  // miss contributes nothing rather than dragging the average of the picks that did land.
+  const spread = Math.max(1, predicted.length - 1);
+  const rankAccuracy = hitCount === 0 ? 0 : asPct(mean(matched.map((row) => 1 - Math.abs(row.rankDifference ?? 0) / spread)) * 100);
+
+  const pickMoves = moves(predicted);
+  const marketMoves = moves(actual);
+  const avgPickMovePercent = round1(mean(pickMoves));
+  const avgMarketMovePercent = round1(mean(marketMoves));
+  const edgePercent = round1(avgPickMovePercent - avgMarketMovePercent);
+  const beatMarketCount = pickMoves.filter((value) => value >= avgMarketMovePercent).length;
+
+  const confidences = predicted.map((row) => row.confidence).filter((value): value is number => typeof value === "number");
+  const avgConfidence = asPct(mean(confidences));
+  // Confidence is only worth anything if it is honest: a 90% claim delivering 30% is penalised
+  // exactly as hard as a 30% claim delivering 90%.
+  const confidenceCalibration = confidences.length === 0 ? 0 : asPct(clamp(100 - Math.abs(avgConfidence - hitRate), 0, 100));
+
+  const lockIntegrity = asPct(clamp((predicted.length / expected) * 100, 0, 100));
+  // One percentage point of edge moves the edge component by ten, so a realistic day's edge of a
+  // point or two reads as a visible difference rather than a rounding error.
+  const edgeScore = clamp(50 + edgePercent * 10, 0, 100);
+  const intelligenceScore = asPct(hitRate * 0.5 + rankAccuracy * 0.2 + confidenceCalibration * 0.15 + edgeScore * 0.15);
+
+  return {
+    hitCount,
+    hitRate,
+    rankAccuracy,
+    avgPickMovePercent,
+    avgMarketMovePercent,
+    edgePercent,
+    beatMarketCount,
+    avgConfidence,
+    confidenceCalibration,
+    lockIntegrity,
+    intelligenceScore,
+  };
+}
+
+export function buildScorecard(
+  predictionsByCap: Record<BseCapTier, PredictionPerformance[]>,
+  actualTopByCap: Record<BseCapTier, PredictionPerformance[]>,
+): PredictionScorecard {
+  const byCap = {
+    Large: scoreCap(predictionsByCap.Large, actualTopByCap.Large),
+    Mid: scoreCap(predictionsByCap.Mid, actualTopByCap.Mid),
+    Small: scoreCap(predictionsByCap.Small, actualTopByCap.Small),
+  };
+
+  return {
+    byCap,
+    overall: scoreCap(
+      CAP_TIERS.flatMap((tier) => predictionsByCap[tier]),
+      CAP_TIERS.flatMap((tier) => actualTopByCap[tier]),
+      PICK_COUNT * CAP_TIERS.length,
+    ),
+  };
+}
+
+function emptyScorecard(actualTopByCap: Record<BseCapTier, PredictionPerformance[]>): PredictionScorecard {
+  return buildScorecard(emptyCapRows<PredictionPerformance>(), actualTopByCap);
 }
 
 function heuristicPicks(candidates: Candidate[], capTier: BseCapTier): LockedPredictionPick[] {
@@ -564,33 +807,154 @@ function canGenerateLock(now: Date): boolean {
   return !isAfterMarketClose(now);
 }
 
-async function lockedPrediction(now: Date): Promise<LockedPredictionCache | null> {
-  const today = tradingDayKey(now);
-  const cached = await readJsonCache<LockedPredictionCache>(CACHE_FILE);
-  if (cached?.date === today) {
-    if (cached.picksByCap && CAP_TIERS.every((tier) => cached.picksByCap[tier]?.length >= PICK_COUNT)) {
-      return {
-        ...cached,
-        picksByCap: {
-          Large: cached.picksByCap.Large.slice(0, PICK_COUNT),
-          Mid: cached.picksByCap.Mid.slice(0, PICK_COUNT),
-          Small: cached.picksByCap.Small.slice(0, PICK_COUNT),
-        },
-      };
-    }
-    if (cached.picks?.length && cached.picks.length >= PICK_COUNT) {
-      return {
-        ...cached,
-        picksByCap: {
-          Large: cached.picks.slice(0, PICK_COUNT),
-          Mid: [],
-          Small: [],
-        },
-      };
-    }
+/** A stored lock in today's shape, or null when the file is absent, partial or pre-cap-tier. */
+function usableCache(cached: LockedPredictionCache | null): LockedPredictionCache | null {
+  if (!cached?.date) return null;
+
+  if (cached.picksByCap && CAP_TIERS.every((tier) => cached.picksByCap[tier]?.length >= PICK_COUNT)) {
+    return {
+      ...cached,
+      picksByCap: {
+        Large: cached.picksByCap.Large.slice(0, PICK_COUNT),
+        Mid: cached.picksByCap.Mid.slice(0, PICK_COUNT),
+        Small: cached.picksByCap.Small.slice(0, PICK_COUNT),
+      },
+    };
   }
-  if (!canGenerateLock(now)) return null;
-  return generateLockedPrediction(now);
+
+  if (cached.picks?.length && cached.picks.length >= PICK_COUNT) {
+    return {
+      ...cached,
+      picksByCap: { Large: cached.picks.slice(0, PICK_COUNT), Mid: [], Small: [] },
+    };
+  }
+
+  return null;
+}
+
+function heldOver(cached: LockedPredictionCache | null): ActiveLock | null {
+  return cached ? { ...cached, holdover: true } : null;
+}
+
+/**
+ * The ten picks per cap tier that today's page should show.
+ *
+ * Reading is never allowed to *replace* a list outside the 8:50 window — that is the whole point
+ * of the lock. Before 8:50, and on a day the exchange is shut, the previous list is handed back
+ * unchanged and flagged as held; only from 8:50 until the 3:30 close will a missing list be
+ * generated, which also covers a deployment whose scheduled run never fired.
+ */
+async function lockedPrediction(now: Date): Promise<ActiveLock | null> {
+  const today = tradingDayKey(now);
+  const cached = usableCache(await readJsonCache<LockedPredictionCache>(CACHE_FILE));
+  if (cached?.date === today) return { ...cached, holdover: false };
+
+  if (isBeforePredictionLock(now) || !isTradingDay(today) || !canGenerateLock(now)) return heldOver(cached);
+
+  const generated = await generateLockedPrediction(now);
+  return generated ? { ...generated, holdover: false } : heldOver(cached);
+}
+
+export type PredictionLockAction =
+  | "generated"
+  | "already-locked"
+  | "skipped-holiday"
+  | "skipped-early"
+  | "skipped-closed"
+  | "failed";
+
+export type PredictionLockRun = {
+  ok: boolean;
+  action: PredictionLockAction;
+  date: string;
+  lockAt: string;
+  nextLockAt: string;
+  tradingDay: boolean;
+  source: PredictionSource | null;
+  model: string | null;
+  generatedAt: string | null;
+  picks: Record<BseCapTier, number>;
+  message: string;
+};
+
+function pickCounts(cache: LockedPredictionCache | null): Record<BseCapTier, number> {
+  return {
+    Large: cache?.picksByCap?.Large?.length ?? 0,
+    Mid: cache?.picksByCap?.Mid?.length ?? 0,
+    Small: cache?.picksByCap?.Small?.length ?? 0,
+  };
+}
+
+/**
+ * The 8:50 AM IST run: locks today's ten picks per cap tier, replacing yesterday's.
+ *
+ * Called by the scheduler (`/api/cron/ai-locked-picks`) rather than by a page, so that the list is
+ * ready before the first visitor of the day arrives instead of being generated by whoever happens
+ * to load the page first. Idempotent — a second call on a day that is already locked reports
+ * `already-locked` and leaves the list alone, which is what makes retries and overlapping
+ * schedules safe. `force` is the manual override an admin uses to re-lock deliberately.
+ */
+export async function runDailyPredictionLock(
+  now = new Date(),
+  options: { force?: boolean } = {},
+): Promise<PredictionLockRun> {
+  const date = tradingDayKey(now);
+  const force = options.force === true;
+  const existing = usableCache(await readJsonCache<LockedPredictionCache>(CACHE_FILE));
+  const base = {
+    date,
+    lockAt: predictionLockAt(date),
+    nextLockAt: nextPredictionLockAt(now),
+    tradingDay: isTradingDay(date),
+  };
+  const held = {
+    ...base,
+    source: existing?.source ?? null,
+    model: existing?.model ?? null,
+    generatedAt: existing?.generatedAt ?? null,
+    picks: pickCounts(existing),
+  };
+
+  if (existing?.date === date && !force) {
+    return { ...held, ok: true, action: "already-locked", message: `Today's ${date} picks are already locked.` };
+  }
+
+  if (!base.tradingDay && !force) {
+    return {
+      ...held,
+      ok: true,
+      action: "skipped-holiday",
+      message: `${date} is not a BSE trading day. Holding the ${existing?.date ?? "previous"} picks.`,
+    };
+  }
+
+  // A scheduler that fires a minute early should still lock the day rather than skip it and leave
+  // the morning without a list, so the run — unlike a page load — is allowed a few minutes of
+  // slack. It stays comfortably ahead of the 9:15 open either way.
+  const earliest = new Date(base.lockAt).getTime() - SCHEDULE_GRACE_MS;
+  if (now.getTime() < earliest && !force) {
+    return { ...held, ok: true, action: "skipped-early", message: `The 8:50 AM IST lock for ${date} has not come round yet.` };
+  }
+
+  if (isAfterMarketClose(now) && !force) {
+    return { ...held, ok: true, action: "skipped-closed", message: `The ${date} session has already closed; no list will be locked for it.` };
+  }
+
+  const generated = await generateLockedPrediction(now);
+  if (!generated) {
+    return { ...held, ok: false, action: "failed", message: `Could not assemble ${PICK_COUNT} picks per cap tier for ${date}.` };
+  }
+
+  return {
+    ...base,
+    ok: true,
+    action: "generated",
+    source: generated.source,
+    model: generated.model,
+    generatedAt: generated.generatedAt,
+    picks: pickCounts(generated),
+    message: `Locked ${PICK_COUNT} picks per cap tier for ${date}, replacing the previous list.`,
+  };
 }
 
 async function actualTopForCap(capTier: BseCapTier): Promise<{ rows: PredictionPerformance[]; sessionDate: string | null }> {
@@ -624,7 +988,7 @@ function sessionSnapshotMessage(snapshotDate: string, currentDate: string): stri
   return `Showing the persisted ${snapshotDate} market-close accuracy snapshot until the next pre-open AI lock is generated.`;
 }
 
-async function readSessionSnapshot(currentDate: string): Promise<BseAiPredictionAccuracy | null> {
+async function readSessionSnapshot(currentDate: string, now: Date): Promise<BseAiPredictionAccuracy | null> {
   const snapshot = await readJsonCache<BseAiPredictionAccuracy>(SESSION_SNAPSHOT_FILE);
   if (!snapshot || snapshot.status !== "locked" || !snapshot.date) return null;
 
@@ -632,6 +996,14 @@ async function readSessionSnapshot(currentDate: string): Promise<BseAiPrediction
     ...snapshot,
     message: sessionSnapshotMessage(snapshot.date, currentDate),
     marketCloseAt: snapshot.marketCloseAt ?? marketCloseAt(snapshot.date),
+    // Older snapshot files predate these fields, so they are derived rather than trusted.
+    lockDate: snapshot.lockDate ?? snapshot.date,
+    lockAt: snapshot.lockAt ?? predictionLockAt(snapshot.date),
+    nextLockAt: nextPredictionLockAt(now),
+    holdover: snapshot.date !== currentDate,
+    // The session is where the clock says it is now, not where it was when this was frozen.
+    marketSession: marketSessionState(now),
+    scorecard: snapshot.scorecard ?? buildScorecard(snapshot.predictionsByCap, snapshot.actualTopByCap),
     persistedSession: true,
     persistedAt: snapshot.persistedAt ?? snapshot.asOf,
   };
@@ -655,12 +1027,18 @@ export async function getBseAiPredictionAccuracy(now = new Date()): Promise<BseA
   const date = tradingDayKey(now);
   const cutoffAt = predictionCutoffAt(date);
   const marketClose = marketCloseAt(date);
+  const nextLockAt = nextPredictionLockAt(now);
   const locked = await lockedPrediction(now);
 
-  if (!locked) {
-    const snapshot = await readSessionSnapshot(date);
-    if (snapshot) return snapshot;
+  // With no list for today — either none was ever locked, or the previous one is being held until
+  // 8:50 — the frozen close snapshot is the better answer, because it carries the accuracy that
+  // session finished on rather than yesterday's picks scored against a market that has not opened.
+  if (!locked || locked.holdover) {
+    const snapshot = await readSessionSnapshot(date, now);
+    if (snapshot && (!locked || snapshot.date === locked.date)) return snapshot;
+  }
 
+  if (!locked) {
     const [rows, actualLarge, actualMid, actualSmall] = await Promise.all([
       getBseRows(),
       actualTopForCap("Large"),
@@ -673,12 +1051,18 @@ export async function getBseAiPredictionAccuracy(now = new Date()): Promise<BseA
     return {
       status: "not-generated",
       date,
+      lockDate: null,
+      lockAt: null,
+      nextLockAt,
+      holdover: false,
       cutoffAt,
       marketCloseAt: marketClose,
       generatedAt: null,
       source: null,
       model: null,
-      message: `No locked AI prediction was generated before 9:15 AM IST for ${date}.`,
+      message: `No locked AI prediction was generated at 8:50 AM IST for ${date}.`,
+      marketSession: marketSessionState(now),
+      scorecard: emptyScorecard(actualTopByCap),
       predictionsByCap: emptyCapRows<PredictionPerformance>(),
       actualTopByCap,
       accuracyByCap: emptyCapAccuracy(),
@@ -724,14 +1108,22 @@ export async function getBseAiPredictionAccuracy(now = new Date()): Promise<BseA
   const report: BseAiPredictionAccuracy = {
     status: "locked",
     date,
+    lockDate: locked.date,
+    lockAt: predictionLockAt(locked.date),
+    nextLockAt,
+    holdover: locked.holdover,
     cutoffAt: locked.cutoffAt,
     marketCloseAt: marketClose,
     generatedAt: locked.generatedAt,
     source: locked.source,
     model: locked.model,
-    message: locked.generatedAfterCutoff
-      ? `AI picks were initialized after the 9:15 AM IST cutoff because no pre-open lock was available. The list will not be recalculated today.`
-      : `AI picks were locked before the 9:15 AM IST market open and will not be recalculated today.`,
+    message: locked.holdover
+      ? `Holding the ${locked.date} locked picks. The AI replaces all 10 per cap tier at the next 8:50 AM IST lock, before the 9:15 AM open.`
+      : locked.generatedAfterCutoff
+        ? `AI picks were initialized after the 9:15 AM IST open because the 8:50 AM lock did not run. The list will not be recalculated today.`
+        : `AI picks were locked at 8:50 AM IST, before the 9:15 AM market open, and will not be recalculated today.`,
+    marketSession: marketSessionState(now),
+    scorecard: buildScorecard(predictionsByCap, actualTopByCap),
     predictionsByCap,
     actualTopByCap,
     accuracyByCap,
@@ -744,6 +1136,8 @@ export async function getBseAiPredictionAccuracy(now = new Date()): Promise<BseA
     persistedAt: null,
   };
 
-  if (isAfterMarketClose(now)) return persistSessionSnapshot(report, now);
+  // A held list has no session of its own to freeze — snapshotting it would overwrite the real
+  // close snapshot of the day it was locked for with a weekend's worth of unchanged prices.
+  if (isAfterMarketClose(now) && !locked.holdover) return persistSessionSnapshot(report, now);
   return report;
 }

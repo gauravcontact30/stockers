@@ -1,109 +1,109 @@
 {
-  "date": "2026-08-16",
-  "generatedAt": "2026-08-16T04:52:05.613Z",
+  "date": "2026-08-17",
+  "generatedAt": "2026-08-17T15:54:40.455Z",
   "source": "heuristic",
   "predictions": {
     "TCS": {
       "symbol": "TCS",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 71,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "INFY": {
       "symbol": "INFY",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "WIPRO": {
       "symbol": "WIPRO",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "HCLTECH": {
       "symbol": "HCLTECH",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 76,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "TECHM": {
       "symbol": "TECHM",
-      "outlook": "Neutral",
-      "confidence": 58,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "LTM": {
-      "symbol": "LTM",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "MPHASIS": {
-      "symbol": "MPHASIS",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "PERSISTENT": {
-      "symbol": "PERSISTENT",
-      "outlook": "Bullish",
-      "confidence": 63,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "COFORGE": {
-      "symbol": "COFORGE",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "LTTS": {
-      "symbol": "LTTS",
-      "outlook": "Bearish",
-      "confidence": 83,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "OFSS": {
-      "symbol": "OFSS",
-      "outlook": "Bullish",
-      "confidence": 84,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "KPITTECH": {
-      "symbol": "KPITTECH",
-      "outlook": "Bearish",
-      "confidence": 63,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "ZENSARTECH": {
-      "symbol": "ZENSARTECH",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "SONATSOFTW": {
-      "symbol": "SONATSOFTW",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "NEWGEN": {
-      "symbol": "NEWGEN",
       "outlook": "Bearish",
       "confidence": 66,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "LTM": {
+      "symbol": "LTM",
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "MPHASIS": {
+      "symbol": "MPHASIS",
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "PERSISTENT": {
+      "symbol": "PERSISTENT",
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "COFORGE": {
+      "symbol": "COFORGE",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "LTTS": {
+      "symbol": "LTTS",
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "OFSS": {
+      "symbol": "OFSS",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "KPITTECH": {
+      "symbol": "KPITTECH",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "ZENSARTECH": {
+      "symbol": "ZENSARTECH",
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "SONATSOFTW": {
+      "symbol": "SONATSOFTW",
+      "outlook": "Bearish",
+      "confidence": 69,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "NEWGEN": {
+      "symbol": "NEWGEN",
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "ROUTE": {
       "symbol": "ROUTE",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "FSL": {
       "symbol": "FSL",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HDFCBANK": {
       "symbol": "HDFCBANK",
@@ -114,14 +114,14 @@
     "ICICIBANK": {
       "symbol": "ICICIBANK",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SBIN": {
       "symbol": "SBIN",
-      "outlook": "Bearish",
-      "confidence": 66,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "KOTAKBANK": {
       "symbol": "KOTAKBANK",
@@ -132,44 +132,44 @@
     "AXISBANK": {
       "symbol": "AXISBANK",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "INDUSINDBK": {
       "symbol": "INDUSINDBK",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 63,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BANKBARODA": {
       "symbol": "BANKBARODA",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PNB": {
       "symbol": "PNB",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IDFCFIRSTB": {
       "symbol": "IDFCFIRSTB",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "FEDERALBNK": {
       "symbol": "FEDERALBNK",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "AUBANK": {
       "symbol": "AUBANK",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BANDHANBNK": {
       "symbol": "BANDHANBNK",
@@ -179,99 +179,99 @@
     },
     "YESBANK": {
       "symbol": "YESBANK",
-      "outlook": "Bearish",
-      "confidence": 66,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "RBLBANK": {
       "symbol": "RBLBANK",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CANBK": {
       "symbol": "CANBK",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "UNIONBANK": {
       "symbol": "UNIONBANK",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "INDIANB": {
       "symbol": "INDIANB",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 67,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "BANKINDIA": {
       "symbol": "BANKINDIA",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MAHABANK": {
       "symbol": "MAHABANK",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "KARURVYSYA": {
       "symbol": "KARURVYSYA",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CUB": {
       "symbol": "CUB",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "DCBBANK": {
       "symbol": "DCBBANK",
-      "outlook": "Bearish",
-      "confidence": 77,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "BAJFINANCE": {
       "symbol": "BAJFINANCE",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BAJAJFINSV": {
       "symbol": "BAJAJFINSV",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CHOLAFIN": {
       "symbol": "CHOLAFIN",
-      "outlook": "Bearish",
-      "confidence": 69,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MUTHOOTFIN": {
       "symbol": "MUTHOOTFIN",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 68,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "PFC": {
       "symbol": "PFC",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RECLTD": {
       "symbol": "RECLTD",
-      "outlook": "Bearish",
-      "confidence": 82,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "LICHSGFIN": {
       "symbol": "LICHSGFIN",
@@ -282,19 +282,19 @@
     "SHRIRAMFIN": {
       "symbol": "SHRIRAMFIN",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SBICARD": {
       "symbol": "SBICARD",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "MFSL": {
       "symbol": "MFSL",
       "outlook": "Bullish",
-      "confidence": 69,
+      "confidence": 72,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "MANAPPURAM": {
@@ -306,55 +306,55 @@
     "IIFL": {
       "symbol": "IIFL",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "POONAWALLA": {
       "symbol": "POONAWALLA",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "M&MFIN": {
       "symbol": "M&MFIN",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CREDITACC": {
       "symbol": "CREDITACC",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "FIVESTAR": {
       "symbol": "FIVESTAR",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 73,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "AAVAS": {
       "symbol": "AAVAS",
-      "outlook": "Bearish",
-      "confidence": 74,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TATACAP": {
       "symbol": "TATACAP",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "HDFCLIFE": {
       "symbol": "HDFCLIFE",
-      "outlook": "Neutral",
-      "confidence": 58,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SBILIFE": {
       "symbol": "SBILIFE",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ICICIPRULI": {
@@ -366,25 +366,25 @@
     "ICICIGI": {
       "symbol": "ICICIGI",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GICRE": {
       "symbol": "GICRE",
-      "outlook": "Bullish",
-      "confidence": 64,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 63,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NIACL": {
       "symbol": "NIACL",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 75,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "LICI": {
       "symbol": "LICI",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "STARHEALTH": {
@@ -395,15 +395,15 @@
     },
     "GODIGIT": {
       "symbol": "GODIGIT",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NIVABUPA": {
       "symbol": "NIVABUPA",
-      "outlook": "Bearish",
-      "confidence": 69,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RELIANCE": {
       "symbol": "RELIANCE",
@@ -413,129 +413,129 @@
     },
     "ONGC": {
       "symbol": "ONGC",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IOC": {
       "symbol": "IOC",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "BPCL": {
-      "symbol": "BPCL",
-      "outlook": "Bullish",
-      "confidence": 66,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "HINDPETRO": {
-      "symbol": "HINDPETRO",
-      "outlook": "Bearish",
-      "confidence": 92,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "GAIL": {
-      "symbol": "GAIL",
       "outlook": "Neutral",
       "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "BPCL": {
+      "symbol": "BPCL",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "HINDPETRO": {
+      "symbol": "HINDPETRO",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "GAIL": {
+      "symbol": "GAIL",
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
     "OIL": {
       "symbol": "OIL",
-      "outlook": "Bearish",
-      "confidence": 74,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "PETRONET": {
       "symbol": "PETRONET",
-      "outlook": "Bullish",
-      "confidence": 64,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "MRPL": {
-      "symbol": "MRPL",
-      "outlook": "Bearish",
-      "confidence": 73,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "IGL": {
-      "symbol": "IGL",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "MGL": {
-      "symbol": "MGL",
-      "outlook": "Bullish",
-      "confidence": 64,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "ATGL": {
-      "symbol": "ATGL",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "HINDUNILVR": {
-      "symbol": "HINDUNILVR",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "ITC": {
-      "symbol": "ITC",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "NESTLEIND": {
-      "symbol": "NESTLEIND",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "BRITANNIA": {
-      "symbol": "BRITANNIA",
-      "outlook": "Bearish",
-      "confidence": 63,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "DABUR": {
-      "symbol": "DABUR",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "GODREJCP": {
-      "symbol": "GODREJCP",
       "outlook": "Neutral",
       "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "MARICO": {
-      "symbol": "MARICO",
+    "MRPL": {
+      "symbol": "MRPL",
+      "outlook": "Bullish",
+      "confidence": 86,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "IGL": {
+      "symbol": "IGL",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "COLPAL": {
-      "symbol": "COLPAL",
+    "MGL": {
+      "symbol": "MGL",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "TATACONSUM": {
-      "symbol": "TATACONSUM",
+    "ATGL": {
+      "symbol": "ATGL",
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "HINDUNILVR": {
+      "symbol": "HINDUNILVR",
       "outlook": "Bearish",
       "confidence": 63,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "ITC": {
+      "symbol": "ITC",
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "NESTLEIND": {
+      "symbol": "NESTLEIND",
+      "outlook": "Bearish",
+      "confidence": 71,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "BRITANNIA": {
+      "symbol": "BRITANNIA",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "DABUR": {
+      "symbol": "DABUR",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "GODREJCP": {
+      "symbol": "GODREJCP",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "MARICO": {
+      "symbol": "MARICO",
+      "outlook": "Bearish",
+      "confidence": 67,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "COLPAL": {
+      "symbol": "COLPAL",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "TATACONSUM": {
+      "symbol": "TATACONSUM",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "VBL": {
       "symbol": "VBL",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "EMAMILTD": {
       "symbol": "EMAMILTD",
@@ -546,19 +546,19 @@
     "UBL": {
       "symbol": "UBL",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "UNITDSPR": {
       "symbol": "UNITDSPR",
-      "outlook": "Bullish",
-      "confidence": 66,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RADICO": {
       "symbol": "RADICO",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PATANJALI": {
@@ -570,13 +570,13 @@
     "BIKAJI": {
       "symbol": "BIKAJI",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GILLETTE": {
       "symbol": "GILLETTE",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MARUTI": {
@@ -588,20 +588,20 @@
     "TMPV": {
       "symbol": "TMPV",
       "outlook": "Bearish",
-      "confidence": 90,
+      "confidence": 65,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "TMCV": {
       "symbol": "TMCV",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "M&M": {
       "symbol": "M&M",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "BAJAJ-AUTO": {
       "symbol": "BAJAJ-AUTO",
@@ -612,289 +612,289 @@
     "EICHERMOT": {
       "symbol": "EICHERMOT",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HEROMOTOCO": {
       "symbol": "HEROMOTOCO",
-      "outlook": "Bearish",
-      "confidence": 63,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "TVSMOTOR": {
-      "symbol": "TVSMOTOR",
       "outlook": "Neutral",
       "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "TVSMOTOR": {
+      "symbol": "TVSMOTOR",
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "ASHOKLEY": {
       "symbol": "ASHOKLEY",
-      "outlook": "Bearish",
-      "confidence": 76,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "MOTHERSON": {
       "symbol": "MOTHERSON",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BOSCHLTD": {
       "symbol": "BOSCHLTD",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MRF": {
       "symbol": "MRF",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "APOLLOTYRE": {
+      "symbol": "APOLLOTYRE",
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "BALKRISIND": {
+      "symbol": "BALKRISIND",
       "outlook": "Bullish",
       "confidence": 70,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
-    "APOLLOTYRE": {
-      "symbol": "APOLLOTYRE",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "BALKRISIND": {
-      "symbol": "BALKRISIND",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
     "EXIDEIND": {
       "symbol": "EXIDEIND",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ARE&M": {
       "symbol": "ARE&M",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SONACOMS": {
       "symbol": "SONACOMS",
-      "outlook": "Neutral",
-      "confidence": 63,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 68,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "UNOMINDA": {
       "symbol": "UNOMINDA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "TIINDIA": {
       "symbol": "TIINDIA",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "SUNPHARMA": {
-      "symbol": "SUNPHARMA",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "DRREDDY": {
-      "symbol": "DRREDDY",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "CIPLA": {
-      "symbol": "CIPLA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "DIVISLAB": {
-      "symbol": "DIVISLAB",
       "outlook": "Neutral",
       "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "LUPIN": {
-      "symbol": "LUPIN",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "AUROPHARMA": {
-      "symbol": "AUROPHARMA",
+    "SUNPHARMA": {
+      "symbol": "SUNPHARMA",
       "outlook": "Bearish",
       "confidence": 75,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "DRREDDY": {
+      "symbol": "DRREDDY",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "CIPLA": {
+      "symbol": "CIPLA",
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "DIVISLAB": {
+      "symbol": "DIVISLAB",
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "LUPIN": {
+      "symbol": "LUPIN",
+      "outlook": "Bullish",
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "AUROPHARMA": {
+      "symbol": "AUROPHARMA",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "TORNTPHARM": {
       "symbol": "TORNTPHARM",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ALKEM": {
       "symbol": "ALKEM",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BIOCON": {
       "symbol": "BIOCON",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "ZYDUSLIFE": {
       "symbol": "ZYDUSLIFE",
-      "outlook": "Bearish",
-      "confidence": 77,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MANKIND": {
       "symbol": "MANKIND",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "GLENMARK": {
       "symbol": "GLENMARK",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IPCALAB": {
       "symbol": "IPCALAB",
-      "outlook": "Bearish",
-      "confidence": 83,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "LAURUSLABS": {
       "symbol": "LAURUSLABS",
-      "outlook": "Bearish",
-      "confidence": 83,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "GLAND": {
       "symbol": "GLAND",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "ABBOTINDIA": {
-      "symbol": "ABBOTINDIA",
       "outlook": "Bearish",
       "confidence": 71,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "ABBOTINDIA": {
+      "symbol": "ABBOTINDIA",
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "AJANTPHARM": {
       "symbol": "AJANTPHARM",
       "outlook": "Bullish",
-      "confidence": 68,
+      "confidence": 65,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NATCOPHARM": {
       "symbol": "NATCOPHARM",
       "outlook": "Bearish",
-      "confidence": 92,
+      "confidence": 67,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "TATASTEEL": {
       "symbol": "TATASTEEL",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "JSWSTEEL": {
       "symbol": "JSWSTEEL",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HINDALCO": {
       "symbol": "HINDALCO",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 71,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "VEDL": {
       "symbol": "VEDL",
-      "outlook": "Bearish",
-      "confidence": 66,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SAIL": {
       "symbol": "SAIL",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NMDC": {
       "symbol": "NMDC",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "JINDALSTEL": {
       "symbol": "JINDALSTEL",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 73,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "COALINDIA": {
       "symbol": "COALINDIA",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NATIONALUM": {
       "symbol": "NATIONALUM",
-      "outlook": "Bearish",
-      "confidence": 92,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 80,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "HINDZINC": {
       "symbol": "HINDZINC",
-      "outlook": "Bearish",
-      "confidence": 78,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 63,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "APLAPOLLO": {
       "symbol": "APLAPOLLO",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "JSL": {
       "symbol": "JSL",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "WELCORP": {
       "symbol": "WELCORP",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RATNAMANI": {
       "symbol": "RATNAMANI",
-      "outlook": "Bullish",
-      "confidence": 74,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ULTRACEMCO": {
       "symbol": "ULTRACEMCO",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SHREECEM": {
       "symbol": "SHREECEM",
       "outlook": "Bearish",
-      "confidence": 69,
+      "confidence": 63,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "AMBUJACEM": {
@@ -906,302 +906,302 @@
     "ACC": {
       "symbol": "ACC",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DALBHARAT": {
       "symbol": "DALBHARAT",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "JKCEMENT": {
       "symbol": "JKCEMENT",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RAMCOCEM": {
       "symbol": "RAMCOCEM",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 69,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NUVOCO": {
       "symbol": "NUVOCO",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "JKLAKSHMI": {
-      "symbol": "JKLAKSHMI",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "HEIDELBERG": {
-      "symbol": "HEIDELBERG",
       "outlook": "Neutral",
       "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "JKLAKSHMI": {
+      "symbol": "JKLAKSHMI",
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "HEIDELBERG": {
+      "symbol": "HEIDELBERG",
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "LT": {
       "symbol": "LT",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GMRAIRPORT": {
       "symbol": "GMRAIRPORT",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IRB": {
       "symbol": "IRB",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NBCC": {
       "symbol": "NBCC",
-      "outlook": "Bearish",
-      "confidence": 80,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RVNL": {
       "symbol": "RVNL",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "KEC": {
       "symbol": "KEC",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ADANIENT": {
       "symbol": "ADANIENT",
-      "outlook": "Bullish",
-      "confidence": 74,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PNCINFRA": {
       "symbol": "PNCINFRA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "KNRCON": {
       "symbol": "KNRCON",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "GRINFRA": {
       "symbol": "GRINFRA",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HCC": {
       "symbol": "HCC",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 76,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NTPC": {
       "symbol": "NTPC",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "POWERGRID": {
       "symbol": "POWERGRID",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TATAPOWER": {
       "symbol": "TATAPOWER",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ADANIPOWER": {
       "symbol": "ADANIPOWER",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NHPC": {
       "symbol": "NHPC",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SJVN": {
       "symbol": "SJVN",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 63,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ADANIENSOL": {
       "symbol": "ADANIENSOL",
-      "outlook": "Bullish",
-      "confidence": 72,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "TORNTPOWER": {
       "symbol": "TORNTPOWER",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CESC": {
       "symbol": "CESC",
       "outlook": "Bullish",
-      "confidence": 70,
+      "confidence": 66,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "JSWENERGY": {
       "symbol": "JSWENERGY",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IREDA": {
       "symbol": "IREDA",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BHARTIARTL": {
       "symbol": "BHARTIARTL",
-      "outlook": "Bullish",
-      "confidence": 77,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "IDEA": {
       "symbol": "IDEA",
-      "outlook": "Bullish",
-      "confidence": 91,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 78,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "INDUSTOWER": {
       "symbol": "INDUSTOWER",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "HFCL": {
       "symbol": "HFCL",
       "outlook": "Bearish",
-      "confidence": 70,
+      "confidence": 68,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "STLTECH": {
       "symbol": "STLTECH",
-      "outlook": "Bearish",
-      "confidence": 71,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HAVELLS": {
       "symbol": "HAVELLS",
-      "outlook": "Bullish",
-      "confidence": 73,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "VOLTAS": {
       "symbol": "VOLTAS",
-      "outlook": "Bullish",
-      "confidence": 74,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 87,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "CROMPTON": {
       "symbol": "CROMPTON",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DIXON": {
       "symbol": "DIXON",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BLUESTARCO": {
       "symbol": "BLUESTARCO",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "WHIRLPOOL": {
       "symbol": "WHIRLPOOL",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "VGUARD": {
       "symbol": "VGUARD",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ORIENTELEC": {
       "symbol": "ORIENTELEC",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "SYMPHONY": {
-      "symbol": "SYMPHONY",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "CERA": {
-      "symbol": "CERA",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "DLF": {
-      "symbol": "DLF",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "GODREJPROP": {
-      "symbol": "GODREJPROP",
-      "outlook": "Bearish",
-      "confidence": 70,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "OBEROIRLTY": {
-      "symbol": "OBEROIRLTY",
       "outlook": "Neutral",
       "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "SYMPHONY": {
+      "symbol": "SYMPHONY",
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "CERA": {
+      "symbol": "CERA",
+      "outlook": "Bearish",
+      "confidence": 67,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
+    "DLF": {
+      "symbol": "DLF",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "GODREJPROP": {
+      "symbol": "GODREJPROP",
+      "outlook": "Bullish",
+      "confidence": 81,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "OBEROIRLTY": {
+      "symbol": "OBEROIRLTY",
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "PRESTIGE": {
       "symbol": "PRESTIGE",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PHOENIXLTD": {
       "symbol": "PHOENIXLTD",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 72,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SOBHA": {
       "symbol": "SOBHA",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BRIGADE": {
       "symbol": "BRIGADE",
@@ -1212,7 +1212,7 @@
     "MAHLIFE": {
       "symbol": "MAHLIFE",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SUNTECK": {
@@ -1224,140 +1224,140 @@
     "LODHA": {
       "symbol": "LODHA",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SUNTV": {
       "symbol": "SUNTV",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ZEEL": {
       "symbol": "ZEEL",
       "outlook": "Bullish",
-      "confidence": 92,
+      "confidence": 75,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "PVRINOX": {
       "symbol": "PVRINOX",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NAZARA": {
       "symbol": "NAZARA",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SAREGAMA": {
       "symbol": "SAREGAMA",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NETWORK18": {
       "symbol": "NETWORK18",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DMART": {
       "symbol": "DMART",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "TRENT": {
       "symbol": "TRENT",
-      "outlook": "Neutral",
-      "confidence": 58,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "ABFRL": {
       "symbol": "ABFRL",
       "outlook": "Bearish",
-      "confidence": 66,
+      "confidence": 65,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "JUBLFOOD": {
       "symbol": "JUBLFOOD",
       "outlook": "Bullish",
-      "confidence": 75,
+      "confidence": 67,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "VMART": {
       "symbol": "VMART",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SHOPERSTOP": {
       "symbol": "SHOPERSTOP",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 70,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "METROBRAND": {
       "symbol": "METROBRAND",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DEVYANI": {
       "symbol": "DEVYANI",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "WESTLIFE": {
       "symbol": "WESTLIFE",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PIDILITIND": {
       "symbol": "PIDILITIND",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SRF": {
       "symbol": "SRF",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "UPL": {
       "symbol": "UPL",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "AARTIIND": {
       "symbol": "AARTIIND",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "DEEPAKNTR": {
       "symbol": "DEEPAKNTR",
       "outlook": "Bullish",
-      "confidence": 65,
+      "confidence": 82,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "TATACHEM": {
       "symbol": "TATACHEM",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NAVINFLUOR": {
       "symbol": "NAVINFLUOR",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 63,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "VINATIORGA": {
       "symbol": "VINATIORGA",
@@ -1367,99 +1367,99 @@
     },
     "CLEAN": {
       "symbol": "CLEAN",
-      "outlook": "Bearish",
-      "confidence": 69,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 73,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "FLUOROCHEM": {
       "symbol": "FLUOROCHEM",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ALKYLAMINE": {
       "symbol": "ALKYLAMINE",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "INDIGO": {
       "symbol": "INDIGO",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "SPICEJET": {
       "symbol": "SPICEJET",
       "outlook": "Bearish",
-      "confidence": 72,
+      "confidence": 67,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "ADANIPORTS": {
       "symbol": "ADANIPORTS",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CONCOR": {
       "symbol": "CONCOR",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GESHIP": {
       "symbol": "GESHIP",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "BLUEDART": {
-      "symbol": "BLUEDART",
       "outlook": "Neutral",
       "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "DELHIVERY": {
-      "symbol": "DELHIVERY",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "TCI": {
-      "symbol": "TCI",
-      "outlook": "Neutral",
-      "confidence": 63,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "ASIANPAINT": {
-      "symbol": "ASIANPAINT",
-      "outlook": "Bearish",
-      "confidence": 72,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "BERGEPAINT": {
-      "symbol": "BERGEPAINT",
+    "BLUEDART": {
+      "symbol": "BLUEDART",
       "outlook": "Neutral",
       "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "DELHIVERY": {
+      "symbol": "DELHIVERY",
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "TCI": {
+      "symbol": "TCI",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "ASIANPAINT": {
+      "symbol": "ASIANPAINT",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "BERGEPAINT": {
+      "symbol": "BERGEPAINT",
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "KANSAINER": {
       "symbol": "KANSAINER",
-      "outlook": "Bearish",
-      "confidence": 72,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "INDIGOPNTS": {
       "symbol": "INDIGOPNTS",
       "outlook": "Bullish",
-      "confidence": 68,
+      "confidence": 64,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "APOLLOHOSP": {
       "symbol": "APOLLOHOSP",
-      "outlook": "Bullish",
-      "confidence": 85,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "MAXHEALTH": {
       "symbol": "MAXHEALTH",
@@ -1469,104 +1469,104 @@
     },
     "FORTIS": {
       "symbol": "FORTIS",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 72,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NH": {
       "symbol": "NH",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "METROPOLIS": {
       "symbol": "METROPOLIS",
-      "outlook": "Bearish",
-      "confidence": 74,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 63,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "LALPATHLAB": {
       "symbol": "LALPATHLAB",
       "outlook": "Bearish",
-      "confidence": 76,
+      "confidence": 71,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "KIMS": {
       "symbol": "KIMS",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "RAINBOW": {
-      "symbol": "RAINBOW",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "MEDANTA": {
-      "symbol": "MEDANTA",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "SIEMENS": {
-      "symbol": "SIEMENS",
       "outlook": "Bearish",
       "confidence": 64,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "RAINBOW": {
+      "symbol": "RAINBOW",
+      "outlook": "Bullish",
+      "confidence": 64,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "MEDANTA": {
+      "symbol": "MEDANTA",
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "SIEMENS": {
+      "symbol": "SIEMENS",
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "ABB": {
       "symbol": "ABB",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CUMMINSIND": {
       "symbol": "CUMMINSIND",
-      "outlook": "Bullish",
-      "confidence": 68,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BHEL": {
       "symbol": "BHEL",
-      "outlook": "Neutral",
-      "confidence": 58,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 82,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "HAL": {
       "symbol": "HAL",
-      "outlook": "Bullish",
-      "confidence": 69,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 60,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BEL": {
       "symbol": "BEL",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "THERMAX": {
       "symbol": "THERMAX",
       "outlook": "Bullish",
-      "confidence": 64,
+      "confidence": 74,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "AIAENG": {
       "symbol": "AIAENG",
-      "outlook": "Bullish",
-      "confidence": 64,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 73,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SKFINDIA": {
       "symbol": "SKFINDIA",
-      "outlook": "Bearish",
-      "confidence": 71,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "CGPOWER": {
       "symbol": "CGPOWER",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 63,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MAZDOCK": {
@@ -1577,86 +1577,86 @@
     },
     "PARAS": {
       "symbol": "PARAS",
-      "outlook": "Bullish",
-      "confidence": 76,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "COCHINSHIP": {
-      "symbol": "COCHINSHIP",
       "outlook": "Neutral",
       "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "COCHINSHIP": {
+      "symbol": "COCHINSHIP",
+      "outlook": "Bearish",
+      "confidence": 76,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
     "POLYCAB": {
       "symbol": "POLYCAB",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "TATACOMM": {
       "symbol": "TATACOMM",
-      "outlook": "Bearish",
-      "confidence": 73,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RAILTEL": {
       "symbol": "RAILTEL",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NETWEB": {
       "symbol": "NETWEB",
-      "outlook": "Bearish",
-      "confidence": 82,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 88,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ANANTRAJ": {
       "symbol": "ANANTRAJ",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "OKPLA": {
       "symbol": "OKPLA",
-      "outlook": "Bullish",
-      "confidence": 92,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 70,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "KVTOYS": {
       "symbol": "KVTOYS",
-      "outlook": "Bullish",
-      "confidence": 79,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
-    },
-    "TATATECH": {
-      "symbol": "TATATECH",
       "outlook": "Neutral",
       "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "TATATECH": {
+      "symbol": "TATATECH",
+      "outlook": "Bearish",
+      "confidence": 79,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+    },
     "HEXT": {
       "symbol": "HEXT",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 67,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "IKS": {
       "symbol": "IKS",
-      "outlook": "Bullish",
-      "confidence": 81,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IDBI": {
       "symbol": "IDBI",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IOB": {
       "symbol": "IOB",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "UCOBANK": {
@@ -1668,146 +1668,146 @@
     "CENTRALBK": {
       "symbol": "CENTRALBK",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "JIOFIN": {
       "symbol": "JIOFIN",
-      "outlook": "Bearish",
-      "confidence": 76,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "ICICIAMC": {
-      "symbol": "ICICIAMC",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "BAJAJHLDNG": {
-      "symbol": "BAJAJHLDNG",
       "outlook": "Neutral",
       "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
-    "GROWW": {
-      "symbol": "GROWW",
+    "ICICIAMC": {
+      "symbol": "ICICIAMC",
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "BAJAJHLDNG": {
+      "symbol": "BAJAJHLDNG",
       "outlook": "Neutral",
       "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "GROWW": {
+      "symbol": "GROWW",
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "SBIFUNDS": {
       "symbol": "SBIFUNDS",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IRFC": {
       "symbol": "IRFC",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ABCAPITAL": {
       "symbol": "ABCAPITAL",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "HDFCAMC": {
-      "symbol": "HDFCAMC",
       "outlook": "Neutral",
       "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "HDFCAMC": {
+      "symbol": "HDFCAMC",
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "PAYTM": {
       "symbol": "PAYTM",
       "outlook": "Bearish",
-      "confidence": 78,
+      "confidence": 66,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "LTF": {
       "symbol": "LTF",
-      "outlook": "Bearish",
+      "outlook": "Bullish",
       "confidence": 78,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "NAM-INDIA": {
       "symbol": "NAM-INDIA",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 79,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "POLICYBZR": {
       "symbol": "POLICYBZR",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BAJAJHFL": {
       "symbol": "BAJAJHFL",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "MCX": {
       "symbol": "MCX",
-      "outlook": "Bearish",
-      "confidence": 71,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "HDBFS": {
-      "symbol": "HDBFS",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "MOTILALOFS": {
-      "symbol": "MOTILALOFS",
       "outlook": "Neutral",
       "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "HDBFS": {
+      "symbol": "HDBFS",
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "MOTILALOFS": {
+      "symbol": "MOTILALOFS",
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "SUNDARMFIN": {
       "symbol": "SUNDARMFIN",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "AIIL": {
       "symbol": "AIIL",
       "outlook": "Bearish",
-      "confidence": 75,
+      "confidence": 74,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "PIRAMALFIN": {
       "symbol": "PIRAMALFIN",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "360ONE": {
       "symbol": "360ONE",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HUDCO": {
       "symbol": "HUDCO",
-      "outlook": "Bearish",
-      "confidence": 71,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TATAINVEST": {
       "symbol": "TATAINVEST",
       "outlook": "Bearish",
-      "confidence": 63,
+      "confidence": 70,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "ANANDRATHI": {
       "symbol": "ANANDRATHI",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CRISIL": {
       "symbol": "CRISIL",
@@ -1817,56 +1817,56 @@
     },
     "CHOLAHLDNG": {
       "symbol": "CHOLAHLDNG",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "TVSHLTD": {
-      "symbol": "TVSHLTD",
-      "outlook": "Bearish",
-      "confidence": 73,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "NUVAMA": {
-      "symbol": "NUVAMA",
-      "outlook": "Bearish",
-      "confidence": 71,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "PNBHOUSING": {
-      "symbol": "PNBHOUSING",
       "outlook": "Bearish",
       "confidence": 65,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
+    "TVSHLTD": {
+      "symbol": "TVSHLTD",
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "NUVAMA": {
+      "symbol": "NUVAMA",
+      "outlook": "Bullish",
+      "confidence": 84,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "PNBHOUSING": {
+      "symbol": "PNBHOUSING",
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "ABSLAMC": {
       "symbol": "ABSLAMC",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ANGELONE": {
       "symbol": "ANGELONE",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 72,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "AEGISLOG": {
       "symbol": "AEGISLOG",
       "outlook": "Bullish",
-      "confidence": 67,
+      "confidence": 69,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "AEGISVOPAK": {
       "symbol": "AEGISVOPAK",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GODFRYPHLP": {
       "symbol": "GODFRYPHLP",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PGHH": {
@@ -1878,176 +1878,176 @@
     "AWL": {
       "symbol": "AWL",
       "outlook": "Neutral",
-      "confidence": 55,
+      "confidence": 60,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HYUNDAI": {
       "symbol": "HYUNDAI",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "BHARATFORG": {
+      "symbol": "BHARATFORG",
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "SCHAEFFLER": {
+      "symbol": "SCHAEFFLER",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "ATHERENERG": {
+      "symbol": "ATHERENERG",
       "outlook": "Bearish",
       "confidence": 69,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
-    "BHARATFORG": {
-      "symbol": "BHARATFORG",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "SCHAEFFLER": {
-      "symbol": "SCHAEFFLER",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "ATHERENERG": {
-      "symbol": "ATHERENERG",
-      "outlook": "Neutral",
-      "confidence": 63,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
     "ENDURANCE": {
       "symbol": "ENDURANCE",
-      "outlook": "Bearish",
-      "confidence": 76,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 77,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ZFCVINDIA": {
       "symbol": "ZFCVINDIA",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "CRAFTSMAN": {
       "symbol": "CRAFTSMAN",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 73,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "MSUMI": {
       "symbol": "MSUMI",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ANTHEM": {
       "symbol": "ANTHEM",
-      "outlook": "Bullish",
-      "confidence": 69,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "GLAXO": {
       "symbol": "GLAXO",
       "outlook": "Neutral",
-      "confidence": 61,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "EMCURE": {
       "symbol": "EMCURE",
       "outlook": "Bearish",
-      "confidence": 86,
+      "confidence": 79,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "WOCKPHARMA": {
       "symbol": "WOCKPHARMA",
-      "outlook": "Bullish",
-      "confidence": 63,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 69,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NEULANDLAB": {
       "symbol": "NEULANDLAB",
-      "outlook": "Neutral",
-      "confidence": 59,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SAILIFE": {
       "symbol": "SAILIFE",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 73,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "PPLPHARMA": {
       "symbol": "PPLPHARMA",
-      "outlook": "Bearish",
-      "confidence": 78,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RUBICON": {
       "symbol": "RUBICON",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "VAML": {
       "symbol": "VAML",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "LLOYDSME": {
       "symbol": "LLOYDSME",
       "outlook": "Bullish",
-      "confidence": 64,
+      "confidence": 65,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "HINDCOPPER": {
       "symbol": "HINDCOPPER",
-      "outlook": "Bearish",
-      "confidence": 78,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SHYAMMETL": {
       "symbol": "SHYAMMETL",
-      "outlook": "Bullish",
-      "confidence": 72,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "GRASIM": {
       "symbol": "GRASIM",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ADANIGREEN": {
       "symbol": "ADANIGREEN",
-      "outlook": "Bullish",
-      "confidence": 73,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 67,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "NTPCGREEN": {
       "symbol": "NTPCGREEN",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NLCINDIA": {
       "symbol": "NLCINDIA",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ACMESOLAR": {
       "symbol": "ACMESOLAR",
-      "outlook": "Neutral",
-      "confidence": 56,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 75,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "BHARTIHEXA": {
       "symbol": "BHARTIHEXA",
       "outlook": "Bullish",
-      "confidence": 83,
+      "confidence": 65,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ITI": {
       "symbol": "ITI",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "LGEINDIA": {
       "symbol": "LGEINDIA",
-      "outlook": "Bullish",
-      "confidence": 92,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 84,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "CPPLUS": {
       "symbol": "CPPLUS",
@@ -2058,7 +2058,7 @@
     "AMBER": {
       "symbol": "AMBER",
       "outlook": "Neutral",
-      "confidence": 60,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ETERNAL": {
@@ -2069,105 +2069,105 @@
     },
     "LENSKART": {
       "symbol": "LENSKART",
-      "outlook": "Bullish",
-      "confidence": 75,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 61,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NYKAA": {
       "symbol": "NYKAA",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "MEESHO": {
       "symbol": "MEESHO",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 66,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SWIGGY": {
       "symbol": "SWIGGY",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "VMM": {
       "symbol": "VMM",
-      "outlook": "Bearish",
-      "confidence": 68,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TITAN": {
       "symbol": "TITAN",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "KALYANKJIL": {
       "symbol": "KALYANKJIL",
       "outlook": "Neutral",
-      "confidence": 62,
+      "confidence": 57,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "THANGAMAYL": {
       "symbol": "THANGAMAYL",
-      "outlook": "Bullish",
-      "confidence": 79,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 68,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SENCO": {
       "symbol": "SENCO",
-      "outlook": "Bearish",
-      "confidence": 78,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "PCJEWELLER": {
-      "symbol": "PCJEWELLER",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "SKYGOLD": {
-      "symbol": "SKYGOLD",
       "outlook": "Neutral",
       "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
+    "PCJEWELLER": {
+      "symbol": "PCJEWELLER",
+      "outlook": "Bullish",
+      "confidence": 67,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "SKYGOLD": {
+      "symbol": "SKYGOLD",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
     "GOLDIAM": {
       "symbol": "GOLDIAM",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 74,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "RAJESHEXPO": {
       "symbol": "RAJESHEXPO",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 65,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "TBZ": {
       "symbol": "TBZ",
-      "outlook": "Bullish",
-      "confidence": 68,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 79,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "MOTISONS": {
       "symbol": "MOTISONS",
-      "outlook": "Bullish",
-      "confidence": 92,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "PNGJL": {
       "symbol": "PNGJL",
-      "outlook": "Bearish",
-      "confidence": 77,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 55,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "DPABHUSHAN": {
       "symbol": "DPABHUSHAN",
-      "outlook": "Bullish",
-      "confidence": 92,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 69,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "RADHIKAJWE": {
       "symbol": "RADHIKAJWE",
@@ -2184,20 +2184,20 @@
     "BLUESTONE": {
       "symbol": "BLUESTONE",
       "outlook": "Bearish",
-      "confidence": 82,
+      "confidence": 65,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "RGL": {
       "symbol": "RGL",
-      "outlook": "Bullish",
-      "confidence": 92,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "UDAYJEW": {
       "symbol": "UDAYJEW",
-      "outlook": "Bullish",
+      "outlook": "Bearish",
       "confidence": 72,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "GOLKUNDIA": {
       "symbol": "GOLKUNDIA",
@@ -2207,140 +2207,140 @@
     },
     "SOLARINDS": {
       "symbol": "SOLARINDS",
-      "outlook": "Bearish",
-      "confidence": 69,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "COROMANDEL": {
       "symbol": "COROMANDEL",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 56,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "LINDEINDIA": {
       "symbol": "LINDEINDIA",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 59,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "FACT": {
       "symbol": "FACT",
       "outlook": "Bearish",
-      "confidence": 66,
+      "confidence": 69,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "PIIND": {
       "symbol": "PIIND",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "HSCL": {
       "symbol": "HSCL",
       "outlook": "Neutral",
-      "confidence": 58,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ACUTAAS": {
       "symbol": "ACUTAAS",
-      "outlook": "Bullish",
-      "confidence": 87,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SUMICHEM": {
       "symbol": "SUMICHEM",
-      "outlook": "Bullish",
-      "confidence": 87,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "JSWINFRA": {
       "symbol": "JSWINFRA",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 64,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "MANIPALHOS": {
       "symbol": "MANIPALHOS",
       "outlook": "Bullish",
-      "confidence": 68,
+      "confidence": 73,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ASTERDM": {
       "symbol": "ASTERDM",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 58,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "POWERINDIA": {
       "symbol": "POWERINDIA",
       "outlook": "Neutral",
-      "confidence": 63,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "ENRIN": {
       "symbol": "ENRIN",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 71,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "GVT&D": {
       "symbol": "GVT&D",
-      "outlook": "Bullish",
-      "confidence": 63,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 66,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "WAAREEENER": {
       "symbol": "WAAREEENER",
       "outlook": "Neutral",
-      "confidence": 56,
+      "confidence": 62,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "APARINDS": {
       "symbol": "APARINDS",
       "outlook": "Bearish",
-      "confidence": 80,
+      "confidence": 63,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SUZLON": {
       "symbol": "SUZLON",
-      "outlook": "Bearish",
-      "confidence": 64,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 87,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "KEI": {
       "symbol": "KEI",
-      "outlook": "Bearish",
-      "confidence": 67,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Bullish",
+      "confidence": 79,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "PREMIERENE": {
       "symbol": "PREMIERENE",
-      "outlook": "Bearish",
-      "confidence": 69,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "BDL": {
       "symbol": "BDL",
-      "outlook": "Bullish",
-      "confidence": 68,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Bearish",
+      "confidence": 65,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SUPREMEIND": {
       "symbol": "SUPREMEIND",
-      "outlook": "Bullish",
-      "confidence": 69,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "INDOMIM": {
       "symbol": "INDOMIM",
       "outlook": "Bullish",
-      "confidence": 72,
+      "confidence": 71,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "ASTRAL": {
       "symbol": "ASTRAL",
       "outlook": "Bearish",
-      "confidence": 73,
+      "confidence": 64,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "ESCORTS": {
@@ -2351,39 +2351,39 @@
     },
     "HONAUT": {
       "symbol": "HONAUT",
-      "outlook": "Neutral",
-      "confidence": 55,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 72,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "SCHNEIDER": {
       "symbol": "SCHNEIDER",
-      "outlook": "Neutral",
-      "confidence": 61,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 92,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "KIRLOSENG": {
       "symbol": "KIRLOSENG",
-      "outlook": "Bullish",
-      "confidence": 71,
-      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+      "outlook": "Neutral",
+      "confidence": 56,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "RRKABEL": {
       "symbol": "RRKABEL",
       "outlook": "Bearish",
-      "confidence": 69,
+      "confidence": 66,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "GRSE": {
       "symbol": "GRSE",
       "outlook": "Neutral",
-      "confidence": 59,
+      "confidence": 61,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PTCIL": {
       "symbol": "PTCIL",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bullish",
+      "confidence": 92,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "SYRMA": {
       "symbol": "SYRMA",
@@ -2393,9 +2393,9 @@
     },
     "KAYNES": {
       "symbol": "KAYNES",
-      "outlook": "Bearish",
-      "confidence": 76,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 57,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "TIMKEN": {
       "symbol": "TIMKEN",
@@ -2406,67 +2406,67 @@
     "E2E": {
       "symbol": "E2E",
       "outlook": "Bullish",
-      "confidence": 92,
+      "confidence": 78,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
     "INDHOTEL": {
       "symbol": "INDHOTEL",
       "outlook": "Neutral",
-      "confidence": 57,
+      "confidence": 55,
       "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "NAUKRI": {
       "symbol": "NAUKRI",
-      "outlook": "Bearish",
+      "outlook": "Neutral",
       "confidence": 63,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "IRCTC": {
       "symbol": "IRCTC",
-      "outlook": "Bearish",
-      "confidence": 66,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
+      "outlook": "Neutral",
+      "confidence": 59,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
     },
     "PWL": {
       "symbol": "PWL",
-      "outlook": "Neutral",
-      "confidence": 62,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "ITCHOTELS": {
-      "symbol": "ITCHOTELS",
-      "outlook": "Bearish",
-      "confidence": 65,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "REDINGTON": {
-      "symbol": "REDINGTON",
-      "outlook": "Bearish",
-      "confidence": 83,
-      "note": "Recent weakness warrants caution; watch for signs of stabilization."
-    },
-    "PAGEIND": {
-      "symbol": "PAGEIND",
-      "outlook": "Neutral",
-      "confidence": 60,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
-    },
-    "KPRMILL": {
-      "symbol": "KPRMILL",
       "outlook": "Bullish",
       "confidence": 74,
       "note": "Momentum and today's move favor continuation if broader sentiment holds."
     },
+    "ITCHOTELS": {
+      "symbol": "ITCHOTELS",
+      "outlook": "Neutral",
+      "confidence": 62,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "REDINGTON": {
+      "symbol": "REDINGTON",
+      "outlook": "Neutral",
+      "confidence": 58,
+      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+    },
+    "PAGEIND": {
+      "symbol": "PAGEIND",
+      "outlook": "Bullish",
+      "confidence": 68,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
+    "KPRMILL": {
+      "symbol": "KPRMILL",
+      "outlook": "Bullish",
+      "confidence": 73,
+      "note": "Momentum and today's move favor continuation if broader sentiment holds."
+    },
     "GODREJIND": {
       "symbol": "GODREJIND",
-      "outlook": "Neutral",
-      "confidence": 57,
-      "note": "Price action is range-bound; a clearer catalyst is needed for direction."
+      "outlook": "Bearish",
+      "confidence": 74,
+      "note": "Recent weakness warrants caution; watch for signs of stabilization."
     },
     "3MINDIA": {
       "symbol": "3MINDIA",
       "outlook": "Bearish",
-      "confidence": 73,
+      "confidence": 65,
       "note": "Recent weakness warrants caution; watch for signs of stabilization."
     }
   }
