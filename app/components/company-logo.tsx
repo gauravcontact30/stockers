@@ -66,6 +66,7 @@ function logoSources(symbol: string, override?: string | null, preferReal = fals
 
   const ticker = normaliseTicker(symbol);
   const domain = checkedDomain(ticker);
+  const clearbit = domain ? `https://logo.clearbit.com/${encodeURIComponent(domain)}?size=128` : null;
   const favicon = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null;
   const symbolLogo = stockLogoUrl(ticker);
   const extraSymbolSources = preferReal
@@ -75,7 +76,7 @@ function logoSources(symbol: string, override?: string | null, preferReal = fals
       ]
     : [];
 
-  return [...(preferReal ? [favicon, symbolLogo] : [symbolLogo, favicon]), ...extraSymbolSources].filter(
+  return [...(preferReal ? [clearbit, favicon, symbolLogo] : [symbolLogo, clearbit, favicon]), ...extraSymbolSources].filter(
     (source): source is string => source !== null,
   );
 }
