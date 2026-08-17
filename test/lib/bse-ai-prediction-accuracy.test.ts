@@ -198,16 +198,45 @@ describe("calculateAccuracy", () => {
 });
 
 describe("getBseAiPredictionAccuracy", () => {
-  it("does not create a new prediction after the cutoff if none was locked", async () => {
+  it("creates and stores a fixed prediction during the live session if none was locked pre-open", async () => {
     const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T04:00:00.000Z"));
+
+    expect(report.status).toBe("locked");
+    expect(report.source).toBe("heuristic");
+    expect(report.message).toContain("initialized after the 9:15 AM IST cutoff");
+    expect(report.predictionsByCap.Large).toHaveLength(10);
+    expect(report.predictionsByCap.Mid).toHaveLength(10);
+    expect(report.predictionsByCap.Small).toHaveLength(10);
+    expect(report.predictions).toHaveLength(10);
+    expect(report.actualTopByCap.Large).toHaveLength(10);
+    expect(report.actualTopByCap.Mid).toHaveLength(10);
+    expect(report.actualTopByCap.Small).toHaveLength(10);
+    expect(report.actualTop).toHaveLength(10);
+    expect(report.actualTop[0].priceSource).toBe("BSE Bhavcopy");
+    expect(write).toHaveBeenCalledWith(
+      "bse-ai-locked-picks.json",
+      expect.objectContaining({
+        date: "2026-08-16",
+        generatedAfterCutoff: true,
+        picksByCap: expect.objectContaining({
+          Large: expect.any(Array),
+          Mid: expect.any(Array),
+          Small: expect.any(Array),
+        }),
+      }),
+    );
+    expect(ai).not.toHaveBeenCalled();
+    expect(news).not.toHaveBeenCalled();
+  });
+
+  it("does not create a new prediction after market close if none was locked", async () => {
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-16T10:05:00.000Z"));
 
     expect(report.status).toBe("not-generated");
     expect(report.predictions).toEqual([]);
     expect(report.actualTopByCap.Large).toHaveLength(10);
     expect(report.actualTopByCap.Mid).toHaveLength(10);
     expect(report.actualTopByCap.Small).toHaveLength(10);
-    expect(report.actualTop).toHaveLength(10);
-    expect(report.actualTop[0].priceSource).toBe("BSE Bhavcopy");
     expect(write).not.toHaveBeenCalled();
     expect(news).not.toHaveBeenCalled();
   });
@@ -291,7 +320,7 @@ describe("getBseAiPredictionAccuracy", () => {
     );
   });
 
-  it("serves the last market-close snapshot until the next session has a new lock", async () => {
+  it("serves the last market-close snapshot after the next session closes without a new lock", async () => {
     const snapshot = {
       status: "locked" as const,
       date: "2026-08-16",
@@ -318,7 +347,7 @@ describe("getBseAiPredictionAccuracy", () => {
     };
     read.mockImplementation(async (fileName) => (fileName === "bse-ai-prediction-accuracy-session.json" ? snapshot : null));
 
-    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T04:00:00.000Z"));
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T10:05:00.000Z"));
 
     expect(report.date).toBe("2026-08-16");
     expect(report.persistedSession).toBe(true);

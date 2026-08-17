@@ -1,0 +1,346 @@
+{
+  "date": "2026-08-17",
+  "generatedAt": "2026-08-17T04:17:07.891Z",
+  "cutoffAt": "2026-08-17T09:15:00+05:30",
+  "source": "heuristic",
+  "model": null,
+  "generatedAfterCutoff": true,
+  "picksByCap": {
+    "Large": [
+      {
+        "symbol": "LGEINDIA",
+        "stockName": "LG Electronics India Ltd",
+        "bseCode": "544576",
+        "sector": "durables",
+        "capTier": "Large",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "IDEA",
+        "stockName": "Vodafone Idea Ltd",
+        "bseCode": "532822",
+        "sector": "telecom",
+        "capTier": "Large",
+        "confidence": 58,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "APOLLOHOSP",
+        "stockName": "Apollo Hospitals Enterprise Ltd",
+        "bseCode": "508869",
+        "sector": "healthcare",
+        "capTier": "Large",
+        "confidence": 58,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "ADANIENT",
+        "stockName": "Adani Enterprises Ltd",
+        "bseCode": "512599",
+        "sector": "unclassified",
+        "capTier": "Large",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "BHARTIARTL",
+        "stockName": "Bharti Airtel Ltd",
+        "bseCode": "532454",
+        "sector": "telecom",
+        "capTier": "Large",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "ADANIENSOL",
+        "stockName": "Adani Energy Solutions Ltd",
+        "bseCode": "539254",
+        "sector": "power",
+        "capTier": "Large",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "ADANIGREEN",
+        "stockName": "Adani Green Energy Ltd",
+        "bseCode": "541450",
+        "sector": "power",
+        "capTier": "Large",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "ADANIPORTS",
+        "stockName": "Adani Ports and Special Economic Zone Ltd",
+        "bseCode": "532921",
+        "sector": "services",
+        "capTier": "Large",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "HAL",
+        "stockName": "Hindustan Aeronautics Ltd",
+        "bseCode": "541154",
+        "sector": "capgoods",
+        "capTier": "Large",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "CUMMINSIND",
+        "stockName": "Cummins India Ltd",
+        "bseCode": "500480",
+        "sector": "capgoods",
+        "capTier": "Large",
+        "confidence": 55,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      }
+    ],
+    "Mid": [
+      {
+        "symbol": "BHARTIHEXA",
+        "stockName": "Bharti Hexacom Ltd",
+        "bseCode": "544162",
+        "sector": "telecom",
+        "capTier": "Mid",
+        "confidence": 58,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "FORTIS",
+        "stockName": "Fortis Healthcare Ltd",
+        "bseCode": "532843",
+        "sector": "healthcare",
+        "capTier": "Mid",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "OFSS",
+        "stockName": "Oracle Financial Services Software Ltd",
+        "bseCode": "532466",
+        "sector": "it",
+        "capTier": "Mid",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "VOLTAS",
+        "stockName": "Voltas Ltd",
+        "bseCode": "500575",
+        "sector": "durables",
+        "capTier": "Mid",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "LENSKART",
+        "stockName": "Lenskart Solutions Ltd",
+        "bseCode": "544600",
+        "sector": "consumerservices",
+        "capTier": "Mid",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "HAVELLS",
+        "stockName": "Havells India Ltd",
+        "bseCode": "517354",
+        "sector": "durables",
+        "capTier": "Mid",
+        "confidence": 57,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "MFSL",
+        "stockName": "Max Financial Services Ltd",
+        "bseCode": "500271",
+        "sector": "financials",
+        "capTier": "Mid",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "KPRMILL",
+        "stockName": "K.P.R. Mill Limited",
+        "bseCode": "532889",
+        "sector": "textiles",
+        "capTier": "Mid",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "GLENMARK",
+        "stockName": "Glenmark Pharmaceuticals Ltd",
+        "bseCode": "532296",
+        "sector": "healthcare",
+        "capTier": "Mid",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "BDL",
+        "stockName": "Bharat Dynamics Ltd",
+        "bseCode": "541143",
+        "sector": "capgoods",
+        "capTier": "Mid",
+        "confidence": 56,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      }
+    ],
+    "Small": [
+      {
+        "symbol": "GALAXYSURF",
+        "stockName": "Galaxy Surfactants Ltd",
+        "bseCode": "540935",
+        "sector": "chemicals",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "BI",
+        "stockName": "Bilcare Ltd-$",
+        "bseCode": "526853",
+        "sector": "healthcare",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "KOHINOOR",
+        "stockName": "Kohinoor Foods Ltd",
+        "bseCode": "512559",
+        "sector": "fmcg",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "MPFSL",
+        "stockName": "MPF Systems Ltd",
+        "bseCode": "532470",
+        "sector": "services",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "SHRJAGP",
+        "stockName": "Shri Jagdamba Polymers Ltd",
+        "bseCode": "512453",
+        "sector": "capgoods",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "TPHQ",
+        "stockName": "Teamo Productions HQ Ltd",
+        "bseCode": "533048",
+        "sector": "infra",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "ALFL",
+        "stockName": "Abhinav Leasing & Finance Ltd",
+        "bseCode": "538952",
+        "sector": "financials",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "SHREESHAY",
+        "stockName": "Shreeshay Engineers Ltd",
+        "bseCode": "541112",
+        "sector": "infra",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "TARSONS",
+        "stockName": "Tarsons Products Ltd",
+        "bseCode": "543399",
+        "sector": "healthcare",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      },
+      {
+        "symbol": "AVTNPL",
+        "stockName": "AVT Natural Products Ltd",
+        "bseCode": "519105",
+        "sector": "fmcg",
+        "capTier": "Small",
+        "confidence": 62,
+        "reason": "No strong pre-open headline matched this stock; fallback ranking used recent BSE momentum.",
+        "positiveNewsSignals": [],
+        "sources": []
+      }
+    ]
+  }
+}

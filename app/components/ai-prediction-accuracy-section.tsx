@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { BseAiPredictionAccuracy, PredictionPerformance } from "../lib/bse-ai-prediction-accuracy";
 import { CategoryIcon } from "./category-icon";
 import { CompanyLogo } from "./company-logo";
-import { chipFor, formatRupee, formatSignedPercent, sectorTone, toneFor } from "./market-format";
+import { chipFor, formatQuantity, formatRupee, formatSignedPercent, sectorTone, toneFor } from "./market-format";
 import { MarketSection, SectionError, SectionFootnote, SectionSkeleton } from "./market-section";
 
 const ENDPOINT = "/api/predictions/bse-accuracy";
@@ -73,6 +73,11 @@ function averageMove(rows: PredictionPerformance[]) {
   return rows.reduce((total, row) => total + (row.changePercent ?? 0), 0) / rows.length;
 }
 
+function formatTurnover(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return `${formatRupee(value, value >= 100 ? 0 : 1)} Cr`;
+}
+
 function scoreRows(predicted: PredictionPerformance[], actual: PredictionPerformance[]) {
   const actualSymbols = new Set(actual.map((row) => row.symbol));
   const matched = predicted.filter((row) => actualSymbols.has(row.symbol)).length;
@@ -96,6 +101,13 @@ function StockLine({ row, side }: { row: PredictionPerformance; side: "predicted
   const matched = row.matchedActualRank !== null;
   const isPredicted = side === "predicted";
   const sector = sectorName(row);
+  const metrics = [
+    { label: row.live ? "Live price" : "Last price", value: formatRupee(row.price), tone: "text-slate-900 dark:text-white" },
+    { label: "Move", value: formatSignedPercent(row.changePercent), tone: toneFor(row.changePercent) },
+    { label: "Low / high", value: `${formatRupee(row.dayLow)} / ${formatRupee(row.dayHigh)}`, tone: "text-slate-700 dark:text-slate-200" },
+    { label: "Volume", value: formatQuantity(row.volume), tone: "text-slate-700 dark:text-slate-200" },
+    { label: "Turnover", value: formatTurnover(row.turnoverCr), tone: "text-slate-700 dark:text-slate-200" },
+  ];
 
   return (
     <li
@@ -155,6 +167,14 @@ function StockLine({ row, side }: { row: PredictionPerformance; side: "predicted
               </span>
             )}
           </div>
+          <dl className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-800 dark:bg-slate-950/70">
+                <dt className="truncate text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{metric.label}</dt>
+                <dd className={`mt-0.5 truncate text-[11px] font-black tabular-nums ${metric.tone}`}>{metric.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         <div className="shrink-0 text-right">
@@ -185,18 +205,13 @@ function ListCard({
 }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const capRows = rowsForCap(rows, cap);
-  const filteredRows = capRows.filter((row) => matchesSearch(row, query));
+  const filteredRows = rows.filter((row) => matchesSearch(row, query));
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filteredRows.slice(pageStart, pageStart + PAGE_SIZE);
   const showingFrom = filteredRows.length === 0 ? 0 : pageStart + 1;
   const showingTo = Math.min(pageStart + PAGE_SIZE, filteredRows.length);
-
-  useEffect(() => {
-    setPage(1);
-  }, [cap, rows.length]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/50" aria-label={title}>
@@ -210,7 +225,10 @@ function ListCard({
           <select
             value={cap}
             aria-label={`${title} cap filter`}
-            onChange={(event) => onCapChange(event.target.value as CapTier)}
+            onChange={(event) => {
+              setPage(1);
+              onCapChange(event.target.value as CapTier);
+            }}
             className="bg-transparent text-[10px] font-black outline-none"
           >
             {CAP_TIERS.map((tier) => (
@@ -345,7 +363,8 @@ export function AiPredictionAccuracySection() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   useEffect(() => {

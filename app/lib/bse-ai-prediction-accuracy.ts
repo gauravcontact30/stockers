@@ -46,6 +46,7 @@ export type LockedPredictionCache = {
   cutoffAt: string;
   source: PredictionSource;
   model: string | null;
+  generatedAfterCutoff?: boolean;
   picksByCap: Record<BseCapTier, LockedPredictionPick[]>;
   /** Kept so an older cache file still reads without crashing. */
   picks?: LockedPredictionPick[];
@@ -442,6 +443,25 @@ async function buildCandidates(): Promise<Candidate[]> {
   return candidates;
 }
 
+async function buildMarketCandidates(): Promise<Candidate[]> {
+  const bseRows = await getBseRows();
+  return bseRows.rows
+    .filter((row) => row.price !== null && row.changePercent !== null)
+    .sort((left, right) => (right.changePercent ?? -Infinity) - (left.changePercent ?? -Infinity))
+    .map((row) => ({
+      symbol: cleanSymbol(row.ticker),
+      stockName: row.name,
+      bseCode: row.code,
+      sector: sectorFor(row),
+      capTier: row.capTier,
+      price: row.price,
+      previousClose: row.previousClose,
+      changePercent: row.changePercent,
+      score: 54 + quoteScore(row),
+      headlines: [],
+    }));
+}
+
 async function aiPicks(candidates: Candidate[], capTier: BseCapTier): Promise<LockedPredictionPick[] | null> {
   if (candidates.length === 0) return null;
 
@@ -510,15 +530,16 @@ async function aiPicks(candidates: Candidate[], capTier: BseCapTier): Promise<Lo
 }
 
 async function generateLockedPrediction(now: Date): Promise<LockedPredictionCache | null> {
-  const candidates = await buildCandidates();
+  const generatedAfterCutoff = !isBeforePredictionCutoff(now);
+  const candidates = generatedAfterCutoff ? await buildMarketCandidates() : await buildCandidates();
   const picksByCap = emptyCapRows<LockedPredictionPick>();
-  let source: PredictionSource = "ai";
+  let source: PredictionSource = generatedAfterCutoff ? "heuristic" : "ai";
 
   for (const capTier of CAP_TIERS) {
     const capCandidates = candidates
       .filter((candidate) => candidate.capTier === capTier)
       .slice(0, CANDIDATE_COUNT);
-    const generated = await aiPicks(capCandidates, capTier);
+    const generated = generatedAfterCutoff ? null : await aiPicks(capCandidates, capTier);
     if (!generated) source = "heuristic";
     const picks = generated ?? heuristicPicks(capCandidates, capTier);
     if (picks.length < PICK_COUNT) return null;
@@ -531,11 +552,16 @@ async function generateLockedPrediction(now: Date): Promise<LockedPredictionCach
     cutoffAt: predictionCutoffAt(tradingDayKey(now)),
     source,
     model: source === "ai" ? aiModel() : null,
+    generatedAfterCutoff,
     picksByCap,
   };
 
   await writeJsonCache(CACHE_FILE, cache);
   return cache;
+}
+
+function canGenerateLock(now: Date): boolean {
+  return !isAfterMarketClose(now);
 }
 
 async function lockedPrediction(now: Date): Promise<LockedPredictionCache | null> {
@@ -552,9 +578,18 @@ async function lockedPrediction(now: Date): Promise<LockedPredictionCache | null
         },
       };
     }
-    if (cached.picks?.length && cached.picks.length >= PICK_COUNT) return null;
+    if (cached.picks?.length && cached.picks.length >= PICK_COUNT) {
+      return {
+        ...cached,
+        picksByCap: {
+          Large: cached.picks.slice(0, PICK_COUNT),
+          Mid: [],
+          Small: [],
+        },
+      };
+    }
   }
-  if (!isBeforePredictionCutoff(now)) return null;
+  if (!canGenerateLock(now)) return null;
   return generateLockedPrediction(now);
 }
 
@@ -694,7 +729,9 @@ export async function getBseAiPredictionAccuracy(now = new Date()): Promise<BseA
     generatedAt: locked.generatedAt,
     source: locked.source,
     model: locked.model,
-    message: `AI picks were locked before the 9:15 AM IST market open and will not be recalculated today.`,
+    message: locked.generatedAfterCutoff
+      ? `AI picks were initialized after the 9:15 AM IST cutoff because no pre-open lock was available. The list will not be recalculated today.`
+      : `AI picks were locked before the 9:15 AM IST market open and will not be recalculated today.`,
     predictionsByCap,
     actualTopByCap,
     accuracyByCap,

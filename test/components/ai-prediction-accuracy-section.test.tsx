@@ -13,7 +13,7 @@ function stock(overrides: Partial<PredictionPerformance> & Pick<PredictionPerfor
     stockName: overrides.stockName,
     bseCode: overrides.bseCode ?? `50000${rank}`,
     sector: overrides.sector ?? "financials",
-    capTier: overrides.capTier ?? "Large",
+    capTier: Object.prototype.hasOwnProperty.call(overrides, "capTier") ? overrides.capTier ?? null : "Large",
     rank,
     price: overrides.price ?? 100 + rank,
     previousClose: overrides.previousClose ?? 100,
@@ -109,7 +109,12 @@ describe("AiPredictionAccuracySection", () => {
     expect(within(predicted).getByText("AAA")).toBeInTheDocument();
     expect(within(predicted).getByText("84%")).toBeInTheDocument();
     expect(within(predicted).getByText("Actual rank #2")).toBeInTheDocument();
+    expect(within(predicted).getByText("Live price")).toBeInTheDocument();
+    expect(within(predicted).getAllByText("Low / high").length).toBeGreaterThan(0);
+    expect(within(predicted).getAllByText("Volume").length).toBeGreaterThan(0);
+    expect(within(predicted).getAllByText("Turnover").length).toBeGreaterThan(0);
     expect(within(actual).getByText("CCC")).toBeInTheDocument();
+    expect(within(actual).getAllByText("Live price").length).toBeGreaterThan(0);
     expect(screen.getByText("10% score")).toBeInTheDocument();
     expect(screen.getByText("1/10 locked AI picks matched real movers")).toBeInTheDocument();
     expect(screen.getAllByTestId("logo-AAA")[0]).toHaveAttribute("data-src", "");
@@ -179,6 +184,35 @@ describe("AiPredictionAccuracySection", () => {
 
     fireEvent.click(within(predicted).getByText("Clear filter"));
     expect(within(predicted).getByText("STK1")).toBeInTheDocument();
+    expect(within(predicted).getByText("Showing 1-5 of 10 real rows")).toBeInTheDocument();
+  });
+
+  it("renders cap-grouped locked picks even when row-level cap metadata is missing", async () => {
+    const rows = Array.from({ length: 10 }, (_, index) =>
+      stock({
+        symbol: `LIVE${index + 1}`,
+        stockName: `Live ${index + 1} Ltd`,
+        rank: index + 1,
+        confidence: 82 - index,
+        capTier: null,
+      }),
+    );
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ...payload,
+            predictions: rows,
+            predictionsByCap: { Large: rows, Mid: [], Small: [] },
+          }),
+      }),
+    ) as unknown as typeof fetch;
+
+    render(<AiPredictionAccuracySection />);
+
+    const predicted = await screen.findByRole("region", { name: "AI locked picks before open" });
+    expect(within(predicted).getByText("LIVE1")).toBeInTheDocument();
     expect(within(predicted).getByText("Showing 1-5 of 10 real rows")).toBeInTheDocument();
   });
 });
