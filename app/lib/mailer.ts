@@ -1,23 +1,24 @@
 ﻿// Sending mail.
 //
-// Still no new dependency: this app ships with three production dependencies (next, react,
-// react-dom) and reaches every other service â€” OpenRouter, NSE, Razorpay â€” over plain `fetch`.
-// Three of the four providers below are a JSON POST, and the fourth is ./smtp, ~120 lines of
-// `node:tls` rather than a megabyte of nodemailer.
+// One provider: Resend. This app ships with three production dependencies (next, react, react-dom)
+// and reaches every other service — OpenRouter, NSE, Razorpay — over plain `fetch`; sending mail
+// is a JSON POST like the rest of them, and needs nothing installed.
 //
-// Four providers rather than one, because a deployment with none configured is not a hypothetical:
-// it is what "the password reset email never arrives" turned out to mean. See the note on the
-// provider order below for what each one costs (nothing, at this volume) and what it needs.
+// There were four, on the theory that a spare provider is insurance against an undelivered reset
+// code. It was not. What actually went wrong was a chain nobody had finished configuring, so every
+// fallback was unconfigured too, and the only thing four providers added was four ways to get the
+// setup half-right — and a "no mail provider is set" message naming three services the operator
+// had never signed up for. One provider has one setup, and one true thing to say about it.
 //
-// With none of them configured nothing is sent and nothing throws: the message is appended to a
-// local outbox file instead, so the sign-up flow can be developed and tested end to end with no
+// With RESEND_API_KEY unset nothing is sent and nothing throws: the message is appended to a local
+// outbox file instead, so the sign-up flow can be developed and tested end to end with no
 // credentials and no mail leaving the machine. `transport` on the result says which happened, so a
 // caller (and a test, and the recovery panel on the sign-in page) can tell a real delivery from a
 // recorded one.
 //
 // Sending must never be able to fail a sign-up. Every entry point here resolves to a result object
 // rather than throwing, and the caller treats a failure as "the account still exists, the mail
-// didn't go" â€” which is recoverable by resending, whereas a rejected sign-up is not.
+// didn't go" — which is recoverable by resending, whereas a rejected sign-up is not.
 
 // Reads RESEND_API_KEY. The `server-only` import makes a client component that pulls this in a
 // build error, rather than a key that quietly ships to the browser.
@@ -25,7 +26,6 @@ import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { sendSmtpMail, smtpConfig } from "./smtp";
 import { TRIAL_DAYS } from "./subscription-policy";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
@@ -41,7 +41,7 @@ export type MailMessage = {
 };
 
 /** Where a message actually went. Anything but "outbox" means it left this server. */
-export type MailTransport = "resend" | "msg91" | "brevo" | "sendgrid" | "smtp" | "outbox";
+export type MailTransport = "resend" | "outbox";
 
 export type MailResult = {
   ok: boolean;
@@ -50,97 +50,58 @@ export type MailResult = {
 };
 
 /**
- * The mail providers, in the order they are tried.
+ * What Resend needs, and what it does without.
  *
- * More than one, because "no mail is arriving" was a real report against a deployment that had
- * none configured, and the fix has to be something the operator can complete in five minutes. Each
- * of these has a free tier that comfortably covers this app's volume, and the last one needs no
- * new account at all, just a mailbox the operator already owns:
+ * RESEND_API_KEY on its own is enough: with MAIL_FROM empty the mail goes out from Resend's shared
+ * sender, which needs no verified domain — see `RESEND_SHARED_FROM` for the catch that comes with
+ * it. 3,000 emails a month free, and it takes the HTML these builders produce, so the reset code
+ * arrives as the designed mail rather than as a panel template with the text dropped into it.
  *
- *   resend     RESEND_API_KEY + MAIL_FROM        3,000/month free, needs a verified domain
- *   msg91      MSG91_AUTH_KEY + domain + template  panel-rendered template, no HTML
- *   brevo      BREVO_API_KEY + MAIL_FROM         300/day free, sends from any verified address
- *   sendgrid   SENDGRID_API_KEY + MAIL_FROM      100/day free
- *   smtp       SMTP_HOST/USER/PASSWORD           a Gmail app password, or the domain's own mailbox
- *
- * Resend leads deliberately: it is the default sender for this deployment, and it is the one
- * provider here that takes the HTML these builders produce, so the reset code arrives as the
- * designed mail rather than as somebody's panel template with the text dropped into it. MSG91
- * sits behind it as the fallback that shares an account with the SMS side.
- *
- * The first one configured wins; a configured provider that *fails* falls through to the next, so
- * a provider having a bad afternoon costs a retry rather than a locked-out account. What none of
- * them can be is keyless — there is no service that will send mail on behalf of an anonymous
+ * What it cannot be is keyless — there is no service that will send mail on behalf of an anonymous
  * server, and pretending otherwise is what an empty outbox looks like.
+ *   resend.com -> API Keys, and Domains -> add + verify the domain in MAIL_FROM
  */
-const MAIL_ENV_HINT =
-  "Set RESEND_API_KEY (with MAIL_FROM) to deliver mail, or one of MSG91_AUTH_KEY + MSG91_EMAIL_DOMAIN + MSG91_EMAIL_TEMPLATE_ID, BREVO_API_KEY, SENDGRID_API_KEY, SMTP_HOST/SMTP_USER/SMTP_PASSWORD.";
-
-const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
-const MSG91_EMAIL_ENDPOINT = "https://control.msg91.com/api/v5/email/send";
-const SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send";
+const MAIL_ENV_HINT = "Set RESEND_API_KEY to deliver mail, and MAIL_FROM to send from your own domain.";
 
 function mailFrom(): string {
-  return process.env.MAIL_FROM?.trim() || process.env.SMTP_USER?.trim() || "";
+  return process.env.MAIL_FROM?.trim() || "";
 }
 
 /**
- * MSG91 Email, which is the other half of running recovery on one provider.
+ * Resend's shared sender, used when the key is set but MAIL_FROM is not.
  *
- * It does not work like the three below it, and the difference is worth stating because it shapes
- * what arrives. MSG91 sends from a template stored on its panel: the request names a template id
- * and supplies variables, and MSG91 renders the message. It will not take the HTML this module
- * builds. So what goes out through MSG91 is the panel's template with `subject` and `body`
- * substituted in, where `body` is the plain-text version of the mail, not the styled HTML one.
+ * A key with no MAIL_FROM used to count as *unconfigured*, and that is how a deployment carrying a
+ * working Resend key came to tell a locked-out reader that email was "not set up on this site
+ * yet": mail was skipped over a missing variable, and the recovery panel reported the skip rather
+ * than the cause. Resend accepts `onboarding@resend.dev` from any account with no domain verified,
+ * so the key on its own is enough to send now.
  *
- * That is a real downgrade in appearance, and it is the price of the provider. Anything below
- * MSG91 in the chain still sends the full HTML, so a deployment that wants the styled mail should
- * leave MSG91_EMAIL_TEMPLATE_ID unset and let Resend or SMTP take it.
- *
- * Needs MSG91_AUTH_KEY (shared with the SMS side), a verified MSG91_EMAIL_DOMAIN, a template id,
- * and MAIL_FROM on that domain.
+ * The limit worth stating: until a domain is verified, Resend delivers from this address only to
+ * the address that owns the account and rejects every other recipient. That surfaces as "could not
+ * be delivered" on the panel — still no code in that reader's inbox, but a true sentence about a
+ * real attempt instead of a false one about configuration. Set MAIL_FROM to an address on a
+ * verified domain to reach everybody.
  */
-export function msg91MailConfigured(): boolean {
-  return Boolean(
-    process.env.MSG91_AUTH_KEY?.trim() &&
-      process.env.MSG91_EMAIL_DOMAIN?.trim() &&
-      process.env.MSG91_EMAIL_TEMPLATE_ID?.trim() &&
-      mailFrom(),
-  );
+const RESEND_SHARED_FROM = "StockersAI <onboarding@resend.dev>";
+
+function resendFrom(): string {
+  return mailFrom() || RESEND_SHARED_FROM;
 }
 
-export function resendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim() && mailFrom());
-}
-
-export function brevoConfigured(): boolean {
-  return Boolean(process.env.BREVO_API_KEY?.trim() && mailFrom());
-}
-
-export function sendgridConfigured(): boolean {
-  return Boolean(process.env.SENDGRID_API_KEY?.trim() && mailFrom());
-}
-
-/** True when *some* provider can deliver, which is the only question the callers ask. */
+/** True when mail can leave this server, which is the only question the callers ask. */
 export function mailConfigured(): boolean {
-  return msg91MailConfigured() || resendConfigured() || brevoConfigured() || sendgridConfigured() || smtpConfig() !== null;
+  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-/** Which provider is doing the sending, for the admin health report. */
+/**
+ * Which provider is doing the sending, for the admin health report.
+ *
+ * There is only one answer left, and it is still worth asking as its own question: "mail is
+ * configured" and "mail is arriving" came apart once, and the health panel names the transport so
+ * that difference stays visible.
+ */
 export function mailTransportName(): MailTransport | null {
-  if (resendConfigured()) return "resend";
-  if (msg91MailConfigured()) return "msg91";
-  if (brevoConfigured()) return "brevo";
-  if (sendgridConfigured()) return "sendgrid";
-  if (smtpConfig()) return "smtp";
-  return null;
-}
-
-/** `Name <address>` split into the pair the JSON APIs want. */
-function fromParts(): { email: string; name?: string } {
-  const value = mailFrom();
-  const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value);
-  return match ? { name: match[1] || undefined, email: match[2] } : { email: value };
+  return mailConfigured() ? "resend" : null;
 }
 
 /**
@@ -175,15 +136,22 @@ async function recordToOutbox(message: MailMessage, reason: string): Promise<Mai
   }
 }
 
-/** One provider attempt: the reason string is what lands in the outbox if everything fails. */
-type Attempt = { transport: MailTransport; send: () => Promise<{ ok: boolean; error?: string }> };
-
-async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<{ ok: boolean; error?: string }> {
+async function postToResend(message: MailMessage): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...headers },
-      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.RESEND_API_KEY?.trim()}`,
+      },
+      body: JSON.stringify({
+        from: resendFrom(),
+        to: [message.to],
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+      }),
+      // Long enough for a slow API, short enough that a hung request cannot hold a sign-up open.
       signal: AbortSignal.timeout(15_000),
     });
 
@@ -195,120 +163,25 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
   }
 }
 
-function attemptsFor(message: MailMessage): Attempt[] {
-  const from = fromParts();
-  const attempts: Attempt[] = [];
-
-  // Resend leads: it is this deployment's default sender, and the only provider here that takes
-  // the HTML these builders produce. Everything below is a fallback, so a bad afternoon at Resend
-  // costs a retry rather than an undelivered reset code.
-  if (resendConfigured()) {
-    attempts.push({
-      transport: "resend",
-      send: () =>
-        postJson(
-          RESEND_ENDPOINT,
-          { Authorization: `Bearer ${process.env.RESEND_API_KEY?.trim()}` },
-          { from: mailFrom(), to: [message.to], subject: message.subject, html: message.html, text: message.text },
-        ),
-    });
-  }
-
-  // MSG91 behind Resend, sharing the auth key with the SMS side. It is the fallback rather than
-  // the default because it cannot send the HTML above: see `msg91MailConfigured` for what a
-  // reader actually receives when this one is the provider that takes the message.
-  if (msg91MailConfigured()) {
-    attempts.push({
-      transport: "msg91",
-      send: () =>
-        postJson(
-          MSG91_EMAIL_ENDPOINT,
-          { authkey: process.env.MSG91_AUTH_KEY?.trim() ?? "", accept: "application/json" },
-          {
-            domain: process.env.MSG91_EMAIL_DOMAIN?.trim(),
-            template_id: process.env.MSG91_EMAIL_TEMPLATE_ID?.trim(),
-            from: { email: from.email, ...(from.name ? { name: from.name } : {}) },
-            // The text body, not the HTML one: see `msg91MailConfigured`. A template variable is
-            // substituted into MSG91's own markup, so handing it a full HTML document produces
-            // either escaped tags or a nested document, neither of which is readable.
-            recipients: [{ to: [{ email: message.to }], variables: { subject: message.subject, body: message.text } }],
-          },
-        ),
-    });
-  }
-
-  if (brevoConfigured()) {
-    attempts.push({
-      transport: "brevo",
-      send: () =>
-        postJson(
-          BREVO_ENDPOINT,
-          { "api-key": process.env.BREVO_API_KEY?.trim() ?? "" },
-          {
-            sender: { email: from.email, ...(from.name ? { name: from.name } : {}) },
-            to: [{ email: message.to }],
-            subject: message.subject,
-            htmlContent: message.html,
-            textContent: message.text,
-          },
-        ),
-    });
-  }
-
-  if (sendgridConfigured()) {
-    attempts.push({
-      transport: "sendgrid",
-      send: () =>
-        postJson(
-          SENDGRID_ENDPOINT,
-          { Authorization: `Bearer ${process.env.SENDGRID_API_KEY?.trim()}` },
-          {
-            personalizations: [{ to: [{ email: message.to }] }],
-            from: { email: from.email, ...(from.name ? { name: from.name } : {}) },
-            subject: message.subject,
-            content: [
-              { type: "text/plain", value: message.text },
-              { type: "text/html", value: message.html },
-            ],
-          },
-        ),
-    });
-  }
-
-  const smtp = smtpConfig();
-  if (smtp) {
-    attempts.push({
-      transport: "smtp",
-      send: () => sendSmtpMail(smtp, { from: mailFrom() || smtp.user, to: message.to, subject: message.subject, html: message.html, text: message.text }),
-    });
-  }
-
-  return attempts;
-}
-
 /**
- * Sends one message through the first provider that takes it.
+ * Sends one message, through Resend or into the outbox.
  *
  * Never throws and never rejects: a caller in the middle of a sign-up or a password reset must not
- * fail because a mail server did. A message no provider accepted is recorded to the local outbox
- * with every provider's complaint attached, which is what makes a misconfiguration diagnosable
- * instead of merely silent.
+ * fail because a mail server did. A message Resend would not take is recorded to the local outbox
+ * with its complaint attached, which is what makes a misconfiguration diagnosable instead of
+ * merely silent.
  */
 export async function sendMail(message: MailMessage): Promise<MailResult> {
-  const attempts = attemptsFor(message);
-  if (attempts.length === 0) {
+  if (!mailConfigured()) {
     return recordToOutbox(message, `No mail provider configured. ${MAIL_ENV_HINT}`);
   }
 
-  const failures: string[] = [];
-  for (const attempt of attempts) {
-    const result = await attempt.send();
-    if (result.ok) return { ok: true, transport: attempt.transport };
-    failures.push(`${attempt.transport} ${result.error ?? "failed"}`);
-  }
+  const result = await postToResend(message);
+  if (result.ok) return { ok: true, transport: "resend" };
 
-  await recordToOutbox(message, failures.join(" | "));
-  return { ok: false, transport: attempts[attempts.length - 1].transport, error: `Mail provider rejected the message: ${failures[0]}` };
+  const failure = `resend ${result.error ?? "failed"}`;
+  await recordToOutbox(message, failure);
+  return { ok: false, transport: "resend", error: `Mail provider rejected the message: ${failure}` };
 }
 
 // ---------------------------------------------------------------------------

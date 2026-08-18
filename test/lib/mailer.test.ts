@@ -3,7 +3,7 @@
 // unchanged there.
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { appOrigin, escapeHtml, mailConfigured, mailTransportName, msg91MailConfigured, passwordResetCodeEmail, sendMail, verificationEmail } from "../../app/lib/mailer";
+import { appOrigin, escapeHtml, mailConfigured, mailTransportName, passwordResetCodeEmail, sendMail, verificationEmail } from "../../app/lib/mailer";
 
 const outboxPath = path.join(process.cwd(), "app", "data", "outbox.json");
 
@@ -21,7 +21,7 @@ describe("mailer", () => {
   const env = { ...process.env };
 
   beforeEach(async () => {
-    for (const key of ["RESEND_API_KEY", "BREVO_API_KEY", "SENDGRID_API_KEY", "MAIL_FROM", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"]) {
+    for (const key of ["RESEND_API_KEY", "MAIL_FROM"]) {
       delete process.env[key];
     }
     await fs.rm(outboxPath, { force: true });
@@ -33,41 +33,22 @@ describe("mailer", () => {
   });
 
   describe("configuration", () => {
-    it("is unconfigured until both the key and the sender are present", () => {
-      expect(mailConfigured()).toBe(false);
-
-      process.env.RESEND_API_KEY = "key";
-      expect(mailConfigured()).toBe(false);
-
-      process.env.MAIL_FROM = "Stockers <hi@example.com>";
-      expect(mailConfigured()).toBe(true);
-    });
-
-    it("counts any one of the four providers as configured, and names the one in use", () => {
+    it("needs the key and nothing else, and names the transport in use", () => {
       expect(mailConfigured()).toBe(false);
       expect(mailTransportName()).toBeNull();
 
-      process.env.MAIL_FROM = "Stockers <hi@example.com>";
-      process.env.BREVO_API_KEY = "brevo-key";
+      // The key alone is enough: Resend sends from its shared address until a domain is verified.
+      // Requiring MAIL_FROM as well is what left a deployment with a working key telling
+      // locked-out readers that email was "not set up on this site yet".
+      process.env.RESEND_API_KEY = "key";
       expect(mailConfigured()).toBe(true);
-      expect(mailTransportName()).toBe("brevo");
-
-      // Resend leads when both are set: see the provider order in the mailer.
-      process.env.RESEND_API_KEY = "resend-key";
       expect(mailTransportName()).toBe("resend");
 
+      // A sender without a key is not a provider, and there is nothing left to fall back to.
       delete process.env.RESEND_API_KEY;
-      delete process.env.BREVO_API_KEY;
-      process.env.SENDGRID_API_KEY = "sendgrid-key";
-      expect(mailTransportName()).toBe("sendgrid");
-
-      delete process.env.SENDGRID_API_KEY;
-      delete process.env.MAIL_FROM;
-      process.env.SMTP_HOST = "smtp.example.com";
-      process.env.SMTP_USER = "hi@example.com";
-      process.env.SMTP_PASSWORD = "app-password";
-      expect(mailConfigured()).toBe(true);
-      expect(mailTransportName()).toBe("smtp");
+      process.env.MAIL_FROM = "Stockers <hi@example.com>";
+      expect(mailConfigured()).toBe(false);
+      expect(mailTransportName()).toBeNull();
     });
 
     // The rules themselves live in app-origin.test.ts; this only pins that the mailer still
@@ -194,20 +175,16 @@ describe("verificationEmail", () => {
 });
 
 
-const PROVIDER_KEYS = [
-  "RESEND_API_KEY",
-  "BREVO_API_KEY",
-  "SENDGRID_API_KEY",
-  "MAIL_FROM",
-  "SMTP_HOST",
-  "SMTP_USER",
-  "SMTP_PASSWORD",
-  "MSG91_AUTH_KEY",
-  "MSG91_EMAIL_DOMAIN",
-  "MSG91_EMAIL_TEMPLATE_ID",
-];
+const PROVIDER_KEYS = ["RESEND_API_KEY", "MAIL_FROM"];
 
-describe("provider selection", () => {
+/**
+ * The sender address, which is the one part of Resend's setup that is optional.
+ *
+ * Worth its own block because the fallback is not free: mail from the shared address reaches only
+ * the account owner, so a deployment that never sets MAIL_FROM can recover its own admin account
+ * and nobody else's.
+ */
+describe("sender address", () => {
   const saved: Record<string, string | undefined> = {};
 
   beforeEach(async () => {
@@ -226,51 +203,50 @@ describe("provider selection", () => {
     await fs.rm(outboxPath, { force: true });
   });
 
-describe("provider fallback", () => {
-  it("falls through to the next provider when the first one refuses", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+  it("sends from Resend's shared address when no MAIL_FROM is set", async () => {
+    // The regression this pins: a key with no sender used to count as no provider at all, so the
+    // reset code went to the local outbox and the recovery panel called email unconfigured.
     process.env.RESEND_API_KEY = "resend-key";
-    process.env.BREVO_API_KEY = "brevo-key";
-
-    const calls: string[] = [];
-    global.fetch = jest.fn(async (url: unknown) => {
-      calls.push(String(url));
-      const failing = String(url).includes("resend.com");
-      return { ok: !failing, status: failing ? 403 : 202, text: async () => (failing ? "domain not verified" : "") };
-    }) as unknown as typeof fetch;
-
-    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "brevo" });
-    expect(calls).toEqual(["https://api.resend.com/emails", "https://api.brevo.com/v3/smtp/email"]);
-    // Delivered, so nothing is kept locally.
-    expect(await readOutbox()).toHaveLength(0);
-  });
-
-  it("records every provider's complaint when none of them takes the message", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.RESEND_API_KEY = "resend-key";
-    process.env.SENDGRID_API_KEY = "sendgrid-key";
-    global.fetch = jest.fn(async () => ({ ok: false, status: 401, text: async () => "bad key" })) as unknown as typeof fetch;
-
-    const result = await sendMail(MESSAGE);
-
-    expect(result.ok).toBe(false);
-    const reason = String((await readOutbox())[0].reason);
-    expect(reason).toContain("resend");
-    expect(reason).toContain("sendgrid");
-  });
-
-  it("sends the sender as a name/address pair to the providers that want one", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.BREVO_API_KEY = "brevo-key";
     const sent: Record<string, unknown>[] = [];
     global.fetch = jest.fn(async (_url: unknown, init: unknown) => {
       sent.push(JSON.parse((init as { body: string }).body));
-      return { ok: true, status: 201, text: async () => "" };
+      return { ok: true, status: 200, text: async () => "" };
+    }) as unknown as typeof fetch;
+
+    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "resend" });
+
+    expect(sent[0].from).toBe("StockersAI <onboarding@resend.dev>");
+    expect(await readOutbox()).toHaveLength(0);
+  });
+
+  it("prefers an explicit MAIL_FROM over the shared address", async () => {
+    process.env.RESEND_API_KEY = "resend-key";
+    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+    const sent: Record<string, unknown>[] = [];
+    global.fetch = jest.fn(async (_url: unknown, init: unknown) => {
+      sent.push(JSON.parse((init as { body: string }).body));
+      return { ok: true, status: 200, text: async () => "" };
     }) as unknown as typeof fetch;
 
     await sendMail(MESSAGE);
 
-    expect(sent[0].sender).toEqual({ email: "hi@example.com", name: "Stockers" });
+    expect(sent[0].from).toBe("Stockers <hi@example.com>");
+  });
+
+  it("records the refusal in the provider's own words when the domain is not verified", async () => {
+    // What the shared address actually costs, and the sentence an operator needs to see to know
+    // that verifying a domain is the fix.
+    process.env.RESEND_API_KEY = "resend-key";
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 403,
+      text: async () => "You can only send testing emails to your own email address",
+    })) as unknown as typeof fetch;
+
+    const result = await sendMail(MESSAGE);
+
+    expect(result).toMatchObject({ ok: false, transport: "resend" });
+    expect(String((await readOutbox())[0].reason)).toContain("your own email address");
   });
 });
 
@@ -283,119 +259,5 @@ describe("the recovery code mail", () => {
     expect(mail.html).toContain("123456");
     // Linkless on purpose: it has to survive a client that strips them.
     expect(mail.text).not.toContain("http");
-  });
-});
-});
-
-/**
- * MSG91 Email, the other half of running password recovery through one provider.
- *
- * The tests that matter here are about its two departures from every other provider: it needs a
- * verified domain and a panel template before it counts as configured at all, and it sends the
- * plain-text body rather than the HTML one, because MSG91 renders its own template around the
- * variables it is given.
- */
-describe("MSG91 email", () => {
-  const KEYS = ["MSG91_AUTH_KEY", "MSG91_EMAIL_DOMAIN", "MSG91_EMAIL_TEMPLATE_ID", "MAIL_FROM", "RESEND_API_KEY"];
-  const saved: Record<string, string | undefined> = {};
-
-  beforeEach(async () => {
-    for (const key of KEYS) {
-      saved[key] = process.env[key];
-      delete process.env[key];
-    }
-    await fs.rm(outboxPath, { force: true });
-  });
-
-  afterEach(async () => {
-    for (const key of KEYS) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
-    }
-    await fs.rm(outboxPath, { force: true });
-  });
-
-  it("needs the domain and the template, not just the auth key the SMS side uses", () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.MSG91_AUTH_KEY = "auth";
-    // An auth key alone is what the SMS side runs on; email additionally needs a verified domain
-    // and a template, so a deployment that only set up SMS must not claim it can send mail.
-    expect(msg91MailConfigured()).toBe(false);
-    expect(mailConfigured()).toBe(false);
-
-    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
-    expect(msg91MailConfigured()).toBe(false);
-
-    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
-    expect(msg91MailConfigured()).toBe(true);
-    expect(mailTransportName()).toBe("msg91");
-  });
-
-  it("sends the template, the domain and the text body when it is the provider that takes it", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.MSG91_AUTH_KEY = "auth";
-    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
-    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
-
-    const calls: string[] = [];
-    let sent: Record<string, unknown> = {};
-    let headers: Record<string, string> = {};
-    global.fetch = jest.fn(async (url: unknown, init: unknown) => {
-      calls.push(String(url));
-      const request = init as { body: string; headers: Record<string, string> };
-      sent = JSON.parse(request.body);
-      headers = request.headers;
-      return { ok: true, status: 200, text: async () => "" };
-    }) as unknown as typeof fetch;
-
-    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "msg91" });
-
-    expect(calls).toEqual(["https://control.msg91.com/api/v5/email/send"]);
-    expect(headers.authkey).toBe("auth");
-    expect(sent.domain).toBe("mail.example.com");
-    expect(sent.template_id).toBe("template-1");
-    expect(sent.from).toEqual({ email: "hi@example.com", name: "Stockers" });
-    // The text body, never the HTML one: it is substituted into MSG91's own template.
-    expect(sent.recipients).toEqual([
-      { to: [{ email: "reader@example.com" }], variables: { subject: "Hello", body: "Hi" } },
-    ]);
-  });
-
-  it("is the fallback, not the default: Resend takes the message when both are configured", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.MSG91_AUTH_KEY = "auth";
-    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
-    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
-    process.env.RESEND_API_KEY = "resend-key";
-
-    const calls: string[] = [];
-    global.fetch = jest.fn(async (url: unknown) => {
-      calls.push(String(url));
-      return { ok: true, status: 202, text: async () => "" };
-    }) as unknown as typeof fetch;
-
-    // Resend is the default sender, and the only one that carries the designed HTML.
-    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "resend" });
-    expect(mailTransportName()).toBe("resend");
-    expect(calls).toEqual(["https://api.resend.com/emails"]);
-  });
-
-  it("picks the message up when Resend is having a bad afternoon", async () => {
-    process.env.MAIL_FROM = "Stockers <hi@example.com>";
-    process.env.MSG91_AUTH_KEY = "auth";
-    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
-    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
-    process.env.RESEND_API_KEY = "resend-key";
-
-    const calls: string[] = [];
-    global.fetch = jest.fn(async (url: unknown) => {
-      calls.push(String(url));
-      const resend = String(url).includes("resend.com");
-      return { ok: !resend, status: resend ? 500 : 200, text: async () => (resend ? "upstream error" : "") };
-    }) as unknown as typeof fetch;
-
-    // A Resend outage costs a retry through MSG91, not an undelivered reset code.
-    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "msg91" });
-    expect(calls).toEqual(["https://api.resend.com/emails", "https://control.msg91.com/api/v5/email/send"]);
   });
 });

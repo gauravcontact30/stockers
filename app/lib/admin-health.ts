@@ -305,10 +305,10 @@ export async function buildHealthReport(): Promise<HealthReport> {
     {
       key: "mail",
       label: "Email",
-      // Any one of four providers counts: see the provider order in ./mailer. Naming the one in
-      // use matters here, because "mail is configured" and "mail is arriving" came apart once.
+      // Resend is the only provider: see ./mailer. Naming the transport still matters here,
+      // because "mail is configured" and "mail is arriving" came apart once.
       state: mailTransport ? "ok" : "degraded",
-      detail: mailTransport ? `Mail is sent through ${mailTransport}.` : "No mail provider is set (Resend, Brevo, SendGrid or SMTP).",
+      detail: mailTransport ? `Mail is sent through ${mailTransport}.` : "No mail provider is set (RESEND_API_KEY is unset).",
       consequence: mailTransport
         ? "Verification, recovery and contact mail is delivered."
         : "Verification links and password reset codes are not sent, so nobody can verify an address or recover an account by email.",
