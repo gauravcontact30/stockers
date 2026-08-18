@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MostBoughtBoard, MostBoughtRow, MostBoughtSignal } from "../lib/most-bought";
 import { CompanyLogo } from "./company-logo";
+import { istMoment, useClockTick } from "./market-clock";
 import { formatQuantity, formatRupee, formatSignedPercent } from "./market-format";
 import { SectorPill } from "./sector-pill";
 
@@ -47,6 +48,99 @@ const SESSION_NOTE: Record<MostBoughtBoard["marketSession"], string> = {
   closed: "Market closed: where the buying ranks finished today.",
   holiday: "No BSE session today: the last completed session's buying ranks.",
 };
+
+/**
+ * What the ribbon says about the calendar, given the clock and the board.
+ *
+ * The state comes from the board rather than being re-derived here: the server knows whether the
+ * exchange actually printed a trade today, which is the only way to tell a holiday from an
+ * ordinary Tuesday without shipping a holiday calendar to the browser and keeping it current. The
+ * clock's job is narrower and is the half a static board cannot do - saying what day and second it
+ * is in IST, which is the timezone every figure on this ribbon is quoted in.
+ */
+const SESSION_STATUS: Record<MostBoughtBoard["marketSession"], string> = {
+  "pre-open": "Pre-open · opens 09:15 IST",
+  live: "Open · live until 15:30 IST",
+  closed: "Closed · ended 15:30 IST",
+  holiday: "Closed · exchange holiday",
+};
+
+const SESSION_TONE: Record<MostBoughtBoard["marketSession"], string> = {
+  "pre-open": "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  live: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  closed: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  holiday: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
+
+/** `2026-08-14` -> `14 Aug 2026`. Returns null for a board that never named its session. */
+function sessionDateLabel(sessionDate: string | null): string | null {
+  if (!sessionDate) return null;
+  const parsed = new Date(`${sessionDate}T12:00:00+05:30`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" });
+}
+
+/**
+ * Why the exchange is shut, when it is - and nothing when it is not.
+ *
+ * A weekend is the one closure the browser can name on its own, so it is named: "closed today"
+ * beside a Sunday date is a worse answer than "closed for the weekend". A holiday is only ever
+ * reported on the board's authority, never guessed from the date.
+ */
+function closureNote(board: MostBoughtBoard, weekday: string, isWeekend: boolean): string | null {
+  if (isWeekend) return `Weekend · BSE is shut on Saturday and Sunday, so there is no ${weekday} session`;
+  if (board.marketSession === "holiday") return "Exchange holiday · the BSE did not trade today";
+  return null;
+}
+
+/** Today's IST date, a ticking clock, and what the exchange is doing right now. */
+function RibbonClock({ board }: { board: MostBoughtBoard }) {
+  const tick = useClockTick();
+
+  // Before the first tick - the server render and the hydration pass - there is no trustworthy
+  // time to print. Showing one anyway is either a stale server clock or a hydration mismatch, so
+  // the strip waits and the session chip alone carries the state.
+  if (tick === 0) {
+    return (
+      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal ${SESSION_TONE[board.marketSession]}`}>
+        {SESSION_STATUS[board.marketSession]}
+      </span>
+    );
+  }
+
+  const moment = istMoment(tick);
+  const closure = closureNote(board, moment.weekday, moment.isWeekend);
+  const ranksFrom = sessionDateLabel(board.sessionDate);
+
+  return (
+    <>
+      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+        {moment.dayLabel}
+      </span>
+      <span
+        className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-black tabular-nums normal-case tracking-normal text-slate-900 dark:bg-slate-950/60 dark:text-white"
+        // The seconds change every tick; announcing each one would make the ribbon unusable with a
+        // screen reader, so the live region is off and the status chip beside it carries meaning.
+        aria-live="off"
+      >
+        {moment.timeLabel} IST
+      </span>
+      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal ${SESSION_TONE[board.marketSession]}`}>
+        {SESSION_STATUS[board.marketSession]}
+      </span>
+      {closure && (
+        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+          {closure}
+        </span>
+      )}
+      {ranksFrom && board.marketSession !== "live" && (
+        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+          Ranks from the {ranksFrom} session
+        </span>
+      )}
+    </>
+  );
+}
 
 function rankTone(rank: number): string {
   return RANK_TONES[(rank - 1) % RANK_TONES.length];
@@ -204,6 +298,7 @@ export function MostBoughtRibbon({ initial }: { initial?: MostBoughtBoard | null
     >
       <p className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
         Most bought today
+        <RibbonClock board={board} />
         <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
           {SESSION_NOTE[board.marketSession]}
         </span>

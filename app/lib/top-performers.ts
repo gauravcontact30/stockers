@@ -10,7 +10,7 @@
 
 import { getReturnsForPeriod, type ReturnPeriod } from "./historical-returns";
 import { indianStocks } from "./indian-stocks";
-import { getAllQuotes } from "./market-data";
+import { getQuotesFor } from "./market-data";
 
 export type Direction = "gainers" | "losers";
 
@@ -77,9 +77,9 @@ export async function getTopPerformers(options: TopPerformersQuery = {}): Promis
   const query = (options.query ?? "").trim().toLowerCase();
 
   // Prices are a bonus on the cards: a quote feed that is down should cost the board its prices,
-  // not its rankings, which come from the return cache alone.
-  const [periodReturns, quotes] = await Promise.all([getReturnsForPeriod(period), getAllQuotes().catch(() => [])]);
-  const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
+  // not its rankings, which come from the return cache alone. So the ranking is built first, with
+  // no quote feed involved at all, and prices are attached to the finished page further down.
+  const periodReturns = await getReturnsForPeriod(period);
 
   const matches: TopPerformer[] = [];
   for (const stock of indianStocks) {
@@ -89,14 +89,13 @@ export async function getTopPerformers(options: TopPerformersQuery = {}): Promis
     if (typeof periodReturn !== "number" || !Number.isFinite(periodReturn)) continue;
     if (direction === "gainers" ? periodReturn < THRESHOLD : periodReturn > -THRESHOLD) continue;
 
-    const quote = quoteMap.get(stock.symbol);
     matches.push({
       symbol: stock.symbol,
       name: stock.name,
       sector: stock.sector,
       capTier: stock.capTier,
-      price: quote?.price ?? null,
-      changePercent: quote?.changePercent ?? null,
+      price: null,
+      changePercent: null,
       periodReturn,
     });
   }
@@ -109,9 +108,33 @@ export async function getTopPerformers(options: TopPerformersQuery = {}): Promis
   // the last page that exists rather than an empty one.
   const page = Math.min(requestedPage, pages);
   const start = (page - 1) * pageSize;
+  const visible = matches.slice(start, start + pageSize);
+
+  /**
+   * Quotes for the rows on screen, and no others.
+   *
+   * This used to call `getAllQuotes()` alongside the return cache, which fetches a live quote for
+   * every one of the ~400 tracked companies before the board slices five of them out. At twelve in
+   * flight and a six-second ceiling each, that is tens of seconds spent on ~395 quotes nobody was
+   * going to see, and it is why the landing page's stock-returns section took ~48s to stream and
+   * held the whole HTML response open behind it.
+   *
+   * The ranking never needed them: it comes from the return cache, which is exactly why a dead
+   * quote feed is survivable here. Fetching after pagination makes the cost a page of rows rather
+   * than a catalogue, and leaves the failure behaviour identical - no quotes, no prices, same rows.
+   */
+  const subjects = new Map(indianStocks.map((stock) => [stock.symbol, stock]));
+  const quotes = await getQuotesFor(
+    visible.map((entry) => subjects.get(entry.symbol)).filter((stock): stock is (typeof indianStocks)[number] => Boolean(stock)),
+  ).catch(() => []);
+  const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
+  const stocks = visible.map((entry) => {
+    const quote = quoteMap.get(entry.symbol);
+    return quote ? { ...entry, price: quote.price ?? null, changePercent: quote.changePercent ?? null } : entry;
+  });
 
   return {
-    stocks: matches.slice(start, start + pageSize),
+    stocks,
     total: matches.length,
     page,
     pages,

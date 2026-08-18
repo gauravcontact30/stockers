@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { CompanyLogo, monogramText, monogramTone } from "../../app/components/company-logo";
-import { normaliseTicker, stockLogoUrl } from "../../app/lib/company-logos";
+import { CHECKED_LOGO_DOMAINS, normaliseTicker, stockIcon, stockLogoUrl } from "../../app/lib/company-logos";
 
 describe("normaliseTicker", () => {
   it("upper-cases and trims", () => {
@@ -230,5 +230,75 @@ describe("CompanyLogo", () => {
 
     complete.mockRestore();
     width.mockRestore();
+  });
+});
+
+/**
+ * Which source wins, and why it matters that the loser is still tried.
+ *
+ * Both halves of this were live bugs. `stockIcon` preferred a checked domain over the symbol
+ * store, and Google's favicon endpoint has no mark for roughly a third of those domains — it
+ * answers 404 with a generic grey globe — so companies whose real logo the store had all along
+ * rendered as a placeholder. Separately, `CompanyLogo` treated a caller-supplied `src` as the only
+ * source, so those grey globes had nothing behind them to fall back to.
+ */
+describe("stockIcon source order", () => {
+  it("prefers the symbol store, which is keyed by the ticker the exchange publishes", () => {
+    expect(stockIcon("DABUR", "dabur.com")).toBe("https://images.dhan.co/symbol/DABUR.png");
+    // Even with a checked domain passed in: the store answers for this ticker, Google does not.
+    expect(stockIcon("HCLTECH", "hcltech.com")).toBe("https://images.dhan.co/symbol/HCLTECH.png");
+  });
+
+  it("uses the verified website for the tickers the store is known to refuse", () => {
+    // Siemens Energy India and LEAP India, the two reported as showing no real icon.
+    expect(stockIcon("ENRIN")).toContain("siemens-energy.com");
+    expect(stockIcon("LEAPIND")).toContain("leapindia.net");
+    expect(stockIcon("ENRIN")).toContain("google.com/s2/favicons");
+  });
+
+  it("keeps working when the ticker arrives with an exchange or series suffix", () => {
+    expect(stockIcon("ENRIN.BO")).toContain("siemens-energy.com");
+    expect(stockIcon("LEAPIND-EQ")).toContain("leapindia.net");
+  });
+
+  it("carries every checked domain as a bare hostname, never a URL or a guess", () => {
+    for (const [ticker, domain] of Object.entries(CHECKED_LOGO_DOMAINS)) {
+      expect(ticker).toMatch(/^[A-Z0-9&-]+$/);
+      expect(domain).toMatch(/^[a-z0-9.-]+\.[a-z]{2,}$/);
+      expect(domain).not.toContain("/");
+    }
+  });
+
+  it("gives back nothing to draw when there is no ticker to look one up by", () => {
+    expect(stockIcon("")).toBeNull();
+    expect(stockIcon(null)).toBeNull();
+    // A company name is not a ticker; there is nothing to ask the store for.
+    expect(stockIcon("Some Unlisted Company Ltd")).toBeNull();
+  });
+});
+
+describe("CompanyLogo fallback chain", () => {
+  it("falls back past a caller-supplied source instead of giving up on it", () => {
+    render(<CompanyLogo symbol="DABUR" src="https://example.com/supplied.png" size={32} />);
+
+    const image = screen.getByRole("img") as HTMLImageElement;
+    // The caller's better information leads...
+    expect(image.getAttribute("src")).toBe("https://example.com/supplied.png");
+
+    // ...but being wrong about it now costs nothing: the store is still behind it.
+    fireEvent.error(image);
+    expect((screen.getByRole("img") as HTMLImageElement).getAttribute("src")).toBe(
+      "https://images.dhan.co/symbol/DABUR.png",
+    );
+  });
+
+  it("still ends at a monogram once every real source has failed", () => {
+    render(<CompanyLogo symbol="ZZZZUNKNOWN" src="https://example.com/supplied.png" size={32} />);
+
+    fireEvent.error(screen.getByRole("img"));
+    fireEvent.error(screen.getByRole("img"));
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("ZZZ")).toBeInTheDocument();
   });
 });

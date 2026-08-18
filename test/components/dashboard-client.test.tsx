@@ -1,7 +1,8 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DashboardClient } from "../../app/components/dashboard-client";
-import { companyLogoUrl, indianStocks } from "../../app/lib/indian-stocks";
+import { indianStocks } from "../../app/lib/indian-stocks";
+import { stockIcon } from "../../app/lib/company-logos";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -245,9 +246,12 @@ describe("DashboardClient", () => {
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-loading", "false");
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-stock", "RELIANCE");
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-company-name", reliance.name);
+      // Asserted through `stockIcon` rather than against a hand-built favicon URL, so this stays
+      // true to whichever real source it picks: the symbol store leads, because Google's favicon
+      // endpoint answers with a generic globe for a large share of the checked domains.
       expect(screen.getByTestId("ai-report-modal")).toHaveAttribute(
         "data-logo-url",
-        companyLogoUrl(reliance.domain)
+        stockIcon(reliance.symbol, reliance.domain)
       );
     });
 

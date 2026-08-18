@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { normaliseTicker, stockLogoUrl } from "../lib/company-logos";
+import { CHECKED_LOGO_DOMAINS, faviconUrl, normaliseTicker, stockLogoUrl } from "../lib/company-logos";
 import { indianStocks } from "../lib/indian-stocks";
 
 // A monogram is drawn whenever no real logo exists, so it has to look like a designed tile rather
@@ -43,11 +43,6 @@ export function monogramText(symbol: string): string {
 // catalogue per row adds up fast on a board showing fifty of them.
 let domainsBySymbol: Map<string, string | undefined> | null = null;
 
-const CHECKED_LOGO_DOMAINS: Record<string, string> = {
-  BDL: "bdl-india.in",
-  LGEINDIA: "lg.com",
-  SOLARINDS: "solargroup.com",
-};
 
 function checkedDomain(ticker: string): string | undefined {
   domainsBySymbol ??= new Map(indianStocks.map((stock) => [stock.symbol, stock.domain || CHECKED_LOGO_DOMAINS[stock.symbol]]));
@@ -81,14 +76,26 @@ function companyName(ticker: string): string {
  * "reorder", because there is no longer a reason to put anything ahead of the store.
  */
 function logoSources(symbol: string, override?: string | null, preferReal = false): string[] {
-  if (override) return [override];
-
   const ticker = normaliseTicker(symbol);
   const domain = checkedDomain(ticker);
 
+  /**
+   * An override leads the list; it no longer replaces it.
+   *
+   * `if (override) return [override]` meant a caller handing us one URL disabled every fallback
+   * behind it, so a source that 404s drew a monogram - or worse, rendered whatever placeholder the
+   * service answers with. That is how `stockIcon()` output reached the screen as a grey globe:
+   * Google's favicon service does not serve a mark for roughly a third of the checked domains
+   * (dabur.com, biocon.com, hcltech.com among them) and answers 404 with a generic globe, while
+   * the symbol store had the real logo for every one of them all along.
+   *
+   * Keeping the override first respects the caller's better information; keeping the rest behind
+   * it means being wrong about that costs nothing.
+   */
   return [
+    override ?? null,
     stockLogoUrl(ticker),
-    domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : null,
+    domain ? faviconUrl(domain, 128) : null,
     domain && preferReal ? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico` : null,
   ].filter((source): source is string => source !== null);
 }

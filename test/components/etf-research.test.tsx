@@ -54,7 +54,10 @@ describe("EtfResearch", () => {
     expect(modal).toHaveAttribute("data-symbol", "NIFTYBEES");
     expect(modal).toHaveAttribute("data-loading", "false");
     expect(modal).toHaveAttribute("data-company", "Nippon India ETF Nifty BeES");
-    expect(modal.getAttribute("data-logo")).toMatch(/google\.com\/s2\/favicons/);
+    // The symbol store, not the website favicon: `stockIcon` leads with the store because Google's
+    // favicon endpoint has no mark for roughly a third of the checked domains and answers with a
+    // generic grey globe, while the store carries the real logo for these tickers.
+    expect(modal.getAttribute("data-logo")).toMatch(/images\.dhan\.co\/symbol/);
 
     expect(await screen.findByText("AI market scan generated for NIFTYBEES.")).toBeInTheDocument();
   });

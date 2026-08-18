@@ -208,3 +208,74 @@ describe("MostBoughtRibbon", () => {
     expect(screen.getAllByText("Bosch").length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * The calendar strip in the ribbon header.
+ *
+ * Every figure on this ribbon is quoted in IST, and the ribbon claims "today" — so it has to say
+ * which day and second that is, and it has to be honest when the exchange is shut rather than
+ * showing a live-looking board beside a Sunday date.
+ */
+describe("the IST clock strip", () => {
+  // A fixed Tuesday inside the session: 18 Aug 2026, 11:30:45 IST.
+  const TRADING_TUESDAY = new Date("2026-08-18T06:00:45.000Z");
+  // A Saturday, when the BSE is shut for the weekend.
+  const WEEKEND_SATURDAY = new Date("2026-08-15T06:00:45.000Z");
+
+  // Fake timers are already installed for the whole file; these tests only pin the instant.
+  function renderAtRest(at: Date, boardOverrides: Partial<MostBoughtBoard> = {}) {
+    jest.setSystemTime(at);
+    render(<MostBoughtRibbon initial={board([row({ buyRank: 1, symbol: "BOSCHLTD", name: "Bosch Ltd" })], boardOverrides)} />);
+    // The clock renders a placeholder until it has subscribed and read a real timestamp. That
+    // happens in an effect, so flushing effects is enough - advancing the timer would also move
+    // the clock on, which is the next test's job rather than this one's.
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+  }
+
+  it("shows today's IST date and a seconds-resolution clock", () => {
+    renderAtRest(TRADING_TUESDAY);
+
+    expect(screen.getByText("Tuesday, 18 Aug 2026")).toBeInTheDocument();
+    expect(screen.getByText("11:30:45 IST")).toBeInTheDocument();
+    expect(screen.getByText("Open · live until 15:30 IST")).toBeInTheDocument();
+  });
+
+  it("ticks the clock forward once a second", () => {
+    renderAtRest(TRADING_TUESDAY);
+    expect(screen.getByText("11:30:45 IST")).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+
+    expect(screen.getByText("11:30:48 IST")).toBeInTheDocument();
+  });
+
+  it("names the weekend rather than implying the board is live", () => {
+    renderAtRest(WEEKEND_SATURDAY, { marketSession: "closed", liveSession: false, sessionDate: "2026-08-14" });
+
+    expect(screen.getByText("Saturday, 15 Aug 2026")).toBeInTheDocument();
+    expect(screen.getByText(/Weekend · BSE is shut on Saturday and Sunday/)).toBeInTheDocument();
+    // And says which session the ranks actually came from, so "today" is not misread.
+    expect(screen.getByText("Ranks from the 14 Aug 2026 session")).toBeInTheDocument();
+  });
+
+  it("reports an exchange holiday on the board's authority, not the date's", () => {
+    // A perfectly ordinary Tuesday on which the exchange did not trade.
+    renderAtRest(TRADING_TUESDAY, { marketSession: "holiday", liveSession: false, sessionDate: "2026-08-17" });
+
+    expect(screen.getByText("Closed · exchange holiday")).toBeInTheDocument();
+    expect(screen.getByText(/Exchange holiday · the BSE did not trade today/)).toBeInTheDocument();
+    expect(screen.getByText("Ranks from the 17 Aug 2026 session")).toBeInTheDocument();
+  });
+
+  it("does not label a live session with a closure note or a past session date", () => {
+    renderAtRest(TRADING_TUESDAY);
+
+    expect(screen.queryByText(/Weekend ·/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Exchange holiday ·/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ranks from the/)).not.toBeInTheDocument();
+  });
+});
