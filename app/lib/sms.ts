@@ -2,7 +2,7 @@
 
 // Sending an SMS, with the same contract as ./mailer.
 //
-// Three gateways are implemented â€” Twilio, Fast2SMS and MSG91 â€” each of them nothing but a `fetch`,
+// Three gateways are implemented â€” MSG91, Twilio and Fast2SMS â€” each of them nothing but a `fetch`,
 // because this project carries three production dependencies on purpose. Everything else about the
 // shape here mirrors the mailer deliberately: it never throws, it degrades to a local outbox when nothing is
 // configured, and it reports which of the two happened. A sign-up must not fail because an SMS
@@ -28,6 +28,17 @@ export type SmsMessage = {
   /** A ten-digit Indian mobile number, or one this module can normalise into that. */
   to: string;
   body: string;
+  /**
+   * The blanks in the DLT template, for a gateway that sends by template rather than by body.
+   *
+   * MSG91's Flow API does not accept a message: it accepts a registered template id and the values
+   * to drop into it, and the carrier renders the sentence. So a caller that wants MSG91 to send
+   * has to say what the variables are as well as what the finished sentence reads like — the
+   * finished sentence is still what Twilio and Fast2SMS send, and what lands in the outbox.
+   */
+  variables?: Record<string, string>;
+  /** Overrides MSG91_TEMPLATE_ID, for a deployment that registers one template per message type. */
+  templateId?: string;
 };
 
 /** Where a message actually went. Anything but "outbox" means it left this server. */
@@ -56,21 +67,41 @@ export function twilioConfig(): TwilioConfig | null {
  * the wall an operator in India hits first. So two Indian gateways sit behind it, both with a free
  * quota big enough for password recovery:
  *
+ *   msg91      MSG91_AUTH_KEY + MSG91_TEMPLATE_ID   Flow API v5, DLT template rendered by MSG91
  *   twilio     TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM
- *   fast2sms   FAST2SMS_API_KEY                    free quota, no card, transactional route
- *   msg91      MSG91_AUTH_KEY + MSG91_SENDER_ID    free trial credits
+ *   fast2sms   FAST2SMS_API_KEY                     free quota, no card, transactional route
  *
- * The DLT caveat at the top of this file applies to all three: an Indian gateway will accept the
- * call and drop the message if the sender id and template are not registered. Fast2SMS's "q"
- * (quick) route is the exception that makes it the useful one to start with — it sends without a
- * registered template, which is why it is tried before MSG91.
+ * MSG91 leads because it is the gateway this deployment is set up against deliberately, and
+ * because its Flow API is the only one of the three that is DLT-correct by construction: the
+ * wording lives in a registered template and MSG91 renders it. The other two send a free-text
+ * body and depend on the operator having registered matching wording separately, with
+ * Fast2SMS's "q" (quick) route the one exception that makes it a usable last resort.
+ *
+ * The DLT caveat at the top of this file still applies to all three: an Indian gateway will
+ * accept the call and drop the message if the sender id and template are not registered.
  */
 export function fast2smsConfigured(): boolean {
   return Boolean(process.env.FAST2SMS_API_KEY?.trim());
 }
 
+/**
+ * MSG91 has two send paths and this project supports both, because an existing deployment should
+ * not break to gain the new one:
+ *
+ *   flow    MSG91_AUTH_KEY + MSG91_TEMPLATE_ID   the current v5 API, DLT template rendered by MSG91
+ *   legacy  MSG91_AUTH_KEY + MSG91_SENDER_ID     the v2 sendsms endpoint, message sent as free text
+ *
+ * Flow wins when both are set. It is the path MSG91 documents today, and it is the only one that
+ * is actually DLT-correct: v2 will accept a free-text body, hand back `"type":"success"`, and let
+ * the carrier drop the message for not matching a registered template — the exact failure this
+ * whole module exists to stop being invisible.
+ */
+export function msg91FlowConfigured(): boolean {
+  return Boolean(process.env.MSG91_AUTH_KEY?.trim() && process.env.MSG91_TEMPLATE_ID?.trim());
+}
+
 export function msg91Configured(): boolean {
-  return Boolean(process.env.MSG91_AUTH_KEY?.trim() && process.env.MSG91_SENDER_ID?.trim());
+  return msg91FlowConfigured() || Boolean(process.env.MSG91_AUTH_KEY?.trim() && process.env.MSG91_SENDER_ID?.trim());
 }
 
 /** True when *some* gateway can deliver, which is the only question the callers ask. */
@@ -80,9 +111,9 @@ export function smsConfigured(): boolean {
 
 /** Which gateway is doing the sending, for the admin health report. */
 export function smsTransportName(): SmsTransport | null {
+  if (msg91Configured()) return "msg91";
   if (twilioConfig()) return "twilio";
   if (fast2smsConfigured()) return "fast2sms";
-  if (msg91Configured()) return "msg91";
   return null;
 }
 
@@ -162,6 +193,56 @@ async function fast2smsSend(nationalNumber: string, body: string): Promise<{ ok:
   }
 }
 
+/**
+ * MSG91 Flow API (v5) — the current way MSG91 sends a transactional SMS in India.
+ *
+ * Unlike every other sender here it is handed variables rather than a message: the wording lives
+ * in a DLT-registered template on the MSG91 panel, and `template_id` selects it. That is what
+ * makes the message survive the carrier, and it is also why `SmsMessage.variables` exists.
+ *
+ * Two details worth keeping. The mobile goes with its country code (`919876543210`), not as the
+ * bare ten digits the legacy v2 endpoint and Fast2SMS want. And MSG91 answers 200 with
+ * `"type":"error"` for a refused template, so the status alone is not the verdict.
+ */
+async function msg91FlowSend(
+  templateId: string,
+  nationalNumber: string,
+  variables: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sender = process.env.MSG91_SENDER_ID?.trim();
+    const response = await fetch("https://control.msg91.com/api/v5/flow/", {
+      method: "POST",
+      headers: {
+        authkey: process.env.MSG91_AUTH_KEY?.trim() ?? "",
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        // MSG91 renamed this field from `flow_id` to `template_id` between doc revisions and still
+        // takes either. Sending both costs nothing and means the call does not quietly depend on
+        // which revision the account happens to be on.
+        template_id: templateId,
+        flow_id: templateId,
+        // Optional: a template already carries its approved sender. Sent when the operator has
+        // named one, because an account with several registered senders needs to be told which.
+        ...(sender ? { sender } : {}),
+        short_url: "0",
+        realTimeResponse: "1",
+        recipients: [{ mobiles: `91${nationalNumber}`, ...variables }],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    const detail = await response.text().catch(() => "");
+    if (response.ok && !/"type"\s*:\s*"error"/.test(detail)) return { ok: true };
+    return { ok: false, error: `responded ${response.status}: ${detail.slice(0, 200)}` };
+  } catch (error) {
+    return { ok: false, error: String(error).slice(0, 200) };
+  }
+}
+
+/** MSG91's legacy v2 endpoint, kept for deployments configured with a sender id and no template. */
 async function msg91Send(nationalNumber: string, body: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch("https://api.msg91.com/api/v2/sendsms", {
@@ -201,9 +282,21 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
   const config = twilioConfig();
   const attempts: SmsAttempt[] = [];
 
+  // MSG91 leads: it is the gateway this deployment is configured against on purpose, so it should
+  // be the one that actually sends. Twilio and Fast2SMS stay behind it as fallbacks, which is what
+  // keeps an MSG91 outage costing a retry rather than a locked-out account.
+  if (msg91Configured()) {
+    const templateId = message.templateId?.trim() || process.env.MSG91_TEMPLATE_ID?.trim() || "";
+    attempts.push({
+      transport: "msg91",
+      send: () =>
+        templateId
+          ? msg91FlowSend(templateId, national, message.variables ?? {})
+          : msg91Send(national, message.body),
+    });
+  }
   if (config) attempts.push({ transport: "twilio", send: () => twilioSend(config, to, message.body) });
   if (fast2smsConfigured()) attempts.push({ transport: "fast2sms", send: () => fast2smsSend(national, message.body) });
-  if (msg91Configured()) attempts.push({ transport: "msg91", send: () => msg91Send(national, message.body) });
 
   if (attempts.length === 0) return recordToOutbox(message, "No SMS gateway configured");
 
@@ -240,6 +333,26 @@ export function mfaOtpSms(code: string): string {
  */
 export function passwordResetSms(code: string, minutes: number): string {
   return `Your StockersAI password reset code is ${code}. It expires in ${minutes} minutes. Do not share this code with anyone.`;
+}
+
+/**
+ * The reset code as a whole message: the sentence, and the blanks MSG91 renders it from.
+ *
+ * Recovery is the one flow that must not depend on a single channel, so this is what the
+ * forgot-password route sends rather than a bare string. `OTP` and `MIN` are the variable names to
+ * register the DLT template with — the template text is `passwordResetSms` above, with those two
+ * values replaced by `##OTP##` and `##MIN##`, so what MSG91 renders reads exactly like what every
+ * other gateway sends verbatim.
+ *
+ * MSG91_RESET_TEMPLATE_ID is optional: without it the shared MSG91_TEMPLATE_ID is used, which is
+ * the right default for an account that registered one template for everything.
+ */
+export function passwordResetSmsMessage(code: string, minutes: number): Omit<SmsMessage, "to"> {
+  return {
+    body: passwordResetSms(code, minutes),
+    variables: { OTP: code, MIN: String(minutes) },
+    templateId: process.env.MSG91_RESET_TEMPLATE_ID?.trim() || undefined,
+  };
 }
 
 /** The message sent once a subscription payment has been captured. */

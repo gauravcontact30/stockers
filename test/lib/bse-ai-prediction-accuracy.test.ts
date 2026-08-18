@@ -365,6 +365,57 @@ describe("runDailyPredictionLock", () => {
     expect(run.date).toBe("2026-08-17");
   });
 
+  /**
+   * The regression behind "today's picks never replaced yesterday's".
+   *
+   * The pre-open shortlist used to be filled against one global budget from every tier's rows
+   * sorted together by change, so a session whose biggest movers sat in one tier starved the other
+   * two. `generateLockedPrediction` needs ten picks in *every* tier and discarded all three when
+   * any one came up short, so the day silently kept the previous list and the landing page showed
+   * the held snapshot message instead of new stocks.
+   */
+  it("locks every tier when the day's biggest movers all sit in one of them", async () => {
+    // Large caps sweep the top of the board; on the old global budget Mid and Small got nothing.
+    const lopsided = [
+      ...Array.from({ length: 150 }, (_, index) => row(`BL${index + 1}`, 40 - index * 0.1, `70${index}`, "Large")),
+      ...Array.from({ length: 150 }, (_, index) => row(`BM${index + 1}`, 5 - index * 0.01, `71${index}`, "Mid")),
+      ...Array.from({ length: 150 }, (_, index) => row(`BS${index + 1}`, 1 - index * 0.001, `72${index}`, "Small")),
+    ];
+    rows.mockResolvedValue({ rows: lopsided, sessionDate: "2026-08-17" });
+    read.mockImplementation(async (fileName) =>
+      fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-17") : null,
+    );
+
+    // 08:50 IST, inside the pre-open window that builds the news-led shortlist.
+    const run = await runDailyPredictionLock(new Date("2026-08-18T03:20:00.000Z"));
+
+    expect(run).toEqual(
+      expect.objectContaining({ ok: true, action: "generated", date: "2026-08-18", picks: { Large: 10, Mid: 10, Small: 10 } }),
+    );
+    expect(write).toHaveBeenCalledWith("bse-ai-locked-picks.json", expect.objectContaining({ date: "2026-08-18" }));
+  });
+
+  it("names the tier that came up short when a lock genuinely cannot be filled", async () => {
+    // A universe with only four small caps in it: no shortlist can reach ten for that tier.
+    const thin = [
+      ...Array.from({ length: 40 }, (_, index) => row(`TL${index + 1}`, 20 - index * 0.1, `80${index}`, "Large")),
+      ...Array.from({ length: 40 }, (_, index) => row(`TM${index + 1}`, 10 - index * 0.1, `81${index}`, "Mid")),
+      ...Array.from({ length: 4 }, (_, index) => row(`TS${index + 1}`, 1 - index * 0.1, `82${index}`, "Small")),
+    ];
+    rows.mockResolvedValue({ rows: thin, sessionDate: "2026-08-17" });
+    read.mockImplementation(async (fileName) =>
+      fileName === "bse-ai-locked-picks.json" ? lockedCacheFor("2026-08-17") : null,
+    );
+
+    const run = await runDailyPredictionLock(new Date("2026-08-18T03:20:00.000Z"));
+
+    expect(run.ok).toBe(false);
+    expect(run.action).toBe("failed");
+    // The tier and the count, so the next morning's failure is diagnosable from the run alone.
+    expect(run.message).toContain("Small");
+    expect(run.message).toContain("only 4 candidates");
+  });
+
   it("skips a run that fires early, on a closed day, or after the session", async () => {
     const early = await runDailyPredictionLock(new Date("2026-08-17T02:00:00.000Z"));
     const holiday = await runDailyPredictionLock(new Date("2026-08-16T03:20:00.000Z"));
@@ -536,6 +587,41 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(report.message).toContain("until the next pre-open AI lock is generated");
     expect(movers).not.toHaveBeenCalled();
     expect(write).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The reported bug, end to end: yesterday's lock and yesterday's close snapshot both on disk,
+   * page loaded after this morning's 8:50 lock on a lopsided board.
+   *
+   * The snapshot is only meant to be served while today's list is missing or held. Because the
+   * shortlist starved two tiers, generation failed, the previous list was held, and the holdover
+   * branch handed back the previous session's snapshot instead: the reader saw yesterday's stocks
+   * under "Showing the persisted ... snapshot until the next pre-open AI lock is generated".
+   */
+  it("replaces yesterday's snapshot with today's picks once the lock has passed", async () => {
+    const lopsided = [
+      ...Array.from({ length: 150 }, (_, index) => row(`BL${index + 1}`, 40 - index * 0.1, `70${index}`, "Large")),
+      ...Array.from({ length: 150 }, (_, index) => row(`BM${index + 1}`, 5 - index * 0.01, `71${index}`, "Mid")),
+      ...Array.from({ length: 150 }, (_, index) => row(`BS${index + 1}`, 1 - index * 0.001, `72${index}`, "Small")),
+    ];
+    rows.mockResolvedValue({ rows: lopsided, sessionDate: "2026-08-17" });
+    read.mockImplementation(async (fileName) => {
+      if (fileName === "bse-ai-locked-picks.json") return lockedCacheFor("2026-08-17");
+      // Yesterday's persisted close snapshot, exactly as it sits on disk.
+      return { ...lockedCacheFor("2026-08-17"), status: "locked", persistedSession: true, persistedAt: "2026-08-17T10:01:00.000Z" };
+    });
+
+    // 08:57 IST: past the 8:50 lock, before the 9:15 open.
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-18T03:27:00.000Z"));
+
+    expect(report.status).toBe("locked");
+    expect(report.date).toBe("2026-08-18");
+    expect(report.lockDate).toBe("2026-08-18");
+    expect(report.holdover).toBe(false);
+    // Neither the stale snapshot nor its message survives into today.
+    expect(report.persistedSession).toBe(false);
+    expect(report.message).not.toContain("until the next pre-open AI lock is generated");
+    expect(write).toHaveBeenCalledWith("bse-ai-locked-picks.json", expect.objectContaining({ date: "2026-08-18" }));
   });
 
   it("holds yesterday's locked picks before the 8:50 AM IST lock instead of predicting early", async () => {

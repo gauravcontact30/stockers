@@ -8,7 +8,7 @@ import { POST as signin } from "../../app/api/auth/signin/route";
 import { POST as verifyMfa } from "../../app/api/auth/mfa/verify/route";
 import { authenticateUser, createUser, updateUser } from "../../app/lib/store";
 import { mailConfigured, passwordResetCodeEmail, passwordResetEmail, sendMail } from "../../app/lib/mailer";
-import { passwordResetSms, sendSms } from "../../app/lib/sms";
+import { passwordResetSmsMessage, sendSms } from "../../app/lib/sms";
 
 jest.mock("../../app/lib/mailer", () => ({
   appOrigin: () => "http://localhost:3000",
@@ -20,7 +20,10 @@ jest.mock("../../app/lib/mailer", () => ({
 
 jest.mock("../../app/lib/sms", () => ({
   mfaOtpSms: jest.fn((code: string) => `Your code is ${code}`),
-  passwordResetSms: jest.fn((code: string) => `Your reset code is ${code}`),
+  passwordResetSmsMessage: jest.fn((code: string, minutes: number) => ({
+    body: `Your reset code is ${code}`,
+    variables: { OTP: code, MIN: String(minutes) },
+  })),
   smsConfigured: jest.fn(() => true),
   sendSms: jest.fn(async () => ({ ok: true, transport: "twilio" })),
 }));
@@ -74,7 +77,10 @@ describe("password recovery", () => {
     expect(sendSms).toHaveBeenCalledTimes(1);
     const code = codeFromMail();
     expect(code).toMatch(/^\d{6}$/);
-    expect((passwordResetSms as jest.Mock).mock.calls[0][0]).toBe(code);
+    // The same six digits the mail carried, handed to the SMS side as a template variable so
+    // MSG91 renders the identical sentence the other gateways send verbatim.
+    expect((passwordResetSmsMessage as jest.Mock).mock.calls[0][0]).toBe(code);
+    expect((sendSms as jest.Mock).mock.calls[0][0]).toMatchObject({ variables: { OTP: code } });
 
     // Both destinations come back masked, and neither is the raw address.
     const body = (await forgot.json()) as { channels: { kind: string; target: string; state: string }[] };

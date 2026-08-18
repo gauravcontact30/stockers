@@ -318,7 +318,7 @@ export async function buildHealthReport(): Promise<HealthReport> {
       key: "sms",
       label: "SMS",
       state: smsTransport ? "ok" : "degraded",
-      detail: smsTransport ? `SMS is sent through ${smsTransport}.` : "No SMS gateway is set (Twilio, Fast2SMS or MSG91).",
+      detail: smsTransport ? `SMS is sent through ${smsTransport}.` : "No SMS gateway is set (MSG91, Twilio or Fast2SMS).",
       consequence: smsTransport
         ? "Sign-in codes and password reset codes can be sent by SMS."
         : "No SMS is sent, so email is the only way to recover an account.",

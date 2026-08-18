@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { passwordResetSms, sendSms, smsConfigured, smsTransportName, subscriptionSms, toE164, twilioConfig, welcomeSms } from "../../app/lib/sms";
+import { msg91FlowConfigured, passwordResetSms, passwordResetSmsMessage, sendSms, smsConfigured, smsTransportName, subscriptionSms, toE164, twilioConfig, welcomeSms } from "../../app/lib/sms";
 
 const outboxPath = path.join(process.cwd(), "app", "data", "sms-outbox.json");
 
@@ -19,6 +19,8 @@ const KEYS = [
   "FAST2SMS_API_KEY",
   "MSG91_AUTH_KEY",
   "MSG91_SENDER_ID",
+  "MSG91_TEMPLATE_ID",
+  "MSG91_RESET_TEMPLATE_ID",
 ] as const;
 const saved: Record<string, string | undefined> = {};
 
@@ -195,11 +197,12 @@ describe("gateway selection", () => {
     const seen: string[] = [];
     global.fetch = jest.fn(async (url: unknown) => {
       seen.push(String(url));
-      const fast2sms = String(url).includes("fast2sms");
-      return { ok: true, status: 200, text: async () => (fast2sms ? '{"return":false,"message":"invalid key"}' : '{"type":"success"}') };
+      // MSG91 leads now, so it is the one that answers 200 with a refusal buried in the body.
+      const msg91 = String(url).includes("msg91");
+      return { ok: true, status: 200, text: async () => (msg91 ? '{"type":"error","message":"bad authkey"}' : '{"return":true}') };
     }) as unknown as typeof fetch;
 
-    await expect(sendSms({ to: "9876543210", body: "hello" })).resolves.toEqual({ ok: true, transport: "msg91" });
+    await expect(sendSms({ to: "9876543210", body: "hello" })).resolves.toEqual({ ok: true, transport: "fast2sms" });
     expect(seen).toHaveLength(2);
   });
 
@@ -221,5 +224,124 @@ describe("passwordResetSms", () => {
     expect(body).toContain("123456");
     expect(body).toContain("15 minutes");
     expect(body).not.toContain("http");
+  });
+});
+
+/**
+ * MSG91's Flow API, which is the path this deployment actually sends on.
+ *
+ * It differs from every other gateway here in three ways that each have their own test: it is
+ * tried first, it addresses the subscriber with the country code rather than without it, and it
+ * sends variables against a registered template instead of a message body.
+ */
+describe("MSG91 Flow API", () => {
+  it("counts as configured on an auth key and a template alone, with no sender id", () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_TEMPLATE_ID = "template-1";
+    expect(msg91FlowConfigured()).toBe(true);
+    expect(smsConfigured()).toBe(true);
+    // A template carries its own approved sender, so MSG91_SENDER_ID is not required for it.
+    expect(smsTransportName()).toBe("msg91");
+  });
+
+  it("leads the order, so a deployment that configured MSG91 is the one that sends", async () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_TEMPLATE_ID = "template-1";
+    process.env.TWILIO_ACCOUNT_SID = "sid";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM = "+15550000000";
+    process.env.FAST2SMS_API_KEY = "fast2sms-key";
+
+    const seen: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      seen.push(String(url));
+      return { ok: true, status: 200, text: async () => '{"type":"success"}' };
+    }) as unknown as typeof fetch;
+
+    await expect(sendSms({ to: "9876543210", body: "hello" })).resolves.toEqual({ ok: true, transport: "msg91" });
+    expect(seen).toEqual(["https://control.msg91.com/api/v5/flow/"]);
+  });
+
+  it("sends the template id and the variables, and the mobile with its country code", async () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_TEMPLATE_ID = "template-1";
+
+    let sent: Record<string, unknown> = {};
+    let headers: Record<string, string> = {};
+    global.fetch = jest.fn(async (_url: unknown, init: unknown) => {
+      const request = init as { body: string; headers: Record<string, string> };
+      sent = JSON.parse(request.body);
+      headers = request.headers;
+      return { ok: true, status: 200, text: async () => '{"type":"success"}' };
+    }) as unknown as typeof fetch;
+
+    await sendSms({ to: "+91 98765 43210", body: "ignored by MSG91", variables: { OTP: "123456", MIN: "15" } });
+
+    expect(headers.authkey).toBe("auth");
+    expect(sent.template_id).toBe("template-1");
+    // Flow wants 919876543210, unlike Fast2SMS and the legacy v2 route which want the bare ten.
+    expect(sent.recipients).toEqual([{ mobiles: "919876543210", OTP: "123456", MIN: "15" }]);
+  });
+
+  it("reads a 200 carrying \"type\":\"error\" as a refusal, not a delivery", async () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_TEMPLATE_ID = "template-1";
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => '{"message":"template not approved","type":"error"}',
+    })) as unknown as typeof fetch;
+
+    const result = await sendSms({ to: "9876543210", body: "hello" });
+
+    expect(result.transport).toBe("outbox");
+    expect((await readOutbox())[0].reason).toContain("msg91");
+  });
+
+  it("falls back to the legacy v2 endpoint when only a sender id is configured", async () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_SENDER_ID = "STOCKR";
+    const seen: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      seen.push(String(url));
+      return { ok: true, status: 200, text: async () => '{"type":"success"}' };
+    }) as unknown as typeof fetch;
+
+    await expect(sendSms({ to: "9876543210", body: "hello" })).resolves.toEqual({ ok: true, transport: "msg91" });
+    expect(seen).toEqual(["https://api.msg91.com/api/v2/sendsms"]);
+  });
+
+  it("lets a per-message template id override the shared one", async () => {
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_TEMPLATE_ID = "shared";
+    process.env.MSG91_RESET_TEMPLATE_ID = "reset-only";
+
+    let sent: Record<string, unknown> = {};
+    global.fetch = jest.fn(async (_url: unknown, init: unknown) => {
+      sent = JSON.parse((init as { body: string }).body);
+      return { ok: true, status: 200, text: async () => '{"type":"success"}' };
+    }) as unknown as typeof fetch;
+
+    await sendSms({ to: "9876543210", ...passwordResetSmsMessage("123456", 15) });
+
+    expect(sent.template_id).toBe("reset-only");
+    expect(sent.recipients).toEqual([{ mobiles: "919876543210", OTP: "123456", MIN: "15" }]);
+  });
+});
+
+describe("passwordResetSmsMessage", () => {
+  it("carries the same two values in its sentence and in its template variables", () => {
+    const message = passwordResetSmsMessage("123456", 15);
+
+    // The registered DLT template is this sentence with the two values as ##OTP## and ##MIN##, so
+    // what MSG91 renders has to read exactly like what the other gateways send verbatim.
+    expect(message.body).toBe(passwordResetSms("123456", 15));
+    expect(message.body).toContain("123456");
+    expect(message.body).toContain("15 minutes");
+    expect(message.variables).toEqual({ OTP: "123456", MIN: "15" });
+  });
+
+  it("leaves the template id unset when the deployment has not named a reset-specific one", () => {
+    expect(passwordResetSmsMessage("123456", 15).templateId).toBeUndefined();
   });
 });

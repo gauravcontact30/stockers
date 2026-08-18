@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { syncSessionCookie, useSubscription } from "./subscription-provider";
 import {
+  MIN_PASSWORD,
   countErrors,
+  passwordProblem,
   validateSignin,
   validateSignup,
   type FieldErrors,
@@ -99,6 +101,8 @@ const FIELD_BASE =
   "w-full rounded-2xl border bg-slate-50 px-4 py-3 text-slate-900 outline-none ring-emerald-500 transition focus:ring-2 dark:bg-slate-950 dark:text-white";
 const FIELD_OK = "border-slate-200 dark:border-slate-700";
 const FIELD_BAD = "border-rose-400 ring-1 ring-rose-300 dark:border-rose-500/60";
+/** The recovery panel's resting border. Sits on a sky background, so it is not FIELD_OK's slate. */
+const FIELD_SKY = "border-sky-200 dark:border-sky-500/40";
 
 /** One labelled input with its own error slot, so the message is always beside its field. */
 function Field({
@@ -171,6 +175,19 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [resetToken, setResetToken] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  /** Recovery marks its fields on the same terms as the rest of the form: after a blur, or a try. */
+  const [resetTouched, setResetTouched] = useState<{ password?: boolean; confirmPassword?: boolean }>({});
+  const [resetSubmitted, setResetSubmitted] = useState(false);
+  /** The address problem, kept beside the field rather than in the form-wide banner. */
+  const [recoveryEmailError, setRecoveryEmailError] = useState<string | null>(null);
+  /**
+   * Where the caret goes when a step opens. Recovery is two steps deep inside a form the reader
+   * did not come here to fill in, and arriving with nothing focused means hunting for the box.
+   */
+  const recoveryEmailRef = useRef<HTMLInputElement | null>(null);
+  const resetCodeRef = useRef<HTMLInputElement | null>(null);
+  const resetPasswordRef = useRef<HTMLInputElement | null>(null);
   const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null);
   const [mfaCode, setMfaCode] = useState("");
 
@@ -260,6 +277,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     return () => window.clearInterval(timer);
   }, [resendIn]);
 
+  /**
+   * Puts the caret on whatever the current step actually asks for: the address on step one, the
+   * code on step two, or the new password when an emailed link already carried the code past that
+   * field. Runs on open and on every step change, which is exactly when the question changes.
+   */
+  useEffect(() => {
+    if (!recoveryOpen) return;
+    if (recoveryStep === "ask") recoveryEmailRef.current?.focus();
+    else if (resetToken) resetPasswordRef.current?.focus();
+    else resetCodeRef.current?.focus();
+  }, [recoveryOpen, recoveryStep, resetToken]);
+
   const localErrors: FieldErrors =
     mode === "signup" ? validateSignup(fields) : validateSignin({ email: fields.email, password: fields.password });
 
@@ -318,8 +347,35 @@ export function AuthForm({ mode }: AuthFormProps) {
     );
   };
 
+  /**
+   * Enter, inside the recovery panel, means "do this step".
+   *
+   * The panel sits inside the sign-in <form> and every control in it is an ordinary button, so an
+   * unguarded Enter fell through to implicit submission: a reader typing the address they wanted
+   * to recover got the sign-in validator telling them they had not entered a password, and the
+   * step they were actually on did nothing.
+   */
+  const onRecoveryEnter = (event: React.KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (!loading) action();
+  };
+
   const requestPasswordReset = async () => {
     const email = (recoveryEmail || fields.email).trim();
+
+    // The same address rule the sign-in form uses. Catching an empty or malformed address here
+    // puts the message under the field that caused it, and saves a round trip whose only outcome
+    // would have been the server saying the same thing in the banner at the foot of the form.
+    const problem = validateSignin({ email, password: "placeholder" }).email;
+    if (problem) {
+      setRecoveryEmailError(problem);
+      setRecoveryStep("ask");
+      recoveryEmailRef.current?.focus();
+      return;
+    }
+
+    setRecoveryEmailError(null);
     setMessage(null);
     setSuccess(false);
     setLoading(true);
@@ -348,6 +404,19 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   const resetPasswordNow = async () => {
+    setResetSubmitted(true);
+
+    // Everything the reset route would refuse, caught while the messages can still sit under the
+    // fields that caused them. Without this, a reader whose two passwords differed by one
+    // character learned it from a red banner under the submit button, one round trip later.
+    const codeMissing = !resetToken && resetCode.length !== 6;
+    if (codeMissing || !resetPassword || passwordProblem(resetPassword) || resetPassword !== resetConfirmPassword) {
+      setMessage(null);
+      if (codeMissing) resetCodeRef.current?.focus();
+      else if (passwordProblem(resetPassword)) resetPasswordRef.current?.focus();
+      return;
+    }
+
     setMessage(null);
     setSuccess(false);
     setLoading(true);
@@ -379,6 +448,9 @@ export function AuthForm({ mode }: AuthFormProps) {
         setResetToken("");
         setResetPassword("");
         setResetConfirmPassword("");
+        setResetSubmitted(false);
+        setResetTouched({});
+        setRecoveryEmailError(null);
         setResendIn(0);
         if (typeof data.email === "string") setFields((current) => ({ ...current, email: data.email, password: "" }));
       }
@@ -539,6 +611,28 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const signup = mode === "signup";
 
+  /**
+   * The recovery panel's field messages, on the same terms as the rest of the form: a field speaks
+   * up once the reader has left it with something in it, or once they have tried to submit — never
+   * while they are still part-way through typing. `passwordProblem` is the rule the reset route
+   * enforces, so the panel cannot accept a password the server is about to refuse.
+   */
+  const resetCodeError = resetSubmitted && !resetToken && resetCode.length !== 6 ? "Enter all 6 digits." : null;
+  const resetPasswordError = !resetPassword
+    ? resetSubmitted
+      ? "Please choose a password."
+      : null
+    : resetSubmitted || resetTouched.password
+      ? passwordProblem(resetPassword)
+      : null;
+  const resetConfirmError = !resetConfirmPassword
+    ? resetSubmitted
+      ? "Please repeat your password."
+      : null
+    : (resetSubmitted || resetTouched.confirmPassword) && resetPassword !== resetConfirmPassword
+      ? "The two passwords don't match."
+      : null;
+
   return (
     <>
     {/* Rendered outside the form on purpose: the dialog portals to the body, and a submit control
@@ -645,6 +739,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             onClick={() => {
               setRecoveryOpen((open) => !open);
               setMessage(null);
+              setRecoveryEmailError(null);
             }}
             className="text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
           >
@@ -668,12 +763,18 @@ export function AuthForm({ mode }: AuthFormProps) {
 
           {recoveryStep === "ask" ? (
             <>
-              <Field label="Your account email">
+              <Field label="Your account email" error={recoveryEmailError ?? undefined}>
                 <input
+                  ref={recoveryEmailRef}
                   type="email"
                   value={recoveryEmail || fields.email}
-                  onChange={(event) => setRecoveryEmail(event.target.value)}
-                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
+                  onChange={(event) => {
+                    setRecoveryEmail(event.target.value);
+                    setRecoveryEmailError(null);
+                  }}
+                  onKeyDown={(event) => onRecoveryEnter(event, requestPasswordReset)}
+                  aria-invalid={Boolean(recoveryEmailError)}
+                  className={`${FIELD_BASE} ${recoveryEmailError ? FIELD_BAD : FIELD_SKY}`}
                   placeholder="you@example.com"
                   autoComplete="email"
                 />
@@ -710,35 +811,70 @@ export function AuthForm({ mode }: AuthFormProps) {
                   Using the reset link from your email. Just choose a new password below.
                 </p>
               ) : (
-                <Field label="6-digit code" hint="Check your SMS as well as your email inbox and spam folder.">
+                <Field
+                  label="6-digit code"
+                  error={resetCodeError ?? undefined}
+                  hint="Check your SMS as well as your email inbox and spam folder."
+                >
                   <input
+                    ref={resetCodeRef}
                     value={resetCode}
                     onChange={(event) => setResetCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className={`${FIELD_BASE} border-sky-200 text-center text-lg tracking-[0.4em] dark:border-sky-500/40`}
+                    onKeyDown={(event) => onRecoveryEnter(event, resetPasswordNow)}
+                    aria-invalid={Boolean(resetCodeError)}
+                    className={`${FIELD_BASE} text-center text-lg tracking-[0.4em] ${resetCodeError ? FIELD_BAD : FIELD_SKY}`}
                     placeholder="000000"
                     inputMode="numeric"
                     autoComplete="one-time-code"
+                    maxLength={6}
                   />
                 </Field>
               )}
 
+              {/* Labelled and checked like every other field on this form. These two were the
+                  only bare inputs left on the page: no label, no rule stated, and no way to see
+                  what had been typed — on the one field where a typo locks you out twice. */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="password"
-                  value={resetPassword}
-                  onChange={(event) => setResetPassword(event.target.value)}
-                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
-                  placeholder="New password"
-                  autoComplete="new-password"
-                />
-                <input
-                  type="password"
-                  value={resetConfirmPassword}
-                  onChange={(event) => setResetConfirmPassword(event.target.value)}
-                  className={`${FIELD_BASE} border-sky-200 dark:border-sky-500/40`}
-                  placeholder="Confirm new password"
-                  autoComplete="new-password"
-                />
+                <Field
+                  label="New password"
+                  error={resetPasswordError ?? undefined}
+                  hint={`At least ${MIN_PASSWORD} characters, with a letter and a number.`}
+                >
+                  <div className="relative">
+                    <input
+                      ref={resetPasswordRef}
+                      type={showResetPassword ? "text" : "password"}
+                      value={resetPassword}
+                      onChange={(event) => setResetPassword(event.target.value)}
+                      onBlur={() => setResetTouched((current) => ({ ...current, password: true }))}
+                      onKeyDown={(event) => onRecoveryEnter(event, resetPasswordNow)}
+                      aria-invalid={Boolean(resetPasswordError)}
+                      className={`${FIELD_BASE} pr-16 ${resetPasswordError ? FIELD_BAD : FIELD_SKY}`}
+                      placeholder="New password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword((prev) => !prev)}
+                      className="absolute inset-y-0 right-3 text-xs font-semibold uppercase tracking-wide text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+                    >
+                      {showResetPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </Field>
+                <Field label="Confirm new password" error={resetConfirmError ?? undefined}>
+                  <input
+                    type={showResetPassword ? "text" : "password"}
+                    value={resetConfirmPassword}
+                    onChange={(event) => setResetConfirmPassword(event.target.value)}
+                    onBlur={() => setResetTouched((current) => ({ ...current, confirmPassword: true }))}
+                    onKeyDown={(event) => onRecoveryEnter(event, resetPasswordNow)}
+                    aria-invalid={Boolean(resetConfirmError)}
+                    className={`${FIELD_BASE} ${resetConfirmError ? FIELD_BAD : FIELD_SKY}`}
+                    placeholder="Confirm new password"
+                    autoComplete="new-password"
+                  />
+                </Field>
               </div>
 
               <button
@@ -765,6 +901,8 @@ export function AuthForm({ mode }: AuthFormProps) {
                     setRecoveryStep("ask");
                     setResetToken("");
                     setResetCode("");
+                    setResetSubmitted(false);
+                    setResetTouched({});
                     setMessage(null);
                   }}
                   className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"

@@ -665,16 +665,44 @@ async function buildCandidates(): Promise<Candidate[]> {
     .filter((row) => row.price !== null && row.changePercent !== null)
     .sort((left, right) => (right.changePercent ?? -Infinity) - (left.changePercent ?? -Infinity));
 
+  /**
+   * Top the shortlist up per cap tier, not against one global budget.
+   *
+   * This loop used to stop as soon as the combined list reached `CANDIDATE_COUNT * CAP_TIERS`,
+   * drawing from every tier's rows sorted together by change. That reads as "the 90 best movers"
+   * and behaves that way right up until a session whose biggest movers all sit in one tier: the
+   * budget is spent before the other two are reached, they arrive at `generateLockedPrediction`
+   * under the ten picks it needs, and that function discards *every* tier and returns null. The
+   * visible result was a landing page still showing the previous day's stocks, all day, behind a
+   * message about the snapshot being held until the next lock is generated.
+   *
+   * Counting per tier removes the interaction entirely: a thin tier can no longer be crowded out
+   * by a busy one, because they no longer draw on the same budget. News-derived candidates already
+   * in the list count toward their tier, so a tier that news filled needs no topping up.
+   *
+   * Rows with no cap tier are skipped rather than added: they can never satisfy the per-tier
+   * filter downstream, so including them only spends a slot that a usable row needed.
+   */
+  const perTier = new Map<BseCapTier, number>(CAP_TIERS.map((tier) => [tier, 0]));
+  for (const candidate of candidates) {
+    if (candidate.capTier) perTier.set(candidate.capTier, (perTier.get(candidate.capTier) ?? 0) + 1);
+  }
+  const tierFull = (tier: BseCapTier) => (perTier.get(tier) ?? 0) >= CANDIDATE_COUNT;
+
   for (const row of fallbackRows) {
+    if (CAP_TIERS.every(tierFull)) break;
+
     const symbol = cleanSymbol(row.ticker);
-    if (!symbol || grouped.has(symbol)) continue;
-    if (candidates.length >= CANDIDATE_COUNT * CAP_TIERS.length) break;
+    const capTier = row.capTier;
+    if (!symbol || !capTier || grouped.has(symbol) || tierFull(capTier)) continue;
+
+    perTier.set(capTier, (perTier.get(capTier) ?? 0) + 1);
     candidates.push({
       symbol,
       stockName: row.name,
       bseCode: row.code,
       sector: sectorFor(row),
-      capTier: row.capTier,
+      capTier,
       price: row.price,
       previousClose: row.previousClose,
       changePercent: row.changePercent,
@@ -772,7 +800,19 @@ async function aiPicks(candidates: Candidate[], capTier: BseCapTier): Promise<Lo
   return result;
 }
 
-async function generateLockedPrediction(now: Date): Promise<LockedPredictionCache | null> {
+/**
+ * The outcome of one generation attempt.
+ *
+ * A failure names the tier that came up short and how many candidates it had, because the failure
+ * is silent from the outside: the caller falls back to the previous day's list, which looks exactly
+ * like a day nobody ran the lock on. Reporting the tier is the difference between "it did not
+ * generate" and "Small had four candidates".
+ */
+type LockAttempt =
+  | { ok: true; cache: LockedPredictionCache }
+  | { ok: false; shortTier: BseCapTier; available: number };
+
+async function generateLockedPrediction(now: Date): Promise<LockAttempt> {
   const generatedAfterCutoff = !isBeforePredictionCutoff(now);
   const candidates = generatedAfterCutoff ? await buildMarketCandidates() : await buildCandidates();
   const picksByCap = emptyCapRows<LockedPredictionPick>();
@@ -785,7 +825,7 @@ async function generateLockedPrediction(now: Date): Promise<LockedPredictionCach
     const generated = generatedAfterCutoff ? null : await aiPicks(capCandidates, capTier);
     if (!generated) source = "heuristic";
     const picks = generated ?? heuristicPicks(capCandidates, capTier);
-    if (picks.length < PICK_COUNT) return null;
+    if (picks.length < PICK_COUNT) return { ok: false, shortTier: capTier, available: capCandidates.length };
     picksByCap[capTier] = picks;
   }
 
@@ -800,7 +840,7 @@ async function generateLockedPrediction(now: Date): Promise<LockedPredictionCach
   };
 
   await writeJsonCache(CACHE_FILE, cache);
-  return cache;
+  return { ok: true, cache };
 }
 
 function canGenerateLock(now: Date): boolean {
@@ -851,8 +891,8 @@ async function lockedPrediction(now: Date): Promise<ActiveLock | null> {
 
   if (isBeforePredictionLock(now) || !isTradingDay(today) || !canGenerateLock(now)) return heldOver(cached);
 
-  const generated = await generateLockedPrediction(now);
-  return generated ? { ...generated, holdover: false } : heldOver(cached);
+  const attempt = await generateLockedPrediction(now);
+  return attempt.ok ? { ...attempt.cache, holdover: false } : heldOver(cached);
 }
 
 export type PredictionLockAction =
@@ -940,11 +980,19 @@ export async function runDailyPredictionLock(
     return { ...held, ok: true, action: "skipped-closed", message: `The ${date} session has already closed; no list will be locked for it.` };
   }
 
-  const generated = await generateLockedPrediction(now);
-  if (!generated) {
-    return { ...held, ok: false, action: "failed", message: `Could not assemble ${PICK_COUNT} picks per cap tier for ${date}.` };
+  const attempt = await generateLockedPrediction(now);
+  if (!attempt.ok) {
+    return {
+      ...held,
+      ok: false,
+      action: "failed",
+      message:
+        `Could not assemble ${PICK_COUNT} picks for the ${attempt.shortTier} cap tier for ${date}: ` +
+        `only ${attempt.available} candidates were available. The previous list is still being shown.`,
+    };
   }
 
+  const generated = attempt.cache;
   return {
     ...base,
     ok: true,

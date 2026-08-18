@@ -3,7 +3,7 @@
 // unchanged there.
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { appOrigin, escapeHtml, mailConfigured, mailTransportName, passwordResetCodeEmail, sendMail, verificationEmail } from "../../app/lib/mailer";
+import { appOrigin, escapeHtml, mailConfigured, mailTransportName, msg91MailConfigured, passwordResetCodeEmail, sendMail, verificationEmail } from "../../app/lib/mailer";
 
 const outboxPath = path.join(process.cwd(), "app", "data", "outbox.json");
 
@@ -194,7 +194,18 @@ describe("verificationEmail", () => {
 });
 
 
-const PROVIDER_KEYS = ["RESEND_API_KEY", "BREVO_API_KEY", "SENDGRID_API_KEY", "MAIL_FROM", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"];
+const PROVIDER_KEYS = [
+  "RESEND_API_KEY",
+  "BREVO_API_KEY",
+  "SENDGRID_API_KEY",
+  "MAIL_FROM",
+  "SMTP_HOST",
+  "SMTP_USER",
+  "SMTP_PASSWORD",
+  "MSG91_AUTH_KEY",
+  "MSG91_EMAIL_DOMAIN",
+  "MSG91_EMAIL_TEMPLATE_ID",
+];
 
 describe("provider selection", () => {
   const saved: Record<string, string | undefined> = {};
@@ -274,4 +285,117 @@ describe("the recovery code mail", () => {
     expect(mail.text).not.toContain("http");
   });
 });
+});
+
+/**
+ * MSG91 Email, the other half of running password recovery through one provider.
+ *
+ * The tests that matter here are about its two departures from every other provider: it needs a
+ * verified domain and a panel template before it counts as configured at all, and it sends the
+ * plain-text body rather than the HTML one, because MSG91 renders its own template around the
+ * variables it is given.
+ */
+describe("MSG91 email", () => {
+  const KEYS = ["MSG91_AUTH_KEY", "MSG91_EMAIL_DOMAIN", "MSG91_EMAIL_TEMPLATE_ID", "MAIL_FROM", "RESEND_API_KEY"];
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(async () => {
+    for (const key of KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+    await fs.rm(outboxPath, { force: true });
+  });
+
+  afterEach(async () => {
+    for (const key of KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+    await fs.rm(outboxPath, { force: true });
+  });
+
+  it("needs the domain and the template, not just the auth key the SMS side uses", () => {
+    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+    process.env.MSG91_AUTH_KEY = "auth";
+    // An auth key alone is what the SMS side runs on; email additionally needs a verified domain
+    // and a template, so a deployment that only set up SMS must not claim it can send mail.
+    expect(msg91MailConfigured()).toBe(false);
+    expect(mailConfigured()).toBe(false);
+
+    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
+    expect(msg91MailConfigured()).toBe(false);
+
+    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
+    expect(msg91MailConfigured()).toBe(true);
+    expect(mailTransportName()).toBe("msg91");
+  });
+
+  it("sends the template, the domain and the text body when it is the provider that takes it", async () => {
+    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
+    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
+
+    const calls: string[] = [];
+    let sent: Record<string, unknown> = {};
+    let headers: Record<string, string> = {};
+    global.fetch = jest.fn(async (url: unknown, init: unknown) => {
+      calls.push(String(url));
+      const request = init as { body: string; headers: Record<string, string> };
+      sent = JSON.parse(request.body);
+      headers = request.headers;
+      return { ok: true, status: 200, text: async () => "" };
+    }) as unknown as typeof fetch;
+
+    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "msg91" });
+
+    expect(calls).toEqual(["https://control.msg91.com/api/v5/email/send"]);
+    expect(headers.authkey).toBe("auth");
+    expect(sent.domain).toBe("mail.example.com");
+    expect(sent.template_id).toBe("template-1");
+    expect(sent.from).toEqual({ email: "hi@example.com", name: "Stockers" });
+    // The text body, never the HTML one: it is substituted into MSG91's own template.
+    expect(sent.recipients).toEqual([
+      { to: [{ email: "reader@example.com" }], variables: { subject: "Hello", body: "Hi" } },
+    ]);
+  });
+
+  it("is the fallback, not the default: Resend takes the message when both are configured", async () => {
+    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
+    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
+    process.env.RESEND_API_KEY = "resend-key";
+
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      calls.push(String(url));
+      return { ok: true, status: 202, text: async () => "" };
+    }) as unknown as typeof fetch;
+
+    // Resend is the default sender, and the only one that carries the designed HTML.
+    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "resend" });
+    expect(mailTransportName()).toBe("resend");
+    expect(calls).toEqual(["https://api.resend.com/emails"]);
+  });
+
+  it("picks the message up when Resend is having a bad afternoon", async () => {
+    process.env.MAIL_FROM = "Stockers <hi@example.com>";
+    process.env.MSG91_AUTH_KEY = "auth";
+    process.env.MSG91_EMAIL_DOMAIN = "mail.example.com";
+    process.env.MSG91_EMAIL_TEMPLATE_ID = "template-1";
+    process.env.RESEND_API_KEY = "resend-key";
+
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      calls.push(String(url));
+      const resend = String(url).includes("resend.com");
+      return { ok: !resend, status: resend ? 500 : 200, text: async () => (resend ? "upstream error" : "") };
+    }) as unknown as typeof fetch;
+
+    // A Resend outage costs a retry through MSG91, not an undelivered reset code.
+    await expect(sendMail(MESSAGE)).resolves.toEqual({ ok: true, transport: "msg91" });
+    expect(calls).toEqual(["https://api.resend.com/emails", "https://control.msg91.com/api/v5/email/send"]);
+  });
 });

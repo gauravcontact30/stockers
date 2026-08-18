@@ -41,7 +41,7 @@ export type MailMessage = {
 };
 
 /** Where a message actually went. Anything but "outbox" means it left this server. */
-export type MailTransport = "resend" | "brevo" | "sendgrid" | "smtp" | "outbox";
+export type MailTransport = "resend" | "msg91" | "brevo" | "sendgrid" | "smtp" | "outbox";
 
 export type MailResult = {
   ok: boolean;
@@ -55,12 +55,18 @@ export type MailResult = {
  * More than one, because "no mail is arriving" was a real report against a deployment that had
  * none configured, and the fix has to be something the operator can complete in five minutes. Each
  * of these has a free tier that comfortably covers this app's volume, and the last one needs no
- * new account at all — just a mailbox the operator already owns:
+ * new account at all, just a mailbox the operator already owns:
  *
  *   resend     RESEND_API_KEY + MAIL_FROM        3,000/month free, needs a verified domain
+ *   msg91      MSG91_AUTH_KEY + domain + template  panel-rendered template, no HTML
  *   brevo      BREVO_API_KEY + MAIL_FROM         300/day free, sends from any verified address
  *   sendgrid   SENDGRID_API_KEY + MAIL_FROM      100/day free
  *   smtp       SMTP_HOST/USER/PASSWORD           a Gmail app password, or the domain's own mailbox
+ *
+ * Resend leads deliberately: it is the default sender for this deployment, and it is the one
+ * provider here that takes the HTML these builders produce, so the reset code arrives as the
+ * designed mail rather than as somebody's panel template with the text dropped into it. MSG91
+ * sits behind it as the fallback that shares an account with the SMS side.
  *
  * The first one configured wins; a configured provider that *fails* falls through to the next, so
  * a provider having a bad afternoon costs a retry rather than a locked-out account. What none of
@@ -68,13 +74,39 @@ export type MailResult = {
  * server, and pretending otherwise is what an empty outbox looks like.
  */
 const MAIL_ENV_HINT =
-  "Set RESEND_API_KEY, BREVO_API_KEY, SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASSWORD (with MAIL_FROM) to deliver mail.";
+  "Set RESEND_API_KEY (with MAIL_FROM) to deliver mail, or one of MSG91_AUTH_KEY + MSG91_EMAIL_DOMAIN + MSG91_EMAIL_TEMPLATE_ID, BREVO_API_KEY, SENDGRID_API_KEY, SMTP_HOST/SMTP_USER/SMTP_PASSWORD.";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+const MSG91_EMAIL_ENDPOINT = "https://control.msg91.com/api/v5/email/send";
 const SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send";
 
 function mailFrom(): string {
   return process.env.MAIL_FROM?.trim() || process.env.SMTP_USER?.trim() || "";
+}
+
+/**
+ * MSG91 Email, which is the other half of running recovery on one provider.
+ *
+ * It does not work like the three below it, and the difference is worth stating because it shapes
+ * what arrives. MSG91 sends from a template stored on its panel: the request names a template id
+ * and supplies variables, and MSG91 renders the message. It will not take the HTML this module
+ * builds. So what goes out through MSG91 is the panel's template with `subject` and `body`
+ * substituted in, where `body` is the plain-text version of the mail, not the styled HTML one.
+ *
+ * That is a real downgrade in appearance, and it is the price of the provider. Anything below
+ * MSG91 in the chain still sends the full HTML, so a deployment that wants the styled mail should
+ * leave MSG91_EMAIL_TEMPLATE_ID unset and let Resend or SMTP take it.
+ *
+ * Needs MSG91_AUTH_KEY (shared with the SMS side), a verified MSG91_EMAIL_DOMAIN, a template id,
+ * and MAIL_FROM on that domain.
+ */
+export function msg91MailConfigured(): boolean {
+  return Boolean(
+    process.env.MSG91_AUTH_KEY?.trim() &&
+      process.env.MSG91_EMAIL_DOMAIN?.trim() &&
+      process.env.MSG91_EMAIL_TEMPLATE_ID?.trim() &&
+      mailFrom(),
+  );
 }
 
 export function resendConfigured(): boolean {
@@ -91,12 +123,13 @@ export function sendgridConfigured(): boolean {
 
 /** True when *some* provider can deliver, which is the only question the callers ask. */
 export function mailConfigured(): boolean {
-  return resendConfigured() || brevoConfigured() || sendgridConfigured() || smtpConfig() !== null;
+  return msg91MailConfigured() || resendConfigured() || brevoConfigured() || sendgridConfigured() || smtpConfig() !== null;
 }
 
 /** Which provider is doing the sending, for the admin health report. */
 export function mailTransportName(): MailTransport | null {
   if (resendConfigured()) return "resend";
+  if (msg91MailConfigured()) return "msg91";
   if (brevoConfigured()) return "brevo";
   if (sendgridConfigured()) return "sendgrid";
   if (smtpConfig()) return "smtp";
@@ -166,6 +199,9 @@ function attemptsFor(message: MailMessage): Attempt[] {
   const from = fromParts();
   const attempts: Attempt[] = [];
 
+  // Resend leads: it is this deployment's default sender, and the only provider here that takes
+  // the HTML these builders produce. Everything below is a fallback, so a bad afternoon at Resend
+  // costs a retry rather than an undelivered reset code.
   if (resendConfigured()) {
     attempts.push({
       transport: "resend",
@@ -174,6 +210,29 @@ function attemptsFor(message: MailMessage): Attempt[] {
           RESEND_ENDPOINT,
           { Authorization: `Bearer ${process.env.RESEND_API_KEY?.trim()}` },
           { from: mailFrom(), to: [message.to], subject: message.subject, html: message.html, text: message.text },
+        ),
+    });
+  }
+
+  // MSG91 behind Resend, sharing the auth key with the SMS side. It is the fallback rather than
+  // the default because it cannot send the HTML above: see `msg91MailConfigured` for what a
+  // reader actually receives when this one is the provider that takes the message.
+  if (msg91MailConfigured()) {
+    attempts.push({
+      transport: "msg91",
+      send: () =>
+        postJson(
+          MSG91_EMAIL_ENDPOINT,
+          { authkey: process.env.MSG91_AUTH_KEY?.trim() ?? "", accept: "application/json" },
+          {
+            domain: process.env.MSG91_EMAIL_DOMAIN?.trim(),
+            template_id: process.env.MSG91_EMAIL_TEMPLATE_ID?.trim(),
+            from: { email: from.email, ...(from.name ? { name: from.name } : {}) },
+            // The text body, not the HTML one: see `msg91MailConfigured`. A template variable is
+            // substituted into MSG91's own markup, so handing it a full HTML document produces
+            // either escaped tags or a nested document, neither of which is readable.
+            recipients: [{ to: [{ email: message.to }], variables: { subject: message.subject, body: message.text } }],
+          },
         ),
     });
   }

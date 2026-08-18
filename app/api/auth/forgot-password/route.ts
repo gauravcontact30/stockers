@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { validateSignin } from "../../../lib/auth-validation";
 import { appOrigin, mailConfigured, passwordResetCodeEmail, passwordResetEmail, sendMail } from "../../../lib/mailer";
 import { recordPlatformLog } from "../../../lib/platform-logs";
-import { passwordResetSms, sendSms, smsConfigured } from "../../../lib/sms";
+import { passwordResetSmsMessage, sendSms, smsConfigured } from "../../../lib/sms";
 import { PASSWORD_RESET_CODE_MINUTES, issuePasswordResetCode } from "../../../lib/store";
 
 /**
@@ -94,9 +94,12 @@ export async function POST(request: Request) {
       channels.push({ kind: "email", target: maskEmail(issued.user.email), state: stateFor(mailResult, mailConfigured()) });
 
       if (issued.user.mobile) {
+        // The whole message, not just the rendered sentence: MSG91's Flow API sends by DLT
+        // template and needs the code and the expiry as variables. Every other gateway still
+        // sends `body` verbatim, so the two paths read identically to whoever receives it.
         const smsResult = await sendSms({
           to: issued.user.mobile,
-          body: passwordResetSms(issued.code, PASSWORD_RESET_CODE_MINUTES),
+          ...passwordResetSmsMessage(issued.code, PASSWORD_RESET_CODE_MINUTES),
         });
         channels.push({ kind: "sms", target: maskMobile(issued.user.mobile), state: stateFor(smsResult, smsConfigured()) });
       }

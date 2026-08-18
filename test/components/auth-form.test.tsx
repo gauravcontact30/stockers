@@ -622,5 +622,109 @@ describe("AuthForm", () => {
 
       expect(await screen.findByText("Network error. Please check your connection and try again.")).toBeInTheDocument();
     });
+
+    /**
+     * The panel lives inside the sign-in form, so every one of these guards the same hazard from a
+     * different angle: a keystroke or a click in recovery must drive recovery, and must not fall
+     * through to the sign-in submit sitting underneath it.
+     */
+    it("treats Enter in the recovery address as 'send me a code', not as a sign-in attempt", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com{Enter}");
+
+      expect(await screen.findByText("Step 2 of 2 - enter the code and a new password")).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/forgot-password", expect.anything());
+    });
+
+    it("marks a malformed address under its own field instead of asking the server", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@");
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByText("That doesn't look like an email address.")).toBeInTheDocument();
+      expect(global.fetch).not.toHaveBeenCalled();
+      // Still on step one, because there is nothing to type a code from yet.
+      expect(screen.getByText("Step 1 of 2 - where should the code go?")).toBeInTheDocument();
+    });
+
+    it("catches two passwords that differ before spending a request on them", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+      await screen.findByPlaceholderText("000000");
+
+      await user.type(screen.getByPlaceholderText("000000"), "123456");
+      await user.type(screen.getByPlaceholderText("New password"), "market2026");
+      await user.type(screen.getByPlaceholderText("Confirm new password"), "market2027");
+      await user.click(screen.getByText("Update password"));
+
+      expect(await screen.findByText("The two passwords don't match.")).toBeInTheDocument();
+      // Only the code request; the reset itself never left the browser.
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("states the password rule up front and refuses one that breaks it", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+      await screen.findByPlaceholderText("000000");
+
+      expect(screen.getByText("At least 8 characters, with a letter and a number.")).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText("000000"), "123456");
+      await user.type(screen.getByPlaceholderText("New password"), "market");
+      await user.type(screen.getByPlaceholderText("Confirm new password"), "market");
+      await user.click(screen.getByText("Update password"));
+
+      expect(await screen.findByText("Use at least 8 characters.")).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("lets the reader see the password they are choosing", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+      await screen.findByPlaceholderText("000000");
+
+      const field = screen.getByPlaceholderText("New password");
+      expect(field).toHaveAttribute("type", "password");
+      await user.click(within(screen.getByText("New password").closest("label") as HTMLElement).getByText("Show"));
+      expect(field).toHaveAttribute("type", "text");
+    });
+
+    it("puts the caret where the step's question is, at each step", async () => {
+      const user = userEvent.setup();
+      mockFetchOnce(CODE_SENT);
+      render(<AuthForm mode="signin" />);
+
+      await user.click(screen.getByText("Forgot password?"));
+      expect(screen.getByLabelText("Your account email")).toHaveFocus();
+
+      await user.type(screen.getByLabelText("Your account email"), "reader@example.com");
+      await user.click(screen.getByText("Send me a code"));
+
+      expect(await screen.findByPlaceholderText("000000")).toHaveFocus();
+    });
   });
 });
