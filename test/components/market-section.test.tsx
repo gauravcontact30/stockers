@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import {
@@ -14,8 +14,18 @@ import {
   usePaged,
 } from "../../app/components/market-section";
 
-function Probe({ url, prefetched }: { url: string; prefetched?: Prefetched<{ value: string }> }) {
-  const { data, loading, error } = useMarketFeed<{ value: string }>(url, prefetched);
+function Probe({
+  url,
+  prefetched,
+  refreshMs,
+  refreshNow,
+}: {
+  url: string;
+  prefetched?: Prefetched<{ value: string }>;
+  refreshMs?: number;
+  refreshNow?: boolean;
+}) {
+  const { data, loading, error } = useMarketFeed<{ value: string }>(url, prefetched, { refreshMs, refreshNow });
   return (
     <div>
       <span data-testid="loading">{String(loading)}</span>
@@ -91,6 +101,136 @@ describe("useMarketFeed", () => {
 
     rerender(<Probe url="/api/test" prefetched={prefetched} />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/test"));
+  });
+});
+
+/**
+ * Refreshing in place, which is what keeps a market board from being a photograph.
+ *
+ * The case these are about is the one a reader cannot see going wrong: a page left open across the
+ * close, or simply open for an hour, showing figures that stopped being true without anything on
+ * screen admitting it.
+ *
+ * Real timers on a very short interval rather than fake ones: each tick ends in a fetch whose
+ * promise has to settle before the DOM changes, and driving that by hand is a lot of ceremony to
+ * test a `setInterval`.
+ */
+describe("useMarketFeed refreshing", () => {
+  /** Long enough for a 20ms interval to have fired and settled, short enough not to pad the suite. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  it("re-asks on the interval and swaps the payload in place", async () => {
+    let served = 0;
+    global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({ value: `print ${++served}` }) }) as Response);
+
+    render(<Probe url="/api/test" refreshMs={20} />);
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("print 1"));
+
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("print 2"));
+    // Never back to a skeleton: the reader's eye is on the numbers, and blanking them every tick
+    // would be worse than not refreshing at all.
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+  });
+
+  it("makes no request at all while the tab is in the background", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ value: "ok" }) }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const visibility = jest.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    render(<Probe url="/api/test" refreshMs={20} />);
+
+    // The opening fetch is not a refresh and happens regardless — it is the board being drawn.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    visibility.mockRestore();
+  });
+
+  it("refreshes the moment a slept-through tab is looked at again", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ value: "ok" }) }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    // No interval, so the only thing that can ask again is the tab coming back to the foreground.
+    render(<Probe url="/api/test" refreshMs={600_000} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps the figures on screen when a background refresh fails", async () => {
+    let call = 0;
+    global.fetch = jest.fn(async () => {
+      call++;
+      if (call === 1) return { ok: true, json: async () => ({ value: "the last good print" }) } as Response;
+      throw new Error("offline");
+    }) as unknown as typeof fetch;
+
+    render(<Probe url="/api/test" refreshMs={20} />);
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("the last good print"));
+    await waitFor(() => expect(call).toBeGreaterThan(1));
+
+    // Real figures the server confirmed a moment ago beat an error banner over the top of them.
+    expect(screen.getByTestId("value")).toHaveTextContent("the last good print");
+    expect(screen.getByTestId("error")).toBeEmptyDOMElement();
+  });
+
+  it("stays a photograph when no interval is asked for", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ value: "ok" }) }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<Probe url="/api/test" />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fills in an incomplete server payload straight away, without a skeleton", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ value: "the fuller answer" }) }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(
+      <Probe
+        url="/api/test"
+        prefetched={{ url: "/api/test", data: { value: "what the server could resolve" } }}
+        refreshNow
+      />,
+    );
+
+    // The server's rows are on screen from the first frame — that is the whole point of prefetching
+    // them — and are replaced in place once the fuller answer lands.
+    expect(screen.getByTestId("value")).toHaveTextContent("what the server could resolve");
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("the fuller answer"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("spends a complete server payload without asking again", async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<Probe url="/api/test" prefetched={{ url: "/api/test", data: { value: "complete" } }} />);
+    await settle();
+
+    expect(screen.getByTestId("value")).toHaveTextContent("complete");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("takes a zero interval as no interval", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ value: "ok" }) }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<Probe url="/api/test" refreshMs={0} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

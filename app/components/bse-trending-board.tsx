@@ -4,7 +4,16 @@ import { useMemo, useState } from "react";
 import { CompanyLogo } from "./company-logo";
 import { StockCombobox } from "./stock-combobox";
 import { StockDetailTrigger } from "./stock-detail-provider";
-import { chipFor, formatCrore, formatQuantity, formatRupee, formatSignedPercent, sectorTone } from "./market-format";
+import {
+  chipFor,
+  formatCrore,
+  formatDayDate,
+  formatQuantity,
+  formatRupee,
+  formatSignedPercent,
+  relativeAge,
+  sectorTone,
+} from "./market-format";
 import {
   MarketSection,
   Pager,
@@ -15,8 +24,9 @@ import {
   type Paged,
   type Prefetched,
 } from "./market-section";
-import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
+import { buildTrendingUrl } from "../lib/market-urls";
 import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow, TrendingRank } from "../lib/bse-market";
+import type { MarketSessionState } from "../lib/market-session";
 
 /**
  * The three rankings, all of them the exchange's own.
@@ -36,10 +46,10 @@ import type { BseTrendingBoard as BseTrendingPayload, BseTrendingRow, TrendingRa
  * `investorFavouriteTrio` in ../lib/hero-trios ranks the hero's fourth slide on it, under its own
  * attribution. Nothing was removed from the data layer; this board just no longer offers it.
  */
-const RANK_OPTIONS: { key: TrendingRank; label: string; note: string }[] = [
-  { key: "turnover", label: "By turnover (₹)", note: "the rupees that changed hands" },
-  { key: "trades", label: "By trade count", note: "how many separate transactions were struck" },
-  { key: "volume", label: "By volume (shares)", note: "the number of shares that moved" },
+const RANK_OPTIONS: { key: TrendingRank; label: string; short: string; note: string }[] = [
+  { key: "turnover", label: "By turnover (₹)", short: "Turnover", note: "the rupees that changed hands" },
+  { key: "trades", label: "By trade count", short: "Trades", note: "how many separate transactions were struck" },
+  { key: "volume", label: "By volume (shares)", short: "Volume", note: "the number of shares that moved" },
 ];
 
 const TIER_OPTIONS = [
@@ -62,7 +72,57 @@ type MoveKey = (typeof MOVE_OPTIONS)[number]["key"];
 // Both now live in ../lib/market-urls, so the server can build the same URL this board asks for
 // when it prefetches the opening payload. Re-exported so existing importers are unaffected.
 export { buildTrendingUrl };
-const PAGE_SIZE = TRENDING_PAGE_SIZE;
+
+/**
+ * How often the board re-asks the server.
+ *
+ * A minute, in every session state, and the same minute the endpoint's own `Cache-Control` is sized
+ * for — so a poll that lands inside the window is served from cache and costs the exchange nothing.
+ * It is the rate the quote feed reprints at while the market is open, which is the case that has to
+ * be fast. It is also, and this is the case that actually mattered, what rolls the board onto the
+ * new session: BSE publishes the day's Bhavcopy in the evening, and a board that never refreshed
+ * sat on the previous day's ranking until somebody happened to reload the page.
+ *
+ * Only ticks while the tab is being looked at — see `useMarketFeed`. A page left open in a
+ * background tab overnight makes no requests at all.
+ */
+const REFRESH_MS = 60_000;
+
+/**
+ * What the status pill says, and how loudly.
+ *
+ * The board used to say "today" in its heading and nothing anywhere about which session its
+ * figures came from. During market hours that was simply untrue: the ranking is built from the
+ * last *completed* session's Bhavcopy, because that is the only file BSE publishes covering all
+ * ~4,900 scrips, and today's copy holds a few dozen rows until the close. A reader looking at it
+ * at noon was reading yesterday, told it was today.
+ */
+const SESSION_BADGE: Record<MarketSessionState, { label: string; tone: string; dot: string; pulse: boolean }> = {
+  live: {
+    label: "Market live",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+    dot: "bg-emerald-500",
+    pulse: true,
+  },
+  "pre-open": {
+    label: "Pre-open",
+    tone: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
+    dot: "bg-amber-500",
+    pulse: false,
+  },
+  closed: {
+    label: "Market closed",
+    tone: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300",
+    dot: "bg-slate-400",
+    pulse: false,
+  },
+  holiday: {
+    label: "Exchange holiday",
+    tone: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300",
+    dot: "bg-slate-400",
+    pulse: false,
+  },
+};
 
 /** The figure the board is currently ranked by, drawn as the row's headline number. */
 function rankValue(row: BseTrendingRow, rank: TrendingRank): string {
@@ -73,6 +133,25 @@ function rankValue(row: BseTrendingRow, rank: TrendingRank): string {
 
 function shortcutName(name: string): string {
   return name.replace(/\s+(Limited|Ltd\.?|Company Ltd\.?)$/i, "").trim();
+}
+
+/** The live price where the feed has one, the session's close otherwise. */
+function shownPrice(row: BseTrendingRow): number | null {
+  return row.liveQuote?.price ?? row.price;
+}
+
+function shownChange(row: BseTrendingRow): number | null {
+  return row.liveQuote ? row.liveQuote.changePercent : row.changePercent;
+}
+
+/** The exchange-open dot, reused by the status pill and by every live row. */
+function LiveDot({ className = "bg-emerald-500", pulse = true }: { className?: string; pulse?: boolean }) {
+  return (
+    <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+      {pulse && <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${className}`} />}
+      <span className={`relative inline-flex h-2 w-2 rounded-full ${className}`} />
+    </span>
+  );
 }
 
 function StockShortcut({ row, active, onSelect }: { row: BseTrendingRow; active: boolean; onSelect: () => void }) {
@@ -102,9 +181,11 @@ function StockShortcut({ row, active, onSelect }: { row: BseTrendingRow; active:
           )}
         </span>
         <span className="mt-1 flex items-center gap-2">
-          <span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">{formatRupee(row.price)}</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${chipFor(row.changePercent)}`}>
-            {formatSignedPercent(row.changePercent)}
+          <span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">
+            {formatRupee(shownPrice(row))}
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${chipFor(shownChange(row))}`}>
+            {formatSignedPercent(shownChange(row))}
           </span>
         </span>
       </span>
@@ -112,9 +193,29 @@ function StockShortcut({ row, active, onSelect }: { row: BseTrendingRow; active:
   );
 }
 
-export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank: TrendingRank; position: number }) {
+/** One figure in the row's footer, so the four line up on a grid rather than by eye. */
+function RowStat({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <li className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700">
+    <div className="min-w-0">
+      <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</dt>
+      <dd
+        className={`mt-0.5 truncate tabular-nums ${
+          emphasis ? "text-sm font-bold text-slate-900 dark:text-white" : "text-[13px] font-semibold text-slate-700 dark:text-slate-200"
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank: TrendingRank; position: number }) {
+  const live = row.liveQuote;
+  const price = shownPrice(row);
+  const change = shownChange(row);
+
+  return (
+    <li className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {/* The rank sits under the logo rather than beside it: it is the weakest thing in the row
@@ -129,7 +230,7 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
             <StockDetailTrigger symbol={row.ticker}>
               {/* The company's registered name leads, with the ticker and the scrip code — the two
                   identifiers a BSE reader actually quotes — under it. */}
-              <p className="truncate text-sm font-bold text-slate-900 underline-offset-2 hover:underline dark:text-white">
+              <p className="truncate text-sm font-bold text-slate-900 underline-offset-2 group-hover:underline dark:text-white">
                 {row.name}
               </p>
               <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
@@ -152,41 +253,48 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">{formatRupee(row.price)}</p>
-          <span
-            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${chipFor(row.changePercent)}`}
-          >
-            {formatSignedPercent(row.changePercent)}
+          <p className="flex items-center justify-end gap-1.5 text-base font-bold tabular-nums text-slate-900 dark:text-white">
+            {live && <LiveDot />}
+            {formatRupee(price)}
+          </p>
+          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${chipFor(change)}`}>
+            {formatSignedPercent(change)}
           </span>
+          {/* Both numbers, never one dressed as the other: the ranking below was computed from the
+              session close, so a row trading live has to show what it closed at as well. */}
+          {live && (
+            <p className="mt-1 text-[10px] font-medium tabular-nums text-slate-400 dark:text-slate-500">
+              Close {formatRupee(row.price)}
+            </p>
+          )}
         </div>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-200 pt-3 text-[11px] sm:grid-cols-4 dark:border-slate-800">
-        <div>
-          <dt className="text-slate-400 dark:text-slate-500">{RANK_OPTIONS.find((o) => o.key === rank)?.label}</dt>
-          <dd className="mt-0.5 font-bold tabular-nums text-slate-900 dark:text-white">{rankValue(row, rank)}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-400 dark:text-slate-500">Share of BSE turnover</dt>
-          <dd className="mt-0.5 font-semibold tabular-nums text-slate-800 dark:text-slate-200">
-            {row.turnoverShare === null ? "—" : `${row.turnoverShare.toFixed(2)}%`}
-          </dd>
-        </div>
-        <div>
-          {/* Small average ticket beside heavy turnover is the retail-crowding tell. */}
-          <dt className="text-slate-400 dark:text-slate-500">Avg trade size</dt>
-          <dd className="mt-0.5 font-semibold tabular-nums text-slate-800 dark:text-slate-200">
-            {row.averageTradeValue === null ? "—" : formatRupee(row.averageTradeValue, 0)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-slate-400 dark:text-slate-500">Day range</dt>
-          <dd className="mt-0.5 font-semibold tabular-nums text-slate-800 dark:text-slate-200">
-            {formatRupee(row.dayLow)} – {formatRupee(row.dayHigh)}
-          </dd>
-        </div>
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-200 pt-3 sm:grid-cols-4 dark:border-slate-800">
+        <RowStat label={RANK_OPTIONS.find((option) => option.key === rank)?.short ?? ""} value={rankValue(row, rank)} emphasis />
+        <RowStat
+          label="Share of BSE"
+          value={row.turnoverShare === null ? "—" : `${row.turnoverShare.toFixed(2)}%`}
+        />
+        {/* Small average ticket beside heavy turnover is the retail-crowding tell. */}
+        <RowStat
+          label="Avg trade"
+          value={row.averageTradeValue === null ? "—" : formatRupee(row.averageTradeValue, 0)}
+        />
+        <RowStat label="Day range" value={`${formatRupee(row.dayLow)} – ${formatRupee(row.dayHigh)}`} />
       </dl>
     </li>
+  );
+}
+
+/** One headline figure above the board, describing the session rather than any single company. */
+function SessionStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="mt-1 text-base font-bold tabular-nums text-slate-900 dark:text-white">{value}</p>
+      {hint && <p className="mt-0.5 truncate text-[10px] text-slate-400 dark:text-slate-500">{hint}</p>}
+    </div>
   );
 }
 
@@ -200,6 +308,12 @@ export function TrendingRow({ row, rank, position }: { row: BseTrendingRow; rank
  *
  * Searching, filtering and paging are all server-side, because the traded universe is thousands of
  * rows and each rendered row costs an upstream sector lookup.
+ *
+ * Two clocks run through it, and keeping them apart is most of the design. The *ranking* is the
+ * last completed session's, from the Bhavcopy — the only file that covers every scrip. The *prices*
+ * are live while the exchange is open, for the ten rows on screen. The status pill, the session
+ * date and the "Close ₹x" line under a live price exist so that no figure here is read as
+ * something it is not.
  */
 export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTrendingPayload> }) {
   // Turnover leads: of the three figures the exchange publishes it is the one that answers "where
@@ -221,11 +335,40 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
   // "all" for the broker facet the endpoint still accepts: this board no longer filters by one, and
   // passing "all" is what keeps it out of the query string entirely — see `buildTrendingUrl`.
   const url = buildTrendingUrl(rank, term, "all", "all", tier, move, page);
-  const { data, loading, error } = useMarketFeed<BseTrendingPayload>(url, prefetched);
+  /**
+   * Whether the payload the page arrived with still owes us the live prices.
+   *
+   * The server renders this board's opening view into the HTML, which is what saves the reader a
+   * round trip — but that render cannot reach the quote feed: its per-symbol memo is module-scoped,
+   * and a cached render scope will not fill an entry from one. So during market hours the prefetched
+   * payload comes back ranked, dated and correct, with no live half to its prices.
+   *
+   * Rather than drop a perfectly good payload and open on a skeleton, the board renders it and asks
+   * the endpoint — which has no such limit — once more immediately. The rows are on screen the whole
+   * time; the prices sharpen a round trip later.
+   */
+  const seed = prefetched && prefetched.url === url ? prefetched.data : null;
+  const seedNeedsPrices = Boolean(
+    seed && (
+      // Ranked but unpriced: market hours, and the render pass could not reach the quote feed.
+      (seed.marketSession === "live" && seed.liveAsOf === null) ||
+      // Or nothing at all. A render that resolved no rows is indistinguishable on screen from an
+      // exchange that has published nothing, and only one of those is worth a reader's patience —
+      // so the board asks the endpoint, which keeps its own copy of the day, before believing it.
+      seed.rows.length === 0
+    ),
+  );
+  const { data, loading, error } = useMarketFeed<BseTrendingPayload>(url, prefetched, {
+    refreshMs: REFRESH_MS,
+    refreshNow: seedNeedsPrices,
+  });
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
   const active = RANK_OPTIONS.find((option) => option.key === rank);
   const filtered = term.length > 0 || tier !== "all" || move !== "0";
+  // Nothing is claimed about the session until the payload that describes it has arrived: the
+  // badge below is rendered only when `data` is, so this fallback never reaches the screen.
+  const badge = SESSION_BADGE[data?.marketSession ?? "closed"];
 
   const clearFilters = () => {
     setTerm("");
@@ -261,14 +404,33 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       title="What BSE crowded into today"
       blurb="Where the session's money actually went, ranked by the exchange's own figures — rupee turnover, transaction count and share volume."
       aside={
-        <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
-          {data ? `${data.total.toLocaleString("en-IN")} traded` : "Loading BSE…"}
+        <div className="flex flex-col items-start gap-2 lg:items-end">
+          {data && (
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${badge.tone}`}
+            >
+              <LiveDot className={badge.dot} pulse={badge.pulse} />
+              {badge.label}
+            </span>
+          )}
+          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+            {data ? `${data.total.toLocaleString("en-IN")} traded` : "Loading BSE…"}
+          </div>
+          {data?.sessionDate && (
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              Ranked on the session of {formatDayDate(data.sessionDate)}
+            </p>
+          )}
         </div>
       }
     >
       {/* Not `PillTabs`: each ranking needs a sentence saying what it measures, because the three
           produce genuinely different boards and the difference is the point. */}
-      <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Ranking method">
+      <div
+        className="mt-5 inline-flex flex-wrap gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900/60"
+        role="group"
+        aria-label="Ranking method"
+      >
         {RANK_OPTIONS.map((option) => (
           <button
             key={option.key}
@@ -277,8 +439,8 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
             aria-pressed={rank === option.key}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               rank === option.key
-                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                : "border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
+                : "text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             }`}
           >
             {option.label}
@@ -287,6 +449,21 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       </div>
 
       {active && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Ranked by {active.note}.</p>}
+
+      {/* The session in four numbers, above the list rather than buried under it. A reader who
+          wants "how big was the day" should not have to add up ten rows to find out. */}
+      {data && (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <SessionStat label="Session turnover" value={formatCrore(data.totals.turnoverCr * 1e7)} hint="all traded scrips" />
+          <SessionStat label="Scrips traded" value={formatQuantity(data.totals.traded)} hint="of the whole exchange" />
+          <SessionStat label="Trades struck" value={formatQuantity(data.totals.trades)} hint="transactions" />
+          <SessionStat
+            label={data.liveAsOf ? "Prices live" : "Prices"}
+            value={data.liveAsOf ? relativeAge(data.liveAsOf) : "At session close"}
+            hint={data.liveAsOf ? "for the rows below" : formatDayDate(data.sessionDate)}
+          />
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
         {/* The exchange-wide type-ahead, so a company can be found by name without knowing its
@@ -304,7 +481,7 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
             id="trending-tier"
             value={tier}
             onChange={(event) => setTier(event.target.value as TierKey)}
-            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
           >
             {TIER_OPTIONS.map((option) => (
               <option key={option.key} value={option.key}>
@@ -320,7 +497,7 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
             id="trending-move"
             value={move}
             onChange={(event) => setMove(event.target.value as MoveKey)}
-            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
           >
             {MOVE_OPTIONS.map((option) => (
               <option key={option.key} value={option.key}>
@@ -341,12 +518,16 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Popular stock shortcuts">
+      <div className="mt-4 flex flex-wrap items-stretch gap-2" role="group" aria-label="Popular stock shortcuts">
         <button
           type="button"
           onClick={() => setTerm("")}
           aria-pressed={term === ""}
-          className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className={`min-h-[74px] rounded-2xl border px-4 text-sm font-bold transition ${
+            term === ""
+              ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+          }`}
         >
           All Platform
         </button>
@@ -354,7 +535,6 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
           <StockShortcut key={row.code} row={row} active={term.toUpperCase() === row.ticker.toUpperCase()} onSelect={() => setTerm(row.ticker)} />
         ))}
       </div>
-
 
       {summary && <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{summary}</p>}
 
@@ -385,9 +565,11 @@ export function BseTrendingBoard({ prefetched }: { prefetched?: Prefetched<BseTr
       )}
 
       <SectionFootnote>
-        Ranked from BSE&apos;s own end-of-session Bhavcopy across all ~4,900 listed scrips. No broker publishes its search or order flow, so
-        &quot;trending&quot; here means traded activity on the exchange rather than searches on any one platform · not
-        investment advice.
+        Ranked from BSE&apos;s own end-of-session Bhavcopy across all ~4,900 listed scrips, for the session named above —
+        today&apos;s file covers the whole exchange only after the close. While the market is open, the price and move on
+        each row are live and the ranking behind them is the last completed session&apos;s. No broker publishes its search
+        or order flow, so &quot;trending&quot; here means traded activity on the exchange rather than searches on any one
+        platform · not investment advice.
       </SectionFootnote>
     </MarketSection>
   );

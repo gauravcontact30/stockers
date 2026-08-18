@@ -8,13 +8,26 @@ import { findStock } from "./stock-search";
 import { getMarketNews, type NewsItem } from "./market-news";
 import { getQuotesFor, type LiveQuote, type QuoteSubject } from "./market-data";
 import { aiModel, chatJson, extractJsonObject } from "./openrouter";
+// The exchange clock. It used to live here, and moved out when the market boards needed the same
+// answer — see ./market-session for why asking this module for it would have closed an import
+// cycle. The names this module has always exported are re-exported below, unchanged.
+import {
+  isAfterMarketClose,
+  isBeforeMarketOpen,
+  isTradingDay,
+  istInstant,
+  marketCloseAt,
+  marketOpenAt,
+  marketSessionState,
+  tradingDayKey,
+  type MarketSessionState,
+} from "./market-session";
 
 const CACHE_FILE = "bse-ai-locked-picks.json";
 const SESSION_SNAPSHOT_FILE = "bse-ai-prediction-accuracy-session.json";
 const PICK_COUNT = 10;
 const CANDIDATE_COUNT = 30;
 const ACTUAL_POOL_COUNT = 50;
-const IST_TIME_ZONE = "Asia/Kolkata";
 const CAP_TIERS: BseCapTier[] = ["Large", "Mid", "Small"];
 const TIER_QUERY: Record<BseCapTier, "large" | "mid" | "small"> = { Large: "large", Mid: "mid", Small: "small" };
 
@@ -32,8 +45,6 @@ export type PredictionStatus = "locked" | "not-generated";
  * the 08:50 run is for, so until that run happens the page keeps showing the picks it locked last.
  */
 const PREDICTION_LOCK_TIME = "08:50";
-const MARKET_OPEN_TIME = "09:15";
-const MARKET_CLOSE_TIME = "15:30";
 /** How far ahead of 8:50 a scheduled run may fire and still be treated as that day's lock. */
 const SCHEDULE_GRACE_MS = 5 * 60_000;
 
@@ -104,7 +115,6 @@ export type AccuracySummary = {
 };
 
 /** Where the BSE day stands right now, which is what the live board's wording depends on. */
-export type MarketSessionState = "pre-open" | "live" | "closed" | "holiday";
 
 /**
  * Today's AI marked against today's market, for one cap tier.
@@ -215,62 +225,33 @@ function emptyCapAccuracy(): Record<BseCapTier, AccuracySummary> {
   };
 }
 
-export function tradingDayKey(now = new Date()): string {
-  return now.toLocaleDateString("en-CA", { timeZone: IST_TIME_ZONE });
-}
-
-function istInstant(day: string, time: string): string {
-  return `${day}T${time}:00+05:30`;
-}
+// Re-exported rather than redefined: every caller that has always imported the exchange clock
+// from this module keeps working, and there is still exactly one implementation of it.
+export { isAfterMarketClose, isTradingDay, marketCloseAt, marketSessionState, tradingDayKey };
+export type { MarketSessionState };
 
 /** 8:50 AM IST — when the AI locks the ten picks for `day`, 25 minutes before the open. */
 export function predictionLockAt(day = tradingDayKey()): string {
   return istInstant(day, PREDICTION_LOCK_TIME);
 }
 
+/**
+ * The moment a day's picks stop being predictions and start being scored: the 9:15 open.
+ *
+ * The same instant as `marketOpenAt`, under the name this module's readers know it by — the
+ * cutoff is a fact about the prediction, the open is a fact about the exchange.
+ */
 export function predictionCutoffAt(day = tradingDayKey()): string {
-  return istInstant(day, MARKET_OPEN_TIME);
-}
-
-export function marketCloseAt(day = tradingDayKey()): string {
-  return istInstant(day, MARKET_CLOSE_TIME);
+  return marketOpenAt(day);
 }
 
 export function isBeforePredictionCutoff(now = new Date()): boolean {
-  return now.getTime() < new Date(predictionCutoffAt(tradingDayKey(now))).getTime();
+  return isBeforeMarketOpen(now);
 }
 
 /** Before 8:50 AM IST the day's list does not exist yet, so the previous one stays on screen. */
 export function isBeforePredictionLock(now = new Date()): boolean {
   return now.getTime() < new Date(predictionLockAt(tradingDayKey(now))).getTime();
-}
-
-export function isAfterMarketClose(now = new Date()): boolean {
-  return now.getTime() >= new Date(marketCloseAt(tradingDayKey(now))).getTime();
-}
-
-/**
- * Exchange holidays, as `YYYY-MM-DD` in `BSE_MARKET_HOLIDAYS`.
- *
- * Unset, only weekends are skipped — which is the safe direction to be wrong in: a run on a
- * holiday locks a list nobody trades against and the next real session replaces it anyway,
- * whereas skipping a real session would leave the page holding a stale list all day.
- */
-function marketHolidays(): Set<string> {
-  return new Set(
-    (process.env.BSE_MARKET_HOLIDAYS ?? "")
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean),
-  );
-}
-
-export function isTradingDay(day: string): boolean {
-  // Noon IST rather than midnight: midnight IST is the *previous* date in UTC, and `getUTCDay`
-  // would then report the wrong weekday for every single day.
-  const weekday = new Date(istInstant(day, "12:00")).getUTCDay();
-  if (weekday === 0 || weekday === 6) return false;
-  return !marketHolidays().has(day);
 }
 
 function addDays(day: string, count: number): string {
@@ -478,14 +459,6 @@ export function calculateAccuracy(
       percent: asPct((matched / PICK_COUNT) * 100),
     },
   };
-}
-
-export function marketSessionState(now = new Date()): MarketSessionState {
-  const day = tradingDayKey(now);
-  if (!isTradingDay(day)) return "holiday";
-  if (isBeforePredictionCutoff(now)) return "pre-open";
-  if (isAfterMarketClose(now)) return "closed";
-  return "live";
 }
 
 function clamp(value: number, low: number, high: number): number {

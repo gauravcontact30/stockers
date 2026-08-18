@@ -40,6 +40,20 @@ function row(overrides: Partial<BseTrendingRow> = {}): BseTrendingRow {
     averageTradeValue: 113_029,
     brokers: [],
     brokerRank: null,
+    liveQuote: null,
+    ...overrides,
+  };
+}
+
+/** A live print sitting on top of a row's session close, as ../lib/bse-market attaches it. */
+function live(overrides: Partial<NonNullable<BseTrendingRow["liveQuote"]>> = {}) {
+  return {
+    price: 812.4,
+    change: 85.05,
+    changePercent: 11.69,
+    dayHigh: 815,
+    dayLow: 726,
+    asOf: "2026-08-18T06:00:00.000Z",
     ...overrides,
   };
 }
@@ -123,6 +137,8 @@ function payload(rank: string, overrides: Partial<BseTrendingPayload> = {}): Bse
     pageSize: 10,
     pages: 1,
     sessionDate: "2026-08-14",
+    marketSession: "closed",
+    liveAsOf: null,
     ...overrides,
   };
 }
@@ -390,6 +406,143 @@ describe("BSE trending board", () => {
 
     await userEvent.selectOptions(screen.getByLabelText("Minimum move"), "10");
     expect(await screen.findByText("No traded BSE stock matches those filters this session.")).toBeInTheDocument();
+  });
+
+  /**
+   * Which session, and what the exchange is doing about it.
+   *
+   * The board used to say "today" in its heading and nothing at all about the session its figures
+   * came from. During market hours that was false: the ranking is the last *completed* session's,
+   * because BSE's own file only covers all ~4,900 scrips after the close. A reader at noon was
+   * reading yesterday, told it was today.
+   */
+  it("dates the session it ranked and says the exchange is shut", async () => {
+    mockFeed();
+    render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
+
+    expect(screen.getByText("Market closed")).toBeInTheDocument();
+    expect(screen.getByText("Ranked on the session of 14 Aug 2026")).toBeInTheDocument();
+    // Nothing on the board is live, so the prices are described as what they are.
+    expect(screen.getByText("At session close")).toBeInTheDocument();
+  });
+
+  it("says the market is live, and prices the rows against it", async () => {
+    mockFeed((url) =>
+      payload(url.searchParams.get("rank") ?? "turnover", {
+        marketSession: "live",
+        liveAsOf: "2026-08-18T06:00:00.000Z",
+        rows: [row({ liveQuote: live() }), SPARSE, SME],
+      }),
+    );
+    render(<BseTrendingBoard />);
+
+    const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
+    expect(screen.getByText("Market live")).toBeInTheDocument();
+
+    // The live price leads, the live move is the chip beside it...
+    expect(within(card).getByText("₹812.40")).toBeInTheDocument();
+    expect(within(card).getByText("+11.69%")).toBeInTheDocument();
+    // ...and the close the ranking was actually computed from is still on the row, because that is
+    // the number the ordering means. A live price alone would be ranked by a figure it never shows.
+    expect(within(card).getByText("Close ₹727.35")).toBeInTheDocument();
+  });
+
+  it("leaves a row the feed had nothing live for on its session close", async () => {
+    mockFeed((url) =>
+      payload(url.searchParams.get("rank") ?? "turnover", {
+        marketSession: "live",
+        liveAsOf: "2026-08-18T06:00:00.000Z",
+        rows: [row({ liveQuote: live() }), SME],
+      }),
+    );
+    render(<BseTrendingBoard />);
+
+    const card = (await screen.findByText("Small Enterprise Co Ltd")).closest("li") as HTMLElement;
+    expect(within(card).getByText("₹88.00")).toBeInTheDocument();
+    expect(within(card).queryByText(/^Close /)).not.toBeInTheDocument();
+  });
+
+  it("counts the whole session above the board rather than making a reader add up rows", async () => {
+    mockFeed();
+    render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
+
+    expect(screen.getByText("Session turnover")).toBeInTheDocument();
+    // 9,075 crore, drawn the way every other rupee figure on the page is.
+    expect(screen.getByText("₹9,075 Cr")).toBeInTheDocument();
+    expect(screen.getByText("Scrips traded")).toBeInTheDocument();
+    expect(screen.getByText("4,419")).toBeInTheDocument();
+    expect(screen.getByText("Trades struck")).toBeInTheDocument();
+  });
+
+  /**
+   * The one thing the server's render cannot do for this board.
+   *
+   * It resolves the opening view into the HTML, which is what saves the reader a round trip — but
+   * it cannot reach the quote feed while doing so, so during market hours that payload arrives
+   * ranked and dated with no live half to its prices. The board renders it anyway and asks the
+   * endpoint, which has no such limit, immediately.
+   */
+  it("asks again at once when the server's payload arrived without live prices", async () => {
+    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
+    const fetchMock = mockFeed(() =>
+      payload("turnover", {
+        marketSession: "live",
+        liveAsOf: "2026-08-18T06:00:00.000Z",
+        rows: [row({ liveQuote: live() }), SPARSE, SME],
+      }),
+    );
+
+    render(
+      <BseTrendingBoard
+        prefetched={{ url, data: payload("turnover", { marketSession: "live", liveAsOf: null }) }}
+      />,
+    );
+
+    // Rendered from the server's payload immediately — no skeleton, no waiting.
+    expect(screen.getByText("HDFC Bank Ltd")).toBeInTheDocument();
+    expect(screen.getByText("At session close")).toBeInTheDocument();
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(url));
+    expect(await screen.findByText("Close ₹727.35")).toBeInTheDocument();
+  });
+
+  it("does not believe an empty payload without asking the endpoint first", async () => {
+    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
+    const fetchMock = mockFeed();
+
+    // A render that resolved no rows looks exactly like an exchange that published none. Only one
+    // of those is worth showing a reader, so the board checks before settling on the empty state.
+    render(
+      <BseTrendingBoard
+        prefetched={{ url, data: payload("turnover", { marketSession: "closed", rows: [], total: 0 }) }}
+      />,
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(url));
+    expect(await screen.findByText("HDFC Bank Ltd")).toBeInTheDocument();
+  });
+
+  it("leaves a payload that already carries live prices alone", async () => {
+    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
+    const fetchMock = mockFeed();
+
+    render(
+      <BseTrendingBoard
+        prefetched={{
+          url,
+          data: payload("turnover", {
+            marketSession: "live",
+            liveAsOf: "2026-08-18T06:00:00.000Z",
+            rows: [row({ liveQuote: live() })],
+          }),
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Close ₹727.35")).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).not.toHaveBeenCalled());
   });
 
   it("surfaces a feed failure instead of an empty board", async () => {

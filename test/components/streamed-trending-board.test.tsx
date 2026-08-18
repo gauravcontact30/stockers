@@ -65,6 +65,9 @@ describe("TrendingPayload", () => {
       rank: "turnover",
       page: 1,
       pageSize: 10,
+      // The same ask the endpoint makes, so the first paint during market hours carries live prices
+      // rather than waiting for the client's first refresh to correct them.
+      live: true,
     });
   });
 

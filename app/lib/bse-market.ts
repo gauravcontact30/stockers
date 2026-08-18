@@ -41,6 +41,13 @@ import {
 // Generic helpers, not NSE-specific: the same TTL memo and the same lenient number parsing that
 // India's exchange feeds require (values arrive as padded, comma-separated strings).
 import { cached, toNumber, toText } from "./nse-client";
+// What the exchange is doing right now. Dependency-free arithmetic on the IST clock, so asking it
+// per request costs nothing — see ./market-session.
+import { marketSessionState, type MarketSessionState } from "./market-session";
+// Live prices, for the handful of rows a reader is actually looking at. Per-symbol and rate-capped
+// upstream, which is why it is only ever asked about one page — see `attachLiveQuotes` below.
+import { getQuotesFor, type LiveQuote, type QuoteSubject } from "./market-data";
+import { bseCatalogue, type CatalogueEntry } from "./bse-catalogue";
 
 export { attachSectors };
 export { BSE_PLATFORMS, bsePlatform, type BsePlatform };
@@ -800,7 +807,28 @@ export async function getBseRows(): Promise<{ rows: (BseStock & BseQuote)[]; ses
  */
 export type TrendingRank = "brokers" | "turnover" | "trades" | "volume";
 
+/**
+ * The live quote sitting on top of a row's session figures, when the exchange is open.
+ *
+ * Deliberately *beside* `price` and `changePercent` rather than replacing them. The board is
+ * ranked on the last completed session's Bhavcopy — that is the only file that covers all ~4,900
+ * scrips — so overwriting the session price with a live one would leave every row showing a number
+ * that had nothing to do with the order it was sorted in. Kept apart, the row can say both: what
+ * this company did in the session that produced this ranking, and what it is doing right now.
+ */
+export type BseLiveQuote = {
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  /** When the feed last printed this price, ISO. */
+  asOf: string | null;
+};
+
 export type BseTrendingRow = BseRow & {
+  /** The live quote for this scrip, or null outside market hours and when the feed had nothing. */
+  liveQuote: BseLiveQuote | null;
   /**
    * Where this company sits on any tracked broker's own published list. Empty for most rows: only
    * one of the five platforms publishes such a list at all — see ./broker-popularity.
@@ -835,6 +863,14 @@ export type TrendingQuery = {
   minPercent?: number;
   page?: number;
   pageSize?: number;
+  /**
+   * Whether to overlay live prices on the page being returned, when the exchange is open.
+   *
+   * Opt-in rather than automatic: it costs one upstream quote per row, so a caller that only wants
+   * the ranking — a totals sweep, a test, a scheduled job — should not pay for it. The API route
+   * and the landing page's prefetch both pass it, because both serve a reader looking at a screen.
+   */
+  live?: boolean;
 };
 
 export type BseTrendingBoard = {
@@ -853,6 +889,16 @@ export type BseTrendingBoard = {
   pageSize: number;
   pages: number;
   sessionDate: string | null;
+  /**
+   * What the exchange is doing at the moment this payload was built, in IST.
+   *
+   * On the payload rather than left to the browser because it is not the browser's question: a
+   * reader's clock can be in any zone or simply wrong, and the holiday list is server configuration.
+   * The board renders "LIVE" off this, so it has to be the server's answer.
+   */
+  marketSession: MarketSessionState;
+  /** The newest live print on this page, ISO, or null when nothing live was attached. */
+  liveAsOf: string | null;
 };
 
 const TRENDING_SIZE = 10;
@@ -898,6 +944,90 @@ const TRENDING_METRIC: Record<Exclude<TrendingRank, "brokers">, (quote: BseQuote
  * `getBseMovers` does it: the traded universe is thousands of rows, and each row's sector costs an
  * upstream call, so only the page actually being looked at is ever resolved.
  */
+/** Scrip code and ticker -> catalogue entry, built once and held for the process's life. */
+let trendingCatalogue: Map<string, CatalogueEntry> | null = null;
+
+function catalogueFor(row: { code: string; ticker: string }): CatalogueEntry | null {
+  if (!trendingCatalogue) {
+    trendingCatalogue = new Map<string, CatalogueEntry>();
+    for (const entry of bseCatalogue()) {
+      trendingCatalogue.set(entry.scripCode, entry);
+      trendingCatalogue.set(entry.symbol.toUpperCase(), entry);
+    }
+  }
+
+  return trendingCatalogue.get(row.code) ?? trendingCatalogue.get(row.ticker.toUpperCase()) ?? null;
+}
+
+/**
+ * The quote feed's name for a scrip: its NSE line where the company trades there too, its BSE one
+ * otherwise. Falling back to `<code>.BO` covers a listing newer than the built catalogue.
+ */
+function quoteSubjectFor(row: { code: string; ticker: string }): QuoteSubject {
+  const entry = catalogueFor(row);
+  return {
+    symbol: entry?.symbol ?? row.ticker,
+    yahooSymbol: entry?.yahooSymbol ?? `${row.code}.BO`,
+  };
+}
+
+/**
+ * Live prices for the rows on one page, asked for only while the exchange is open.
+ *
+ * One page, never the board: the ranking is computed over every scrip that traded, and pricing all
+ * of them live would be ~4,900 upstream calls to draw ten rows. The quotes are keyed and cached per
+ * symbol upstream, so a page of ten costs ten calls a minute across every reader on the site.
+ *
+ * A feed that fails, times out or answers with a stale print leaves the row's `live` at null and
+ * the session figures standing. That is the whole failure story: nothing here can empty the board,
+ * because the board was already complete before this ran.
+ */
+async function attachLiveQuotes<T extends { code: string; ticker: string }>(
+  rows: T[],
+): Promise<Map<string, BseLiveQuote>> {
+  if (rows.length === 0) return new Map();
+
+  const subjects = new Map<string, QuoteSubject>();
+  const symbolByCode = new Map<string, string>();
+
+  for (const row of rows) {
+    const subject = quoteSubjectFor(row);
+    subjects.set(subject.symbol, subject);
+    symbolByCode.set(row.code, subject.symbol);
+  }
+
+  const quotes = await getQuotesFor([...subjects.values()]).catch(() => [] as LiveQuote[]);
+  const bySymbol = new Map(quotes.map((quote) => [quote.symbol, quote]));
+
+  const live = new Map<string, BseLiveQuote>();
+  for (const [code, symbol] of symbolByCode) {
+    const quote = bySymbol.get(symbol);
+    // `live` false is the feed telling us this print is not from an open session — a stale close
+    // dressed as a live price is exactly what this board must not show.
+    if (!quote?.live || quote.price === null) continue;
+
+    live.set(code, {
+      price: quote.price,
+      change: quote.change,
+      changePercent: quote.changePercent,
+      dayHigh: quote.dayHigh,
+      dayLow: quote.dayLow,
+      asOf: quote.asOf,
+    });
+  }
+
+  return live;
+}
+
+/** The most recent print across a page's live quotes, which is how fresh the board can claim to be. */
+function newestPrint(live: Map<string, BseLiveQuote>): string | null {
+  let newest: string | null = null;
+  for (const quote of live.values()) {
+    if (quote.asOf && (newest === null || quote.asOf > newest)) newest = quote.asOf;
+  }
+  return newest;
+}
+
 export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTrendingBoard> {
   const rank = query.rank ?? "turnover";
   // The broker board still only contains companies that traded, so it is gated on turnover the
@@ -974,9 +1104,16 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
 
   const resolved = await attachSectors(rows.slice((page - 1) * pageSize, page * pageSize));
 
+  // The session state is read once, here, rather than per row: a page whose first row said "live"
+  // and whose last said "closed" because 15:30 passed between them would be nobody's idea of a
+  // consistent board.
+  const marketSession = marketSessionState();
+  const live = query.live && marketSession === "live" ? await attachLiveQuotes(resolved) : new Map<string, BseLiveQuote>();
+
   return {
     rows: resolved.map((row) => ({
       ...row,
+      liveQuote: live.get(row.code) ?? null,
       brokers: brokerPicks[row.code] ?? [],
       brokerRank: (brokerPicks[row.code] ?? []).length ? bestBrokerRank(brokerPicks, row) : null,
       turnoverShare:
@@ -992,5 +1129,7 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
     pageSize,
     pages,
     sessionDate: tape.sessionDate,
+    marketSession,
+    liveAsOf: newestPrint(live),
   };
 }

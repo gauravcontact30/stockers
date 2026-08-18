@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
     // Clamped inside getBseTrending, so a hand-edited URL cannot ask for the whole exchange —
     // or for the per-scrip sector lookups that come with every row returned.
     pageSize: count(params.get("pageSize")),
+    // Every caller of this endpoint is a board on somebody's screen, and during market hours the
+    // price beside a company should be the one it is trading at. Ignored outside the session.
+    live: true,
   });
 
   return NextResponse.json(board, { headers: cacheHeaders(60) });

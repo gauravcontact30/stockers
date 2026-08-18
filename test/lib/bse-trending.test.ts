@@ -24,6 +24,18 @@ jest.mock("../../app/lib/broker-popularity", () => ({
   })),
 }));
 
+// The exchange clock, so a suite can be run at any hour of any day and still say what the board
+// does during a live session. Its own rules are tested in ./market-session.test.ts.
+jest.mock("../../app/lib/market-session", () => ({
+  marketSessionState: jest.fn(() => "closed"),
+}));
+
+// The live quote feed, which is per-symbol and goes to the internet. Stubbed to nothing by default:
+// the ranking tests below are about the Bhavcopy, and a board must be complete before any of this.
+jest.mock("../../app/lib/market-data", () => ({
+  getQuotesFor: jest.fn(async () => []),
+}));
+
 // Sector classification is a per-scrip upstream call with a suite of its own; here it only has to
 // hand the rows back so the ranking is what is under test.
 jest.mock("../../app/lib/bse-sectors", () => ({
@@ -40,6 +52,25 @@ const { fetchBse, fetchBseText } = require("../../app/lib/bse-client") as {
 };
 const { clearMemoryCache } = require("../../app/lib/cache") as typeof import("../../app/lib/cache");
 const { getBseTrending } = require("../../app/lib/bse-market") as typeof import("../../app/lib/bse-market");
+const { marketSessionState } = require("../../app/lib/market-session") as { marketSessionState: jest.Mock };
+const { getQuotesFor } = require("../../app/lib/market-data") as { getQuotesFor: jest.Mock };
+
+/** A live print from the quote feed, in the shape ./market-data returns. */
+function quote(symbol: string, price: number, changePercent: number, overrides: Record<string, unknown> = {}) {
+  return {
+    symbol,
+    price,
+    previousClose: price - 1,
+    change: 1,
+    changePercent,
+    dayHigh: price + 2,
+    dayLow: price - 2,
+    volume: 1000,
+    live: true,
+    asOf: "2026-08-18T06:00:00.000Z",
+    ...overrides,
+  };
+}
 
 type Scrip = {
   code: string;
@@ -118,6 +149,8 @@ function seed(scrips: Scrip[]) {
 beforeEach(() => {
   jest.clearAllMocks();
   clearMemoryCache();
+  marketSessionState.mockReturnValue("closed");
+  getQuotesFor.mockResolvedValue([]);
 });
 
 describe("BSE trending board", () => {
@@ -337,5 +370,160 @@ describe("BSE trending board", () => {
     expect(board.rows).toEqual([]);
     expect(board.sessionDate).toBeNull();
     expect(board.totals.traded).toBe(0);
+  });
+});
+
+/**
+ * The two clocks this board runs on.
+ *
+ * The ranking is the last completed session's, because the Bhavcopy is the only file BSE publishes
+ * that covers every scrip — today's holds a few dozen rows until the close. The prices, while the
+ * exchange is open, are live. Keeping those apart is the whole of what these tests are about: a
+ * live price must never overwrite the close the ranking was computed from, and a board must never
+ * claim a session state the server did not report.
+ */
+describe("BSE trending board, live session", () => {
+  it("says what the exchange is doing, and dates the session it ranked", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+
+    const board = await getBseTrending({ rank: "turnover" });
+
+    expect(board.marketSession).toBe("live");
+    expect(board.sessionDate).toBe("2026-08-14");
+  });
+
+  it("leaves the rows alone when nobody asked for live prices", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    getQuotesFor.mockResolvedValue([quote("HDFCBANK", 800, 10)]);
+
+    const board = await getBseTrending({ rank: "turnover" });
+
+    // Not opted in, so not a single upstream quote was fetched to draw this board.
+    expect(getQuotesFor).not.toHaveBeenCalled();
+    expect(board.rows.every((row) => row.liveQuote === null)).toBe(true);
+    expect(board.liveAsOf).toBeNull();
+  });
+
+  it("hangs a live price beside the session close, without disturbing the ranking", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    getQuotesFor.mockResolvedValue([quote("HDFCBANK", 800, 10.03)]);
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+    const hdfc = board.rows.find((row) => row.ticker === "HDFCBANK");
+
+    expect(hdfc?.liveQuote).toMatchObject({ price: 800, changePercent: 10.03 });
+    // The session figures are untouched: they are what the row was sorted on, and a row showing a
+    // live price where its close belongs would be ranked by a number it no longer displays.
+    expect(hdfc?.price).toBe(727.35);
+    expect(hdfc?.turnoverCr).toBeCloseTo(319, 0);
+    expect(board.rows[0].ticker).toBe("ICICIPRULI");
+    expect(board.liveAsOf).toBe("2026-08-18T06:00:00.000Z");
+  });
+
+  it("asks the feed only about the page it is drawing", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+
+    await getBseTrending({ rank: "turnover", live: true, pageSize: 2, page: 1 });
+
+    // Two rows on the page, two symbols asked for — not the ~4,900 the ranking was computed over.
+    const [subjects] = getQuotesFor.mock.calls[0];
+    expect(subjects).toHaveLength(2);
+    expect(subjects.map((subject: { symbol: string }) => subject.symbol)).toEqual(["ICICIPRULI", "HDFCBANK"]);
+  });
+
+  it("names a scrip to the feed the way the feed knows it", async () => {
+    // A listing newer than the built catalogue: nothing maps its scrip code to a quote symbol.
+    const UNLISTED = { code: "998877", ticker: "NEWCO", name: "Newly Listed Co", marketCapCr: 200, price: 55, previousClose: 50, volume: 90_000, turnover: 4_500_000, trades: 400 };
+    seed([...BOARD, UNLISTED]);
+    marketSessionState.mockReturnValue("live");
+
+    await getBseTrending({ rank: "turnover", live: true, pageSize: 6 });
+
+    const [subjects] = getQuotesFor.mock.calls[0];
+    const symbols: string[] = subjects.map((subject: { yahooSymbol: string }) => subject.yahooSymbol);
+    // A company the catalogue knows is asked for by the line it actually trades on — the NSE one
+    // where it is listed there, which is where the quote feed carries the deeper book.
+    expect(symbols).toContain("HDFCBANK.NS");
+    // Anything the catalogue has never heard of falls back to its BSE scrip code, which is the one
+    // identifier every listed scrip is guaranteed to have.
+    expect(symbols).toContain("998877.BO");
+  });
+
+  it("ignores a print the feed itself does not call live", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    // A stale close dressed as a price is the one thing this board must not show as live.
+    getQuotesFor.mockResolvedValue([quote("HDFCBANK", 800, 10, { live: false })]);
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    expect(board.rows.find((row) => row.ticker === "HDFCBANK")?.liveQuote).toBeNull();
+    expect(board.liveAsOf).toBeNull();
+  });
+
+  it("ignores a live flag with no price behind it", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    getQuotesFor.mockResolvedValue([quote("HDFCBANK", 0, 0, { price: null })]);
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    expect(board.rows.find((row) => row.ticker === "HDFCBANK")?.liveQuote).toBeNull();
+  });
+
+  it("does not price a closed market live", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("closed");
+    getQuotesFor.mockResolvedValue([quote("HDFCBANK", 800, 10)]);
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    expect(getQuotesFor).not.toHaveBeenCalled();
+    expect(board.rows.every((row) => row.liveQuote === null)).toBe(true);
+    expect(board.marketSession).toBe("closed");
+  });
+
+  it("serves the session's board unchanged when the quote feed fails", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    getQuotesFor.mockRejectedValue(new Error("upstream down"));
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    // The board was complete before the feed was asked, so a feed that falls over costs the live
+    // half of a price and nothing else.
+    expect(board.rows).toHaveLength(5);
+    expect(board.rows.every((row) => row.liveQuote === null)).toBe(true);
+    expect(board.liveAsOf).toBeNull();
+  });
+
+  it("reports the newest print on the page as how fresh it is", async () => {
+    seed(BOARD);
+    marketSessionState.mockReturnValue("live");
+    getQuotesFor.mockResolvedValue([
+      quote("HDFCBANK", 800, 1, { asOf: "2026-08-18T06:00:00.000Z" }),
+      quote("ICICIPRULI", 510, 1, { asOf: "2026-08-18T06:02:00.000Z" }),
+      quote("IDEA", 14, 1, { asOf: null }),
+    ]);
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    expect(board.liveAsOf).toBe("2026-08-18T06:02:00.000Z");
+  });
+
+  it("has nothing to price on an empty board", async () => {
+    fetchBse.mockResolvedValue([]);
+    fetchBseText.mockResolvedValue(null);
+    marketSessionState.mockReturnValue("live");
+
+    const board = await getBseTrending({ rank: "turnover", live: true });
+
+    expect(board.rows).toEqual([]);
+    expect(getQuotesFor).not.toHaveBeenCalled();
+    expect(board.liveAsOf).toBeNull();
   });
 });

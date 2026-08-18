@@ -52,6 +52,9 @@ export async function TrendingPayload() {
     rank: OPENING.rank,
     page: OPENING.page,
     pageSize: TRENDING_PAGE_SIZE,
+    // Matching the endpoint: the first paint of this board during market hours carries live prices
+    // rather than waiting for the client's first refresh to correct them.
+    live: true,
   });
 
   const url = buildTrendingUrl(

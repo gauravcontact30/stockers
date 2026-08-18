@@ -20,29 +20,55 @@ export type Prefetched<T> = { url: string; data: T } | null;
  * round trip from what the reader waits through: the old sequence was HTML, then JavaScript, then
  * a fetch, then the numbers, with a skeleton on screen throughout. Changing a filter still goes to
  * the network — from then on the browser is asking a question the server was never asked.
+ *
+ * `refreshMs` opts a board into re-asking on an interval. Without it a board is a photograph taken
+ * when the page loaded: a reader who left a market page open across the close, or simply open for
+ * an hour, was reading figures that had stopped being true without anything on screen admitting it.
+ * The interval only runs while the tab is actually being looked at, and a tab returning to the
+ * foreground refreshes immediately rather than waiting out the rest of a tick it slept through.
+ *
+ * `refreshNow` is for the case where the server's payload is worth rendering but is known to be
+ * incomplete — a board whose live prices the render pass could not fetch, say. The rows still paint
+ * from the server with no skeleton and no round trip, and the board asks once more in the
+ * background straight away rather than waiting out a whole interval to fill in what is missing.
  */
 export function useMarketFeed<T>(
   url: string,
   prefetched?: Prefetched<T>,
+  options?: { refreshMs?: number; refreshNow?: boolean },
 ): { data: T | null; loading: boolean; error: string | null } {
+  const refreshMs = options?.refreshMs;
+  const refreshNow = options?.refreshNow ?? false;
   const seeded = prefetched && prefetched.url === url ? prefetched.data : null;
 
   const [data, setData] = useState<T | null>(seeded);
   const [loading, setLoading] = useState(seeded === null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Request failed");
-      setData(await response.json());
-      setError(null);
-    } catch {
-      setError("Couldn't reach the market data feed right now. Please try again shortly.");
-    } finally {
-      setLoading(false);
-    }
-  }, [url]);
+  /**
+   * @param background true for a refresh of a board that is already on screen.
+   *
+   * A background refresh never touches `loading`, and never clears the rows it is replacing: the
+   * point of refreshing in place is that the reader's eye stays on the numbers, and swapping them
+   * for a skeleton every minute would be worse than not refreshing at all. A failed background
+   * refresh is also silent — the figures on screen are still the last ones the server confirmed,
+   * which is a better thing to show than an error banner over stale-but-real data.
+   */
+  const load = useCallback(
+    async (background = false) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Request failed");
+        setData(await response.json());
+        setError(null);
+      } catch {
+        if (!background) setError("Couldn't reach the market data feed right now. Please try again shortly.");
+      } finally {
+        if (!background) setLoading(false);
+      }
+    },
+    [url],
+  );
 
   // The URL the server's payload answers, held in a ref so it can be spent exactly once. Without
   // this, a board whose reader navigates back to its opening filters would skip the refetch and
@@ -50,13 +76,37 @@ export function useMarketFeed<T>(
   const unspent = useRef(prefetched?.url ?? null);
 
   useEffect(() => {
-    if (unspent.current === url) {
-      unspent.current = null;
-      return;
-    }
+    const seeded = unspent.current === url;
+    if (seeded) unspent.current = null;
+    // A seeded board already has rows on screen and asks again only if it was told to. When it
+    // does, it asks in the background, so the server's rows stay put while the fuller answer lands.
+    if (seeded && !refreshNow) return;
 
-    load();
-  }, [load, url]);
+    load(seeded);
+  }, [load, refreshNow, url]);
+
+  useEffect(() => {
+    if (!refreshMs || refreshMs <= 0) return;
+
+    // `document` is always defined by the time an effect runs, but a board rendered under a test
+    // renderer without a DOM would still reach this line.
+    /* istanbul ignore next */
+    const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
+
+    const timer = setInterval(() => {
+      if (visible()) load(true);
+    }, refreshMs);
+
+    const onVisible = () => {
+      if (visible()) load(true);
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load, refreshMs]);
 
   return { data, loading, error };
 }
