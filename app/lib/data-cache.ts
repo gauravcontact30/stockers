@@ -21,10 +21,32 @@
 // runtime home for these files. A warm instance still reads its own refreshed copy, a cold one
 // falls back to the committed seed, and a host that permits neither write still serves every
 // request â€” it just recomputes more often.
+//
+// ---------------------------------------------------------------------------
+// Why the temporary directory alone was not enough
+// ---------------------------------------------------------------------------
+//
+// The temporary directory belongs to one instance. Two serverless instances of the same
+// deployment do not share it, so a cache written by one is invisible to every other one, and an
+// answer computed once per day was in practice computed once per day *per container*.
+//
+// For most of these files that is only wasted work. For the 8:50 AM AI lock it was the bug: the
+// scheduled invocation locked the day's picks into a container that was then torn down, and the
+// instance rendering the landing page went on reading the copy committed to the repository. The
+// list "generated at 8:50" existed and nobody could see it, so the page generated its own later
+// in the morning instead - after the 9:15 open, from a different code path, with different stocks.
+//
+// So when Supabase is configured there is a row per cache file in `data_cache`, which every
+// instance of the deployment can see, and that is consulted before either local copy. It is a
+// cache and not the record: a Supabase that is down or has no such table costs a slower request,
+// never a failed one, and a deployment without credentials behaves exactly as it did before. A
+// project that has not applied `supabase/migrations/0007-data-cache.sql` says so once, in a 404,
+// and this layer then stands down for the life of the process rather than asking again per read.
 
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isMissingTable, supabaseConfigured, supabaseRequest } from "./supabase";
 
 /** The committed copy: the seed a checkout ships with, and where a writable host keeps them. */
 const BUNDLED_DIR = path.join(process.cwd(), "app", "data");
@@ -56,6 +78,70 @@ export function bundledCachePath(fileName: string): string {
   return path.join(BUNDLED_DIR, fileName);
 }
 
+/** The shared table, or null when this deployment has no Supabase to share through. */
+const SHARED_TABLE = "data_cache";
+
+type SharedRow = { key: string; value: unknown };
+
+/**
+ * Whether the shared table has already reported that it does not exist.
+ *
+ * Latched for the same reason `appDirIsReadOnly` is: an unapplied migration is a property of the
+ * project, not of one request, and re-learning it costs a Supabase round trip on *every single*
+ * cache read. Measured against a project without the table, that was ~260ms added to each of the
+ * dozen or so caches a page reads — an unapplied migration made the whole site slower, which is
+ * the opposite of what a shared cache is for. One 404 and this layer stands down for the life of
+ * the process; applying the migration and redeploying is what brings it back.
+ */
+let sharedTableIsMissing = false;
+
+function sharedUnavailable(): boolean {
+  return sharedTableIsMissing || !supabaseConfigured();
+}
+
+/**
+ * The shared copy of one cache file, or null when there is no Supabase, no row, or no reaching it.
+ *
+ * Every failure is the same answer — null — because this is a cache in front of a cache. A project
+ * that has not applied `supabase/migrations/0007-data-cache.sql` gets a 404 from PostgREST on
+ * every call and still serves every page, from the local copies, exactly as before.
+ */
+async function readShared<T>(fileName: string): Promise<T | null> {
+  if (sharedUnavailable()) return null;
+
+  try {
+    const rows = await supabaseRequest<SharedRow>({
+      method: "GET",
+      path: `${SHARED_TABLE}?key=eq.${encodeURIComponent(fileName)}&select=value&limit=1`,
+    });
+    return (rows[0]?.value as T) ?? null;
+  } catch (error) {
+    if (isMissingTable(error)) sharedTableIsMissing = true;
+    return null;
+  }
+}
+
+/** Saves one cache file to the shared table. Reports whether it landed; never throws. */
+async function writeShared(fileName: string, value: unknown): Promise<boolean> {
+  if (sharedUnavailable()) return false;
+
+  try {
+    // An upsert rather than read-then-write: two instances refreshing the same cache in the same
+    // second is ordinary here, and Postgres deciding the winner is the only version of that with
+    // no gap between the two statements.
+    await supabaseRequest({
+      method: "POST",
+      path: `${SHARED_TABLE}?on_conflict=key`,
+      body: { key: fileName, value, updated_at: new Date().toISOString() },
+      merge: true,
+    });
+    return true;
+  } catch (error) {
+    if (isMissingTable(error)) sharedTableIsMissing = true;
+    return false;
+  }
+}
+
 async function readJsonAt<T>(filePath: string): Promise<T | null> {
   try {
     return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
@@ -69,22 +155,37 @@ async function readJsonAt<T>(filePath: string): Promise<T | null> {
 /**
  * The freshest copy of one cache file, or null when there is none to be had.
  *
- * The runtime copy is read first: it only exists because this deployment wrote it, so it is at
- * least as new as the committed seed underneath it.
+ * Shared, then runtime, then committed seed: each layer is at least as new as the one below it.
+ * The runtime copy only exists because this instance wrote it, so it beats the seed; the shared
+ * row could have been written by any instance, so it beats both.
  */
 export async function readJsonCache<T>(fileName: string): Promise<T | null> {
-  return (await readJsonAt<T>(path.join(RUNTIME_DIR, fileName))) ?? (await readJsonAt<T>(bundledCachePath(fileName)));
+  // Shared first: it is the only copy that a *different* instance of this deployment could have
+  // written, which is what makes a scheduled job's work visible to the pages.
+  return (
+    (await readShared<T>(fileName)) ??
+    (await readJsonAt<T>(path.join(RUNTIME_DIR, fileName))) ??
+    (await readJsonAt<T>(bundledCachePath(fileName)))
+  );
 }
 
 /**
  * Saves one cache file, reporting where it landed. Never throws.
  *
- * The application directory is tried first so that local development keeps updating the committed
- * seeds exactly as it did before; only once it has refused does this fall back to the temporary
- * directory, for good.
+ * The shared row is written whenever there is a Supabase to write it to, because that is the copy
+ * other instances can read; the local write happens either way, so a warm instance still answers
+ * from disk without a round trip and a deployment with no credentials is unaffected.
+ *
+ * The application directory is tried first for the local copy, so that local development keeps
+ * updating the committed seeds exactly as it did before; only once it has refused does this fall
+ * back to the temporary directory, for good.
  */
-export async function writeJsonCache(fileName: string, value: unknown): Promise<"bundled" | "runtime" | "none"> {
+export async function writeJsonCache(
+  fileName: string,
+  value: unknown,
+): Promise<"shared" | "bundled" | "runtime" | "none"> {
   const contents = JSON.stringify(value, null, 2);
+  const shared = await writeShared(fileName, value);
 
   if (!appDirIsReadOnly) {
     try {
@@ -92,7 +193,7 @@ export async function writeJsonCache(fileName: string, value: unknown): Promise<
       await fs.writeFile(bundledCachePath(fileName), contents, "utf8");
       return "bundled";
     } catch (error) {
-      if (!isNotWritable(error)) return "none";
+      if (!isNotWritable(error)) return shared ? "shared" : "none";
       appDirIsReadOnly = true;
     }
   }
@@ -102,13 +203,14 @@ export async function writeJsonCache(fileName: string, value: unknown): Promise<
     await fs.writeFile(path.join(RUNTIME_DIR, fileName), contents, "utf8");
     return "runtime";
   } catch {
-    // Nowhere to keep it. The answer is still an answer â€” the caller returns it and the next
-    // reader recomputes.
-    return "none";
+    // Nowhere local to keep it. Still durable if the shared row took it; otherwise the answer is
+    // still an answer â€” the caller returns it and the next reader recomputes.
+    return shared ? "shared" : "none";
   }
 }
 
-/** Test seam: forget that the application directory refused a write. */
+/** Test seam: forget that the application directory refused a write, and that the table was absent. */
 export function resetCacheWritability(): void {
   appDirIsReadOnly = false;
+  sharedTableIsMissing = false;
 }

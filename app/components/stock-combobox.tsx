@@ -207,7 +207,7 @@ export function StockCombobox({
         }`}
       >
         {selected ? (
-          <CompanyLogo symbol={selected.symbol} size={36} />
+          <CompanyLogo symbol={selected.symbol} size={36} preferReal />
         ) : (
           <svg viewBox="0 0 20 20" aria-hidden="true" className="ml-1 h-5 w-5 shrink-0 text-slate-400 dark:text-slate-500">
             <path
@@ -314,7 +314,7 @@ export function StockCombobox({
                       index === active ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-transparent"
                     }`}
                   >
-                    <CompanyLogo symbol={suggestion.symbol} size={32} />
+                    <CompanyLogo symbol={suggestion.symbol} size={32} preferReal />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline gap-2">
                         <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">

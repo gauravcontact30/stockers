@@ -15,13 +15,22 @@ it is safe to run twice.
 | `subscription_payments` | One row per payment Razorpay confirmed — the revenue ledger | Written |
 | `client_reviews` | Landing-page testimonials | **Not yet** — see below |
 | `stocks` | The listed-company catalogue | **Not yet** — see below |
+| `data_cache` | The daily JSON caches under `app/data`, shared across instances | Yes |
 
 Where a store has a local fallback, configuration alone decides which is used:
 
-| `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Accounts | Analytics | Presence | Portfolios | Feature locks | AI telemetry | Platform logs |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| set | Supabase (Postgres) | Supabase | Supabase | Supabase | Supabase | Supabase + memory | Supabase + memory |
-| not set | `app/data/users.json` | `app/data/analytics-events.json` | `app/data/live-sessions.json` | `app/data/portfolio-holdings.json` | `app/data/feature-locks.json` | process memory | process memory |
+| `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Accounts | Analytics | Presence | Portfolios | Feature locks | AI telemetry | Platform logs | Daily caches |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| set | Supabase (Postgres) | Supabase | Supabase | Supabase | Supabase | Supabase + memory | Supabase + memory | Supabase + local file |
+| not set | `app/data/users.json` | `app/data/analytics-events.json` | `app/data/live-sessions.json` | `app/data/portfolio-holdings.json` | `app/data/feature-locks.json` | process memory | process memory | local file only |
+
+**`data_cache`** is the one table that is a cache rather than a record. Each row is one of the JSON
+files under `app/data` — the 8:50 AM AI lock's picks, the daily predictions, the returns tables —
+keyed by file name. It exists because the application directory is read-only on a serverless host
+and each instance's temporary directory is its own: without a shared row, a cache written by the
+scheduled invocation is invisible to the instance that renders the page, and the 8:50 lock in
+particular was being written into a container that was then torn down. Losing this table costs
+slower requests and nothing else.
 
 The last two rows of the first table are provisioned but not yet read:
 

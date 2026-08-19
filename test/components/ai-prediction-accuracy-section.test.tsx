@@ -162,7 +162,7 @@ describe("AiPredictionAccuracySection", () => {
     render(<AiPredictionAccuracySection />);
 
     expect(screen.getByText("Locked AI picks versus real BSE top performers")).toBeInTheDocument();
-    expect(await screen.findByText("10% accurate")).toBeInTheDocument();
+    expect(await screen.findByText("1 of 10 picks landed")).toBeInTheDocument();
 
     const predicted = screen.getByRole("region", { name: "AI locked picks before open" });
     const actual = screen.getByRole("region", { name: "Actual top performers live today" });
@@ -179,73 +179,94 @@ describe("AiPredictionAccuracySection", () => {
     expect(screen.getAllByTestId("logo-AAA")[0]).toHaveAttribute("data-src", "");
   });
 
-  it("scores today's locked picks against today's live top ten in the three cards", async () => {
-    render(<AiPredictionAccuracySection />);
-
-    // Lock status: how much of the ten-slot list is locked and held.
-    expect(await screen.findByLabelText("Lock integrity: 20%")).toBeInTheDocument();
-    expect(screen.getByText("Locked for today")).toBeInTheDocument();
-    expect(screen.getByText("2/10 locked Large cap stocks for 2026-08-16")).toBeInTheDocument();
-
-    // Prediction engine: was the stated confidence honest about what it delivered?
-    expect(screen.getByLabelText("Confidence calibration: 73%")).toBeInTheDocument();
-    expect(screen.getByText("Claimed 77% confidence, delivered 50%")).toBeInTheDocument();
-    expect(screen.getByText("AI picks +1.50% vs market +6.50%")).toBeInTheDocument();
-
-    // Accuracy check: the blended score, from the two boards below it.
-    expect(screen.getByLabelText("AI intelligence: 54%")).toBeInTheDocument();
-    expect(screen.getByText("1/10 in today's live top 10")).toBeInTheDocument();
-    expect(screen.getByText("Rank accuracy 89% · 0/10 picks beat the Large cap average")).toBeInTheDocument();
-    expect(screen.getByText("Edge -5.00% vs the live Large cap top 10")).toBeInTheDocument();
-  });
-
-  it("splits the comparison into an AI panel and a live-market panel", async () => {
-    render(<AiPredictionAccuracySection />);
-
-    const ai = await screen.findByRole("region", { name: "AI locked picks" });
-    const market = screen.getByRole("region", { name: "Live BSE market" });
-
-    // The AI's own claim, on its own side.
-    expect(within(ai).getByText("54%")).toBeInTheDocument();
-    expect(within(ai).getByText("Stated confidence")).toBeInTheDocument();
-    expect(within(ai).getByText("77%")).toBeInTheDocument();
-    expect(within(ai).getByText("+1.50%")).toBeInTheDocument();
-    expect(within(ai).getByText("1 of 10 in the live top 10")).toBeInTheDocument();
-    expect(within(ai).getByText("AAA")).toBeInTheDocument();
-
-    // What the exchange actually did, on the other.
-    expect(within(market).getByText("Live session")).toBeInTheDocument();
-    expect(within(market).getAllByText("+6.50%").length).toBeGreaterThan(0);
-    expect(within(market).getByText("CCC")).toBeInTheDocument();
-    expect(within(market).getByText("Live")).toBeInTheDocument();
-    // The two sides do not repeat each other's figures.
-    expect(within(market).queryByText("Stated confidence")).not.toBeInTheDocument();
-  });
-
-  it("keeps only comparison figures in the verdict strip, with a score per cap tier", async () => {
+  it("answers the one question the board exists for, in words", async () => {
     render(<AiPredictionAccuracySection />);
 
     const verdict = await screen.findByRole("region", { name: "AI versus market verdict" });
 
-    expect(within(verdict).getByText("Edge vs market")).toBeInTheDocument();
-    expect(within(verdict).getByText("-5.00%")).toBeInTheDocument();
-    expect(within(verdict).getByText("Picks in live top 10")).toBeInTheDocument();
-    expect(within(verdict).getByText("Confidence calibration")).toBeInTheDocument();
-    expect(within(verdict).getByText("73%")).toBeInTheDocument();
-    expect(within(verdict).getByText("Large 54%")).toBeInTheDocument();
-    expect(within(verdict).getByText("Mid 0%")).toBeInTheDocument();
-    expect(within(verdict).getByText("All 54%")).toBeInTheDocument();
+    // The AI's ten moved +1.50%, the market's ten +6.50%, so the market is 5 points ahead. The
+    // reader is told that rather than being handed an "edge" to subtract for themselves.
+    expect(within(verdict).getByText("The market is ahead by 5.00 points")).toBeInTheDocument();
+    expect(within(verdict).getByText("The AI's 10 picks")).toBeInTheDocument();
+    expect(within(verdict).getByText("+1.50%")).toBeInTheDocument();
+    expect(within(verdict).getByText("The market's top 10")).toBeInTheDocument();
+    expect(within(verdict).getByText("+6.50%")).toBeInTheDocument();
+    expect(within(verdict).getByText(/Large cap · Live session/)).toBeInTheDocument();
+  });
+
+  it("says so plainly when the AI is the one ahead", async () => {
+    const ahead = {
+      ...payload,
+      scorecard: {
+        ...payload.scorecard,
+        byCap: {
+          ...payload.scorecard.byCap,
+          Large: { ...payload.scorecard.byCap.Large, avgPickMovePercent: 6.5, avgMarketMovePercent: 1.5, edgePercent: 5 },
+        },
+      },
+    };
+    global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(ahead) })) as unknown as typeof fetch;
+
+    render(<AiPredictionAccuracySection />);
+
+    expect(await screen.findByText("The AI is ahead by 5.00 points")).toBeInTheDocument();
+  });
+
+  it("calls a dead heat a dead heat rather than a win by nothing", async () => {
+    const level = {
+      ...payload,
+      scorecard: {
+        ...payload.scorecard,
+        byCap: {
+          ...payload.scorecard.byCap,
+          Large: { ...payload.scorecard.byCap.Large, avgPickMovePercent: 2, avgMarketMovePercent: 2, edgePercent: 0 },
+        },
+      },
+    };
+    global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(level) })) as unknown as typeof fetch;
+
+    render(<AiPredictionAccuracySection />);
+
+    expect(await screen.findByText("Too close to call")).toBeInTheDocument();
+  });
+
+  it("reduces the board to four plain answers and a per-tier count", async () => {
+    render(<AiPredictionAccuracySection />);
+
+    expect(await screen.findByText("Picks that landed")).toBeInTheDocument();
+    expect(screen.getByText("1 of 10")).toBeInTheDocument();
+    expect(screen.getByText("In today's real large cap top 10.")).toBeInTheDocument();
+
+    // The AI's best of its two, and the market's best, named rather than scored.
+    expect(screen.getByText("The AI's best pick")).toBeInTheDocument();
+    expect(screen.getByText("The market's best")).toBeInTheDocument();
+    expect(screen.getByText("Next list of 10")).toBeInTheDocument();
+    expect(screen.getByText("All 10 stocks are replaced at that lock.")).toBeInTheDocument();
+
+    // The per-tier strip, in the same units as the card above it: how many of the ten landed.
+    expect(screen.getByText("Large 1/10")).toBeInTheDocument();
+    expect(screen.getByText("Mid 0/10")).toBeInTheDocument();
+    expect(screen.getByText("Small 0/10")).toBeInTheDocument();
+    expect(screen.getByText(/Picked by test\/model\./)).toBeInTheDocument();
+  });
+
+  it("names the fallback ranking when no model picked the list", async () => {
+    const fallback = { ...payload, source: "heuristic" as const, model: null };
+    global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(fallback) })) as unknown as typeof fetch;
+
+    render(<AiPredictionAccuracySection />);
+
+    expect(await screen.findByText(/Picked by the fallback ranking\./)).toBeInTheDocument();
   });
 
   it("moves the scoreboard to the cap tier the reader selected", async () => {
     render(<AiPredictionAccuracySection />);
 
-    await screen.findByRole("region", { name: "AI locked picks" });
+    await screen.findByRole("region", { name: "AI versus market verdict" });
     fireEvent.change(screen.getByLabelText("AI locked picks before open cap filter"), { target: { value: "Small" } });
 
-    expect(screen.getByText("Small cap - AI side")).toBeInTheDocument();
-    expect(screen.getByText("Small cap - market side")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "AI versus market verdict" })).toHaveTextContent("AI versus market, small cap");
+    expect(screen.getByRole("region", { name: "AI versus market verdict" })).toHaveTextContent("Small cap");
+    expect(screen.getByText("In today's real small cap top 10.")).toBeInTheDocument();
   });
 
   it("moves both boards and the cards together when either cap filter changes", async () => {
@@ -257,7 +278,7 @@ describe("AiPredictionAccuracySection", () => {
     fireEvent.change(predictedFilter, { target: { value: "Small" } });
     expect(predictedFilter).toHaveValue("Small");
     expect(actualFilter).toHaveValue("Small");
-    expect(screen.getByText("Edge +0.00% vs the live Small cap top 10")).toBeInTheDocument();
+    expect(screen.getByText("In today's real small cap top 10.")).toBeInTheDocument();
 
     fireEvent.change(actualFilter, { target: { value: "Mid" } });
     expect(predictedFilter).toHaveValue("Mid");
@@ -293,8 +314,9 @@ describe("AiPredictionAccuracySection", () => {
     render(<AiPredictionAccuracySection />);
 
     await waitFor(() => expect(screen.getAllByText("No locked prediction today")).toHaveLength(1));
-    expect(screen.getByText("No real 8:50 AM IST AI lock exists for this trading date")).toBeInTheDocument();
     expect(screen.getByText("No locked AI prediction was generated at 8:50 AM IST for 2026-08-16.")).toBeInTheDocument();
+    // Nothing is invented for the empty half: the card says there is no pick rather than showing one.
+    expect(screen.getByText("No picks are locked for this tier.")).toBeInTheDocument();
     expect(screen.queryByText("RELIANCE")).not.toBeInTheDocument();
     expect(screen.queryByText("TATAPOWER")).not.toBeInTheDocument();
     const actual = screen.getByRole("region", { name: "Actual top performers live today" });
@@ -316,9 +338,9 @@ describe("AiPredictionAccuracySection", () => {
 
     render(<AiPredictionAccuracySection />);
 
-    expect(await screen.findByText("Holding 2026-08-16 picks")).toBeInTheDocument();
-    expect(screen.getByText(held.message)).toBeInTheDocument();
-    expect(screen.getByText(/Next AI lock: 8:50 am IST/i)).toBeInTheDocument();
+    expect(await screen.findByText(held.message)).toBeInTheDocument();
+    expect(screen.getByText("Next list of 10")).toBeInTheDocument();
+    expect(screen.getByText(/8:50 am, 17 Aug/i)).toBeInTheDocument();
   });
 
   it("filters, clears and paginates real top-ten rows from the API", async () => {

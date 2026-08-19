@@ -1,11 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
+import { CACHE_TAGS, revalidating } from "./cache";
 import { readJsonCache, writeJsonCache } from "./data-cache";
 import { getBseMovers, getBseRows, type BseCapTier, type BseQuote, type BseStock } from "./bse-market";
 import { bseCatalogue, type CatalogueEntry } from "./bse-catalogue";
 import { findStock } from "./stock-search";
-import { getMarketNews, type NewsItem } from "./market-news";
+import { classifySentiment, fetchNewsQuery, getMarketNews, matchCompany, type NewsItem } from "./market-news";
 import { getQuotesFor, type LiveQuote, type QuoteSubject } from "./market-data";
 import { aiModel, chatJson, extractJsonObject } from "./openrouter";
 // The exchange clock. It used to live here, and moved out when the market boards needed the same
@@ -590,16 +591,89 @@ function heuristicPicks(candidates: Candidate[], capTier: BseCapTier): LockedPre
   }));
 }
 
+/**
+ * The searches the 8:50 lock runs, over and above the news board's own market feed.
+ *
+ * The market feed exists to fill a news panel: four searches, twelve headlines kept from each, and
+ * one of the four deliberately looks for stories about shares *falling*. Measured against a live
+ * morning it yielded 48 headlines, 5 of them positive, 2 of those about a company that could be
+ * identified — which is two usable signals to choose thirty stocks from. The shortlist was
+ * therefore built almost entirely from the momentum top-up underneath it, and the model, handed
+ * candidates with an empty `positiveNews` field, ranked them the only way it could: by yesterday's
+ * change percent. Every pick came back with no news signals and no sources attached, which is
+ * exactly what the landing page showed.
+ *
+ * These searches are phrased the way *good* news about one listed company is written — an order
+ * won, a rating raised, a result beaten, a plant announced — and keep twice as many results each.
+ * The same morning yielded 124 headlines, 62 positive, 30 distinct listed companies. That is a
+ * shortlist the model can actually reason about.
+ */
+const PRE_OPEN_NEWS_QUERIES = [
+  '("order win" OR "bags order" OR "wins contract" OR "secures order" OR "order book") (BSE OR NSE OR India) when:2d',
+  '("target price raised" OR "upgrades" OR "buy rating" OR "brokerage bullish" OR "outperform") India stock when:2d',
+  '("shares surge" OR "shares jump" OR "shares rally" OR "stock soars" OR "hits record high" OR "52-week high") India when:2d',
+  '("profit rises" OR "profit jumps" OR "beats estimates" OR "strong results" OR "revenue growth") India company when:3d',
+  '("buyback" OR "dividend announced" OR "bonus issue" OR "stake buy" OR "expansion plan" OR "new plant") India listed when:3d',
+];
+
+const PRE_OPEN_NEWS_LIMIT = 25;
+
+/**
+ * Sentiment and company for a headline that arrived raw.
+ *
+ * `fetchNewsQuery` is the shared retrieval path and does no judging: every item comes back
+ * Neutral with no company attached. Items that came through `getMarketNews` have already been
+ * labelled — by the model where one is configured — so they are left exactly as they are rather
+ * than second-guessed by the keyword classifier.
+ */
+function identified(item: NewsItem): NewsItem {
+  const text = `${item.title} ${item.summary}`;
+  return { ...item, sentiment: classifySentiment(text), ...matchCompany(text) };
+}
+
+/**
+ * This morning's positive coverage of individual listed companies.
+ *
+ * Cached for ten minutes so that a scheduled run and a page load arriving together — or several
+ * readers arriving at 8:50 on an instance that has not locked yet — cost one set of searches
+ * rather than one each. A failing search costs its own results and nothing else.
+ */
+const positiveNewsPool = revalidating<NewsItem[]>({
+  key: "predictions:pre-open-news",
+  ttlMs: 10 * 60_000,
+  ttlFor: (items) => (items.length > 0 ? 10 * 60_000 : 60_000),
+  tags: [CACHE_TAGS.news, CACHE_TAGS.ai],
+  persist: true,
+  load: async () => {
+    const [market, ...batches] = await Promise.all([
+      getMarketNews(null).then((feed) => feed.items).catch(() => [] as NewsItem[]),
+      ...PRE_OPEN_NEWS_QUERIES.map((query) =>
+        fetchNewsQuery(query, { limit: PRE_OPEN_NEWS_LIMIT }).then((items) => items.map(identified)),
+      ),
+    ]);
+
+    // Merged by URL: the same story reaching two searches is one headline, not two votes.
+    const merged = new Map<string, NewsItem>();
+    for (const item of [...market, ...batches.flat()]) {
+      if (!merged.has(item.url)) merged.set(item.url, item);
+    }
+
+    return [...merged.values()]
+      .filter((item) => item.sentiment === "Positive" && item.symbol)
+      .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
+  },
+});
+
 async function buildCandidates(): Promise<Candidate[]> {
   const [news, bseRows] = await Promise.all([
-    getMarketNews(null).catch(() => ({ items: [] as NewsItem[] })),
+    positiveNewsPool().catch(() => [] as NewsItem[]),
     getBseRows(),
   ]);
   const rows = bseRows.rows;
   const rowMap = buildRowMaps(rows);
   const grouped = new Map<string, Candidate>();
 
-  for (const item of news.items) {
+  for (const item of news) {
     if (item.sentiment !== "Positive" || !item.symbol) continue;
     const stock = findStock(item.symbol);
     if (!stock) continue;
@@ -785,17 +859,41 @@ type LockAttempt =
   | { ok: true; cache: LockedPredictionCache }
   | { ok: false; shortTier: BseCapTier; available: number };
 
+/**
+ * Builds the day's list: the AI's ten per cap tier, from a shortlist led by this morning's
+ * positive coverage.
+ *
+ * A run that lands after the 9:15 open still goes through the news and the model. It used to drop
+ * to `buildMarketCandidates` — the day's biggest movers so far, ranked by how much they had
+ * already risen — which is not a prediction at all, and is what the landing page was showing on
+ * any morning the scheduler was late: ten stocks with no confidence the AI had stated, no reason
+ * beyond "went up", and no sources. Being late is worth disclosing, which `generatedAfterCutoff`
+ * does; it is not worth answering with a different kind of thing. The market shortlist survives
+ * only as the fallback for a tier the news-led one cannot fill.
+ */
 async function generateLockedPrediction(now: Date): Promise<LockAttempt> {
   const generatedAfterCutoff = !isBeforePredictionCutoff(now);
-  const candidates = generatedAfterCutoff ? await buildMarketCandidates() : await buildCandidates();
+  const candidates = await buildCandidates();
   const picksByCap = emptyCapRows<LockedPredictionPick>();
-  let source: PredictionSource = generatedAfterCutoff ? "heuristic" : "ai";
+  let source: PredictionSource = "ai";
+  let marketFallback: Candidate[] | null = null;
 
   for (const capTier of CAP_TIERS) {
-    const capCandidates = candidates
+    let capCandidates = candidates
       .filter((candidate) => candidate.capTier === capTier)
       .slice(0, CANDIDATE_COUNT);
-    const generated = generatedAfterCutoff ? null : await aiPicks(capCandidates, capTier);
+
+    // A tier the shortlist came up short on is topped up from the whole exchange rather than
+    // failing the entire run, which would leave the morning on yesterday's list.
+    if (capCandidates.length < PICK_COUNT) {
+      marketFallback ??= await buildMarketCandidates();
+      const seen = new Set(capCandidates.map((candidate) => candidate.symbol));
+      capCandidates = capCandidates
+        .concat(marketFallback.filter((row) => row.capTier === capTier && !seen.has(row.symbol)))
+        .slice(0, CANDIDATE_COUNT);
+    }
+
+    const generated = await aiPicks(capCandidates, capTier);
     if (!generated) source = "heuristic";
     const picks = generated ?? heuristicPicks(capCandidates, capTier);
     if (picks.length < PICK_COUNT) return { ok: false, shortTier: capTier, available: capCandidates.length };

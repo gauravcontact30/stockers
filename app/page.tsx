@@ -9,6 +9,7 @@ import { Logo } from "./components/logo";
 import { MobileNav } from "./components/mobile-nav";
 import { StreamedOwnershipBoard } from "./components/streamed-ownership-board";
 import { PendingSubscriptionCheckout } from "./components/pending-subscription-checkout";
+import { WelcomeModal } from "./components/welcome-modal";
 import { PricingPlans } from "./components/pricing-plans";
 import { ScrollToSection } from "./components/scroll-to-section";
 import { SiteFooter } from "./components/site-footer";
@@ -318,6 +319,9 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
 
       <BackToTop />
       <PendingSubscriptionCheckout />
+      {/* Greets a browser that has never been here before, ten seconds in. Silent for everybody
+          else, and it fetches nothing until the timer fires. */}
+      <WelcomeModal />
     </main>
   );
 }

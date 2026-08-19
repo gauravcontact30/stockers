@@ -15,7 +15,7 @@ import {
 } from "../../app/lib/bse-ai-prediction-accuracy";
 import { readJsonCache, writeJsonCache } from "../../app/lib/data-cache";
 import { getBseMovers, getBseRows } from "../../app/lib/bse-market";
-import { getMarketNews } from "../../app/lib/market-news";
+import { classifySentiment, fetchNewsQuery, getMarketNews, matchCompany } from "../../app/lib/market-news";
 import { getQuotesFor } from "../../app/lib/market-data";
 import { chatJson } from "../../app/lib/openrouter";
 import { findStock } from "../../app/lib/stock-search";
@@ -32,6 +32,18 @@ jest.mock("../../app/lib/bse-market", () => ({
 
 jest.mock("../../app/lib/market-news", () => ({
   getMarketNews: jest.fn(),
+  fetchNewsQuery: jest.fn(),
+  classifySentiment: jest.fn(() => "Neutral"),
+  matchCompany: jest.fn(() => ({ symbol: null, company: null })),
+}));
+
+// The pre-open news pool is wrapped in the app's revalidating cache, which would otherwise hold
+// one test's headlines for the ten minutes that follow — i.e. for every test after it in this
+// file. Passed straight through, each call loads afresh, which is what these tests are asserting.
+jest.mock("../../app/lib/cache", () => ({
+  CACHE_TAGS: { bse: "bse", nse: "nse", ai: "ai", news: "news", quotes: "quotes" },
+  revalidating: <T,>(options: { load: () => Promise<T> }) =>
+    Object.assign(() => options.load(), { fresh: () => options.load(), peek: () => null }),
 }));
 
 jest.mock("../../app/lib/market-data", () => ({
@@ -53,6 +65,9 @@ const write = writeJsonCache as jest.MockedFunction<typeof writeJsonCache>;
 const rows = getBseRows as jest.MockedFunction<typeof getBseRows>;
 const movers = getBseMovers as jest.MockedFunction<typeof getBseMovers>;
 const news = getMarketNews as jest.MockedFunction<typeof getMarketNews>;
+const newsQuery = fetchNewsQuery as jest.MockedFunction<typeof fetchNewsQuery>;
+const classify = classifySentiment as jest.MockedFunction<typeof classifySentiment>;
+const match = matchCompany as jest.MockedFunction<typeof matchCompany>;
 const quotes = getQuotesFor as jest.MockedFunction<typeof getQuotesFor>;
 const ai = chatJson as jest.MockedFunction<typeof chatJson>;
 const find = findStock as jest.MockedFunction<typeof findStock>;
@@ -160,6 +175,10 @@ beforeEach(() => {
     source: "google-news",
     classifier: "heuristic",
   });
+  // `clearAllMocks` forgets calls but keeps implementations, so the per-test ones are re-set here.
+  newsQuery.mockResolvedValue([]);
+  classify.mockReturnValue("Neutral");
+  match.mockReturnValue({ symbol: null, company: null });
   find.mockImplementation((symbol) => ({
     symbol: symbol.toUpperCase(),
     name: `${symbol.toUpperCase()} Ltd`,
@@ -436,6 +455,10 @@ describe("getBseAiPredictionAccuracy", () => {
     expect(report.status).toBe("locked");
     expect(report.source).toBe("heuristic");
     expect(report.message).toContain("initialized after the 9:15 AM IST open");
+    // Late is disclosed, not answered with a different kind of list: the morning's positive
+    // coverage and the model are still what the picks come from.
+    expect(news).toHaveBeenCalled();
+    expect(ai).toHaveBeenCalled();
     expect(report.predictionsByCap.Large).toHaveLength(10);
     expect(report.predictionsByCap.Mid).toHaveLength(10);
     expect(report.predictionsByCap.Small).toHaveLength(10);
@@ -457,8 +480,6 @@ describe("getBseAiPredictionAccuracy", () => {
         }),
       }),
     );
-    expect(ai).not.toHaveBeenCalled();
-    expect(news).not.toHaveBeenCalled();
   });
 
   it("does not create a new prediction after market close if none was locked", async () => {
@@ -494,6 +515,62 @@ describe("getBseAiPredictionAccuracy", () => {
           Small: expect.any(Array),
         }),
       }),
+    );
+  });
+
+  it("shortlists from the dedicated pre-open searches, not only the news board's market feed", async () => {
+    // The market feed on its own is a news panel's feed: four searches, one of them looking for
+    // shares falling. On a live morning it yielded two usable company signals, which is what left
+    // every pick with an empty `positiveNewsSignals` array on the landing page.
+    news.mockResolvedValue({
+      scope: "Indian markets",
+      items: [],
+      fetchedAt: "2026-08-17T02:00:00.000Z",
+      source: "google-news",
+      classifier: "heuristic",
+    });
+    newsQuery.mockResolvedValue([
+      {
+        id: "news-bbb",
+        title: "BBB bags Rs 900 crore order from Indian Railways",
+        summary: "",
+        source: "Publisher",
+        url: "https://example.com/bbb",
+        publishedAt: "2026-08-17T02:30:00.000Z",
+        sentiment: "Neutral",
+        symbol: null,
+        company: null,
+      },
+    ]);
+    classify.mockReturnValue("Positive");
+    match.mockReturnValue({ symbol: "BBB", company: "BBB Ltd" });
+
+    const report = await getBseAiPredictionAccuracy(new Date("2026-08-17T03:30:00.000Z"));
+
+    expect(newsQuery).toHaveBeenCalledTimes(5);
+    expect(report.predictions[0].symbol).toBe("BBB");
+    expect(report.predictions[0].positiveNewsSignals).toEqual(["BBB bags Rs 900 crore order from Indian Railways"]);
+    expect(report.predictions[0].sources?.[0]).toEqual(
+      expect.objectContaining({ url: "https://example.com/bbb", publisher: "Publisher" }),
+    );
+  });
+
+  it("hands the model the headlines behind each candidate", async () => {
+    let handed: unknown = null;
+    ai.mockImplementation(async (options) => {
+      handed ??= JSON.parse((options as { user: string }).user);
+      return null;
+    });
+
+    await getBseAiPredictionAccuracy(new Date("2026-08-17T03:30:00.000Z"));
+
+    expect(handed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ticker: "AAA",
+          positiveNews: [expect.objectContaining({ title: "AAA shares jump after order win" })],
+        }),
+      ]),
     );
   });
 

@@ -458,10 +458,11 @@ describe("HeadToHead", () => {
     const yours = screen.getByRole("region", { name: "You" });
     const theirs = screen.getByRole("region", { name: "The AI" });
 
-    // Every row on both cards carries the company's own mark.
-    expect(within(yours).getByTestId("logo-TCS")).toBeInTheDocument();
+    // Every row on both cards carries the company's own mark — and so does every other place a
+    // ticker is named, which for TCS is its own row plus the "Weakest" summary above the board.
+    expect(within(yours).getAllByTestId("logo-TCS")).toHaveLength(2);
     expect(within(yours).getByText("60")).toBeInTheDocument();
-    expect(within(theirs).getByTestId("logo-HAL")).toBeInTheDocument();
+    expect(within(theirs).getAllByTestId("logo-HAL").length).toBeGreaterThan(0);
     expect(within(theirs).getByText("71")).toBeInTheDocument();
     expect(within(yours).queryByTestId("logo-HAL")).not.toBeInTheDocument();
 

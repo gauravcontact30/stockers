@@ -42,12 +42,15 @@ const CHROME = {
     badge: "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200",
     bar: "bg-sky-500 dark:bg-sky-400",
     score: "text-sky-700 dark:text-sky-300",
+    /** The same team colour, for digits sitting on the scoreboard's dark plate. */
+    plate: "text-sky-300",
   },
   ai: {
     card: "border-violet-200 bg-violet-50/70 dark:border-violet-500/25 dark:bg-violet-500/10",
     badge: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
     bar: "bg-violet-500 dark:bg-violet-400",
     score: "text-violet-700 dark:text-violet-300",
+    plate: "text-violet-300",
   },
 } as const;
 
@@ -78,7 +81,7 @@ function LockedSlot({ pick, chrome, label }: { pick: SlotPick; chrome: "human" |
 
   return (
     <div aria-label={label} className={`flex w-full items-center gap-2 overflow-hidden rounded-xl border px-2 py-1.5 ${tone}`}>
-      <CompanyLogo symbol={pick.symbol} size={24} />
+      <CompanyLogo symbol={pick.symbol} size={24} preferReal />
       <span className="min-w-0 flex-1 leading-tight">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-xs font-bold">{pick.symbol}</span>
@@ -180,18 +183,56 @@ const MATRIX: { key: MatrixKey; label: string; scored: boolean }[] = [
   { key: "overall", label: "ALL", scored: false },
 ];
 
-function PickRow({ pick, tone }: { pick: Contender; tone: string }) {
+/**
+ * The standing plate at the head of each row: position within the side, medalled at the top.
+ *
+ * Gold, silver and bronze rather than five identical chips, because the ranking is the thing a
+ * scoreboard is for — a reader should be able to see which of the five carried the side without
+ * comparing five numbers to each other.
+ */
+const RANK_PLATE = [
+  "bg-amber-400 text-amber-950 ring-amber-500/50 dark:bg-amber-400 dark:text-amber-950",
+  "bg-slate-300 text-slate-800 ring-slate-400/50 dark:bg-slate-400 dark:text-slate-900",
+  "bg-orange-300 text-orange-950 ring-orange-400/50 dark:bg-orange-400/90 dark:text-orange-950",
+] as const;
+
+function rankPlate(rank: number): string {
+  return RANK_PLATE[rank - 1] ?? "bg-slate-200 text-slate-600 ring-slate-300/60 dark:bg-white/10 dark:text-slate-300 dark:ring-white/15";
+}
+
+/**
+ * One competitor's line on the board.
+ *
+ * Read left to right it is a scoreboard row and nothing else: the standing, who is standing there,
+ * and the score on its own lit plate, with the run of returns underneath as a box score — a header
+ * of windows over a line of figures, which is how a reader already knows to read a table of
+ * results. The four windows the score actually weighs are the lit columns; the rest are context,
+ * and saying which is which is the difference between showing the workings and decorating.
+ */
+function PickRow({ pick, rank, tone, rail }: { pick: Contender; rank: number; tone: string; rail: string }) {
   // A company the price feed could not answer for has no windows at all. Its score is the engine's
   // neutral 50 rather than a measurement, and saying so is the difference between an honest card
   // and one that quietly presents a default as a result.
   const unpriced = MATRIX.every((window) => pick[window.key] === null);
 
   return (
-    <li className="rounded-xl bg-white/70 p-2.5 dark:bg-white/5">
-      {/* The company, then the score. Two lines rather than one crowded row: nine return figures
-          and a company identity competing for one line is what made the stats unreadable. */}
-      <div className="flex items-start gap-2.5">
-        <CompanyLogo symbol={pick.symbol} size={28} />
+    <li
+      className={`overflow-hidden rounded-xl border bg-white/80 dark:bg-white/5 ${
+        rank === 1
+          ? "border-amber-300/80 shadow-[0_1px_0_0_rgba(251,191,36,0.35)] dark:border-amber-400/30"
+          : "border-slate-200/80 dark:border-white/10"
+      }`}
+    >
+      <div className="flex items-stretch gap-2.5 p-2.5">
+        {/* The standing, as its own plate rather than a number floating beside the logo. */}
+        <div
+          className={`flex w-8 shrink-0 flex-col items-center justify-center gap-0.5 self-start rounded-lg py-1 ring-1 ${rankPlate(rank)}`}
+        >
+          <span className="text-[13px] font-black leading-none tabular-nums">{rank}</span>
+          <span className="text-[7px] font-bold uppercase leading-none tracking-wider opacity-70">Rank</span>
+        </div>
+
+        <CompanyLogo symbol={pick.symbol} size={28} preferReal />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -199,6 +240,11 @@ function PickRow({ pick, tone }: { pick: Contender; tone: string }) {
               {pick.symbol}
             </span>
             <CapTierBadge raw={pick.capTier} />
+            {rank === 1 && (
+              <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-px text-[8px] font-black uppercase tracking-wider text-amber-800 dark:bg-amber-400/20 dark:text-amber-300">
+                Leader
+              </span>
+            )}
           </div>
           {pick.name && (
             <p className="truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">{pick.name}</p>
@@ -215,51 +261,79 @@ function PickRow({ pick, tone }: { pick: Contender; tone: string }) {
           </div>
         </div>
 
-        <div className="shrink-0 text-right">
-          <p
-            className={`text-xl font-bold leading-none tabular-nums ${tone}`}
+        {/* The lit plate. Dark in both themes, because a scoreboard's digits read off a dark
+            ground and that is what tells the eye this number is the result and not another stat.
+            The unlit "88" sits behind the score the way a real segment display shows every segment
+            it is not currently using, which is most of what makes one look like one. */}
+        <div className="relative flex w-[3.4rem] shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg bg-slate-900 px-1 py-1.5 ring-1 ring-slate-700 dark:bg-slate-950 dark:ring-white/15">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-1.5 text-center font-mono text-xl font-black leading-none tabular-nums text-white/[0.07]"
+          >
+            888
+          </span>
+          <span
+            className={`relative font-mono text-xl font-black leading-none tabular-nums ${tone}`}
             title={unpriced ? "Neutral: no returns to score" : undefined}
           >
             {pick.score}
-          </p>
-          <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Score
-          </p>
+          </span>
+          <span className="relative mt-1 text-[7px] font-bold uppercase leading-none tracking-[0.14em] text-slate-400">
+            Points
+          </span>
+          {/* The score as a rail as well as a figure: 0-100, so it is the score itself. */}
+          <span className="relative mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-white/15">
+            <span className={`block h-full rounded-full ${rail}`} style={{ width: `${pick.score}%` }} />
+          </span>
         </div>
       </div>
 
       {unpriced && (
-        <p className="mt-1.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400">
+        <p className="px-2.5 pb-1.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400">
           No price history — scored neutral
         </p>
       )}
 
-      {/* The whole record, on one line that scrolls rather than a grid that wraps.
-          Nine cells wrapped across two rows of a five-column grid read as noise; a single strip a
-          reader can push sideways keeps the windows in order and every figure at a legible size.
-          The four the score weighs are ringed and carry a dot; the rest are context. */}
-      <div className="mt-2 -mx-0.5 overflow-x-auto pb-0.5">
-        <dl className="flex min-w-max gap-1 px-0.5">
-          {MATRIX.map((window) => (
-            <div
-              key={window.key}
-              title={window.scored ? `${window.label} — counts towards the score` : `${window.label} — shown, not scored`}
-              className={`w-[3.1rem] shrink-0 rounded-lg px-1 py-1 text-center ${
-                window.scored
-                  ? "bg-white ring-1 ring-slate-300 dark:bg-white/10 dark:ring-white/20"
-                  : "bg-slate-50 dark:bg-white/5"
-              }`}
-            >
-              <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {window.label}
-                {window.scored && <span aria-hidden="true"> ·</span>}
-              </dt>
-              <dd className={`mt-0.5 text-[11px] font-bold leading-none tabular-nums ${returnTone(pick[window.key])}`}>
-                {formatReturn(pick[window.key])}
-              </dd>
-            </div>
-          ))}
-        </dl>
+      {/* The box score: a header of windows over a line of figures, scrolling sideways rather than
+          wrapping. Nine cells wrapped across two rows of a five-column grid read as noise; one
+          strip a reader can push keeps the windows in order and every figure legible. The four the
+          score weighs are the lit columns and carry a dot; the rest are context. */}
+      <div className="overflow-x-auto border-t border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-black/20">
+        <table className="min-w-max border-separate border-spacing-0 text-center">
+          <thead>
+            <tr>
+              {MATRIX.map((window) => (
+                <th
+                  key={window.key}
+                  scope="col"
+                  title={window.scored ? `${window.label} — counts towards the score` : `${window.label} — shown, not scored`}
+                  className={`w-[3.1rem] border-b border-slate-200/80 px-1 pb-0.5 pt-1 text-[8px] font-bold uppercase tracking-wider dark:border-white/10 ${
+                    window.scored
+                      ? "bg-white text-slate-600 dark:bg-white/10 dark:text-slate-200"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  {window.label}
+                  {window.scored && <span aria-hidden="true"> ·</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {MATRIX.map((window) => (
+                <td
+                  key={window.key}
+                  className={`px-1 pb-1.5 pt-1 text-[11px] font-bold leading-none tabular-nums ${
+                    window.scored ? "bg-white dark:bg-white/10" : ""
+                  } ${returnTone(pick[window.key])}`}
+                >
+                  {formatReturn(pick[window.key])}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </li>
   );
@@ -352,14 +426,16 @@ function SideCard({
       <dl className="mt-3 grid grid-cols-3 gap-1.5">
         <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
           <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Best</dt>
-          <dd className="mt-0.5 truncate text-[11px] font-bold leading-none text-slate-900 dark:text-white">
-            {stats.best}
+          <dd className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-bold leading-none text-slate-900 dark:text-white">
+            {stats.best !== "—" && <CompanyLogo symbol={stats.best} size={14} preferReal />}
+            <span className="truncate">{stats.best}</span>
           </dd>
         </div>
         <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
           <dt className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Weakest</dt>
-          <dd className="mt-0.5 truncate text-[11px] font-bold leading-none text-slate-900 dark:text-white">
-            {stats.worst}
+          <dd className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-bold leading-none text-slate-900 dark:text-white">
+            {stats.worst !== "—" && <CompanyLogo symbol={stats.worst} size={14} preferReal />}
+            <span className="truncate">{stats.worst}</span>
           </dd>
         </div>
         <div className="rounded-lg bg-white/70 px-2 py-1.5 text-center dark:bg-white/5">
@@ -370,10 +446,24 @@ function SideCard({
         </div>
       </dl>
 
-      <ul className="mt-2.5 flex flex-col gap-1.5">
-        {side.picks.map((pick) => (
-          <PickRow key={pick.symbol} pick={pick} tone={chrome.score} />
-        ))}
+      {/* Standings, not the order they were entered in: a board that does not rank its competitors
+          is a list. The reader's own five are five rows either way, so nothing is harder to find.
+
+          The column strip above them is what makes it read as a board rather than five cards: a
+          reader arriving at the middle of the list still knows which number is which. */}
+      {side.picks.length > 0 && (
+        <div className="mt-3 flex items-center gap-2.5 rounded-t-lg bg-slate-900 px-2.5 py-1 text-[7px] font-black uppercase tracking-[0.18em] text-slate-400 dark:bg-slate-950">
+          <span className="w-8 shrink-0 text-center">Pos</span>
+          <span className="flex-1">Company</span>
+          <span className="w-[3.4rem] shrink-0 text-center">Score</span>
+        </div>
+      )}
+      <ul className="flex flex-col gap-1.5">
+        {[...side.picks]
+          .sort((left, right) => right.score - left.score)
+          .map((pick, index) => (
+            <PickRow key={pick.symbol} pick={pick} rank={index + 1} tone={chrome.plate} rail={chrome.bar} />
+          ))}
       </ul>
 
       {celebrating && <Fireworks />}

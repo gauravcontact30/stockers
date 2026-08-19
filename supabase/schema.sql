@@ -610,3 +610,23 @@ create index if not exists blocked_ips_blocked_at_idx
 
 alter table public.blocked_ips enable row level security;
 revoke all on public.blocked_ips from anon, authenticated;
+
+-- The daily JSON caches under app/data, shared across serverless instances.
+--
+-- The application directory is read-only on a serverless host, so each instance keeps its refreshed
+-- copy in its own temporary directory and no other instance ever sees it. The 8:50 AM AI lock is
+-- the case that made it visible: the scheduled invocation wrote the day's picks into a container
+-- that then went away, and the instance rendering the landing page still read the copy committed to
+-- the repository. One row per cache file, keyed by the file name the code has always used.
+
+create table if not exists public.data_cache (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists data_cache_updated_at_idx
+  on public.data_cache (updated_at desc);
+
+alter table public.data_cache enable row level security;
+revoke all on public.data_cache from anon, authenticated;

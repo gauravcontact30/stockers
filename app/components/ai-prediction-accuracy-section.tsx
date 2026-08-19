@@ -306,177 +306,120 @@ function metaLabel(data: BseAiPredictionAccuracy | null) {
   return `${data.accuracy.matched}/${data.accuracy.total} matched`;
 }
 
-/** What the lock is doing right now: fresh for today, or holding yesterday's until 8:50. */
-function lockStatusText(data: BseAiPredictionAccuracy) {
-  if (data.status !== "locked") return "No locked picks";
-  if (data.holdover) return `Holding ${data.lockDate} picks`;
-  if (data.persistedSession) return "Last session saved";
-  return "Locked for today";
-}
-
-function nextLockText(data: BseAiPredictionAccuracy) {
-  const at = new Date(data.nextLockAt);
-  const time = at.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
-  const day = at.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
-  return `Next AI lock: ${time} IST, ${day}`;
-}
-
-function SummaryCard({
-  label,
-  score,
-  scoreLabel,
-  value,
-  detail,
-  foot,
-  tone,
+/**
+ * The one sentence this whole board exists to answer: did the AI's ten beat the market's ten?
+ *
+ * It used to answer it with six composite percentages — lock integrity, confidence calibration,
+ * an "AI intelligence" score — and twelve supporting figures underneath them. Every one of those
+ * was honestly computed and none of them told a reader who had just arrived what had happened.
+ * So the arithmetic is unchanged and the presentation is not: the verdict in words, the two
+ * average moves it is drawn from, and nothing a reader has to be taught to read.
+ */
+function VerdictBanner({
+  data,
+  cap,
+  aiMove,
+  marketMove,
+  edge,
 }: {
-  label: string;
-  /** Today's score for this card, 0-100, scored from the two lists below it. */
-  score: number;
-  scoreLabel: string;
-  value: string;
-  detail: string;
-  foot: string;
-  tone: "sky" | "violet" | "emerald";
+  data: BseAiPredictionAccuracy;
+  cap: CapTier;
+  aiMove: number;
+  marketMove: number;
+  edge: number;
 }) {
+  const aiAhead = edge > 0;
+  const level = Math.abs(edge) < 0.05 ? "level" : aiAhead ? "ai" : "market";
+  const headline =
+    level === "level"
+      ? "Too close to call"
+      : level === "ai"
+        ? `The AI is ahead by ${Math.abs(edge).toFixed(2)} points`
+        : `The market is ahead by ${Math.abs(edge).toFixed(2)} points`;
+
   const tones = {
-    sky: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300",
-    violet: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300",
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+    ai: "border-violet-200 bg-violet-50 dark:border-violet-500/25 dark:bg-violet-500/10",
+    market: "border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10",
+    level: "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/50",
   };
 
   return (
-    <div className={`rounded-2xl border p-3 ${tones[tone]}`}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">{label}</p>
-        <p className="shrink-0 text-lg font-black tabular-nums text-slate-900 dark:text-white" aria-label={`${scoreLabel}: ${score}%`}>
-          {score}%
+    <section
+      className={`mt-5 rounded-2xl border p-4 ${tones[level]}`}
+      aria-label="AI versus market verdict"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white">{headline}</h3>
+        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          {cap} cap · {SESSION_LABEL[data.marketSession]}
+          {data.sessionDate ? ` · ${data.sessionDate}` : ""}
         </p>
       </div>
-      <p className="text-right text-[10px] font-bold uppercase tracking-wide opacity-70">{scoreLabel}</p>
-      <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{value}</p>
-      <p className="mt-1 text-[11px] font-bold">{detail}</p>
-      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{foot}</p>
-    </div>
-  );
-}
 
-/**
- * The three cards, scored from the two boards underneath them.
- *
- * Every figure is today's: the scorecard the server sends is built from the list locked at 8:50
- * this morning and the live top ten as it stands this minute, for the one cap tier both boards
- * are showing. Yesterday contributes nothing to it.
- */
-function SummaryCards({ data, cap, lockedCount }: { data: BseAiPredictionAccuracy; cap: CapTier; lockedCount: number }) {
-  const scored = data.scorecard.byCap[cap];
-
-  return (
-    <div className="mt-5 grid gap-3 md:grid-cols-3">
-      <SummaryCard
-        label="Lock status"
-        score={scored.lockIntegrity}
-        scoreLabel="Lock integrity"
-        value={lockStatusText(data)}
-        detail={
-          data.status === "locked"
-            ? `${lockedCount}/10 locked ${cap} cap stocks for ${data.lockDate}`
-            : "No real 8:50 AM IST AI lock exists for this trading date"
-        }
-        foot={nextLockText(data)}
-        tone="sky"
-      />
-      <SummaryCard
-        label="Prediction engine"
-        score={scored.confidenceCalibration}
-        scoreLabel="Confidence calibration"
-        value={data.source === "ai" ? data.model ?? "AI model" : data.source === "heuristic" ? "Fallback heuristic" : "Waiting for lock"}
-        detail={
-          scored.avgConfidence > 0
-            ? `Claimed ${scored.avgConfidence}% confidence, delivered ${scored.hitRate}%`
-            : "AI score appears after real picks are locked"
-        }
-        foot={`AI picks ${formatSignedPercent(scored.avgPickMovePercent)} vs market ${formatSignedPercent(scored.avgMarketMovePercent)}`}
-        tone="violet"
-      />
-      <SummaryCard
-        label="Accuracy check"
-        score={scored.intelligenceScore}
-        scoreLabel="AI intelligence"
-        value={`${scored.hitCount}/10 in today's live top 10`}
-        detail={`Rank accuracy ${scored.rankAccuracy}% · ${scored.beatMarketCount}/10 picks beat the ${cap} cap average`}
-        foot={`Edge ${formatSignedPercent(scored.edgePercent)} vs the live ${cap} cap top 10`}
-        tone="emerald"
-      />
-    </div>
-  );
-}
-
-/** One figure on a scoreboard panel: a label, the number, and nothing else. */
-function Metric({ label, value, tone = "", note }: { label: string; value: string; tone?: string; note?: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</dt>
-      <dd className={`mt-0.5 truncate text-base font-black tabular-nums ${tone || "text-slate-900 dark:text-white"}`}>{value}</dd>
-      {note && <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500 dark:text-slate-400">{note}</p>}
-    </div>
-  );
-}
-
-/** One side of the comparison, in its own tint. */
-function ScorePanel({
-  title,
-  eyebrow,
-  score,
-  scoreLabel,
-  tone,
-  children,
-}: {
-  title: string;
-  eyebrow: string;
-  score: string;
-  scoreLabel: string;
-  tone: "ai" | "market";
-  children: React.ReactNode;
-}) {
-  const tones = {
-    ai: "border-violet-200 bg-violet-50/60 dark:border-violet-500/25 dark:bg-violet-500/10",
-    market: "border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10",
-  };
-  const pills = {
-    ai: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
-    market: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
-  };
-
-  return (
-    <section className={`rounded-2xl border p-3.5 ${tones[tone]}`} aria-label={title}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{eyebrow}</p>
-          <p className="mt-0.5 truncate text-sm font-black text-slate-900 dark:text-white">{title}</p>
+      {/* The two numbers the verdict is the difference between, side by side and nothing between
+          them but the word. A reader can check the subtraction in their head, which is the point. */}
+      <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="rounded-xl bg-white/80 px-3 py-2 text-center dark:bg-white/10">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-300">
+            The AI&apos;s 10 picks
+          </p>
+          <p className={`mt-0.5 text-2xl font-black tabular-nums ${toneFor(aiMove)}`}>{formatSignedPercent(aiMove)}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">average move today</p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums ${pills[tone]}`}>
-          {score}
-          <span className="ml-1 font-bold uppercase tracking-wide opacity-70">{scoreLabel}</span>
-        </span>
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">vs</span>
+        <div className="rounded-xl bg-white/80 px-3 py-2 text-center dark:bg-white/10">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-300">
+            The market&apos;s top 10
+          </p>
+          <p className={`mt-0.5 text-2xl font-black tabular-nums ${toneFor(marketMove)}`}>
+            {formatSignedPercent(marketMove)}
+          </p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">average move today</p>
+        </div>
       </div>
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-3">{children}</dl>
     </section>
   );
 }
 
+/** One plain answer: a question in words, the answer in figures, and a line saying what it means. */
+function PlainCard({
+  question,
+  answer,
+  answerTone = "",
+  meaning,
+}: {
+  question: string;
+  answer: string;
+  answerTone?: string;
+  meaning: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-950/40">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{question}</p>
+      <p className={`mt-1 truncate text-xl font-black tabular-nums ${answerTone || "text-slate-900 dark:text-white"}`}>
+        {answer}
+      </p>
+      <p className="mt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">{meaning}</p>
+    </div>
+  );
+}
+
+function nextLockShort(data: BseAiPredictionAccuracy) {
+  const at = new Date(data.nextLockAt);
+  const time = at.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+  const day = at.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
+  return `${time}, ${day}`;
+}
+
 /**
- * The comparison, as two panels rather than one wide table.
+ * The board, as three questions a first-time reader actually has.
  *
- * Twelve columns asked the reader to work out for themselves which numbers were the AI's claim and
- * which were the exchange's record. They are two different things, so they now sit in two
- * differently tinted panels — the AI's own figures on the left, what the market actually did on the
- * right — and only the handful of numbers that mean something as a *comparison* sit between them.
- *
- * Every figure is arithmetic over the two lists below it, for the cap tier on screen. Nothing here
- * is an opinion, and nothing that could not be recomputed from those rows is shown.
+ * How many did it get right; which one did best; when does the list change. Everything else that
+ * used to be here — rank accuracy, calibration, lock integrity, the twelve-figure comparison — was
+ * either derivable from the rows below or only meaningful to somebody who already knew how the
+ * screen worked, which is nobody arriving at it for the first time.
  */
-function Scoreboard({
+function PlainSummary({
   data,
   cap,
   predicted,
@@ -488,104 +431,71 @@ function Scoreboard({
   actual: PredictionPerformance[];
 }) {
   const score = data.scorecard.byCap[cap];
-  const aiLeader = predicted[0];
+  const best = [...predicted].sort((left, right) => (right.changePercent ?? -Infinity) - (left.changePercent ?? -Infinity))[0];
   const marketLeader = actual[0];
-  const advancers = actual.filter((row) => (row.changePercent ?? 0) > 0).length;
-
-  const verdicts = [
-    { label: "Edge vs market", value: formatSignedPercent(score.edgePercent), tone: toneFor(score.edgePercent) },
-    { label: "Picks in live top 10", value: `${score.hitCount}/10`, tone: "" },
-    { label: "Beat market average", value: `${score.beatMarketCount}/10`, tone: "" },
-    { label: "Confidence calibration", value: `${score.confidenceCalibration}%`, tone: "" },
-  ];
 
   return (
-    <div className="mt-5 space-y-3" role="region" aria-label="AI versus live market scoreboard">
-      <div className="grid gap-3 lg:grid-cols-2">
-        <ScorePanel
-          eyebrow={`${cap} cap - AI side`}
-          title="AI locked picks"
-          score={`${score.intelligenceScore}%`}
-          scoreLabel="AI score"
-          tone="ai"
-        >
-          <Metric label="Locked at 8:50 AM" value={`${predicted.length}/10`} note={data.lockDate ?? undefined} />
-          <Metric label="Avg move" value={formatSignedPercent(score.avgPickMovePercent)} tone={toneFor(score.avgPickMovePercent)} />
-          <Metric label="Stated confidence" value={`${score.avgConfidence}%`} />
-          <Metric label="Hit rate" value={`${score.hitRate}%`} note={`${score.hitCount} of 10 in the live top 10`} />
-          <Metric label="Rank accuracy" value={`${score.rankAccuracy}%`} />
-          <Metric
-            label="Top pick"
-            value={aiLeader ? aiLeader.symbol : "-"}
-            note={aiLeader ? formatSignedPercent(aiLeader.changePercent) : undefined}
-          />
-        </ScorePanel>
+    <>
+      <VerdictBanner
+        data={data}
+        cap={cap}
+        aiMove={score.avgPickMovePercent}
+        marketMove={score.avgMarketMovePercent}
+        edge={score.edgePercent}
+      />
 
-        <ScorePanel
-          eyebrow={`${cap} cap - market side`}
-          title="Live BSE market"
-          score={formatSignedPercent(score.avgMarketMovePercent)}
-          scoreLabel="Top 10 avg"
-          tone="market"
-        >
-          <Metric label="Session" value={SESSION_LABEL[data.marketSession]} note={data.sessionDate ?? undefined} />
-          <Metric
-            label="Top 10 avg move"
-            value={formatSignedPercent(score.avgMarketMovePercent)}
-            tone={toneFor(score.avgMarketMovePercent)}
-          />
-          <Metric label="Advancing in top 10" value={`${advancers}/${actual.length || 10}`} />
-          <Metric
-            label="Market leader"
-            value={marketLeader ? marketLeader.symbol : "-"}
-            note={marketLeader ? marketLeader.stockName : undefined}
-          />
-          <Metric
-            label="Leader move"
-            value={formatSignedPercent(marketLeader?.changePercent)}
-            tone={toneFor(marketLeader?.changePercent)}
-          />
-          <Metric label="Prices" value={marketLeader?.live ? "Live" : "BSE close"} />
-        </ScorePanel>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <PlainCard
+          question="Picks that landed"
+          answer={`${score.hitCount} of 10`}
+          meaning={`In today's real ${cap.toLowerCase()} cap top 10.`}
+        />
+        <PlainCard
+          question="The AI's best pick"
+          answer={best ? best.symbol : "—"}
+          answerTone="text-slate-900 dark:text-white"
+          meaning={best ? `${formatSignedPercent(best.changePercent)} today.` : "No picks are locked for this tier."}
+        />
+        <PlainCard
+          question="The market's best"
+          answer={marketLeader ? marketLeader.symbol : "—"}
+          answerTone="text-slate-900 dark:text-white"
+          meaning={marketLeader ? `${formatSignedPercent(marketLeader.changePercent)} today.` : "The live board is empty."}
+        />
+        <PlainCard
+          question="Next list of 10"
+          answer={nextLockShort(data)}
+          answerTone="text-slate-900 dark:text-white"
+          meaning="All 10 stocks are replaced at that lock."
+        />
       </div>
 
-      <section
-        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 dark:border-slate-800 dark:bg-slate-950/50"
-        aria-label="AI versus market verdict"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            AI versus market, {cap.toLowerCase()} cap
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {CAP_TIERS.map((tier) => (
-              <span
-                key={tier}
-                className={`rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums ${
-                  tier === cap
-                    ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200"
-                    : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"
-                }`}
-              >
-                {tier} {data.scorecard.byCap[tier].intelligenceScore}%
-              </span>
-            ))}
-            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-black tabular-nums text-white dark:bg-white dark:text-slate-900">
-              All {data.scorecard.overall.intelligenceScore}%
-            </span>
-          </div>
-        </div>
-        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-4">
-          {verdicts.map((verdict) => (
-            <Metric key={verdict.label} label={verdict.label} value={verdict.value} tone={verdict.tone} />
-          ))}
-        </dl>
-        <p className="mt-2.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-          Edge is the picks&apos; average move minus the market top 10&apos;s. Calibration compares the confidence the AI stated with the hit
-          rate it delivered. AI score blends hit rate, rank accuracy, calibration and edge.
+      {/* One row, one number each: how many of that tier's ten are in its live top ten. The reader
+          switches tiers with the dropdowns on the boards below; this is what they would switch for. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-950/50">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          Picks that landed, per tier
         </p>
-      </section>
-    </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {CAP_TIERS.map((tier) => (
+            <span
+              key={tier}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-black tabular-nums ${
+                tier === cap
+                  ? "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200"
+                  : "bg-white text-slate-500 dark:bg-white/10 dark:text-slate-400"
+              }`}
+            >
+              {tier} {data.scorecard.byCap[tier].hitCount}/10
+            </span>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          {data.source === "ai" && data.model ? `Picked by ${data.model}.` : "Picked by the fallback ranking."} Locked
+          at 8:50 AM IST{data.lockDate ? ` on ${data.lockDate}` : ""}.
+        </p>
+      </div>
+    </>
   );
 }
 
@@ -659,10 +569,10 @@ export function AiPredictionAccuracySection() {
       eyebrow="AI prediction accuracy"
       eyebrowClass="text-violet-600 dark:text-violet-400"
       title="Locked AI picks versus real BSE top performers"
-      blurb="At 8:50 AM IST each trading day, the AI reads that morning's positive market coverage and locks 10 BSE-listed stocks per cap tier. The list is then fixed from the 9:15 AM open to the 3:30 PM close — only live prices move — and the next 8:50 AM lock replaces all 10."
+      blurb="Every trading morning at 8:50, 25 minutes before the market opens, the AI reads the day's positive news and names 10 stocks. The list is then locked for the day. Below: those 10 against the 10 that actually did best."
       aside={
         <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-bold text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300">
-          {data?.status === "locked" ? `${data.accuracy.percent}% accurate` : metaLabel(data)}
+          {data?.status === "locked" ? `${data.accuracy.matched} of ${data.accuracy.total} picks landed` : metaLabel(data)}
         </div>
       }
     >
@@ -671,9 +581,7 @@ export function AiPredictionAccuracySection() {
 
       {!loading && data && (
         <>
-          <SummaryCards data={data} cap={cap} lockedCount={predictedCapRows.length} />
-
-          <Scoreboard data={data} cap={cap} predicted={predictedCapRows} actual={actualCapRows} />
+          <PlainSummary data={data} cap={cap} predicted={predictedCapRows} actual={actualCapRows} />
 
           {data.holdover && (
             <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
