@@ -1,29 +1,35 @@
 // The hero, behind its own Suspense boundary and its own deadline.
 //
-// The bug this covers is not a rendering one. The three reads the slider needs were awaited at the
-// top of `Home`, so until all three came back the visitor got `app/loading.tsx` and nothing else —
-// not the header, not the boards, not the footer. What is checked here is that neither half of the
-// fix can be quietly undone: that the hero really is behind a boundary, and that a read which never
-// answers is abandoned rather than waited on.
+// The bug this covers is not a rendering one. The reads the slider needs were awaited at the top of
+// `Home`, so until they all came back the visitor got `app/loading.tsx` and nothing else — not the
+// header, not the boards, not the footer. What is checked here is that neither half of the fix can
+// be quietly undone: that the hero really is behind a boundary, and that a read which never answers
+// is abandoned rather than waited on.
+//
+// The second thing it covers is newer. Every slide is a ranking now, so the companies to price are
+// only known once the rankings are in — the prefetch is a second round over whatever they named,
+// not a fixed list of six.
 
 import { render, screen } from "@testing-library/react";
 import { Suspense } from "react";
 import {
   HERO_DEADLINE_MS,
-  HERO_PERFORMANCE_SYMBOLS,
   HeroFallback,
   HeroPayload,
   StreamedHero,
+  heroPerformanceSymbols,
   withDeadline,
 } from "../../app/components/streamed-hero";
+import type { DynamicTrio } from "../../app/lib/hero-trios";
 
 jest.mock("../../app/lib/hero-trios", () => ({
-  topYearGainerTrio: jest.fn(),
-  investorFavouriteTrio: jest.fn(),
-  // The fourth read the hero makes: the week's strongest large caps, which feed the rail and tape
-  // that frame every slide. Added to `HeroPayload` after this mock was first written, and a mocked
-  // module replaces the whole thing — so leaving it out made the real export unreachable and the
-  // component threw "topWeeklyGainers is not a function" before any assertion could run.
+  capitalGoodsTrio: jest.fn(),
+  healthcareTrio: jest.fn(),
+  monthGainerTrio: jest.fn(),
+  investorHeldTrio: jest.fn(),
+  // The strips that frame every slide read this one. A mocked module replaces the whole thing, so
+  // leaving an export out makes the real one unreachable and the component throws before any
+  // assertion can run.
   topWeeklyGainers: jest.fn(),
 }));
 
@@ -33,8 +39,10 @@ jest.mock("../../app/lib/stock-performance", () => ({
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- the mocked modules, for arranging return values.
 const trios = require("../../app/lib/hero-trios") as {
-  topYearGainerTrio: jest.Mock;
-  investorFavouriteTrio: jest.Mock;
+  capitalGoodsTrio: jest.Mock;
+  healthcareTrio: jest.Mock;
+  monthGainerTrio: jest.Mock;
+  investorHeldTrio: jest.Mock;
   topWeeklyGainers: jest.Mock;
 };
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- as above.
@@ -42,7 +50,7 @@ const performance = require("../../app/lib/stock-performance") as {
   getCachedPerformanceSummaries: jest.Mock;
 };
 
-function trioOf(symbols: [string, string, string], sector: string) {
+function trioOf(symbols: [string, string, string], sector: string): DynamicTrio {
   return symbols.map((symbol) => ({
     symbol,
     company: `${symbol} Ltd`,
@@ -51,16 +59,20 @@ function trioOf(symbols: [string, string, string], sector: string) {
     wash: "bg-emerald-50/70",
     tier: "Large" as const,
     sector,
-  }));
+  })) as unknown as DynamicTrio;
 }
 
-const GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
-const FAVOURITES = trioOf(["SUZLON", "IREDA", "YESBANK"], "Electric Utilities");
+const CAPITAL_GOODS = trioOf(["BEL", "HAL", "SIEMENS"], "Capital Goods & Industrials");
+const HEALTHCARE = trioOf(["SUNPHARMA", "APOLLOHOSP", "CIPLA"], "Pharmaceuticals");
+const MONTH_GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
+const FAVOURITES = trioOf(["RELIANCE", "ITC", "SBIN"], "Energy & Petrochemicals");
 
 beforeEach(() => {
   performance.getCachedPerformanceSummaries.mockResolvedValue([]);
-  trios.topYearGainerTrio.mockResolvedValue(GAINERS);
-  trios.investorFavouriteTrio.mockResolvedValue(FAVOURITES);
+  trios.capitalGoodsTrio.mockResolvedValue(CAPITAL_GOODS);
+  trios.healthcareTrio.mockResolvedValue(HEALTHCARE);
+  trios.monthGainerTrio.mockResolvedValue(MONTH_GAINERS);
+  trios.investorHeldTrio.mockResolvedValue(FAVOURITES);
   trios.topWeeklyGainers.mockResolvedValue([]);
   // The scenes fetch live figures on mount; left unstubbed they reject against jsdom and push a
   // state update through outside act(), which is noise rather than a finding.
@@ -73,8 +85,8 @@ describe("withDeadline", () => {
   });
 
   it("gives the fallback when the read rejects", async () => {
-    // A rejection must not propagate: these three run under one Promise.all, and a throw here would
-    // take the whole hero down rather than costing one slide its companies.
+    // A rejection must not propagate: these run under one Promise.all, and a throw here would take
+    // the whole hero down rather than costing one slide its companies.
     await expect(withDeadline(Promise.reject(new Error("feed down")), "fallback", 50)).resolves.toBe("fallback");
   });
 
@@ -115,6 +127,27 @@ describe("withDeadline", () => {
   });
 });
 
+describe("heroPerformanceSymbols", () => {
+  it("gathers every company the rankings named", () => {
+    expect(heroPerformanceSymbols([CAPITAL_GOODS, HEALTHCARE])).toEqual([
+      "BEL",
+      "HAL",
+      "SIEMENS",
+      "SUNPHARMA",
+      "APOLLOHOSP",
+      "CIPLA",
+    ]);
+  });
+
+  it("asks for a company topping two boards only once", () => {
+    expect(heroPerformanceSymbols([CAPITAL_GOODS, CAPITAL_GOODS])).toEqual(["BEL", "HAL", "SIEMENS"]);
+  });
+
+  it("skips a ranking that could not be built", () => {
+    expect(heroPerformanceSymbols([null, MONTH_GAINERS, null])).toEqual(["STLTECH", "HFCL", "SKYGOLD"]);
+  });
+});
+
 describe("HeroFallback", () => {
   /**
    * The fallback stands in the layout while the reads settle. If it were shorter than the carousel
@@ -133,35 +166,49 @@ describe("HeroFallback", () => {
 });
 
 describe("HeroPayload", () => {
-  it("prefetches the six companies the two fixed slides name", async () => {
+  it("prefetches the companies the four rankings named, and only those", async () => {
     render(await HeroPayload());
 
-    expect(performance.getCachedPerformanceSummaries).toHaveBeenCalledWith(HERO_PERFORMANCE_SYMBOLS);
-    expect(HERO_PERFORMANCE_SYMBOLS).toEqual(["HAL", "MAZDOCK", "PARAS", "NETWEB", "POWERINDIA", "LT"]);
+    expect(performance.getCachedPerformanceSummaries).toHaveBeenCalledWith([
+      "BEL",
+      "HAL",
+      "SIEMENS",
+      "SUNPHARMA",
+      "APOLLOHOSP",
+      "CIPLA",
+      "STLTECH",
+      "HFCL",
+      "SKYGOLD",
+      "RELIANCE",
+      "ITC",
+      "SBIN",
+    ]);
   });
 
-  it("hands both rankings to the carousel", async () => {
+  it("hands all four rankings to the carousel", async () => {
     const element = await HeroPayload();
 
-    expect(element.props.yearGainers).toBe(GAINERS);
+    expect(element.props.capitalGoods).toBe(CAPITAL_GOODS);
+    expect(element.props.healthcare).toBe(HEALTHCARE);
+    expect(element.props.monthGainers).toBe(MONTH_GAINERS);
     expect(element.props.investorFavourites).toBe(FAVOURITES);
   });
 
-  it("opens the slider on the one-year gainers slide", async () => {
+  it("opens the slider on the capital goods slide", async () => {
     render(await HeroPayload());
-    expect(screen.getByText("The three biggest one-year runs on the board")).toBeInTheDocument();
+    expect(screen.getByText("The three strongest capital goods stocks")).toBeInTheDocument();
   });
 
   /**
-   * One refusing feed costs its own slide and nothing else. Before this, a broker feed that hung
-   * held the entire page — header, boards, pricing and footer — on `app/loading.tsx`.
+   * One refusing feed costs its own slide and nothing else. Before this, a feed that hung held the
+   * entire page — header, boards, pricing and footer — on `app/loading.tsx`.
    */
   it("still opens when a ranking cannot be built", async () => {
-    trios.investorFavouriteTrio.mockRejectedValue(new Error("broker feed changed its HTML"));
+    trios.investorHeldTrio.mockRejectedValue(new Error("NSE refused the filing index"));
     const element = await HeroPayload();
 
     expect(element.props.investorFavourites).toBeNull();
-    expect(element.props.yearGainers).toBe(GAINERS);
+    expect(element.props.capitalGoods).toBe(CAPITAL_GOODS);
   });
 
   it("still opens when the live figures cannot be read", async () => {

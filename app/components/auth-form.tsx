@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { syncSessionCookie, useSubscription } from "./subscription-provider";
+import { PASSWORD_RECOVERY_ENABLED } from "../lib/auth-features";
 import {
   MIN_PASSWORD,
   countErrors,
@@ -732,7 +733,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
       </Field>
 
-      {!signup && (
+      {/* Withheld rather than deleted — see `../lib/auth-features`. With the trigger gone
+          `recoveryOpen` can never become true, so the two-step panel below it never renders
+          either; both conditions still name the flag so neither can be revived on its own. */}
+      {!signup && PASSWORD_RECOVERY_ENABLED && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -748,7 +752,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
       )}
 
-      {!signup && recoveryOpen && (
+      {!signup && PASSWORD_RECOVERY_ENABLED && recoveryOpen && (
         <div className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/30 dark:bg-sky-500/10">
           <div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">

@@ -79,9 +79,10 @@ export function formatPrice(value: number | null): string {
  * nobody anything, and "what actually compounded, and what broke" is the question a visitor
  * arrives with. Every row is a real company — its own logo, its sector and cap tier as pills.
  *
- * The search box above it suggests across every BSE-listed company, which is a wider set than the
- * board itself: a return needs price history per company, and that is tracked for the catalogue,
- * not for all ~4,950 scrips. Searching a name outside it says so rather than showing nothing.
+ * The search box above it suggests across every BSE-listed company, and searching one answers for
+ * that company whatever it did: the 50% bar and the gainers/losers split shape the unfiltered
+ * ranking, not a name typed in. A company outside the tracked catalogue has no cached return, so
+ * its history is fetched on the spot rather than the row being dropped — see ../lib/top-performers.
  */
 export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}) {
   const [direction, setDirection] = useState<Direction>("gainers");
@@ -209,8 +210,12 @@ export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}
         </div>
       </div>
 
+      {/* What the board is showing, which a search changes: the 50% bar is a device for keeping an
+          unfiltered ranking readable, and it does not apply to a company asked for by name. */}
       <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
-        {gaining ? "Up" : "Down"} more than 50% over {CAPTION[period]}
+        {term
+          ? `Measured returns for "${term}" over ${CAPTION[period]}`
+          : `${gaining ? "Up" : "Down"} more than 50% over ${CAPTION[period]}`}
       </p>
 
       {/* The same box the research desk uses: it suggests across every BSE-listed company, with
@@ -250,7 +255,7 @@ export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}
       {!loading && !settled.failed && stocks.length === 0 && (
         <p className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm leading-relaxed text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
           {term
-            ? `No tracked company matching "${term}" is ${gaining ? "up" : "down"} more than 50% over ${CAPTION[period]}. Long-run returns are tracked for the catalogue rather than every listed scrip.`
+            ? `No listed company matching "${term}" has a measured return over ${CAPTION[period]}. Newly listed and rarely traded scrips have no history to measure over that window.`
             : `No tracked company is ${gaining ? "up" : "down"} more than 50% over ${CAPTION[period]}.`}
         </p>
       )}
@@ -270,7 +275,7 @@ export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}
                       covers the thing the row is there to show. */}
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums ${
-                      gaining
+                      up
                         ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
                         : "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
                     }`}
@@ -316,7 +321,7 @@ export function TopPerformers({ prefetched }: { prefetched?: Board | null } = {}
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-              {total} {gaining ? "above" : "below"} 50%
+              {term ? `${total} matching "${term}"` : `${total} ${gaining ? "above" : "below"} 50%`}
               {settled.asOf ? ` · as of ${settled.asOf}` : ""} · past performance is not a prediction.
             </p>
             <div className="flex shrink-0 items-center gap-1">

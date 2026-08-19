@@ -33,6 +33,7 @@ import { bseCatalogue, type CatalogueEntry } from "./bse-catalogue";
 import { getBseTrending, type BseTrendingRow } from "./bse-market";
 import { getQuotesFor, type LiveQuote, type QuoteSubject } from "./market-data";
 import { marketSessionState, type MarketSessionState } from "./bse-ai-prediction-accuracy";
+import { nextMarketOpenAt } from "./market-session";
 
 /** How deep into the trade-count board to look before scoring. */
 const CANDIDATE_COUNT = 60;
@@ -40,6 +41,14 @@ const CANDIDATE_COUNT = 60;
 const LIVE_QUOTE_COUNT = 24;
 /** How many rows the ribbon is given. */
 export const MOST_BOUGHT_COUNT = 12;
+/**
+ * How often the ribbon re-asks while the exchange is open.
+ *
+ * Stated here rather than only in the component because the board now tells the reader when its
+ * figures next change, and that promise has to be made by whoever knows the cadence. The component
+ * takes this value off the payload rather than keeping its own copy, so the two cannot drift.
+ */
+export const MOST_BOUGHT_REFRESH_MS = 30_000;
 
 export type MostBoughtSignal =
   | "broker-list"
@@ -76,12 +85,49 @@ export type MostBoughtRow = {
   asOf: string | null;
 };
 
+/**
+ * Where the figures on the ribbon actually came from.
+ *
+ *   live      the exchange is open and live quotes are laid over the tape, so what a reader sees is
+ *             this session's prices moving.
+ *   stale     everything else: the ranks and the prices are the last *completed* session's, which
+ *             is a different day's data whenever that session is not today's.
+ *
+ * The distinction is not cosmetic. The board's rank is built from BSE's Bhavcopy, which only covers
+ * the whole exchange once a session has closed — so at 10 AM the ordering is yesterday's even while
+ * the prices on top of it are today's, and a ribbon that said "today" throughout would be telling a
+ * reader something it cannot support.
+ */
+export type MostBoughtFreshness = "live" | "stale";
+
 export type MostBoughtBoard = {
   rows: MostBoughtRow[];
   sessionDate: string | null;
   marketSession: MarketSessionState;
   /** True while the exchange is open, i.e. while this board is genuinely moving. */
   liveSession: boolean;
+  /** Whether these rows are this session's or the last completed one's. */
+  freshness: MostBoughtFreshness;
+  /** How many of the rows carry a live quote rather than the Bhavcopy's closing print. */
+  liveRows: number;
+  /**
+   * The IST trading day the ranking's tape comes from, as `YYYY-MM-DD` — the same value as
+   * `sessionDate`, restated as the answer to "which day am I looking at" rather than as a property
+   * of the file it was read from.
+   */
+  dataDay: string | null;
+  /**
+   * When these figures next change, as an ISO instant.
+   *
+   * While the market is open that is one poll away, because the ribbon re-asks on a fixed interval
+   * and the tape underneath it really is moving. While it is shut it is the next 09:15 IST the
+   * exchange opens at — weekends and configured holidays skipped — because nothing about this board
+   * changes before the first trade of the next session. Null only when the holiday calendar leaves
+   * no session ahead at all.
+   */
+  nextUpdateAt: string | null;
+  /** How often the ribbon re-asks while the session is live, in milliseconds. */
+  refreshMs: number;
   asOf: string;
 };
 
@@ -236,12 +282,30 @@ export async function getMostBoughtToday(now = new Date()): Promise<MostBoughtBo
     }));
 
   const marketSession = marketSessionState(now);
+  const liveSession = marketSession === "live";
+  const liveRows = rows.filter((row) => row.live).length;
+
+  // "Live" is claimed only when both halves of the claim hold: the exchange is open *and* at least
+  // one row actually carries a live quote. An open market whose quote feed refused every request
+  // leaves the reader looking at the last session's closes, and calling that live would be the one
+  // lie this ribbon must not tell.
+  const freshness: MostBoughtFreshness = liveSession && liveRows > 0 ? "live" : "stale";
 
   return {
     rows,
     sessionDate: board.sessionDate,
     marketSession,
-    liveSession: marketSession === "live",
+    liveSession,
+    freshness,
+    liveRows,
+    dataDay: board.sessionDate,
+    // One poll away while the tape is moving; otherwise the next open, because nothing here changes
+    // until the exchange trades again.
+    nextUpdateAt:
+      freshness === "live"
+        ? new Date(now.getTime() + MOST_BOUGHT_REFRESH_MS).toISOString()
+        : nextMarketOpenAt(now),
+    refreshMs: MOST_BOUGHT_REFRESH_MS,
     asOf: now.toISOString(),
   };
 }

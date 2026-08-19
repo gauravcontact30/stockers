@@ -46,8 +46,8 @@ const moverPage = {
       returnPercent: 412.6,
     },
   ],
-  period: "overall",
-  periodFrom: "2020-08-07",
+  period: "1y",
+  periodFrom: "2025-08-07",
   total: 1,
   page: 1,
   pages: 1,
@@ -85,7 +85,7 @@ describe("MoversBoard", () => {
     expect(bseMarket.getBseMovers).toHaveBeenCalledWith({
       tier: "all",
       direction: "gainers",
-      period: "overall",
+      period: "1y",
       page: 1,
       pageSize: MOVERS_PAGE_SIZE,
     });
@@ -99,7 +99,7 @@ describe("MoversBoard", () => {
   it("labels the payload with the URL the client asks for on its first render", async () => {
     const element = await MoversBoard();
 
-    expect(element.props.prefetched.url).toBe(buildMoversUrl("all", "gainers", "overall", "", "0", 1));
+    expect(element.props.prefetched.url).toBe(buildMoversUrl("all", "gainers", "1y", "", "0", 1));
     expect(element.props.prefetched.data).toBe(moverPage);
   });
 

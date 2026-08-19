@@ -10,9 +10,9 @@
 // Awaited here instead, so the opening tab arrives in the HTML, inside its own `<Suspense>` so a
 // slow broker feed delays this board and nothing else on the page.
 //
-// Only the opening view is prefetched. Change the tab, the platform, the broker, the tier or the
-// page and the reader is asking something the server was never asked, and the client goes to the
-// network exactly as before.
+// Only the opening view of each side is prefetched. Change the tab, the cap tier, the return window
+// or the page and the reader is asking something the server was never asked, and the client goes to
+// the network exactly as before.
 
 import { Suspense } from "react";
 import { io } from "next/cache";
@@ -22,18 +22,19 @@ import { TRENDING_PAGE_SIZE, buildTrendingUrl } from "../lib/market-urls";
 import { BoardFallback } from "./streamed-boards";
 
 /**
- * The board's opening state, mirroring `BseTrendingBoard`'s initial `useState` values exactly.
+ * The section's opening state, mirroring `BseTrendingBoard`'s initial `useState` values exactly.
  *
- * They have to match: the payload is only spent when the URL the client builds on its first render
- * is the one named here, so a board that opened on different defaults would simply fetch as it
- * always did rather than render the wrong figures.
+ * They have to match: a payload is only spent when the URL the client builds on its first render is
+ * the one named here, so a board that opened on different defaults would simply fetch as it always
+ * did rather than render the wrong figures.
  *
  * `turnover` is the opening tab. It was `brokers` — a retail broker's published buying list — and
  * that ranking has been taken off the board entirely, so that this section names no platform but
  * the exchange it is about. See the note on `RANK_OPTIONS` in ./bse-trending-board.
  *
- * `broker` stays in this object only because `buildTrendingUrl` still takes the facet; at "all" it
- * is omitted from the query string, so the URL built here is the one the client builds.
+ * `platform` and `broker` stay in this object only because `buildTrendingUrl` still takes the
+ * facets; at "all" they are omitted from the query string, so the URL built here is the one the
+ * client builds.
  */
 const OPENING = {
   rank: "turnover",
@@ -42,14 +43,16 @@ const OPENING = {
   broker: "all",
   tier: "all",
   move: "0",
+  period: "1m",
   page: 1,
 } as const;
 
-export async function TrendingPayload() {
-  await io();
-
+/** One side's opening payload and the URL it answers. */
+async function side(direction: "bought" | "sold") {
   const board = await getBseTrending({
     rank: OPENING.rank,
+    direction,
+    returnPeriod: OPENING.period,
     page: OPENING.page,
     pageSize: TRENDING_PAGE_SIZE,
     // Matching the endpoint: the first paint of this board during market hours carries live prices
@@ -65,9 +68,22 @@ export async function TrendingPayload() {
     OPENING.tier,
     OPENING.move,
     OPENING.page,
+    direction,
+    OPENING.period,
   );
 
-  return <BseTrendingBoard prefetched={{ url, data: board as BseTrendingPayload }} />;
+  return { url, data: board as BseTrendingPayload };
+}
+
+export async function TrendingPayload() {
+  await io();
+
+  // Two queries because it is two boards, and together rather than in turn — they share every cache
+  // underneath (the universe, the tape, the period baseline), so the second costs little more than
+  // the sector lookups for its own five rows.
+  const [bought, sold] = await Promise.all([side("bought"), side("sold")]);
+
+  return <BseTrendingBoard prefetched={bought} soldPrefetched={sold} />;
 }
 
 export function StreamedTrendingBoard() {

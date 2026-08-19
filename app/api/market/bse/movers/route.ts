@@ -4,7 +4,7 @@ import { getBseMovers, type MoverQuery } from "../../../../lib/bse-market";
 
 const TIERS: NonNullable<MoverQuery["tier"]>[] = ["all", "large", "mid", "small"];
 const DIRECTIONS: NonNullable<MoverQuery["direction"]>[] = ["gainers", "losers"];
-const PERIODS: NonNullable<MoverQuery["period"]>[] = ["1d", "1w", "3m", "6m", "1y", "3y", "5y", "overall"];
+const PERIODS: NonNullable<MoverQuery["period"]>[] = ["1d", "1w", "1m", "3m", "6m", "1y", "3y", "5y", "overall"];
 
 function pick<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return allowed.includes(value as T) ? (value as T) : fallback;

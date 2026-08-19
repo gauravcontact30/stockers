@@ -1,26 +1,33 @@
-// The two hero slides whose companies are chosen by the market rather than by us.
+// The four hero slides, every one of them chosen by the data rather than by us.
 //
-// Slides one and two are fixed themes — data centres and defence — because the *theme* is the
-// editorial point and the companies in it are stable. Slides three and four are the opposite: the
-// theme is a ranking, so the companies have to come out of the data or the slide is a lie the day
-// after it is written.
+// The slider used to open on two fixed sector themes — data centres and defence — with two rankings
+// behind them. All four are rankings now:
 //
-//   "Most gainers, last 1 year"  the three strongest one-year returns in the tracked universe
-//   "Where investors are buying" the three names India's retail brokers place highest
+//   1. "Capital goods"        the three strongest one-year returns filed under capital goods
+//   2. "Healthcare"           the same, over pharma and hospitals together, as BSE buckets them
+//   3. "Most gainers, 1M"     the three strongest one-month returns in the tracked universe
+//   4. "Investor favourites"  the three most widely held outside the promoter group, as filed
 //
-// Both are resolved on the server and handed to the carousel as props, for the same reason the day
-// is: the hero is server-rendered and hydrated, and a list computed independently in the browser
-// would differ from the one in the markup.
+// The first three are read from the committed return caches, which cost nothing at request time and
+// cannot disagree with the returns tables further down the page. The fourth is the only one that
+// reaches a feed: it reads the companies' own quarterly shareholding patterns, which is the only
+// source for "where FIIs, DIIs, the government and retail investors are actually invested" that is
+// not an inference from price or volume.
 //
-// Neither throws. A slide that cannot be built comes back as null and the carousel falls back to
-// its static trio — a hero that 500s because a broker's website changed its HTML would be a very
-// poor trade for a ranking.
+// All four are resolved on the server and handed to the carousel as props, because the hero is
+// server-rendered and then hydrated, and a list computed independently in the browser would differ
+// from the one already in the markup.
+//
+// None of them throws. A slide that cannot be built comes back as null and the scene says it is
+// reading the board — a hero that 500s because a feed changed its shape would be a very poor trade
+// for a ranking.
 
 import "server-only";
 
-import { getBseMovers, getBseTrending } from "./bse-market";
-import { getOneYearReturns } from "./historical-returns";
-import { indianStocks } from "./indian-stocks";
+import { getBseMovers } from "./bse-market";
+import { getOneMonthReturns, getOneYearReturns, type PeriodReturnsCache } from "./historical-returns";
+import { indianStocks, type StockMeta } from "./indian-stocks";
+import { getOwnership, type Ownership } from "./shareholding";
 import { getCachedPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
 
 /**
@@ -38,6 +45,14 @@ export type DynamicTrioStock = {
   wash: string;
   tier: "Large" | "Mid" | "Small";
   sector: string;
+  /**
+   * The filed ownership split, on the one slide that is ranked by it.
+   *
+   * Optional because only the investor slide has it, and absent rather than zeroed when a company
+   * has not filed: a card drawing "FII 0.0%" against a company nobody has read the filing for would
+   * be inventing a fact. Percentages of total shares, straight from the quarterly pattern.
+   */
+  ownership?: { fii: number; dii: number; government: number; retail: number; outsidePromoters: number };
 };
 
 export type DynamicTrio = readonly [DynamicTrioStock, DynamicTrioStock, DynamicTrioStock];
@@ -77,39 +92,168 @@ function trioOf(entries: Omit<DynamicTrioStock, "accent" | "wash">[]): DynamicTr
 const STOCK_BY_SYMBOL = new Map(indianStocks.map((stock) => [stock.symbol, stock]));
 const TICKER_SUMMARY_DEADLINE_MS = 1200;
 
+/** The catalogue's own sector names for the two sector slides. */
+export const CAPITAL_GOODS_SECTORS = ["Capital Goods & Industrials"] as const;
+// BSE files drugmakers and hospitals under one "Healthcare" bucket; the catalogue splits them into
+// a finer pair. The slide is about the sector as the exchange means it, so it takes both back.
+export const HEALTHCARE_SECTORS = ["Pharmaceuticals", "Healthcare Services"] as const;
+
 /**
- * The three strongest one-year returns in the tracked universe.
+ * The tracked companies with a measured return over this period, strongest first.
+ *
+ * Only companies the catalogue knows are eligible — a symbol with a return but no name or sector
+ * would put a blank card on the landing page — and the optional filter is what makes this the
+ * ranking for one sector rather than for the whole board.
+ */
+function rankedByReturn(
+  cache: PeriodReturnsCache,
+  keep: (stock: StockMeta) => boolean = () => true,
+) {
+  return Object.entries(cache.returns)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))
+    .sort((a, b) => b[1] - a[1])
+    .flatMap(([symbol, gain]) => {
+      const stock = STOCK_BY_SYMBOL.get(symbol);
+      if (!stock || !keep(stock)) return [];
+      return [{ symbol, gain, stock }];
+    });
+}
+
+/**
+ * The three strongest one-year returns inside one set of sectors.
  *
  * Read from the same cached return set the returns tables use, so the hero cannot disagree with the
- * page a reader lands on after clicking it. Only companies the catalogue knows are eligible — a
- * symbol with a return but no name or sector would put a blank card on the landing page.
+ * page a reader lands on after clicking it. "Top three" is decided by measured return rather than by
+ * size: a slide that simply listed a sector's largest companies would say the same thing every day
+ * for a year, and would not be a ranking at all.
  */
-export async function topYearGainerTrio(): Promise<DynamicTrio | null> {
+async function sectorLeaderTrio(sectors: readonly string[], label: string): Promise<DynamicTrio | null> {
   try {
-    const { returns } = await getOneYearReturns();
+    const wanted = new Set<string>(sectors);
+    const ranked = rankedByReturn(await getOneYearReturns(), (stock) => wanted.has(stock.sector));
 
-    const ranked = Object.entries(returns)
-      .filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))
-      .sort((a, b) => b[1] - a[1]);
+    return trioOf(
+      ranked.map(({ symbol, gain, stock }, index) => ({
+        symbol,
+        company: stock.name,
+        // The figure and the placing that put it on the slide. The card's own matrix carries every
+        // other window, so this line does not repeat them.
+        blurb: `#${index + 1} in ${label} on one-year return, up ${Math.round(gain)}%.`,
+        tier: tierOf(stock.capTier),
+        sector: stock.sector,
+      })),
+    );
+  } catch {
+    return null;
+  }
+}
 
-    const entries = ranked.flatMap(([symbol, gain]) => {
-      const stock = STOCK_BY_SYMBOL.get(symbol);
-      if (!stock) return [];
+/** The three strongest capital goods names of the last year. */
+export function capitalGoodsTrio(): Promise<DynamicTrio | null> {
+  return sectorLeaderTrio(CAPITAL_GOODS_SECTORS, "capital goods");
+}
 
-      return [
-        {
-          symbol,
-          company: stock.name,
-          // The figure that put it on the slide, said plainly. The card's own matrix carries every
-          // other window, so this line does not repeat them.
-          blurb: `Up ${Math.round(gain)}% over the last year — the ${stock.sector.toLowerCase()} name that ran hardest.`,
-          tier: tierOf(stock.capTier),
-          sector: stock.sector,
-        },
-      ];
-    });
+/** The same, across drugmakers and hospital chains together. */
+export function healthcareTrio(): Promise<DynamicTrio | null> {
+  return sectorLeaderTrio(HEALTHCARE_SECTORS, "healthcare");
+}
 
-    return trioOf(entries);
+/**
+ * The three strongest one-month returns in the tracked universe.
+ *
+ * A month rather than a year on purpose: the slide beside it already reports a year, and the two
+ * windows almost never name the same companies — which is the point of showing both.
+ */
+export async function monthGainerTrio(): Promise<DynamicTrio | null> {
+  try {
+    const ranked = rankedByReturn(await getOneMonthReturns());
+
+    return trioOf(
+      ranked.map(({ symbol, gain, stock }) => ({
+        symbol,
+        company: stock.name,
+        blurb: `Up ${Math.round(gain)}% over the last month — the ${stock.sector.toLowerCase()} name that ran hardest.`,
+        tier: tierOf(stock.capTier),
+        sector: stock.sector,
+      })),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The candidates the investor slide ranks.
+ *
+ * A named pool rather than the whole catalogue, and that is a real constraint rather than a
+ * shortcut: an ownership split is one company's own quarterly filing, read one company at a time,
+ * so ranking four hundred of them would mean four hundred reads of a feed this app does not own.
+ * These are the widely-followed names a reader is most likely to be weighing, every one of them
+ * NSE-listed and therefore filing a pattern each quarter.
+ */
+export const INVESTOR_POOL = [
+  "RELIANCE",
+  "HDFCBANK",
+  "ICICIBANK",
+  "INFY",
+  "SBIN",
+  "ITC",
+  "LT",
+  "AXISBANK",
+] as const;
+
+/** A percentage from the filing, rounded the way the board rounds it. */
+const owned = (ownership: Ownership, key: "fii" | "dii" | "government" | "retail"): number =>
+  ownership.groups.find((group) => group.key === key)?.percent ?? 0;
+
+/**
+ * The three companies of the pool whose registers sit furthest outside the promoter group.
+ *
+ * "Where investors are most invested", answered from the filings rather than from turnover: the
+ * ranking is FII + DII + government + retail as a share of total shares, which is exactly the part
+ * of a company owned by somebody who chose to buy it. A promoter's own holding is not an investment
+ * decision anybody made this quarter, so it is what the ranking measures against rather than part
+ * of it.
+ *
+ * `allSettled` rather than `all`: one company whose filing could not be read costs itself its place
+ * on the board, not the whole slide.
+ */
+export async function investorHeldTrio(): Promise<DynamicTrio | null> {
+  try {
+    const settled = await Promise.allSettled(INVESTOR_POOL.map((symbol) => getOwnership(symbol)));
+
+    const ranked = settled
+      .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
+      .flatMap((ownership) => {
+        const stock = STOCK_BY_SYMBOL.get(ownership.symbol);
+        if (!stock) return [];
+
+        const split = {
+          fii: owned(ownership, "fii"),
+          dii: owned(ownership, "dii"),
+          government: owned(ownership, "government"),
+          retail: owned(ownership, "retail"),
+        };
+        const outsidePromoters = Math.round((split.fii + split.dii + split.government + split.retail) * 10) / 10;
+        // Nothing measured means the filing was read but carried no split — which is not a company
+        // held by nobody, it is a filing this parser got nothing out of. It has no place in a
+        // ranking of who holds the most.
+        if (outsidePromoters <= 0) return [];
+
+        return [
+          {
+            symbol: ownership.symbol,
+            company: stock.name,
+            blurb: `${outsidePromoters}% of the register is held outside the promoter group, as filed for ${ownership.quarter}.`,
+            tier: tierOf(stock.capTier),
+            sector: stock.sector,
+            ownership: { ...split, outsidePromoters },
+          },
+        ];
+      })
+      .sort((a, b) => b.ownership.outsidePromoters - a.ownership.outsidePromoters);
+
+    return trioOf(ranked);
   } catch {
     return null;
   }
@@ -221,50 +365,5 @@ export async function topWeeklyGainers(count = 8): Promise<HeroTickerRow[]> {
     }));
   } catch {
     return [];
-  }
-}
-
-/**
- * The three companies India's retail brokers place highest on their own most-bought lists.
- *
- * "Where investors are actually investing", as closely as a public source can answer it: these are
- * the brokers' own published lists, not our inference from turnover. `getBseTrending` already does
- * the join from a broker's scrip codes to the exchange's traded universe, ranked by best placing,
- * so this asks it for the top of that board rather than repeating the work.
- */
-export async function investorFavouriteTrio(): Promise<DynamicTrio | null> {
-  try {
-    const board = await getBseTrending({ rank: "brokers", pageSize: 3 });
-
-    const entries = board.rows.flatMap((row) => {
-      const sector = row.sector ?? STOCK_BY_SYMBOL.get(row.ticker)?.sector ?? "";
-      if (!sector) return [];
-
-      const placings = row.brokers ?? [];
-      const best = placings.reduce<number | null>(
-        (top, pick) => (top === null || pick.rank < top ? pick.rank : top),
-        null,
-      );
-      const house = placings[0]?.brokerName;
-
-      return [
-        {
-          symbol: row.ticker,
-          company: row.name,
-          // Attributed to the broker that published it. An unattributed "most bought" would be a
-          // claim of ours about what the country is buying, which is not something we can know.
-          blurb:
-            best !== null && house
-              ? `Placed #${best} on ${house}'s own most-bought list.`
-              : "On a tracked broker's published most-bought list.",
-          tier: tierOf(row.capTier),
-          sector,
-        },
-      ];
-    });
-
-    return trioOf(entries);
-  } catch {
-    return null;
   }
 }

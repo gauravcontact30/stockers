@@ -46,7 +46,7 @@ export function BoardFallback({ rows, height }: { rows: number; height: string }
  * board that opened on different defaults would simply fetch as it always did rather than show the
  * wrong figures.
  */
-const OPENING_MOVERS = { tier: "all", direction: "gainers", period: "overall", term: "", move: "0", page: 1 } as const;
+const OPENING_MOVERS = { tier: "all", direction: "gainers", period: "1y", term: "", move: "0", page: 1 } as const;
 
 export async function MoversBoard() {
   await io();

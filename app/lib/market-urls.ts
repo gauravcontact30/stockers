@@ -12,7 +12,7 @@
 
 export type MoverDirection = "gainers" | "losers";
 export type MoverTierKey = "all" | "large" | "mid" | "small";
-export type MoverPeriodKey = "1d" | "1w" | "3m" | "6m" | "1y" | "3y" | "5y" | "overall";
+export type MoverPeriodKey = "1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "3y" | "5y" | "overall";
 /** The size of move a reader is willing to look at, as a percentage. "0" means show everything. */
 export type MoverMoveKey = "0" | "2" | "5" | "10" | "20" | "50" | "100" | "200" | "300" | "500";
 
@@ -69,10 +69,18 @@ export function buildMoversUrl(
  * above: the landing page resolves this board's opening payload on the server now, and the server
  * cannot call into `../components/bse-trending-board`, which is `"use client"`. That component
  * re-exports both, so every existing import still resolves.
+ *
+ * Five rather than ten, since that section became two boards standing side by side. Ten a side is
+ * twenty rows in one section — and twenty per turn is twenty sector lookups upstream, for a section
+ * every other board on the page turns five at a time.
  */
-export const TRENDING_PAGE_SIZE = 10;
+export const TRENDING_PAGE_SIZE = 5;
 
 export type TrendingRankKey = "brokers" | "turnover" | "trades" | "volume";
+/** Which half of the tape a board asks for. Mirrors `TrendingDirection` in `./bse-market`. */
+export type TrendingDirectionKey = "all" | "bought" | "sold";
+/** The trailing windows the return column offers. Mirrors the periods `./bse-history` can baseline. */
+export type TrendingReturnKey = "1m" | "1y" | "3y" | "5y";
 /** `"all"` plus the platform and broker ids; kept loose here so this module pulls in no client code. */
 export type TrendingFilterKey = string;
 
@@ -84,6 +92,13 @@ export function buildTrendingUrl(
   tier: MoverTierKey,
   move: string,
   page: number,
+  /**
+   * Defaulted so every existing caller is unchanged. The two boards in the trending section pass
+   * "bought" and "sold"; anything else asking this endpoint still gets the whole tape.
+   */
+  direction: TrendingDirectionKey = "all",
+  /** The window the return column reports. Defaulted to match `getBseTrending`'s own default. */
+  returnPeriod: TrendingReturnKey = "1m",
 ): string {
   const params = new URLSearchParams({ rank, page: String(page), pageSize: String(TRENDING_PAGE_SIZE) });
   if (term) params.set("q", term);
@@ -91,6 +106,8 @@ export function buildTrendingUrl(
   if (broker !== "all") params.set("broker", broker);
   if (tier !== "all") params.set("tier", tier);
   if (move !== "0") params.set("min", move);
+  if (direction !== "all") params.set("direction", direction);
+  if (returnPeriod !== "1m") params.set("period", returnPeriod);
   return `/api/market/bse/trending?${params.toString()}`;
 }
 

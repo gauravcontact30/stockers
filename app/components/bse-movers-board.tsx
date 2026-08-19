@@ -14,7 +14,6 @@ import {
   chipFor,
   formatCrore,
   formatDayDate,
-  formatQuantity,
   formatRupee,
   formatSignedPercent,
   sectorTone,
@@ -92,25 +91,37 @@ const TIER_OPTIONS: { key: TierKey; label: string }[] = [
   { key: "small", label: "Small cap" },
 ];
 
-/** The return window the board is ranked by. */
+/** The return window a payload was ranked by. Wider than what this board offers — see below. */
 export type PeriodKey = MoverPeriodKey;
 
-// Longest first, because that is the order a trader reads a return table in — and "Overall" leads
-// because it is what the board opens on.
-const PERIOD_OPTIONS: { key: PeriodKey; label: string; short: string }[] = [
-  { key: "overall", label: "Overall return", short: "Overall" },
-  { key: "5y", label: "5 years", short: "5Y" },
-  { key: "3y", label: "3 years", short: "3Y" },
-  { key: "1y", label: "1 year", short: "1Y" },
+/**
+ * The windows the % Return column can be measured over, shortest first.
+ *
+ * A ladder of five, where there were eight. "Overall" ranked the whole exchange by returns since
+ * listing, which is what floated +81,286% scrips to the top of a board people read for what to
+ * trade; 1D and 1W duplicated the Day % column at one and five sessions. What is left is the span
+ * a position is actually held over.
+ *
+ * `1m` is new to the URL layer but not to the data: ../lib/bse-history has kept a one-month
+ * baseline in HISTORY_PERIODS all along, and only the endpoint's whitelist turned the request away.
+ */
+const PERIOD_OPTIONS = [
+  { key: "1m", label: "1 month", short: "1M" },
   { key: "6m", label: "6 months", short: "6M" },
-  { key: "3m", label: "3 months", short: "3M" },
-  { key: "1w", label: "1 week", short: "1W" },
-  { key: "1d", label: "1 day", short: "1D" },
-];
+  { key: "1y", label: "1 year", short: "1Y" },
+  { key: "3y", label: "3 years", short: "3Y" },
+  { key: "5y", label: "5 years", short: "5Y" },
+] as const satisfies readonly { key: MoverPeriodKey; label: string; short: string }[];
 
-const PERIOD_LABEL: Record<PeriodKey, string> = Object.fromEntries(
+/** What the board can be set to, as against what a payload may carry. */
+type BoardPeriod = (typeof PERIOD_OPTIONS)[number]["key"];
+
+/** The window the board opens on: long enough to mean something, short enough to still be a trade. */
+const DEFAULT_PERIOD: BoardPeriod = "1y";
+
+const PERIOD_LABEL: Record<BoardPeriod, string> = Object.fromEntries(
   PERIOD_OPTIONS.map((option) => [option.key, option.short]),
-) as Record<PeriodKey, string>;
+) as Record<BoardPeriod, string>;
 
 // A threshold on the size of the return, applied to whichever tab is open — over one session 20%
 // picks the stocks that hit the upper circuit on the gainers board and the lower circuit on the
@@ -418,24 +429,85 @@ function FilterSelect<T extends string>({
   );
 }
 
-/** The columns, with the return column named after whichever period the board is ranked by. */
-function columnsFor(period: PeriodKey): { label: string; align: string }[] {
-  return [
-    { label: "#", align: "text-left" },
-    { label: "Company", align: "text-left" },
-    { label: "Tier", align: "text-left" },
-    { label: "Price", align: "text-right" },
-    { label: `Return · ${PERIOD_LABEL[period]}`, align: "text-right" },
-    { label: "Day change", align: "text-right" },
-    { label: "Day %", align: "text-right" },
-    { label: "Day range", align: "text-right" },
-    { label: "Volume", align: "text-right" },
-    { label: "Turnover", align: "text-right" },
-    { label: "Market cap", align: "text-right" },
-  ];
+/**
+ * The columns, with the return column named after whichever period the board is ranked by.
+ *
+ * Seven, down from eleven, and the four that went were not showing anything the remaining seven
+ * do not already say:
+ *
+ *  - Day change in rupees restated Day % in the unit nobody compares stocks in. ₹29.65 means
+ *    nothing across two share prices; +4.99% is the comparison a reader was making anyway.
+ *  - Day range printed both ends of the session as text — the widest column on the board, and the
+ *    close is already in Price.
+ *  - Volume and Turnover are the same fact twice, and turnover is the honest one: 2,376 shares
+ *    reads as a number until you notice it is ₹55.8 L, and 1 share reads as a number until you
+ *    notice it is ₹0. Rupees traded is what says whether a move can be traded at all.
+ *  - Tier had a column to itself for one word, and carried the scrip's market-cap rank ("#529")
+ *    which is exchange bookkeeping, not something anyone trades on. The word moved into the
+ *    company cell as a pill; the rank went.
+ *
+ * The scrip code went the same way, out of the company cell: BSE keys its own pages by it, but a
+ * reader looking at SWANDEF is not looking for 533107.
+ *
+ * The return column is named "% Return" flat rather than "Return · 5Y", because the window is no
+ * longer something the header reports — it is something the header asks for. See `PeriodPicker`.
+ */
+const COLUMNS: { key: string; label: string; align: string }[] = [
+  { key: "rank", label: "#", align: "text-left" },
+  { key: "company", label: "Company", align: "text-left" },
+  { key: "price", label: "Price", align: "text-right" },
+  { key: "return", label: "% Return", align: "text-right" },
+  { key: "day", label: "Day %", align: "text-right" },
+  { key: "turnover", label: "Turnover", align: "text-right" },
+  { key: "marketCap", label: "Market cap", align: "text-right" },
+];
+
+/**
+ * The window the % Return column is measured over, as a control inside the column it rewrites.
+ *
+ * It used to be a "Return" select in the toolbar above, one of four filters in a row — which put
+ * the thing the whole board is ranked by as far from its own numbers as the layout allowed. The
+ * header said "Return · Overall" and the way to change it was somewhere else entirely. Here the
+ * two are the same control: the dropdown sits in the cell whose figures it changes, so switching
+ * 1Y to 5Y is one movement in the place the reader is already looking.
+ */
+function PeriodPicker({ value, onChange }: { value: BoardPeriod; onChange: (next: BoardPeriod) => void }) {
+  return (
+    <select
+      aria-label="Return period"
+      value={value}
+      onChange={(event) => onChange(event.target.value as BoardPeriod)}
+      className="cursor-pointer rounded-md border border-slate-200 bg-white px-1 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 outline-none transition hover:border-slate-400 focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500"
+    >
+      {PERIOD_OPTIONS.map((option) => (
+        <option key={option.key} value={option.key} className="text-slate-900">
+          {option.short}
+        </option>
+      ))}
+    </select>
+  );
 }
 
-/** One stock, priced and classified, as a row of a movers table. */
+/** The cap tier as a pill, beside the sector it sits with — one word, not a column. */
+function TierPill({ tier }: { tier: BseCapTier | null }) {
+  if (!tier) return null;
+
+  return (
+    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+      {tier} cap
+    </span>
+  );
+}
+
+/**
+ * One stock as a row of a movers table: who it is, what it costs, what it did, and whether the
+ * move is tradeable.
+ *
+ * That last one is why turnover survived the trim while volume did not. This board ranks the whole
+ * exchange by return, which floats scrips to the top that nobody can actually buy — a name up
+ * 27,935% on a single share changing hands is a rounding artefact of a dead order book, not a
+ * trade. A share count hides that behind a plausible-looking number; rupees traded does not.
+ */
 export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number }) {
   return (
     <tr className="border-b border-slate-100 transition hover:bg-slate-50 dark:border-slate-800/70 dark:hover:bg-slate-950/50">
@@ -443,29 +515,23 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
         <SegmentRankPill rank={rank} />
       </td>
 
-      {/* The sector belongs to the company, so it sits with the company's name rather than in a
-          column of its own — one less column to scroll past, and the pill reads as a label on the
-          row it describes. */}
+      {/* Sector and tier belong to the company, so they sit with its name rather than in columns of
+          their own — two fewer columns to scroll past, and the pills read as labels on the row they
+          describe. */}
       <td className="py-2.5 pr-3">
         <div className="flex items-center gap-2.5">
           <CompanyLogo symbol={row.ticker} size={32} />
           <div className="min-w-0">
             <StockDetailTrigger symbol={row.ticker}>
               <p className="font-semibold text-slate-900 underline-offset-2 hover:underline dark:text-white">{row.ticker}</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {row.name} · {row.code}
-              </p>
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{row.name}</p>
             </StockDetailTrigger>
-            <span className="mt-1 block max-w-52">
+            <span className="mt-1 flex max-w-64 flex-wrap items-center gap-1">
               <CategoryPill sector={row.sector} />
+              <TierPill tier={row.capTier} />
             </span>
           </div>
         </div>
-      </td>
-
-      <td className="py-2.5 pr-3 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-        {row.capTier ?? "—"}
-        {row.rank !== null && <span className="ml-1 text-slate-400 dark:text-slate-500">#{row.rank}</span>}
       </td>
 
       <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-slate-900 dark:text-white">
@@ -479,22 +545,10 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
         </span>
       </td>
 
-      <td className={`py-2.5 pr-3 text-right font-semibold tabular-nums ${toneFor(row.change)}`}>
-        {formatRupee(row.change)}
-      </td>
-
       <td className="py-2.5 pr-3 text-right">
         <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${chipFor(row.changePercent)}`}>
           {formatSignedPercent(row.changePercent)}
         </span>
-      </td>
-
-      <td className="py-2.5 pr-3 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
-        {formatRupee(row.dayLow)} – {formatRupee(row.dayHigh)}
-      </td>
-
-      <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
-        {formatQuantity(row.volume)}
       </td>
 
       <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
@@ -525,9 +579,9 @@ export function MoverTableRow({ row, rank }: { row: RankedMoverRow; rank: number
 export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMoverPage> }) {
   const [direction, setDirection] = useState<MoverDirection>("gainers");
   const [tier, setTier] = useState<TierKey>("all");
-  // The board opens on the whole story rather than today's noise: ranked by overall return, the
-  // top of the list is what has actually compounded, not what happened to be bid up this morning.
-  const [period, setPeriod] = useState<PeriodKey>("overall");
+  // One year: long enough that the ranking is about the business rather than this morning's tape,
+  // short enough that it is still a holding period rather than a listing history.
+  const [period, setPeriod] = useState<BoardPeriod>(DEFAULT_PERIOD);
   const [move, setMove] = useState<MoveKey>("0");
   const [input, setInput] = useState("");
   const [term, setTerm] = useState("");
@@ -555,7 +609,7 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
   const [cursor, setCursor] = useState({ key: listKey, page: 1 });
   const page = cursor.key === listKey ? cursor.page : 1;
 
-  const { data, loading, error } = useMarketFeed<BseMoverPage>(
+  const { data, loading, updating, error } = useMarketFeed<BseMoverPage>(
     buildMoversUrl(tier, direction, period, term, move, page),
     prefetched,
   );
@@ -591,7 +645,7 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
       blurb={voice.blurb}
       aside={
         <div className={`rounded-full border px-3 py-2 text-sm font-medium ${voice.asideClass}`}>
-          {data ? `${data.total.toLocaleString("en-IN")} ${voice.closed}` : "Loading BSE…"}
+          {updating ? "Updating…" : data ? `${data.total.toLocaleString("en-IN")} ${voice.closed}` : "Loading BSE…"}
         </div>
       }
     >
@@ -611,7 +665,6 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
             suggestions={rows}
             rankOffset={paged.from > 0 ? paged.from - 1 : 0}
           />
-          <FilterSelect label="Return" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
           <FilterSelect label="Tier" value={tier} options={TIER_OPTIONS} onChange={setTier} />
           <FilterSelect label="Move" value={move} options={MOVE_OPTIONS} onChange={setMove} />
           <button
@@ -637,8 +690,8 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
             ) : (
               <>
                 {filtered ? "stocks match these filters, of those" : "stocks in all"} {voice.over}{" "}
-                {period === "1d" ? formatDayDate(data.sessionDate) : PERIOD_LABEL[period].toLowerCase()}
-                {period !== "1d" && data.periodFrom && ` (measured from ${formatDayDate(data.periodFrom)})`} · sorted by{" "}
+                {PERIOD_LABEL[period].toLowerCase()}
+                {data.periodFrom && ` (measured from ${formatDayDate(data.periodFrom)})`} · sorted by{" "}
                 {PERIOD_LABEL[period]} return, {voice.order}
               </>
             )}{" "}
@@ -653,20 +706,35 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
       {!loading && rows.length > 0 && (
         <>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-260 border-collapse text-left text-sm">
+            <table className="w-full min-w-180 border-collapse text-left text-sm">
               <caption className="sr-only">
                 BSE stocks that {voice.closed}, ranked by percentage change, {voice.order}
               </caption>
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-400 dark:border-slate-800 dark:text-slate-500">
-                  {columnsFor(period).map((column) => (
-                    <th key={column.label} scope="col" className={`py-2 pr-3 font-medium ${column.align}`}>
-                      {column.label}
+                  {COLUMNS.map((column) => (
+                    <th key={column.key} scope="col" className={`py-2 pr-3 font-medium ${column.align}`}>
+                      {column.key === "return" ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {column.label}
+                          <PeriodPicker value={period} onChange={setPeriod} />
+                        </span>
+                      ) : (
+                        column.label
+                      )}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              {/* The rows dim and go inert while a changed filter is in flight — they are still the
+                  last figures the server confirmed, but they answer the previous question, so they
+                  are shown as being replaced rather than as the answer to the controls above. The
+                  header is deliberately outside this: the period picker lives up there, and a
+                  control that goes dead while its own request is in flight cannot be corrected. */}
+              <tbody
+                className={`transition-opacity ${updating ? "pointer-events-none opacity-45" : "opacity-100"}`}
+                aria-busy={updating}
+              >
                 {rows.map((row, index) => (
                   // Ranks run on across pages: the first row of page two is the 26th sharpest move.
                   <MoverTableRow key={row.code} row={row} rank={paged.from + index} />
@@ -697,7 +765,7 @@ export function BseMoversBoard({ prefetched }: { prefetched?: Prefetched<BseMove
       )}
 
       <SectionFootnote>
-        Prices, volumes and turnover from BSE&apos;s official Bhavcopy for {formatDayDate(data?.sessionDate)}; market caps,
+        Prices and turnover from BSE&apos;s official Bhavcopy for {formatDayDate(data?.sessionDate)}; market caps,
         listings and cap tiers from BSE&apos;s scrip master, tiered by SEBI&apos;s rule — top 100 by market capitalisation
         are large cap, the next 150 mid cap, the remainder small cap. Non-equity instruments (ETFs, REITs, rights
         entitlements, g-secs) are excluded so they cannot crowd out a real mover · not investment advice.

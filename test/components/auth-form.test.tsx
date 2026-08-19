@@ -10,6 +10,11 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, refresh: mockRefresh }),
 }));
 
+// The self-service reset is built but not currently offered — `app/lib/auth-features` withholds its
+// entry point. Forced on here so the flow below is still exercised rather than deleted with the
+// link; that the flag really is off by default is covered by `./auth-form-recovery-hidden.test.tsx`.
+jest.mock("../../app/lib/auth-features", () => ({ PASSWORD_RECOVERY_ENABLED: true }));
+
 function mockFetchOnce(response: { ok: boolean; body: unknown }) {
   global.fetch = jest.fn(() =>
     Promise.resolve({

@@ -25,10 +25,11 @@ function Probe({
   refreshMs?: number;
   refreshNow?: boolean;
 }) {
-  const { data, loading, error } = useMarketFeed<{ value: string }>(url, prefetched, { refreshMs, refreshNow });
+  const { data, loading, updating, error } = useMarketFeed<{ value: string }>(url, prefetched, { refreshMs, refreshNow });
   return (
     <div>
       <span data-testid="loading">{String(loading)}</span>
+      <span data-testid="updating">{String(updating)}</span>
       <span data-testid="error">{error ?? ""}</span>
       <span data-testid="value">{data?.value ?? ""}</span>
     </div>
@@ -101,6 +102,108 @@ describe("useMarketFeed", () => {
 
     rerender(<Probe url="/api/test" prefetched={prefetched} />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/test"));
+  });
+
+  /**
+   * The case behind "the table does not update when I change the filters".
+   *
+   * Two of the boards on this hook take tens of seconds to answer, so a reader who changes a filter
+   * mid-flight leaves two requests racing — and the loser was landing last and winning. Nothing tied
+   * a response to the request it came from, so the answer to the filters they had left overwrote the
+   * answer to the filters they were on, and the table sat there disagreeing with its own controls.
+   */
+  it("does not let a superseded response overwrite the current one", async () => {
+    const settle: Record<string, (value: unknown) => void> = {};
+    global.fetch = jest.fn(
+      (url: string) =>
+        new Promise((resolve) => {
+          settle[String(url)] = resolve;
+        }),
+    ) as unknown as typeof fetch;
+
+    const { rerender } = render(<Probe url="/api/test?tier=all" />);
+    await waitFor(() => expect(settle["/api/test?tier=all"]).toBeDefined());
+
+    // The reader changes the filter while the first request is still in flight.
+    rerender(<Probe url="/api/test?tier=large" />);
+    await waitFor(() => expect(settle["/api/test?tier=large"]).toBeDefined());
+
+    // The new filter's answer arrives first.
+    await act(async () => {
+      settle["/api/test?tier=large"]({ ok: true, json: async () => ({ value: "large caps" }) });
+    });
+    expect(screen.getByTestId("value")).toHaveTextContent("large caps");
+
+    // Then the old one turns up. It must be dropped, not applied over the top.
+    await act(async () => {
+      settle["/api/test?tier=all"]({ ok: true, json: async () => ({ value: "whole exchange" }) });
+    });
+    expect(screen.getByTestId("value")).toHaveTextContent("large caps");
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+  });
+
+  /**
+   * A changed filter reports itself as `updating` rather than as `loading`.
+   *
+   * The distinction is the whole point: `loading` is the empty board and draws a skeleton, while a
+   * filter change keeps the last real figures on screen — these boards take seconds to answer, and
+   * twenty seconds of skeleton over readable numbers is worse than the numbers plus a caller-drawn
+   * "being replaced". What it must not do is call them the answer to the new filters.
+   */
+  it("reports a changed filter as updating, keeping the last figures on screen", async () => {
+    const settle: Record<string, (value: unknown) => void> = {};
+    global.fetch = jest.fn(
+      (url: string) =>
+        new Promise((resolve) => {
+          settle[String(url)] = resolve;
+        }),
+    ) as unknown as typeof fetch;
+
+    const { rerender } = render(<Probe url="/api/test?tier=all" />);
+    await waitFor(() => expect(settle["/api/test?tier=all"]).toBeDefined());
+    await act(async () => {
+      settle["/api/test?tier=all"]({ ok: true, json: async () => ({ value: "whole exchange" }) });
+    });
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    expect(screen.getByTestId("updating")).toHaveTextContent("false");
+
+    rerender(<Probe url="/api/test?tier=large" />);
+    expect(screen.getByTestId("updating")).toHaveTextContent("true");
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    expect(screen.getByTestId("value")).toHaveTextContent("whole exchange");
+
+    await act(async () => {
+      settle["/api/test?tier=large"]({ ok: true, json: async () => ({ value: "large caps" }) });
+    });
+    expect(screen.getByTestId("updating")).toHaveTextContent("false");
+    expect(screen.getByTestId("value")).toHaveTextContent("large caps");
+  });
+
+  // A failed request for the previous filters is the same story: it belongs to a question the
+  // reader has moved on from, so it must not raise a banner over the one they are waiting for.
+  it("drops a superseded failure too", async () => {
+    const reject: Record<string, (reason: unknown) => void> = {};
+    global.fetch = jest.fn(
+      (url: string) =>
+        new Promise((_resolve, rejectIt) => {
+          reject[String(url)] = rejectIt;
+        }),
+    ) as unknown as typeof fetch;
+
+    const { rerender } = render(<Probe url="/api/test?tier=all" />);
+    await waitFor(() => expect(reject["/api/test?tier=all"]).toBeDefined());
+
+    rerender(<Probe url="/api/test?tier=large" />);
+    await waitFor(() => expect(reject["/api/test?tier=large"]).toBeDefined());
+
+    await act(async () => {
+      reject["/api/test?tier=all"](new Error("gave up"));
+    });
+
+    // Nothing has answered yet, so the board is still on its first load rather than updating —
+    // and it is waiting on the current request, not reporting the abandoned one's failure.
+    expect(screen.getByTestId("error")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("loading")).toHaveTextContent("true");
   });
 });
 

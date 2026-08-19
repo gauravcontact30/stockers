@@ -5,11 +5,10 @@ import type { DynamicTrio } from "../lib/hero-trios";
 import type { MostBoughtBoard } from "../lib/most-bought";
 import { MostBoughtRibbon } from "./most-bought-ribbon";
 import {
-  DataCentreScene,
-  DefenceStocksScene,
+  CapitalGoodsScene,
+  HealthcareScene,
   InvestorFavouritesScene,
-  MINT,
-  YearGainersScene,
+  MonthGainersScene,
   type Trio,
 } from "./hero-scenes";
 import type { StockPerformance } from "./use-stock-performance";
@@ -26,15 +25,19 @@ type Slide = {
 export type HeroCarouselProps = {
   initialPerformance?: readonly StockPerformance[];
   /**
-   * The three strongest one-year returns, resolved on the server.
+   * The three strongest capital goods names of the last year, resolved on the server.
    *
    * A prop rather than a fetch in here for the same reason every other figure on this page is: the
    * hero is server-rendered and then hydrated, and a ranking computed independently in the browser
    * would differ from the one already in the markup. Null when the board could not be built, which
    * the scene renders as "reading" rather than as an error.
    */
-  yearGainers?: DynamicTrio | null;
-  /** The three names brokers place highest on their own most-bought lists. Same contract. */
+  capitalGoods?: DynamicTrio | null;
+  /** The same over healthcare — drugmakers and hospitals together. Same contract. */
+  healthcare?: DynamicTrio | null;
+  /** The three biggest one-month runs in the tracked universe. Same contract. */
+  monthGainers?: DynamicTrio | null;
+  /** The three held furthest outside their promoter groups, as filed. Same contract. */
   investorFavourites?: DynamicTrio | null;
   /**
    * Today's buying board, for the ribbon under the slider.
@@ -49,54 +52,63 @@ export type HeroCarouselProps = {
 /**
  * The four slides.
  *
- * A visitor lands looking for proof before editorial breadth, so the two live rankings open the
- * carousel and the fixed sector themes follow as examples of how to inspect a thesis:
+ * Two sectors first, then two boards over the whole market — narrow to wide, which is the order a
+ * visitor reads them in:
  *
- *   1. Most gainers over one year — chosen by measured returns
- *   2. Where investors are buying — chosen by what brokers publish as most bought
- *   3. Data centres — the capacity build-out, three companies at three points in the chain
- *   4. Defence — aircraft, warships and components, at three different sizes
+ *   1. Capital goods — the sector's three strongest one-year returns
+ *   2. Healthcare — the same, over drugmakers and hospital chains together
+ *   3. Most gainers, last one month — the three biggest short-run moves on the board
+ *   4. Where investors are invested — the three held furthest outside their promoter groups,
+ *      by FIIs, DIIs, the government and retail investors, as filed each quarter
  *
- * The ranking slides get their companies out of the data — a hard-coded "top gainers" list is a
- * claim that stops being true the week after it is written. The last two are fixed because the
- * *theme* is the editorial point and its companies are stable.
+ * Every one of the four gets its companies out of the data — a hard-coded "top three" is a claim
+ * that stops being true the week after it is written — and every one of them arrives as a prop
+ * resolved on the server, so the hero cannot disagree with the boards below it.
  *
  * Every card carries the company's own mark, the sector the exchange files it under with that
  * family's glyph, its cap tier, a live price and the full return matrix. Nothing is written over
  * the scenes: they carry their own labels, and a headline laid on top only competed with those.
+ *
+ * Takes every ranking explicitly rather than defaulting them: `HeroCarousel` has already applied
+ * the defaults by the time it calls this, and a second set here would be two places to change and
+ * one of them silently unreachable.
  */
 export function slidesFor({
-  initialPerformance = [],
-  yearGainers = null,
-  investorFavourites = null,
-}: HeroCarouselProps): Slide[] {
+  initialPerformance,
+  capitalGoods,
+  healthcare,
+  monthGainers,
+  investorFavourites,
+}: Required<Omit<HeroCarouselProps, "mostBought">>): Slide[] {
   return [
     {
-      caption: "Most gainers: the three biggest one-year runs",
-      scene: <YearGainersScene trio={yearGainers as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Capital goods: the sector's three strongest stocks",
+      scene: <CapitalGoodsScene trio={capitalGoods as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Where investors are buying: the three most bought through brokers",
+      caption: "Healthcare: the sector's three strongest stocks",
+      scene: <HealthcareScene trio={healthcare as Trio | null} initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Most gainers: the three biggest one-month runs",
+      scene: <MonthGainersScene trio={monthGainers as Trio | null} initialPerformances={initialPerformance} />,
+    },
+    {
+      caption: "Where investors are invested: the three most widely held outside their promoters",
       scene: <InvestorFavouritesScene trio={investorFavourites as Trio | null} initialPerformances={initialPerformance} />,
-    },
-    {
-      caption: "Data centres: three companies building the capacity",
-      scene: <DataCentreScene initialPerformances={initialPerformance} />,
-    },
-    {
-      caption: "Defence: aircraft, warships and components compared",
-      scene: <DefenceStocksScene initialPerformances={initialPerformance} />,
     },
   ];
 }
 
 export function HeroCarousel({
   initialPerformance = [],
-  yearGainers = null,
+  capitalGoods = null,
+  healthcare = null,
+  monthGainers = null,
   investorFavourites = null,
   mostBought = null,
 }: HeroCarouselProps) {
-  const slides = slidesFor({ initialPerformance, yearGainers, investorFavourites });
+  const slides = slidesFor({ initialPerformance, capitalGoods, healthcare, monthGainers, investorFavourites });
   const [activeSlide, setActiveSlide] = useState(0);
   /**
    * Which scenes have earned the right to exist yet.

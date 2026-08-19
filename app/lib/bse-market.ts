@@ -826,7 +826,25 @@ export type BseLiveQuote = {
   asOf: string | null;
 };
 
+/**
+ * Which half of the tape a board is showing.
+ *
+ * The exchange publishes no buy/sell split — no venue does, intraday or otherwise — so the sign of
+ * the session's move is what stands in for it, and that substitution is stated on the board rather
+ * than hidden behind the word "bought". A scrip trading above its previous close on heavy,
+ * many-handed volume is one a crowd is buying into; the same tape below the close is one being sold.
+ * It is the same rule `./most-bought` already uses, named once here so both agree.
+ */
+export type TrendingDirection = "all" | "bought" | "sold";
+
 export type BseTrendingRow = BseRow & {
+  /**
+   * The trailing return over the board's selected window, in percent, or null.
+   *
+   * Null is a real answer and not a gap: a company listed after the reference session genuinely has
+   * no return over that window, and printing a zero would claim it went nowhere.
+   */
+  returnPercent: number | null;
   /** The live quote for this scrip, or null outside market hours and when the feed had nothing. */
   liveQuote: BseLiveQuote | null;
   /**
@@ -853,6 +871,16 @@ export type BseTrendingRow = BseRow & {
 
 export type TrendingQuery = {
   rank?: TrendingRank;
+  /** Which half of the tape: everything, the scrips being bought up, or the ones being sold off. */
+  direction?: TrendingDirection;
+  /**
+   * The trailing window each row reports beside the session's figures.
+   *
+   * Only the page being returned is measured, so this costs one memoised baseline file rather than
+   * a per-row lookup. Defaults to one month — the shortest window on the board, and the one whose
+   * answer is least likely to be the same as the session move already on the row.
+   */
+  returnPeriod?: Exclude<ReturnPeriod, "1d" | "overall">;
   /** Name, ticker, scrip code or ISIN — the same four ways the directory is searched. */
   q?: string;
   platform?: BsePlatform | "all";
@@ -876,6 +904,11 @@ export type TrendingQuery = {
 export type BseTrendingBoard = {
   rows: BseTrendingRow[];
   rank: TrendingRank;
+  /** The half of the tape these rows come from. */
+  direction: TrendingDirection;
+  /** The window `returnPercent` on each row was measured over, and the session it was measured from. */
+  returnPeriod: Exclude<ReturnPeriod, "1d" | "overall">;
+  returnFrom: string | null;
   /** Exchange-wide session totals, which is what each row's share is a share of. */
   totals: { turnoverCr: number; volume: number; trades: number; traded: number };
   /**
@@ -1030,6 +1063,8 @@ function newestPrint(live: Map<string, BseLiveQuote>): string | null {
 
 export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTrendingBoard> {
   const rank = query.rank ?? "turnover";
+  const direction = query.direction ?? "all";
+  const returnPeriod = query.returnPeriod ?? "1m";
   // The broker board still only contains companies that traded, so it is gated on turnover the
   // same way the turnover board is — a listing nobody traded today is not something to show.
   const metric = TRENDING_METRIC[rank === "brokers" ? "turnover" : rank];
@@ -1040,7 +1075,15 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
   const minPercent = query.minPercent && query.minPercent > 0 ? query.minPercent : 0;
   const pageSize = Math.min(Math.max(query.pageSize ?? TRENDING_SIZE, 1), MAX_TRENDING_SIZE);
 
-  const [universe, tape, brokerPicks] = await Promise.all([getBseUniverse(), getBseTape(), getBrokerPopularity()]);
+  const [universe, tape, brokerPicks, baseline] = await Promise.all([
+    getBseUniverse(),
+    getBseTape(),
+    getBrokerPopularity(),
+    // Memoised for half a day upstream, so this is one download per period per process rather than
+    // per request — and it is asked for unconditionally because every board on screen reports a
+    // trailing return now, whichever half of the tape it is showing.
+    getBaseline(returnPeriod),
+  ]);
 
   // A scrip with no price did not trade at all; one with turnover but no transaction count is a
   // filing artefact. Both would otherwise sort into the board on a null treated as zero.
@@ -1077,7 +1120,17 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
     .filter((row) => broker === "all" || (brokerPicks[row.code] ?? []).some((pick) => pick.broker === broker))
     // Ranking by broker placing over companies no broker lists would be ranking by nothing, so the
     // board is confined to the listed ones rather than padded with unplaced rows at the bottom.
-    .filter((row) => rank !== "brokers" || (brokerPicks[row.code] ?? []).length > 0);
+    .filter((row) => rank !== "brokers" || (brokerPicks[row.code] ?? []).length > 0)
+    // The buy/sell split. Part of `matching` rather than applied after it, so the platform facets
+    // counted below describe the half being shown — a facet that promised rows the selected
+    // direction excludes would empty the board when it was clicked, which is the bug faceting is
+    // for. A scrip that closed exactly level belongs to neither half: it was not bought up and it
+    // was not sold off, and putting it on one board would be choosing a side the tape did not.
+    .filter((row) => {
+      if (direction === "all") return true;
+      const move = row.changePercent ?? 0;
+      return direction === "bought" ? move > 0 : move < 0;
+    });
 
   // Faceted: the counts describe the search and the other filters, so a platform chip that would
   // return nothing reads as zero rather than silently emptying the board when it is clicked.
@@ -1113,6 +1166,10 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
   return {
     rows: resolved.map((row) => ({
       ...row,
+      // Measured against this company's own close in the reference session, for the page on screen
+      // only — the whole traded universe would be thousands of lookups to draw five rows.
+      returnPercent:
+        row.price === null ? null : periodReturn([row.code, row.ticker, row.isin], row.price, baseline),
       liveQuote: live.get(row.code) ?? null,
       brokers: brokerPicks[row.code] ?? [],
       brokerRank: (brokerPicks[row.code] ?? []).length ? bestBrokerRank(brokerPicks, row) : null,
@@ -1122,6 +1179,9 @@ export async function getBseTrending(query: TrendingQuery = {}): Promise<BseTren
       averageTradeValue: row.turnoverCr !== null && row.trades ? (row.turnoverCr * 1e7) / row.trades : null,
     })),
     rank,
+    direction,
+    returnPeriod,
+    returnFrom: baseline.date,
     totals,
     platforms,
     total,

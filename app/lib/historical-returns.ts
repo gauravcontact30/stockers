@@ -110,3 +110,45 @@ export async function getOneYearReturns(): Promise<PeriodReturnsCache> {
 export async function getOneMonthReturns(): Promise<PeriodReturnsCache> {
   return getPeriodReturns("1mo");
 }
+
+/**
+ * Returns for a named handful of companies, fetched now instead of read from the daily cache.
+ *
+ * The caches above cover the tracked catalogue — ~400 companies out of the ~4,950 listed on the
+ * BSE — because pre-fetching a year of price history for the whole exchange every day is not a
+ * thing to do. That is the right trade for a *ranking*: nobody misses the 4,550th-best performer.
+ *
+ * It is the wrong answer for a *search*. A reader who typed "Cupid" named one company, and the
+ * board answering "no such thing" when the exchange lists it is a hole rather than a limit. So a
+ * searched name outside the cache is worth the one request it costs, and the answer is held for
+ * the rest of the IST day — same freshness as the cache it stands in for, and a second search for
+ * the same company inside that day costs nothing.
+ */
+const onDemand = new Map<string, { date: string; value: number | null }>();
+
+export async function getReturnsOnDemand(
+  subjects: QuoteSubject[],
+  period: ReturnPeriod,
+): Promise<Record<string, number | null>> {
+  const config = PERIOD_CONFIG[period];
+  const today = todayIST();
+
+  const returns: Record<string, number | null> = {};
+  const missing: QuoteSubject[] = [];
+
+  for (const subject of subjects) {
+    const held = onDemand.get(`${period}|${subject.symbol}`);
+    if (held && held.date === today) returns[subject.symbol] = held.value;
+    else missing.push(subject);
+  }
+
+  const values = await mapWithConcurrency(missing, CONCURRENCY, (subject) => fetchPeriodReturn(subject, config));
+  missing.forEach((subject, index) => {
+    // A null is cached too: a scrip with no usable history is a fact about the scrip, and asking
+    // Yahoo again on the next keystroke would not change it.
+    onDemand.set(`${period}|${subject.symbol}`, { date: today, value: values[index] });
+    returns[subject.symbol] = values[index];
+  });
+
+  return returns;
+}

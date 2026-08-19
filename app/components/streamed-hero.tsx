@@ -1,7 +1,7 @@
 // The landing page's slider, streamed into the page rather than awaited in front of it.
 //
-// The four slides need three server reads: live figures for the six fixed companies, the one-year
-// gainers ranking, and the brokers' most-bought ranking. Those were awaited at the top of `Home`,
+// The four slides need five server reads: the four rankings the slides are, and the live figures for
+// whichever companies those rankings name. They were awaited at the top of `Home`,
 // which is the one place a slow read costs the most — `Home` cannot return any markup until its
 // own awaits settle, so a reader saw `app/loading.tsx` and nothing else until all three had come
 // back. Three network round trips, two of them against feeds this app does not own, sat in front of
@@ -26,12 +26,27 @@ import { Suspense } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { HeroCarousel } from "./hero-carousel";
 import { CACHE_TAGS } from "../lib/cache";
-import { investorFavouriteTrio, topYearGainerTrio, type DynamicTrio } from "../lib/hero-trios";
+import {
+  capitalGoodsTrio,
+  healthcareTrio,
+  investorHeldTrio,
+  monthGainerTrio,
+  type DynamicTrio,
+} from "../lib/hero-trios";
 import { getMostBoughtToday, type MostBoughtBoard } from "../lib/most-bought";
 import { getCachedPerformanceSummaries, type PerformanceSummary } from "../lib/stock-performance";
 
-/** The six companies on the two fixed slides. Their live figures are prefetched for both. */
-export const HERO_PERFORMANCE_SYMBOLS = ["HAL", "MAZDOCK", "PARAS", "NETWEB", "POWERINDIA", "LT"];
+/**
+ * The companies whose live figures are prefetched, gathered from the four rankings themselves.
+ *
+ * A function rather than the fixed list it used to be, because no slide names its companies any
+ * more — all four are rankings, so which twelve names need a price is only known once the rankings
+ * have resolved. Deduplicated: a company can top two of these boards at once, and asking the quote
+ * feed for it twice in the same call is work for nothing.
+ */
+export function heroPerformanceSymbols(trios: (DynamicTrio | null)[]): string[] {
+  return [...new Set(trios.flatMap((trio) => trio ?? []).map((stock) => stock.symbol))];
+}
 
 /**
  * How long the hero waits on one read before opening without it.
@@ -94,11 +109,14 @@ export function HeroFallback() {
 }
 
 /**
- * The four reads, run together, each on its own deadline and each falling back on its own.
+ * The reads, in two rounds: the rankings together, then the prices for whoever they named.
  *
- * Separate deadlines rather than one around the `Promise.all`: the four are independent, and a
- * broker feed that is refusing today should cost slide four its companies, not strip the live
- * prices off slides one and two as well.
+ * Two rounds rather than one is forced by the slides themselves — every one of the four is now a
+ * ranking, so the symbols to price are not known until the rankings are in. The first round is five
+ * independent reads on five separate deadlines: a feed refusing today should cost its own slide its
+ * companies, not strip the live prices off the other three as well. The second round is one call,
+ * and every scene already knows how to draw a card whose price has not arrived — the browser fetches
+ * it on hydration — so a miss here costs the first paint its figures and nothing more.
  */
 export async function HeroPayload() {
   // Cached, so the hero is part of the prerendered shell rather than a per-request hole. Note what
@@ -107,21 +125,27 @@ export async function HeroPayload() {
   // the abandoned read still lands in `../lib/cache`, so the next revalidation picks it up.
   "use cache";
   cacheLife("market");
-  cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes);
+  cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes, CACHE_TAGS.nse);
 
-  const [initialPerformance, yearGainers, investorFavourites, mostBought] = await Promise.all([
-    withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(HERO_PERFORMANCE_SYMBOLS), []),
-    withDeadline<DynamicTrio | null>(topYearGainerTrio(), null),
-    withDeadline<DynamicTrio | null>(investorFavouriteTrio(), null),
+  const [capitalGoods, healthcare, monthGainers, investorFavourites, mostBought] = await Promise.all([
+    withDeadline<DynamicTrio | null>(capitalGoodsTrio(), null),
+    withDeadline<DynamicTrio | null>(healthcareTrio(), null),
+    withDeadline<DynamicTrio | null>(monthGainerTrio(), null),
+    withDeadline<DynamicTrio | null>(investorHeldTrio(), null),
     // The ribbon's opening board. It polls for itself after hydration, so a deadline miss here
     // costs the first paint its rows and nothing more.
     withDeadline<MostBoughtBoard | null>(getMostBoughtToday(), null),
   ]);
 
+  const symbols = heroPerformanceSymbols([capitalGoods, healthcare, monthGainers, investorFavourites]);
+  const initialPerformance = await withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(symbols), []);
+
   return (
     <HeroCarousel
       initialPerformance={initialPerformance}
-      yearGainers={yearGainers}
+      capitalGoods={capitalGoods}
+      healthcare={healthcare}
+      monthGainers={monthGainers}
       investorFavourites={investorFavourites}
       mostBought={mostBought}
     />

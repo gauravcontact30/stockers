@@ -83,3 +83,45 @@ export function marketSessionState(now = new Date()): MarketSessionState {
   if (isAfterMarketClose(now)) return "closed";
   return "live";
 }
+
+/** `2026-08-19` -> `2026-08-20`. Calendar arithmetic in IST, so no day is ever skipped or repeated. */
+export function nextCalendarDay(day: string): string {
+  const noon = new Date(istInstant(day, "12:00"));
+  noon.setUTCDate(noon.getUTCDate() + 1);
+  return noon.toLocaleDateString("en-CA", { timeZone: IST_TIME_ZONE });
+}
+
+/**
+ * How far ahead `nextTradingDay` will look before giving up.
+ *
+ * Ten days covers a weekend with a holiday either side of it, which is the longest closure the BSE
+ * calendar actually produces. A bound rather than a `while (true)`: an operator who pasted a year of
+ * dates into `BSE_MARKET_HOLIDAYS` should get a wrong answer, not a hung request.
+ */
+const MAX_CLOSURE_DAYS = 10;
+
+/** The next day the exchange trades, strictly after `day`. Null if the calendar says never. */
+export function nextTradingDay(day: string): string | null {
+  let candidate = day;
+  for (let step = 0; step < MAX_CLOSURE_DAYS; step += 1) {
+    candidate = nextCalendarDay(candidate);
+    if (isTradingDay(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * The next 09:15 IST the exchange will actually open at, as an ISO instant.
+ *
+ * "When does this board start moving again", which is the only honest answer to give a reader
+ * looking at a closed market's figures. Today's open when it is still ahead on a trading day;
+ * otherwise the next trading day's — skipping weekends and every date the operator has listed as a
+ * holiday. Null when the holiday list leaves no session within `MAX_CLOSURE_DAYS`.
+ */
+export function nextMarketOpenAt(now = new Date()): string | null {
+  const today = tradingDayKey(now);
+  if (isTradingDay(today) && isBeforeMarketOpen(now)) return marketOpenAt(today);
+
+  const next = nextTradingDay(today);
+  return next ? marketOpenAt(next) : null;
+}

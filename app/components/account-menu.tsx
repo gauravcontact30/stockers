@@ -153,14 +153,14 @@ export function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={state.label ? `${state.label} — account and appearance` : "Appearance and account"}
-        /* 36px rather than 40, with a 16px glyph rather than 20. Signed out — which is the state
+        /* 32px rather than 40, with a 16px glyph rather than 20. Signed out — which is the state
            the landing page's header is almost always in — this collapses to a bare circle with a
            sun or a moon in it, and at h-10/w-10 it read as the heaviest thing in a bar whose actual
            calls to action are "Sign in" and "Get started" sitting right beside it. It is a
-           preference switch, so it should not out-weigh them. Still a comfortable target, and the
-           label state keeps the same padding so the trial countdown is unaffected. */
-        className={`inline-flex h-9 items-center gap-2 rounded-full border text-sm font-semibold transition hover:border-emerald-300 dark:hover:border-emerald-500/40 ${
-          state.label ? "px-3" : "w-9 justify-center"
+           preference switch, so it should not out-weigh them. Still a usable target, and the label
+           state keeps the same padding so the trial countdown is unaffected. */
+        className={`inline-flex h-8 items-center gap-2 rounded-full border text-sm font-semibold transition hover:border-emerald-300 dark:hover:border-emerald-500/40 ${
+          state.label ? "px-3" : "w-8 justify-center"
         } ${state.chrome}`}
       >
         {state.icon ?? (isDark ? <MoonIcon className="h-4 w-4" /> : <SunIcon className="h-4 w-4" />)}

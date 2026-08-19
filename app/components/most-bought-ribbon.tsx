@@ -21,7 +21,12 @@ import { formatQuantity, formatRupee, formatSignedPercent } from "./market-forma
 import { SectorPill } from "./sector-pill";
 
 const ENDPOINT = "/api/market/most-bought";
-/** The board's own cache is 30s; polling faster than it would only re-fetch the same rows. */
+/**
+ * The board's own cache is 30s; polling faster than it would only re-fetch the same rows.
+ *
+ * The same number the server puts on `board.refreshMs`, and the ribbon prefers the server's copy
+ * once a board has arrived — this is only the cadence to poll at before the first one has.
+ */
 const REFRESH_MS = 30_000;
 
 const RANK_TONES = [
@@ -52,6 +57,9 @@ const SESSION_NOTE: Record<MostBoughtBoard["marketSession"], string> = {
 /**
  * What the ribbon says about the calendar, given the clock and the board.
  *
+ * It no longer names the session the ranks came from: the freshness chip beside it does that, and
+ * two chips naming the same date on one strip was one too many.
+ *
  * The state comes from the board rather than being re-derived here: the server knows whether the
  * exchange actually printed a trade today, which is the only way to tell a holiday from an
  * ordinary Tuesday without shipping a holiday calendar to the browser and keeping it current. The
@@ -78,6 +86,69 @@ function sessionDateLabel(sessionDate: string | null): string | null {
   const parsed = new Date(`${sessionDate}T12:00:00+05:30`);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" });
+}
+
+/**
+ * An instant as a full IST date and time — `Wed, 20 Aug 2026, 09:15 AM IST`.
+ *
+ * Spelled out in full rather than as "in 4 hours", because the question this answers is "when will
+ * what I am looking at stop being yesterday's", and a relative phrase makes a reader do the
+ * arithmetic against a timezone that may not be their own. Null in, null out; an unparseable
+ * instant is the same as none.
+ */
+export function instantLabel(iso: string | null): string | null {
+  if (!iso) return null;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed.toLocaleString("en-GB", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/**
+ * Which day's figures the ribbon is actually showing, and how it says so.
+ *
+ * The one thing a reader cannot tell by looking: a ribbon of rising stocks looks identical whether
+ * those are this minute's prices or Friday's closes. The board decides — it is the only side that
+ * knows whether a live quote was laid over the tape — and this turns that decision into the chip.
+ *
+ * "Yesterday" is never asserted from the date arithmetic: the chip names the session's own date, so
+ * a board sitting on a Friday close over a long weekend reads correctly rather than claiming to be
+ * one day old.
+ */
+export function freshnessChip(board: MostBoughtBoard): { label: string; tone: string; live: boolean } {
+  if (board.freshness === "live") {
+    return {
+      label: `Live · today's prices, ${board.liveRows} of ${board.rows.length} quoted live`,
+      tone: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+      live: true,
+    };
+  }
+
+  const from = sessionDateLabel(board.dataDay);
+  return {
+    label: from ? `Stale · last completed session, ${from}` : "Stale · last completed BSE session",
+    tone: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100",
+    live: false,
+  };
+}
+
+/** What the "next update" chip says, given what the board is currently showing. */
+export function nextUpdateLabel(board: MostBoughtBoard): string {
+  const at = instantLabel(board.nextUpdateAt);
+  if (!at) return "Next update · when the exchange next opens";
+
+  return board.freshness === "live"
+    ? `Next refresh · ${at} IST (every ${Math.round(board.refreshMs / 1000)}s while open)`
+    : `Next update · ${at} IST, when the market opens`;
 }
 
 /**
@@ -110,7 +181,6 @@ function RibbonClock({ board }: { board: MostBoughtBoard }) {
 
   const moment = istMoment(tick);
   const closure = closureNote(board, moment.weekday, moment.isWeekend);
-  const ranksFrom = sessionDateLabel(board.sessionDate);
 
   return (
     <>
@@ -131,11 +201,6 @@ function RibbonClock({ board }: { board: MostBoughtBoard }) {
       {closure && (
         <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
           {closure}
-        </span>
-      )}
-      {ranksFrom && board.marketSession !== "live" && (
-        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
-          Ranks from the {ranksFrom} session
         </span>
       )}
     </>
@@ -239,6 +304,7 @@ function BuyCard({ row, duplicate, eager }: { row: MostBoughtRow; duplicate: boo
 export function MostBoughtRibbon({ initial }: { initial?: MostBoughtBoard | null }) {
   const [board, setBoard] = useState<MostBoughtBoard | null>(initial ?? null);
   const lastGood = useRef<MostBoughtBoard | null>(initial ?? null);
+  const pollMs = board?.refreshMs ?? REFRESH_MS;
 
   useEffect(() => {
     let cancelled = false;
@@ -267,14 +333,17 @@ export function MostBoughtRibbon({ initial }: { initial?: MostBoughtBoard | null
       if (!document.hidden) void load();
     };
 
-    const timer = window.setInterval(tick, REFRESH_MS);
+    const timer = window.setInterval(tick, pollMs);
     document.addEventListener("visibilitychange", tick);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, []);
+    // Re-armed when the server's cadence changes, which in practice means once — the first board to
+    // arrive carries it. The ribbon promises the reader a next-refresh time on that number, so it
+    // has to poll at it rather than at a copy of its own that could drift.
+  }, [pollMs]);
 
   // Nothing to show yet — the server read missed its deadline and the first poll has not answered.
   // The space the ribbon will occupy is held open rather than left to collapse, because the rows
@@ -290,6 +359,7 @@ export function MostBoughtRibbon({ initial }: { initial?: MostBoughtBoard | null
   }
 
   const rows = board.rows;
+  const freshness = freshnessChip(board);
 
   return (
     <div
@@ -298,6 +368,15 @@ export function MostBoughtRibbon({ initial }: { initial?: MostBoughtBoard | null
     >
       <p className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
         Most bought today
+        {/* Which day's figures these are, first — before the clock and before the session note.
+            Everything else on this strip describes the exchange; this one describes the cards. */}
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black normal-case tracking-normal ${freshness.tone}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${freshness.live ? "animate-live-blink bg-emerald-500" : "bg-amber-500"}`} />
+          {freshness.label}
+        </span>
+        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+          {nextUpdateLabel(board)}
+        </span>
         <RibbonClock board={board} />
         <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
           {SESSION_NOTE[board.marketSession]}

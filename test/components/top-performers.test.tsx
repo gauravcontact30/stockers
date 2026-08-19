@@ -248,19 +248,62 @@ describe("TopPerformers", () => {
 
     await user.type(screen.getByPlaceholderText("Search any BSE-listed company"), "zzz");
 
-    // A searched name outside the tracked catalogue is explained rather than left blank.
+    // A search that genuinely matches nothing is about history, not about the 50% bar: the bar is
+    // not applied to a name typed in, so it has no business in the explanation.
     expect(
       await screen.findByText(
-        'No tracked company matching "zzz" is up more than 50% over the last one year. Long-run returns are tracked for the catalogue rather than every listed scrip.',
+        'No listed company matching "zzz" has a measured return over the last one year. Newly listed and rarely traded scrips have no history to measure over that window.',
       ),
     ).toBeInTheDocument();
 
-    // The same two sentences read the other way round on the losers board.
-    await user.click(screen.getByRole("button", { name: "Top Losers" }));
-    expect(await screen.findByText(/matching "zzz" is down more than 50%/)).toBeInTheDocument();
-
     await user.click(screen.getByRole("button", { name: "clear" }));
+    expect(await screen.findByText("No tracked company is up more than 50% over the last one year.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Top Losers" }));
     expect(await screen.findByText("No tracked company is down more than 50% over the last one year.")).toBeInTheDocument();
+  });
+
+  it("shows a searched company on either tab, whichever way it moved", async () => {
+    const user = userEvent.setup();
+    // What the exchange answers for a searched name: the company, at whatever it did. A +12% run
+    // clears neither the gainers bar nor the losers one, and used to leave both tabs empty.
+    const cupid: TopPerformer = {
+      symbol: "CUPID",
+      name: "Cupid Ltd",
+      sector: "FMCG",
+      capTier: "Small",
+      price: 118.4,
+      changePercent: 0.8,
+      periodReturn: 12.3,
+    };
+    mockRouted((url) =>
+      url.includes("q=cupid")
+        ? { stocks: [cupid], total: 1, page: 1, pages: 1, asOfDate: "2026-08-17" }
+        : { stocks: GAINERS, total: 3, page: 1, pages: 1, asOfDate: "2026-08-17" },
+    );
+    render(<TopPerformers />);
+    await screen.findAllByRole("listitem");
+
+    await user.type(screen.getByPlaceholderText("Search any BSE-listed company"), "cupid");
+
+    // Every detail the board shows for any other row, for a company under the bar and outside the
+    // tracked catalogue.
+    const row = within(await screen.findByRole("listitem"));
+    expect(row.getByAltText("CUPID (CUPID) logo")).toBeInTheDocument();
+    expect(row.getByText("Cupid Ltd")).toBeInTheDocument();
+    expect(row.getByText("CUPID")).toBeInTheDocument();
+    expect(row.getByText("FMCG")).toBeInTheDocument();
+    expect(row.getByText("Small cap")).toBeInTheDocument();
+    expect(row.getByText("+12.3%")).toBeInTheDocument();
+    expect(row.getByText("₹118.4")).toBeInTheDocument();
+
+    expect(screen.getByText('Measured returns for "cupid" over the last one year')).toBeInTheDocument();
+    expect(screen.getByText('1 matching "cupid" · as of 2026-08-17 · past performance is not a prediction.')).toBeInTheDocument();
+
+    // And the same row on the other tab: the direction orders a search, it does not filter it.
+    await user.click(screen.getByRole("button", { name: "Top Losers" }));
+    expect(within(await screen.findByRole("listitem")).getByText("Cupid Ltd")).toBeInTheDocument();
+    expect(screen.getByText('Measured returns for "cupid" over the last one year')).toBeInTheDocument();
   });
 
   it("treats a response with no fields as an empty board rather than a crash", async () => {

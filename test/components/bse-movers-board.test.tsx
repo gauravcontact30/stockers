@@ -130,7 +130,7 @@ describe("buildMoversUrl", () => {
 });
 
 describe("MoverTableRow", () => {
-  it("carries the identity, classification and the whole of the day's trade", () => {
+  it("carries the identity, the classification, the move and what it cost to trade", () => {
     render(
       <table>
         <tbody>
@@ -142,15 +142,35 @@ describe("MoverTableRow", () => {
     expect(screen.getByLabelText("Rank 4 in this segment")).toBeInTheDocument();
     expect(screen.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
     expect(screen.getByText("RELIANCE")).toBeInTheDocument();
-    expect(screen.getByText("Reliance Industries Ltd · 500325")).toBeInTheDocument();
+    expect(screen.getByText("Reliance Industries Ltd")).toBeInTheDocument();
+    // Sector and cap tier ride with the company rather than holding columns of their own.
     expect(screen.getByText("Energy")).toBeInTheDocument();
+    expect(screen.getByText("Large cap")).toBeInTheDocument();
     expect(screen.getByText("₹1,281.00")).toBeInTheDocument();
+    expect(screen.getByText("+154.20%")).toBeInTheDocument();
     expect(screen.getByText("-0.93%")).toBeInTheDocument();
-    expect(screen.getByText("₹1,275.00 – ₹1,295.00")).toBeInTheDocument();
-    expect(screen.getByText("2.50 L")).toBeInTheDocument();
     // Turnover and market cap arrive in crore and are printed in crore, not converted twice.
     expect(screen.getByText("₹32.5 Cr")).toBeInTheDocument();
     expect(screen.getByText("₹17,33,518 Cr")).toBeInTheDocument();
+  });
+
+  it("drops what the remaining columns already say", () => {
+    render(
+      <table>
+        <tbody>
+          <MoverTableRow row={row()} rank={4} />
+        </tbody>
+      </table>,
+    );
+
+    // The day's move in rupees, restated by Day %.
+    expect(screen.queryByText("-₹12.00")).not.toBeInTheDocument();
+    // Both ends of the session as text, when the close is already in Price.
+    expect(screen.queryByText("₹1,275.00 – ₹1,295.00")).not.toBeInTheDocument();
+    // A share count, when turnover says the same thing in the unit that matters.
+    expect(screen.queryByText("2.50 L")).not.toBeInTheDocument();
+    // BSE's own scrip code, which is how the exchange keys its pages, not how a reader reads one.
+    expect(screen.queryByText(/500325/)).not.toBeInTheDocument();
   });
 
   // A scrip the exchange has not classified, and one that reports no turnover or market cap, must
@@ -170,8 +190,10 @@ describe("MoverTableRow", () => {
     expect(screen.queryByText("Energy")).not.toBeInTheDocument();
     expect(screen.getByText("RELIANCE")).toBeInTheDocument();
     expect(screen.getByText("Unclassified")).toBeInTheDocument();
-    // Tier, turnover and market cap.
-    expect(screen.getAllByText("—")).toHaveLength(3);
+    // An unfiled cap tier drops its pill rather than printing a dash beside the sector.
+    expect(screen.queryByText(/cap$/)).not.toBeInTheDocument();
+    // Turnover and market cap.
+    expect(screen.getAllByText("—")).toHaveLength(2);
   });
 });
 
@@ -183,13 +205,14 @@ describe("BseMoversBoard", () => {
     expect(await screen.findByText("CHLOGIST")).toBeInTheDocument();
     expect(screen.getByText("SECOND")).toBeInTheDocument();
     expect(screen.getByText("3 closed higher")).toBeInTheDocument();
-    // Overall return is the default ranking, not the day's move.
-    expect(screen.getByText(/stocks in all up over overall/)).toBeInTheDocument();
-    expect(screen.getByText(/sorted by Overall return, biggest gain first · ten a page/)).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Return · Overall" })).toBeInTheDocument();
+    // One year is the default ranking: a holding period, not the day's move and not since listing.
+    expect(screen.getByText(/stocks in all up over 1y/)).toBeInTheDocument();
+    expect(screen.getByText(/sorted by 1Y return, biggest gain first · ten a page/)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /% Return/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Return period")).toHaveValue("1y");
     expect(screen.getByRole("tab", { name: "Most Gainers" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Most Losers" })).toHaveAttribute("aria-selected", "false");
-    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "", "0", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "", "0", 1));
   });
 
   // The other tab is the other question: its own heading, its own count, its own order.
@@ -205,9 +228,9 @@ describe("BseMoversBoard", () => {
     expect(screen.queryByText("CHLOGIST")).not.toBeInTheDocument();
     expect(screen.getByText("Every BSE stock that closed lower")).toBeInTheDocument();
     expect(screen.getByText("3 closed lower")).toBeInTheDocument();
-    expect(screen.getByText(/sorted by Overall return, deepest fall first/)).toBeInTheDocument();
+    expect(screen.getByText(/sorted by 1Y return, deepest fall first/)).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Most Losers" })).toHaveAttribute("aria-selected", "true");
-    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "overall", "", "0", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "1y", "", "0", 1));
   });
 
   // Page two of the gainers is not a place to land in the losers.
@@ -223,7 +246,7 @@ describe("BseMoversBoard", () => {
     await user.click(screen.getByRole("tab", { name: "Most Losers" }));
 
     expect(await screen.findByText("SCARNOSE")).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "overall", "", "0", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "1y", "", "0", 1));
   });
 
   it("names every column of the table", async () => {
@@ -231,8 +254,14 @@ describe("BseMoversBoard", () => {
     render(<BseMoversBoard />);
     await screen.findByText("CHLOGIST");
 
-    for (const heading of ["Company", "Tier", "Price", "Day change", "Day %", "Day range", "Volume", "Turnover", "Market cap"]) {
+    for (const heading of ["Company", "Price", "Day %", "Turnover", "Market cap"]) {
       expect(screen.getByRole("columnheader", { name: heading })).toBeInTheDocument();
+    }
+
+    // Seven columns, and no more: the board is a screen, not a dump of the Bhavcopy.
+    expect(screen.getAllByRole("columnheader")).toHaveLength(7);
+    for (const dropped of ["Tier", "Day change", "Day range", "Volume"]) {
+      expect(screen.queryByRole("columnheader", { name: dropped })).not.toBeInTheDocument();
     }
   });
 
@@ -249,7 +278,7 @@ describe("BseMoversBoard", () => {
     expect(screen.queryByText("CHLOGIST")).not.toBeInTheDocument();
     // Row one of page two is the third sharpest move, not the first.
     expect(within(third.closest("tr")!).getByLabelText("Rank 3 in this segment")).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "", "0", 2));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "", "0", 2));
 
     await user.click(within(pager).getByRole("button", { name: "← Prev" }));
     expect(await screen.findByText("CHLOGIST")).toBeInTheDocument();
@@ -268,7 +297,7 @@ describe("BseMoversBoard", () => {
     await user.selectOptions(screen.getByLabelText("Tier"), "large");
 
     expect(await screen.findByText("HINDZINC")).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("large", "gainers", "overall", "", "0", 1));
+    expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("large", "gainers", "1y", "", "0", 1));
   });
 
   it("says so when a cap tier has no move in this direction, and offers to widen it", async () => {
@@ -298,55 +327,64 @@ describe("BseMoversBoard", () => {
     expect(screen.queryByRole("button", { name: "Clear filters and show everything" })).not.toBeInTheDocument();
   });
 
-  // The whole point of the period control: the same tab, ranked over a different window.
-  it("re-ranks over the chosen return period, on both tabs", async () => {
+  // The whole point of the period control: the same tab, ranked over a different window — and it
+  // now lives in the column header whose figures it rewrites, not in the toolbar above.
+  it("re-ranks from the % Return header, on both tabs", async () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseMoversBoard />);
     await screen.findByText("CHLOGIST");
 
-    await user.selectOptions(screen.getByLabelText("Return"), "1y");
+    const header = screen.getByRole("columnheader", { name: /% Return/ });
+    await user.selectOptions(within(header).getByLabelText("Return period"), "5y");
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "", "0", 1));
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "5y", "", "0", 1));
     });
-    expect(await screen.findByRole("columnheader", { name: "Return · 1Y" })).toBeInTheDocument();
-    expect(screen.getByText(/sorted by 1Y return, biggest gain first/)).toBeInTheDocument();
+    expect(screen.getByText(/sorted by 5Y return, biggest gain first/)).toBeInTheDocument();
     // The baseline is stated, so nobody has to guess what the return is measured against.
     expect(screen.getByText(/measured from 6 Aug 2021/)).toBeInTheDocument();
 
     // The losers tab keeps the period: it is the board's ranking, not the tab's.
     await user.click(screen.getByRole("tab", { name: "Most Losers" }));
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "1y", "", "0", 1));
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "losers", "5y", "", "0", 1));
     });
-    expect(screen.getByText(/sorted by 1Y return, deepest fall first/)).toBeInTheDocument();
+    expect(screen.getByText(/sorted by 5Y return, deepest fall first/)).toBeInTheDocument();
   });
 
-  it("offers every return window the exchange can be measured over", async () => {
+  it("offers the five windows a position is actually held over, and nothing else", async () => {
     mockFeed();
     render(<BseMoversBoard />);
     await screen.findByText("CHLOGIST");
 
-    const periods = within(screen.getByLabelText("Return"));
-    for (const label of ["Overall return", "5 years", "3 years", "1 year", "6 months", "3 months", "1 week", "1 day"]) {
+    const periods = within(screen.getByLabelText("Return period"));
+    for (const label of ["1M", "6M", "1Y", "3Y", "5Y"]) {
       expect(periods.getByRole("option", { name: label })).toBeInTheDocument();
     }
-    expect(screen.getByLabelText("Return")).toHaveValue("overall");
+    expect(periods.getAllByRole("option")).toHaveLength(5);
+
+    // Since-listing returns put +81,286% scrips at the top of a board people read for what to
+    // trade; 1D and 1W only restated the Day % column.
+    for (const dropped of ["Overall", "1D", "1W", "3M"]) {
+      expect(periods.queryByRole("option", { name: dropped })).not.toBeInTheDocument();
+    }
   });
 
-  // Over a single session the return column is the day's move, and the count line says so.
-  it("falls back to the session's own move when the period is one day", async () => {
+  // A month is new to the endpoint's whitelist, though ../lib/bse-history has always kept the
+  // baseline — so it is worth proving the request goes out and comes back.
+  it("ranks over one month, the shortest window it offers", async () => {
     const user = userEvent.setup();
     mockFeed();
     render(<BseMoversBoard />);
     await screen.findByText("CHLOGIST");
 
-    await user.selectOptions(screen.getByLabelText("Return"), "1d");
+    await user.selectOptions(screen.getByLabelText("Return period"), "1m");
 
-    expect(await screen.findByRole("columnheader", { name: "Return · 1D" })).toBeInTheDocument();
-    expect(screen.getByText(/up over 5 Aug 2026/)).toBeInTheDocument();
-    expect(screen.queryByText(/measured from/)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1m", "", "0", 1));
+    });
+    expect(screen.getByText(/sorted by 1M return, biggest gain first/)).toBeInTheDocument();
   });
 
   it("filters the list to moves of at least the chosen size", async () => {
@@ -358,7 +396,7 @@ describe("BseMoversBoard", () => {
     await user.selectOptions(screen.getByLabelText("Move"), "10");
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "", "10", 1));
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "", "10", 1));
     });
     // THIRD only moved 1.6%, so the floor drops it — and the count line says the total is filtered.
     expect(await screen.findByText(/stocks match these filters/)).toBeInTheDocument();
@@ -375,7 +413,7 @@ describe("BseMoversBoard", () => {
     await user.type(search, "second");
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "second", "0", 1));
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "second", "0", 1));
     });
 
     const option = await screen.findByRole("option", { name: /SECOND/ });
@@ -391,7 +429,7 @@ describe("BseMoversBoard", () => {
     expect(search).toHaveValue("SECOND");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "overall", "SECOND", "0", 1));
+      expect(global.fetch).toHaveBeenCalledWith(buildMoversUrl("all", "gainers", "1y", "SECOND", "0", 1));
     });
   });
 
@@ -473,7 +511,7 @@ describe("BseMoversBoard", () => {
 
     expect(await screen.findByText("CHLOGIST")).toBeInTheDocument();
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenLastCalledWith(buildMoversUrl("all", "gainers", "overall", "", "0", 1));
+      expect(global.fetch).toHaveBeenLastCalledWith(buildMoversUrl("all", "gainers", "1y", "", "0", 1));
     });
   });
 

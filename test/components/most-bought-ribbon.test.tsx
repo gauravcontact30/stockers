@@ -3,7 +3,7 @@
 // invent a row when the board is empty, and empty itself when a poll fails.
 
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { MostBoughtRibbon } from "../../app/components/most-bought-ribbon";
+import { MostBoughtRibbon, freshnessChip, instantLabel, nextUpdateLabel } from "../../app/components/most-bought-ribbon";
 import type { MostBoughtBoard, MostBoughtRow } from "../../app/lib/most-bought";
 
 function row(overrides: Partial<MostBoughtRow> & Pick<MostBoughtRow, "buyRank" | "symbol" | "name">): MostBoughtRow {
@@ -36,6 +36,11 @@ function board(rows: MostBoughtRow[], overrides: Partial<MostBoughtBoard> = {}):
     sessionDate: "2026-08-17",
     marketSession: "live",
     liveSession: true,
+    freshness: "live",
+    liveRows: rows.filter((entry) => entry.live).length,
+    dataDay: "2026-08-17",
+    nextUpdateAt: "2026-08-17T05:00:30.000Z",
+    refreshMs: 30_000,
     asOf: "2026-08-17T05:00:00.000Z",
     ...overrides,
   };
@@ -254,12 +259,19 @@ describe("the IST clock strip", () => {
   });
 
   it("names the weekend rather than implying the board is live", () => {
-    renderAtRest(WEEKEND_SATURDAY, { marketSession: "closed", liveSession: false, sessionDate: "2026-08-14" });
+    renderAtRest(WEEKEND_SATURDAY, {
+      marketSession: "closed",
+      liveSession: false,
+      freshness: "stale",
+      sessionDate: "2026-08-14",
+      dataDay: "2026-08-14",
+    });
 
     expect(screen.getByText("Saturday, 15 Aug 2026")).toBeInTheDocument();
     expect(screen.getByText(/Weekend · BSE is shut on Saturday and Sunday/)).toBeInTheDocument();
-    // And says which session the ranks actually came from, so "today" is not misread.
-    expect(screen.getByText("Ranks from the 14 Aug 2026 session")).toBeInTheDocument();
+    // Which session the ranks actually came from is the freshness chip's job now, not this strip's —
+    // two chips naming the same date was one too many.
+    expect(screen.getByText("Stale · last completed session, 14 Aug 2026")).toBeInTheDocument();
   });
 
   it("reports an exchange holiday on the board's authority, not the date's", () => {
@@ -268,7 +280,6 @@ describe("the IST clock strip", () => {
 
     expect(screen.getByText("Closed · exchange holiday")).toBeInTheDocument();
     expect(screen.getByText(/Exchange holiday · the BSE did not trade today/)).toBeInTheDocument();
-    expect(screen.getByText("Ranks from the 17 Aug 2026 session")).toBeInTheDocument();
   });
 
   it("does not label a live session with a closure note or a past session date", () => {
@@ -276,6 +287,89 @@ describe("the IST clock strip", () => {
 
     expect(screen.queryByText(/Weekend ·/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Exchange holiday ·/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Ranks from the/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Stale · /)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Which day's figures the ribbon is showing, and when they next change.
+ *
+ * The one thing a reader cannot tell by looking: a ribbon of rising stocks looks identical whether
+ * those prices are from this minute or from Friday's close. Both halves are stated — the day, and
+ * the moment it stops being that day — and neither is guessed in the browser: "live" is the
+ * server's answer because only it knows whether a live quote was laid over the tape, and the next
+ * open is the server's because only it has the holiday list.
+ */
+describe("freshness and the next update", () => {
+  it("says it is live, and how much of the board is quoted live", () => {
+    expect(freshnessChip(OPENING)).toMatchObject({
+      label: "Live · today's prices, 1 of 2 quoted live",
+      live: true,
+    });
+  });
+
+  it("names the session a stale board is actually showing", () => {
+    const stale = board(OPENING.rows, { freshness: "stale", marketSession: "closed", dataDay: "2026-08-14" });
+
+    // The session's own date, never "yesterday": a Friday close read on a Monday is three days old,
+    // and the date says so where the word would not.
+    expect(freshnessChip(stale)).toMatchObject({
+      label: "Stale · last completed session, 14 Aug 2026",
+      live: false,
+    });
+  });
+
+  it("still says stale when the board never named its session", () => {
+    const undated = board(OPENING.rows, { freshness: "stale", dataDay: null });
+    expect(freshnessChip(undated).label).toBe("Stale · last completed BSE session");
+  });
+
+  // A session date the exchange sent in a shape nobody expected is the same as no date: the chip
+  // drops the claim rather than printing "Invalid Date" at a reader.
+  it("drops a session date it cannot read", () => {
+    const garbled = board(OPENING.rows, { freshness: "stale", dataDay: "the fourteenth" });
+    expect(freshnessChip(garbled).label).toBe("Stale · last completed BSE session");
+  });
+
+  it("gives the exact next refresh while the market is open", () => {
+    expect(nextUpdateLabel(OPENING)).toBe(
+      "Next refresh · Mon, 17 Aug 2026, 10:30 am IST (every 30s while open)",
+    );
+  });
+
+  it("points a stale board at the next open, in full", () => {
+    const stale = board(OPENING.rows, {
+      freshness: "stale",
+      marketSession: "closed",
+      nextUpdateAt: "2026-08-18T03:45:00.000Z",
+    });
+
+    expect(nextUpdateLabel(stale)).toBe("Next update · Tue, 18 Aug 2026, 09:15 am IST, when the market opens");
+  });
+
+  it("says only that it will be the next open when the calendar could not name one", () => {
+    const stale = board(OPENING.rows, { freshness: "stale", nextUpdateAt: null });
+    expect(nextUpdateLabel(stale)).toBe("Next update · when the exchange next opens");
+  });
+
+  it("treats an unparseable instant as no instant at all", () => {
+    expect(instantLabel("not a date")).toBeNull();
+    expect(instantLabel(null)).toBeNull();
+  });
+
+  it("draws both chips on the strip", () => {
+    render(<MostBoughtRibbon initial={OPENING} />);
+
+    expect(screen.getByText("Live · today's prices, 1 of 2 quoted live")).toBeInTheDocument();
+    expect(screen.getByText(/^Next refresh · /)).toBeInTheDocument();
+  });
+
+  it("marks a stale strip amber rather than green", () => {
+    const stale = board(OPENING.rows, { freshness: "stale", marketSession: "closed", dataDay: "2026-08-14" });
+    render(<MostBoughtRibbon initial={stale} />);
+
+    const chip = screen.getByText("Stale · last completed session, 14 Aug 2026");
+    expect(chip.className).toContain("bg-amber-100");
+    expect(screen.queryByText(/quoted live/)).not.toBeInTheDocument();
   });
 });

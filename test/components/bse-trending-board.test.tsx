@@ -1,3 +1,11 @@
+// The landing page's trending section: two boards side by side, not one list.
+//
+// What the exchange crowded *into* and what it crowded *out of*, because a stock being dumped
+// prints exactly as busy a tape as one being bought and the old single ranking put both under a
+// heading that read as buying. The split is the sign of the session's move, the filters are shared
+// across the two, and the pages are not — most of what is checked here is that those three things
+// stay true.
+
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BseTrendingBoard, TrendingRow, buildTrendingUrl } from "../../app/components/bse-trending-board";
@@ -38,6 +46,7 @@ function row(overrides: Partial<BseTrendingRow> = {}): BseTrendingRow {
     trades: 28_254,
     turnoverShare: 3.52,
     averageTradeValue: 113_029,
+    returnPercent: 12.5,
     brokers: [],
     brokerRank: null,
     liveQuote: null,
@@ -76,6 +85,8 @@ const SPARSE = row({
   price: null,
   dayHigh: null,
   dayLow: null,
+  // Listed after the reference session, so there is no return to measure. A dash, never a zero.
+  returnPercent: null,
 });
 
 const SME = row({
@@ -91,42 +102,44 @@ const SME = row({
   trades: 300,
   turnoverShare: 0.01,
   averageTradeValue: 11_666,
+  returnPercent: -4.2,
+});
+
+/** The selling side, so a test can tell which of the two boards it is looking at. */
+const FALLER = row({
+  code: "532822",
+  ticker: "IDEA",
+  name: "Vodafone Idea Ltd",
+  group: "B",
+  sector: "Telecommunication",
+  capTier: "Small",
+  price: 14.1,
+  changePercent: -1.4,
+  volume: 54_953_475,
+  turnoverCr: 77.5,
+  trades: 567_272,
+  turnoverShare: 0.85,
+  averageTradeValue: 1355,
+  returnPercent: -33.3,
 });
 
 const BOARDS: Record<string, BseTrendingRow[]> = {
-  // Most bought first. SPARSE sits in the middle deliberately: a row with no placing has to draw a
-  // dash rather than a "#null", and this is the board where that can happen.
+  turnover: [row(), SPARSE, SME],
+  trades: [row({ code: "500325", ticker: "RELIANCE", name: "Reliance Industries Ltd", trades: 567_272 })],
+  volume: [SPARSE],
   brokers: [
     row({ brokers: [{ broker: "groww", brokerName: "Groww", label: "Most bought on Groww", rank: 1 }], brokerRank: 1 }),
-    SPARSE,
-    { ...SME, brokers: [{ broker: "groww", brokerName: "Groww", label: "Most bought on Groww", rank: 4 }], brokerRank: 4 },
   ],
-  turnover: [row(), SPARSE, SME],
-  trades: [
-    row({
-      code: "532822",
-      ticker: "IDEA",
-      name: "Vodafone Idea Ltd",
-      group: "B",
-      sector: "Telecommunication",
-      capTier: "Small",
-      price: 14.1,
-      changePercent: -1.4,
-      volume: 54_953_475,
-      turnoverCr: 77.5,
-      trades: 567_272,
-      turnoverShare: 0.85,
-      averageTradeValue: 1355,
-    }),
-  ],
-  volume: [SPARSE],
 };
 
 function payload(rank: string, overrides: Partial<BseTrendingPayload> = {}): BseTrendingPayload {
-  const rows = BOARDS[rank];
+  const rows = overrides.rows ?? BOARDS[rank];
   return {
     rows,
     rank: rank as BseTrendingPayload["rank"],
+    direction: "bought",
+    returnPeriod: "1m",
+    returnFrom: "2026-07-14",
     totals: { turnoverCr: 9075, volume: 1_000_000, trades: 2_000_000, traded: 4419 },
     platforms: [
       { platform: "Main Board", count: 2 },
@@ -134,7 +147,7 @@ function payload(rank: string, overrides: Partial<BseTrendingPayload> = {}): Bse
     ],
     total: rows.length,
     page: 1,
-    pageSize: 10,
+    pageSize: 5,
     pages: 1,
     sessionDate: "2026-08-14",
     marketSession: "closed",
@@ -143,7 +156,15 @@ function payload(rank: string, overrides: Partial<BseTrendingPayload> = {}): Bse
   };
 }
 
-function mockFeed(build: (url: URL) => BseTrendingPayload = (url) => payload(url.searchParams.get("rank") ?? "turnover")) {
+/** The buying board's rows for the ranking asked for; the selling board always gets the faller. */
+function bySide(url: URL): BseTrendingPayload {
+  const rank = url.searchParams.get("rank") ?? "turnover";
+  return url.searchParams.get("direction") === "sold"
+    ? payload(rank, { direction: "sold", rows: [FALLER], total: 1 })
+    : payload(rank);
+}
+
+function mockFeed(build: (url: URL) => BseTrendingPayload = bySide) {
   const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input), "http://localhost");
     return { ok: true, json: async () => build(url) } as Response;
@@ -152,16 +173,32 @@ function mockFeed(build: (url: URL) => BseTrendingPayload = (url) => payload(url
   return fetchMock;
 }
 
+const BOUGHT_URL = "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&direction=bought";
+const SOLD_URL = "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&direction=sold";
+
+/** The panel one side of the section draws, found by the label it carries for assistive tech. */
+function panel(side: "bought" | "sold") {
+  return screen.getByRole("region", {
+    name: side === "bought" ? "Most bought on BSE this session" : "Most sold on BSE this session",
+  });
+}
+
 describe("buildTrendingUrl", () => {
   it("leaves every default off the query string", () => {
     expect(buildTrendingUrl("brokers", "", "all", "all", "all", "0", 1)).toBe(
-      "/api/market/bse/trending?rank=brokers&page=1&pageSize=10",
+      "/api/market/bse/trending?rank=brokers&page=1&pageSize=5",
     );
   });
 
   it("carries the search, platform, tier and move filters when they are set", () => {
     expect(buildTrendingUrl("trades", "hdfc", "SME", "groww", "large", "5", 3)).toBe(
-      "/api/market/bse/trending?rank=trades&page=3&pageSize=10&q=hdfc&platform=SME&broker=groww&tier=large&min=5",
+      "/api/market/bse/trending?rank=trades&page=3&pageSize=5&q=hdfc&platform=SME&broker=groww&tier=large&min=5",
+    );
+  });
+
+  it("names the half of the tape and the return window once they leave their defaults", () => {
+    expect(buildTrendingUrl("turnover", "", "all", "all", "all", "0", 1, "sold", "3y")).toBe(
+      "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&direction=sold&period=3y",
     );
   });
 });
@@ -170,28 +207,80 @@ describe("TrendingRow", () => {
   it("shows the ranked figure for whichever ranking it is drawn under", () => {
     const { rerender } = render(
       <ul>
-        <TrendingRow row={row()} rank="turnover" position={1} />
+        <TrendingRow row={row()} rank="turnover" position={1} returnLabel="1M" />
       </ul>,
     );
     expect(screen.getByText("₹319 Cr")).toBeInTheDocument();
 
     rerender(
       <ul>
-        <TrendingRow row={row()} rank="volume" position={1} />
+        <TrendingRow row={row()} rank="volume" position={1} returnLabel="1M" />
       </ul>,
     );
     expect(screen.getByText("43.90 L")).toBeInTheDocument();
 
     rerender(
       <ul>
-        <TrendingRow row={row()} rank="trades" position={1} />
+        <TrendingRow row={row()} rank="trades" position={1} returnLabel="1M" />
       </ul>,
     );
     expect(screen.getByText("28,254")).toBeInTheDocument();
   });
+
+  it("reports the trailing return under the window it was measured over", () => {
+    const { rerender } = render(
+      <ul>
+        <TrendingRow row={row()} rank="turnover" position={1} returnLabel="1M" />
+      </ul>,
+    );
+    expect(screen.getByText("1M return")).toBeInTheDocument();
+    expect(screen.getByText("+12.50%")).toBeInTheDocument();
+
+    rerender(
+      <ul>
+        <TrendingRow row={row()} rank="turnover" position={1} returnLabel="5Y" />
+      </ul>,
+    );
+    expect(screen.getByText("5Y return")).toBeInTheDocument();
+  });
+
+  // A company younger than the window genuinely has no return over it. A zero would claim it went
+  // nowhere, which is a different — and false — statement.
+  it("draws a dash for a company with no return over the window", () => {
+    render(
+      <ul>
+        <TrendingRow row={SPARSE} rank="turnover" position={1} returnLabel="3Y" />
+      </ul>,
+    );
+    const stat = screen.getByText("3Y return").closest("div") as HTMLElement;
+    expect(within(stat).getByText("—")).toBeInTheDocument();
+  });
 });
 
 describe("BSE trending board", () => {
+  it("draws both halves of the tape, side by side", async () => {
+    mockFeed();
+    render(<BseTrendingBoard />);
+
+    await screen.findByText("HDFC Bank Ltd");
+    expect(within(panel("bought")).getByText("HDFC Bank Ltd")).toBeInTheDocument();
+    expect(within(panel("sold")).getByText("Vodafone Idea Ltd")).toBeInTheDocument();
+
+    // Each side says what its own word actually means, rather than leaving "bought" to be read as
+    // order flow the exchange does not publish.
+    expect(screen.getByText("Trading above the previous close — money going in")).toBeInTheDocument();
+    expect(screen.getByText("Trading below the previous close — money coming out")).toBeInTheDocument();
+  });
+
+  it("asks the endpoint for one half of the tape per board", async () => {
+    const fetchMock = mockFeed();
+    render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
+
+    expect(fetchMock).toHaveBeenCalledWith(BOUGHT_URL);
+    expect(fetchMock).toHaveBeenCalledWith(SOLD_URL);
+  });
+
   it("leads each row with the company's real name, sector and cap tier", async () => {
     mockFeed();
     render(<BseTrendingBoard />);
@@ -201,15 +290,15 @@ describe("BSE trending board", () => {
     expect(within(card).getByText("Financial Services")).toBeInTheDocument();
     expect(within(card).getByText("Large cap")).toBeInTheDocument();
 
-    expect(screen.getByText("3 traded")).toBeInTheDocument();
+    // The exchange-wide count, not the page's — it describes the session rather than the board.
+    expect(screen.getByText("4,419 traded")).toBeInTheDocument();
   });
 
   it("opens on exchange turnover, which is where the session's money went", async () => {
-    const fetchMock = mockFeed();
+    mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10");
     expect(screen.getByText("Ranked by the rupees that changed hands.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "By turnover (₹)" })).toHaveAttribute("aria-pressed", "true");
 
@@ -226,11 +315,10 @@ describe("BSE trending board", () => {
     for (const name of ["Groww", "Zerodha", "Angel One", "Upstox", "ICICI Direct", "All BSE"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByText(/most bought/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Broker lists/i)).not.toBeInTheDocument();
   });
 
-  it("offers the other two exchange rankings", async () => {
+  it("re-ranks both boards at once when the ranking changes", async () => {
     const fetchMock = mockFeed();
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
@@ -238,9 +326,24 @@ describe("BSE trending board", () => {
     await userEvent.click(screen.getByRole("button", { name: "By trade count" }));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=trades&page=1&pageSize=10"),
+      expect(fetchMock).toHaveBeenCalledWith("/api/market/bse/trending?rank=trades&page=1&pageSize=5&direction=bought"),
     );
+    expect(fetchMock).toHaveBeenCalledWith("/api/market/bse/trending?rank=trades&page=1&pageSize=5&direction=sold");
     expect(screen.getByText("Ranked by how many separate transactions were struck.")).toBeInTheDocument();
+    expect(await screen.findByText("Reliance Industries Ltd")).toBeInTheDocument();
+  });
+
+  it("re-ranks by share volume", async () => {
+    const fetchMock = mockFeed();
+    render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
+
+    await userEvent.click(screen.getByRole("button", { name: "By volume (shares)" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/market/bse/trending?rank=volume&page=1&pageSize=5&direction=bought"),
+    );
+    expect(screen.getByText("Ranked by the number of shares that moved.")).toBeInTheDocument();
   });
 
   it("puts the rank under the logo rather than beside it", async () => {
@@ -264,32 +367,6 @@ describe("BSE trending board", () => {
     expect(within(card).getByText("Small cap")).toBeInTheDocument();
   });
 
-  it("re-ranks by trade count and makes that figure the row's headline", async () => {
-    const fetchMock = mockFeed();
-    render(<BseTrendingBoard />);
-    await screen.findByText("HDFC Bank Ltd");
-
-    await userEvent.click(screen.getByRole("button", { name: "By trade count" }));
-
-    expect(await screen.findByText("Vodafone Idea Ltd")).toBeInTheDocument();
-    expect(screen.getByText("Ranked by how many separate transactions were struck.")).toBeInTheDocument();
-    expect(screen.getByText("5.67 L")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=trades&page=1&pageSize=10");
-  });
-
-  it("re-ranks by share volume", async () => {
-    const fetchMock = mockFeed();
-    render(<BseTrendingBoard />);
-    await screen.findByText("HDFC Bank Ltd");
-
-    await userEvent.click(screen.getByRole("button", { name: "By volume (shares)" }));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=volume&page=1&pageSize=10"),
-    );
-    expect(screen.getByText("Ranked by the number of shares that moved.")).toBeInTheDocument();
-  });
-
   it("renders a sparse row as dashes and draws no platform, sector or tier pill", async () => {
     mockFeed();
     render(<BseTrendingBoard />);
@@ -299,6 +376,10 @@ describe("BSE trending board", () => {
     expect(within(card).queryByText(/^BSE /)).not.toBeInTheDocument();
     expect(within(card).queryByText(/cap$/)).not.toBeInTheDocument();
   });
+
+  // ---------------------------------------------------------------------------
+  // The shared filters
+  // ---------------------------------------------------------------------------
 
   it("searches the exchange and offers to clear the filters once one is set", async () => {
     const fetchMock = mockFeed();
@@ -310,14 +391,18 @@ describe("BSE trending board", () => {
     await userEvent.type(screen.getByPlaceholderText(/Search any BSE company/), "hdfc");
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=hdfc"),
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&q=hdfc&direction=bought",
+      ),
+    );
+    // One search, both boards: it is one question asked of two lists.
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&q=hdfc&direction=sold",
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=1&pageSize=10"),
-    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(BOUGHT_URL));
     expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
   });
 
@@ -328,8 +413,8 @@ describe("BSE trending board", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /HDFC Bank\s+HDFCBANK/i }));
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=HDFCBANK",
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&q=HDFCBANK&direction=bought",
       ),
     );
 
@@ -337,32 +422,45 @@ describe("BSE trending board", () => {
     await userEvent.selectOptions(screen.getByLabelText("Minimum move"), "5");
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&q=HDFCBANK&tier=small&min=5",
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&q=HDFCBANK&tier=small&min=5&direction=bought",
       ),
     );
 
-    // Back to every platform, with the other two filters left alone.
+    // Back to every company, with the other two filters left alone.
     await userEvent.click(screen.getByRole("button", { name: "All Platform" }));
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        "/api/market/bse/trending?rank=turnover&page=1&pageSize=10&tier=small&min=5",
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&tier=small&min=5&direction=bought",
       ),
     );
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("platform="))).toBe(false);
   });
 
-  it("does not badge a row with a broker's list, even when the feed still carries one", async () => {
-    mockFeed(() =>
-      payload("turnover", {
-        rows: [row({ brokers: [{ broker: "groww", brokerName: "Groww", label: "Most bought on Groww", rank: 3 }] })],
-      }),
-    );
+  it("changes the return window on both boards, and leaves it alone when the filters are cleared", async () => {
+    const fetchMock = mockFeed();
     render(<BseTrendingBoard />);
+    await screen.findByText("HDFC Bank Ltd");
 
-    const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
-    // The endpoint still serves the facet for the hero's slide; this board simply never draws it.
-    expect(within(card).queryByText("Most bought on Groww #3")).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Return period"), "3y");
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&direction=bought&period=3y",
+      ),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/market/bse/trending?rank=turnover&page=1&pageSize=5&direction=sold&period=3y",
+    );
+    expect(screen.getAllByText("3Y return").length).toBeGreaterThan(0);
+
+    // The window narrows nothing, so it is not one of the filters "Clear filters" offers to undo —
+    // it does not even bring the button out, and a search that does leaves the window where it was.
+    expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByPlaceholderText(/Search any BSE company/), "hdfc");
+    await userEvent.click(await screen.findByRole("button", { name: "Clear filters" }));
+    expect(screen.getAllByText("3Y return").length).toBeGreaterThan(0);
   });
 
   it("shows stock shortcuts instead of exchange segment chips", async () => {
@@ -377,36 +475,75 @@ describe("BSE trending board", () => {
     expect(screen.queryByRole("button", { name: /BSE SME/ })).not.toBeInTheDocument();
   });
 
-  it("pages through the board and starts page two at the eleventh rank", async () => {
+  // ---------------------------------------------------------------------------
+  // Two lists, two pagers
+  // ---------------------------------------------------------------------------
+
+  it("pages one side without moving the other", async () => {
     const fetchMock = mockFeed((url) => {
       const page = Number(url.searchParams.get("page") ?? "1");
-      return payload("brokers", { total: 13, page, pages: 2, rows: page === 1 ? BOARDS.brokers : [SME] });
+      const sold = url.searchParams.get("direction") === "sold";
+      if (sold) return payload("turnover", { direction: "sold", rows: [FALLER], total: 1 });
+      return payload("turnover", { total: 8, page, pages: 2, rows: page === 1 ? BOARDS.turnover : [SME] });
     });
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    await userEvent.click(screen.getByRole("button", { name: "Next →" }));
+    await userEvent.click(within(panel("bought")).getByRole("button", { name: "Next →" }));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenLastCalledWith("/api/market/bse/trending?rank=turnover&page=2&pageSize=10"),
+      expect(fetchMock).toHaveBeenCalledWith("/api/market/bse/trending?rank=turnover&page=2&pageSize=5&direction=bought"),
     );
-    const card = (await screen.findByText("Small Enterprise Co Ltd")).closest("li") as HTMLElement;
-    expect(within(card).getByText("11")).toBeInTheDocument();
+    // Page two of a five-a-page board starts at the sixth rank.
+    const card = (await within(panel("bought")).findByText("Small Enterprise Co Ltd")).closest("li") as HTMLElement;
+    expect(within(card).getByText("6")).toBeInTheDocument();
+
+    // The selling board was never asked for a second page.
+    expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("page=2&pageSize=5&direction=sold"))).toBe(true);
+    expect(within(panel("sold")).getByText("Vodafone Idea Ltd")).toBeInTheDocument();
   });
 
-  it("tells an unpublished session apart from empty filters", async () => {
-    mockFeed((url) => payload(url.searchParams.get("rank") ?? "turnover", { rows: [], total: 0, platforms: [] }));
+  it("pages the selling board on its own pager", async () => {
+    const fetchMock = mockFeed((url) => {
+      const page = Number(url.searchParams.get("page") ?? "1");
+      if (url.searchParams.get("direction") !== "sold") return payload("turnover");
+      return payload("turnover", { direction: "sold", total: 7, page, pages: 2, rows: page === 1 ? [FALLER] : [SME] });
+    });
+    render(<BseTrendingBoard />);
+    await screen.findByText("Vodafone Idea Ltd");
+
+    await userEvent.click(within(panel("sold")).getByRole("button", { name: "Next →" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/market/bse/trending?rank=turnover&page=2&pageSize=5&direction=sold"),
+    );
+    expect(await within(panel("sold")).findByText("Small Enterprise Co Ltd")).toBeInTheDocument();
+    // And the buying board stayed where it was.
+    expect(within(panel("bought")).getByText("HDFC Bank Ltd")).toBeInTheDocument();
+  });
+
+  it("tells an unpublished session apart from empty filters, per side", async () => {
+    mockFeed((url) =>
+      payload(url.searchParams.get("rank") ?? "turnover", {
+        direction: url.searchParams.get("direction") === "sold" ? "sold" : "bought",
+        rows: [],
+        total: 0,
+        platforms: [],
+      }),
+    );
     render(<BseTrendingBoard />);
 
     // Every ranking here is read from the same exchange file, so an empty board means one thing.
-    expect(await screen.findByText(/hasn't published a complete session file yet/)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "By trade count" }));
-    expect(await screen.findByText(/hasn't published a complete session file yet/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/hasn't published a complete session file yet/)).length).toBe(2);
 
     await userEvent.selectOptions(screen.getByLabelText("Minimum move"), "10");
-    expect(await screen.findByText("No traded BSE stock matches those filters this session.")).toBeInTheDocument();
+    expect(await screen.findByText("No rising BSE stock matches those filters this session.")).toBeInTheDocument();
+    expect(screen.getByText("No falling BSE stock matches those filters this session.")).toBeInTheDocument();
   });
+
+  // ---------------------------------------------------------------------------
+  // The session, and which clock each figure runs on
+  // ---------------------------------------------------------------------------
 
   /**
    * Which session, and what the exchange is doing about it.
@@ -423,22 +560,25 @@ describe("BSE trending board", () => {
 
     expect(screen.getByText("Market closed")).toBeInTheDocument();
     expect(screen.getByText("Ranked on the session of 14 Aug 2026")).toBeInTheDocument();
-    // Nothing on the board is live, so the prices are described as what they are.
-    expect(screen.getByText("At session close")).toBeInTheDocument();
+    // Nothing is refreshing, so nothing claims to be.
+    expect(screen.queryByText(/Prices refresh every/)).not.toBeInTheDocument();
   });
 
-  it("says the market is live, and prices the rows against it", async () => {
+  it("says the market is live, prices the rows against it, and refreshes faster", async () => {
     mockFeed((url) =>
       payload(url.searchParams.get("rank") ?? "turnover", {
         marketSession: "live",
         liveAsOf: "2026-08-18T06:00:00.000Z",
-        rows: [row({ liveQuote: live() }), SPARSE, SME],
+        rows: url.searchParams.get("direction") === "sold" ? [FALLER] : [row({ liveQuote: live() })],
       }),
     );
     render(<BseTrendingBoard />);
 
     const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
-    expect(screen.getByText("Market live")).toBeInTheDocument();
+    // The session state arrives with the payload and is adopted a render later, so this settles
+    // asynchronously — the board opens on the slower cadence and moves onto the faster one.
+    expect(await screen.findByText("Market live")).toBeInTheDocument();
+    expect(screen.getByText("Prices refresh every 30s while the market is open")).toBeInTheDocument();
 
     // The live price leads, the live move is the chip beside it...
     expect(within(card).getByText("₹812.40")).toBeInTheDocument();
@@ -453,7 +593,7 @@ describe("BSE trending board", () => {
       payload(url.searchParams.get("rank") ?? "turnover", {
         marketSession: "live",
         liveAsOf: "2026-08-18T06:00:00.000Z",
-        rows: [row({ liveQuote: live() }), SME],
+        rows: url.searchParams.get("direction") === "sold" ? [FALLER] : [row({ liveQuote: live() }), SME],
       }),
     );
     render(<BseTrendingBoard />);
@@ -463,18 +603,25 @@ describe("BSE trending board", () => {
     expect(within(card).queryByText(/^Close /)).not.toBeInTheDocument();
   });
 
-  it("counts the whole session above the board rather than making a reader add up rows", async () => {
-    mockFeed();
+  it("counts both halves of the session in one sentence", async () => {
+    mockFeed((url) =>
+      url.searchParams.get("direction") === "sold"
+        ? payload("turnover", { direction: "sold", rows: [FALLER], total: 1_902 })
+        : payload("turnover", { total: 2_310 }),
+    );
     render(<BseTrendingBoard />);
     await screen.findByText("HDFC Bank Ltd");
 
-    expect(screen.getByText("Session turnover")).toBeInTheDocument();
-    // 9,075 crore, drawn the way every other rupee figure on the page is.
-    expect(screen.getByText("₹9,075 Cr")).toBeInTheDocument();
-    expect(screen.getByText("Scrips traded")).toBeInTheDocument();
-    expect(screen.getByText("4,419")).toBeInTheDocument();
-    expect(screen.getByText("Trades struck")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "2,310 BSE stocks closed above their previous close this session and 1,902 closed below it, across 4,419 scrips that traded.",
+      ),
+    ).toBeInTheDocument();
   });
+
+  // ---------------------------------------------------------------------------
+  // The server's opening payload
+  // ---------------------------------------------------------------------------
 
   /**
    * The one thing the server's render cannot do for this board.
@@ -485,64 +632,85 @@ describe("BSE trending board", () => {
    * endpoint, which has no such limit, immediately.
    */
   it("asks again at once when the server's payload arrived without live prices", async () => {
-    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
-    const fetchMock = mockFeed(() =>
+    const fetchMock = mockFeed((url) =>
       payload("turnover", {
         marketSession: "live",
         liveAsOf: "2026-08-18T06:00:00.000Z",
-        rows: [row({ liveQuote: live() }), SPARSE, SME],
+        rows: url.searchParams.get("direction") === "sold" ? [FALLER] : [row({ liveQuote: live() })],
       }),
     );
 
     render(
       <BseTrendingBoard
-        prefetched={{ url, data: payload("turnover", { marketSession: "live", liveAsOf: null }) }}
+        prefetched={{ url: BOUGHT_URL, data: payload("turnover", { marketSession: "live", liveAsOf: null }) }}
+        soldPrefetched={{
+          url: SOLD_URL,
+          data: payload("turnover", { direction: "sold", marketSession: "live", liveAsOf: null, rows: [FALLER] }),
+        }}
       />,
     );
 
     // Rendered from the server's payload immediately — no skeleton, no waiting.
     expect(screen.getByText("HDFC Bank Ltd")).toBeInTheDocument();
-    expect(screen.getByText("At session close")).toBeInTheDocument();
+    expect(screen.getByText("Vodafone Idea Ltd")).toBeInTheDocument();
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(url));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(BOUGHT_URL));
     expect(await screen.findByText("Close ₹727.35")).toBeInTheDocument();
   });
 
   it("does not believe an empty payload without asking the endpoint first", async () => {
-    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
     const fetchMock = mockFeed();
 
     // A render that resolved no rows looks exactly like an exchange that published none. Only one
     // of those is worth showing a reader, so the board checks before settling on the empty state.
     render(
       <BseTrendingBoard
-        prefetched={{ url, data: payload("turnover", { marketSession: "closed", rows: [], total: 0 }) }}
+        prefetched={{ url: BOUGHT_URL, data: payload("turnover", { marketSession: "closed", rows: [], total: 0 }) }}
       />,
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(url));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(BOUGHT_URL));
     expect(await screen.findByText("HDFC Bank Ltd")).toBeInTheDocument();
   });
 
-  it("leaves a payload that already carries live prices alone", async () => {
-    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
+  it("uses server-rendered payloads for both sides without going to the network", async () => {
     const fetchMock = mockFeed();
 
     render(
       <BseTrendingBoard
-        prefetched={{
-          url,
-          data: payload("turnover", {
-            marketSession: "live",
-            liveAsOf: "2026-08-18T06:00:00.000Z",
-            rows: [row({ liveQuote: live() })],
-          }),
+        prefetched={{ url: BOUGHT_URL, data: payload("turnover") }}
+        soldPrefetched={{
+          url: SOLD_URL,
+          data: payload("turnover", { direction: "sold", rows: [FALLER], total: 1 }),
         }}
       />,
     );
 
-    expect(screen.getByText("Close ₹727.35")).toBeInTheDocument();
+    expect(screen.getByText("HDFC Bank Ltd")).toBeInTheDocument();
+    expect(screen.getByText("Vodafone Idea Ltd")).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).not.toHaveBeenCalled());
+  });
+
+  it("keeps the surviving half of the section when one board's feed refuses", async () => {
+    // Two boards, two requests, two things that can fail independently. A selling board that could
+    // not be reached must not take the buying one — or the sentence that counts both — down with it.
+    global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://localhost");
+      if (url.searchParams.get("direction") === "bought") return { ok: false } as Response;
+      return { ok: true, json: async () => payload("turnover", { direction: "sold", rows: [FALLER], total: 640 }) } as Response;
+    }) as unknown as typeof fetch;
+
+    render(<BseTrendingBoard />);
+
+    expect(await within(panel("sold")).findByText("Vodafone Idea Ltd")).toBeInTheDocument();
+    expect(within(panel("bought")).getByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
+    // The half that answered is still counted; the half that did not reads as zero rather than as
+    // a number nobody measured.
+    expect(
+      screen.getByText(
+        "0 BSE stocks closed above their previous close this session and 640 closed below it, across 4,419 scrips that traded.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("surfaces a feed failure instead of an empty board", async () => {
@@ -550,20 +718,7 @@ describe("BSE trending board", () => {
 
     render(<BseTrendingBoard />);
 
-    expect(await screen.findByText(/Couldn't reach the market data feed/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Couldn't reach the market data feed/)).length).toBe(2);
     expect(screen.getByText("Loading BSE…")).toBeInTheDocument();
-  });
-
-  it("uses a server-rendered payload without going to the network", async () => {
-    const fetchMock = mockFeed();
-    const url = "/api/market/bse/trending?rank=turnover&page=1&pageSize=10";
-
-    render(<BseTrendingBoard prefetched={{ url, data: payload("brokers") }} />);
-
-    expect(screen.getByText("HDFC Bank Ltd")).toBeInTheDocument();
-    expect(
-      screen.getByText("2 of 3 on this page rising · they are 3.5% of the session's traded value across 4,419 scrips."),
-    ).toBeInTheDocument();
-    await waitFor(() => expect(fetchMock).not.toHaveBeenCalled());
   });
 });

@@ -7,15 +7,17 @@
  * a raster export is either enormous or visibly soft on a wide display, and at 4:3 crops it reflows
  * badly. Drawn scenes stay sharp at any width and cost nothing to download.
  *
- * Three of the four carry **live figures**, and each says so on its own footnote:
+ * The four the carousel draws — capital goods, healthcare, the month's biggest runs, and the names
+ * held furthest outside their promoter groups — all carry **live figures** and all say so on their
+ * own footnotes. Their companies arrive as props resolved on the server (`app/lib/hero-trios.ts`);
+ * the prices and returns on each card come from the same performance endpoint the watchlist and the
+ * dashboard boards use.
  *
- *   * The two sector trios — banking, and the data-centre build-out — name three companies each and
- *     ask the same performance endpoint the watchlist and the dashboard boards use.
- *   * The last scene is a live screen: the year's strongest performers that are trading below their
- *     own recent range today, with their headlines counted beside them.
- *
- * Only the first scene is a *depiction* — a themed gainers board whose company names and BSE scrip
- * codes are real but whose prices are illustrative. Its footnote says as much.
+ * The remaining scenes in this file are not on the carousel. They are kept because they are whole,
+ * covered, and the sort of thing the slider rotates back to: two fixed sector trios (defence and the
+ * data-centre build-out), a live "winners on sale" screen, and one *depiction* — a themed gainers
+ * board whose company names and BSE scrip codes are real but whose prices are illustrative, as its
+ * footnote says.
  *
  * Every scene is laid out inside one padded card (`SceneCard`) in normal flow — nothing is
  * absolutely positioned against the frame edge, so no content can ever sit flush against it or
@@ -436,6 +438,15 @@ export type TrioStock = {
    * Taken from BSE's own classification.
    */
   tier: "Large" | "Mid" | "Small";
+  /**
+   * The filed ownership split, on the one slide that is ranked by it.
+   *
+   * Optional, and absent rather than zeroed when a company has not filed — a card drawing "FII 0.0%"
+   * against a company nobody has read the filing for would be inventing a fact. Where it is present
+   * the card draws it in place of the blurb, because on that slide it *is* the reason the company
+   * is on the board.
+   */
+  ownership?: { fii: number; dii: number; government: number; retail: number; outsidePromoters: number };
 };
 
 /** A trio is exactly three. Stated as a tuple so a slide cannot be built with two or four. */
@@ -624,6 +635,34 @@ function VisibleTrioStatsStrip({
   );
 }
 
+/**
+ * Who holds the company, from its own quarterly filing.
+ *
+ * Four buckets in one row rather than a bar: the reader's question on this slide is "how much does
+ * each kind of investor hold", which four figures answer directly and a stacked bar only
+ * approximates at this size. Government is drawn even at zero — a private company genuinely has no
+ * government holding, and a cell that vanished would make the four cards different shapes.
+ */
+function OwnershipStrip({ ownership }: { ownership: NonNullable<TrioStock["ownership"]> }) {
+  const cells = [
+    { label: "FII", value: ownership.fii },
+    { label: "DII", value: ownership.dii },
+    { label: "Govt", value: ownership.government },
+    { label: "Retail", value: ownership.retail },
+  ];
+
+  return (
+    <div className="mx-3 mt-2 grid grid-cols-4 overflow-hidden rounded-xl border border-white/80 bg-white/70 divide-x divide-white/80">
+      {cells.map((cell) => (
+        <div key={cell.label} className="px-1 py-1.5 text-center">
+          <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">{cell.label}</p>
+          <p className="mt-0.5 text-[11px] font-black tabular-nums text-slate-900">{cell.value.toFixed(1)}%</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TrioCard({
   stock,
   performance,
@@ -655,7 +694,11 @@ export function TrioCard({
       </div>
 
       {/* Two lines at most. A third pushes three stacked cards past the frame on a narrow screen. */}
-      <p className="mt-2 line-clamp-2 px-3 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
+      {stock.ownership ? (
+        <OwnershipStrip ownership={stock.ownership} />
+      ) : (
+        <p className="mt-2 line-clamp-2 px-3 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
+      )}
 
       <div className="mt-2.5 rounded-xl border border-white/80 bg-white/65 p-2.5 mx-3">
         <div className="flex items-end justify-between gap-3">
@@ -1115,15 +1158,15 @@ export function DipBuysScene({ initialBoard = null }: { initialBoard?: DipLeader
 }
 
 // ---------------------------------------------------------------------------
-// Scenes 3 and 4 — the two rankings
+// The carousel's four scenes — all four of them rankings
 // ---------------------------------------------------------------------------
 //
-// These differ from the two trios above in one way: their companies are chosen by the data rather
-// than by us. `app/lib/hero-trios.ts` resolves them on the server and the carousel passes them
+// These differ from the fixed trios above in one way: their companies are chosen by the data rather
+// than by us. `app/lib/hero-trios.ts` resolves all four on the server and the carousel passes them
 // down, so the hero cannot disagree with the boards a reader reaches by clicking it.
 //
-// A ranking that could not be built comes back as null. That is rare — the one-year returns are a
-// committed data file and the broker board is cached for half an hour — but a hero slide is not a
+// A ranking that could not be built comes back as null. That is rare — three of the four read a
+// committed returns file and the fourth reads filings cached for a day — but a hero slide is not a
 // place to throw, so the scene says it is reading rather than showing an error or, worse, showing
 // last week's leaders as though they were today's.
 
@@ -1170,8 +1213,66 @@ function RankingScene({
   );
 }
 
-/** The three strongest one-year returns in the tracked universe, on live figures. */
-export function YearGainersScene({
+/**
+ * The three strongest capital goods names of the last year.
+ *
+ * Capital goods rather than "industrials": it is the bucket the exchange itself groups by, and the
+ * one a reader weighing an order-book story actually thinks in — turbines, switchgear, shipyards and
+ * defence electronics, at whatever size the returns put on top.
+ */
+export function CapitalGoodsScene({
+  trio = null,
+  initialPerformances = [],
+}: {
+  trio?: Trio | null;
+  initialPerformances?: readonly StockPerformance[];
+}) {
+  return (
+    <RankingScene
+      palette={SKY}
+      eyebrow="Capital goods"
+      title="The three strongest capital goods stocks"
+      badge="RANKED BY 1Y"
+      periods={LONG_RETURN_TRIO_PERIODS}
+      footnote="Ranked on measured one-year returns among the capital goods companies we track, from the same price history the returns tables use. Prices are live · not investment advice."
+      trio={trio}
+      initialPerformances={initialPerformances}
+    />
+  );
+}
+
+/**
+ * The same ranking across healthcare — drugmakers and hospital chains together, which is how BSE
+ * files them and how a reader comparing the sector means it.
+ */
+export function HealthcareScene({
+  trio = null,
+  initialPerformances = [],
+}: {
+  trio?: Trio | null;
+  initialPerformances?: readonly StockPerformance[];
+}) {
+  return (
+    <RankingScene
+      palette={LILAC}
+      eyebrow="Healthcare"
+      title="The three strongest healthcare stocks"
+      badge="RANKED BY 1Y"
+      periods={LONG_RETURN_TRIO_PERIODS}
+      footnote="Pharmaceuticals and hospital chains together, as the exchange buckets them, ranked on measured one-year returns. Prices are live · not investment advice."
+      trio={trio}
+      initialPerformances={initialPerformances}
+    />
+  );
+}
+
+/**
+ * The three biggest one-month runs.
+ *
+ * The short windows here, not the long ones: a slide about a month is the one place a five-year
+ * return says least, and the week beside the month is what shows whether the run is still going.
+ */
+export function MonthGainersScene({
   trio = null,
   initialPerformances = [],
 }: {
@@ -1181,19 +1282,25 @@ export function YearGainersScene({
   return (
     <RankingScene
       palette={MINT}
-      eyebrow="Most gainers, last 1 year"
-      title="The three biggest one-year runs on the board"
-      badge="RANKED BY 1Y"
-      // The long windows, because a slide about a year is the one place a single week says least.
-      periods={LONG_RETURN_TRIO_PERIODS}
-      footnote="Ranked on measured one-year returns from the same price history the returns tables use. Prices are live."
+      eyebrow="Most gainers, last 1 month"
+      title="The three biggest one-month runs on the board"
+      badge="RANKED BY 1M"
+      periods={TRIO_PERIODS}
+      footnote="Ranked on measured one-month returns from the same price history the returns tables use. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />
   );
 }
 
-/** The three names India's retail brokers place highest on their own most-bought lists. */
+/**
+ * The three companies of the tracked pool held furthest outside the promoter group.
+ *
+ * Every figure on these cards is filed rather than inferred: the split comes from the company's own
+ * quarterly shareholding pattern, which is the only source for who owns what that is not a guess
+ * from price or turnover. The cards draw FII, DII, government and retail in place of a blurb,
+ * because on this slide that split is the whole reason the company is on the board.
+ */
 export function InvestorFavouritesScene({
   trio = null,
   initialPerformances = [],
@@ -1204,11 +1311,12 @@ export function InvestorFavouritesScene({
   return (
     <RankingScene
       palette={SAND}
-      eyebrow="Where investors are buying"
-      title="The three names most bought through India's brokers"
-      badge="BROKER RANKED"
-      // Attributed, not asserted: this is what the brokers publish, not what we have measured.
-      footnote="Placings are the brokers' own published most-bought lists, joined to today's BSE tape. Prices are live."
+      eyebrow="Where investors are invested"
+      title="The three most widely held by FIIs, DIIs, government and retail"
+      badge="AS FILED"
+      periods={LONG_RETURN_TRIO_PERIODS}
+      // Attributed, not asserted: this is what the companies certified, not something we measured.
+      footnote="Holdings are the companies' own quarterly shareholding patterns filed under SEBI LODR, ranked by the share held outside the promoter group. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />

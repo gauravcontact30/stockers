@@ -45,10 +45,18 @@ const board = {
     { platform: "Z Group", count: 0 },
   ],
   sessionDate: "2026-08-07",
+  direction: "bought",
+  returnPeriod: "1m",
+  returnFrom: "2026-07-07",
 };
 
+/** The selling half, so the two prefetched payloads can be told apart. */
+const sold = { ...board, direction: "sold", rows: [{ ...board.rows[0], ticker: "IDEA", name: "Vodafone Idea" }] };
+
 beforeEach(() => {
-  bseMarket.getBseTrending.mockResolvedValue(board);
+  bseMarket.getBseTrending.mockImplementation(async (query: { direction?: string }) =>
+    query.direction === "sold" ? sold : board,
+  );
   global.fetch = jest.fn(() => new Promise(() => {})) as unknown as typeof fetch;
 });
 
@@ -58,32 +66,43 @@ describe("TrendingPayload", () => {
    * ranking is gone from the board entirely, so this section names no platform but the exchange —
    * and the tab the server prefetches has to follow the tab the client opens on.
    */
-  it("asks the data layer for the tab the board opens on", async () => {
+  it("asks the data layer for both halves of the tab the board opens on", async () => {
     await TrendingPayload();
 
-    expect(bseMarket.getBseTrending).toHaveBeenCalledWith({
-      rank: "turnover",
-      page: 1,
-      pageSize: 10,
-      // The same ask the endpoint makes, so the first paint during market hours carries live prices
-      // rather than waiting for the client's first refresh to correct them.
-      live: true,
-    });
+    for (const direction of ["bought", "sold"] as const) {
+      expect(bseMarket.getBseTrending).toHaveBeenCalledWith({
+        rank: "turnover",
+        direction,
+        returnPeriod: "1m",
+        page: 1,
+        pageSize: 5,
+        // The same ask the endpoint makes, so the first paint during market hours carries live prices
+        // rather than waiting for the client's first refresh to correct them.
+        live: true,
+      });
+    }
   });
 
-  it("labels the payload with the URL the client asks for on its first render", async () => {
+  it("labels each payload with the URL the client asks for on its first render", async () => {
     const element = await TrendingPayload();
 
-    expect(element.props.prefetched.url).toBe(buildTrendingUrl("turnover", "", "all", "all", "all", "0", 1));
+    expect(element.props.prefetched.url).toBe(
+      buildTrendingUrl("turnover", "", "all", "all", "all", "0", 1, "bought", "1m"),
+    );
     expect(element.props.prefetched.data).toBe(board);
+    expect(element.props.soldPrefetched.url).toBe(
+      buildTrendingUrl("turnover", "", "all", "all", "all", "0", 1, "sold", "1m"),
+    );
+    expect(element.props.soldPrefetched.data).toBe(sold);
   });
 
-  it("renders the rows straight out of the server's payload, without fetching", async () => {
+  it("renders both sides straight out of the server's payloads, without fetching", async () => {
     render(await TrendingPayload());
 
     // The company name, not the ticker: the row renders the ticker as `{ticker} · {code}`, so it
     // is not a text node of its own.
     expect(await screen.findAllByText("Reliance Industries")).not.toHaveLength(0);
+    expect(screen.getAllByText("Vodafone Idea")).not.toHaveLength(0);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

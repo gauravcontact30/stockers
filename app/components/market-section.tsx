@@ -36,39 +36,89 @@ export function useMarketFeed<T>(
   url: string,
   prefetched?: Prefetched<T>,
   options?: { refreshMs?: number; refreshNow?: boolean },
-): { data: T | null; loading: boolean; error: string | null } {
+): { data: T | null; loading: boolean; updating: boolean; error: string | null } {
   const refreshMs = options?.refreshMs;
   const refreshNow = options?.refreshNow ?? false;
   const seeded = prefetched && prefetched.url === url ? prefetched.data : null;
 
-  const [data, setData] = useState<T | null>(seeded);
-  const [loading, setLoading] = useState(seeded === null);
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * What is being held, and the request it answers.
+   *
+   * The URL is held with the payload rather than the payload being kept beside a bare `loading`
+   * flag, because that pair could disagree — and did, in two ways that between them produced "the
+   * table does not update when I change the filters":
+   *
+   *  - Nothing tied a response to the request it came from. Two of the boards on this hook take
+   *    tens of seconds to answer, so a reader changing a filter mid-flight left two requests
+   *    racing, and the answer to the filters they had left could land last and overwrite the answer
+   *    to the filters they were on. The table then disagreed with its own controls until something
+   *    else happened to refetch.
+   *  - `loading` was only ever raised for the very first fetch, so a filter change said nothing at
+   *    all: the previous rows simply sat there for as long as the request took.
+   *
+   * Carrying the URL fixes the first outright — a response for any other URL is dropped — and
+   * makes the second answerable without blanking the board: see `updating` below.
+   */
+  const [answer, setAnswer] = useState<{ url: string | null; data: T | null; error: string | null }>(() =>
+    seeded === null ? { url: null, data: null, error: null } : { url, data: seeded, error: null },
+  );
+
+  /**
+   * The request that is currently the live one, so a superseded response can recognise itself.
+   *
+   * Set as each request goes out rather than in a cleanup, because the interval refresher shares
+   * `load` with the URL effect and neither owns the other's lifetime.
+   */
+  const requested = useRef<string | null>(seeded === null ? null : url);
 
   /**
    * @param background true for a refresh of a board that is already on screen.
    *
-   * A background refresh never touches `loading`, and never clears the rows it is replacing: the
-   * point of refreshing in place is that the reader's eye stays on the numbers, and swapping them
-   * for a skeleton every minute would be worse than not refreshing at all. A failed background
-   * refresh is also silent — the figures on screen are still the last ones the server confirmed,
-   * which is a better thing to show than an error banner over stale-but-real data.
+   * A background refresh never clears the rows it is replacing: the point of refreshing in place is
+   * that the reader's eye stays on the numbers, and swapping them for a skeleton every minute would
+   * be worse than not refreshing at all. A failed background refresh is also silent — the figures
+   * on screen are still the last ones the server confirmed, which is a better thing to show than an
+   * error banner over stale-but-real data.
    */
   const load = useCallback(
     async (background = false) => {
+      requested.current = url;
+
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error("Request failed");
-        setData(await response.json());
-        setError(null);
+        const payload = (await response.json()) as T;
+        // A newer request has gone out since this one started, so this answer is about filters the
+        // reader has already left. Dropping it is the whole fix for the mismatched table.
+        if (requested.current !== url) return;
+        setAnswer({ url, data: payload, error: null });
       } catch {
-        if (!background) setError("Couldn't reach the market data feed right now. Please try again shortly.");
-      } finally {
-        if (!background) setLoading(false);
+        if (requested.current !== url) return;
+        if (!background) {
+          setAnswer({ url, data: null, error: "Couldn't reach the market data feed right now. Please try again shortly." });
+        }
       }
+
     },
     [url],
   );
+
+  const answered = answer.url === url;
+
+  /**
+   * `loading` is the empty board — nothing has ever answered — and stays that way, which is what
+   * every caller already draws a skeleton for.
+   *
+   * `updating` is the new one: an answer is held, but for a different request than the one now in
+   * flight. Rows stay on screen through it deliberately. These boards take seconds rather than
+   * milliseconds, and twenty seconds of skeleton where readable figures used to be is worse than
+   * the figures with something saying they are being replaced — which is what a caller should draw
+   * for this. What it must not do is present them as the answer to the current filters.
+   */
+  const data = answer.data;
+  const loading = answer.url === null;
+  const updating = !loading && !answered;
+  const error = answered ? answer.error : null;
 
   // The URL the server's payload answers, held in a ref so it can be spent exactly once. Without
   // this, a board whose reader navigates back to its opening filters would skip the refetch and
@@ -108,7 +158,7 @@ export function useMarketFeed<T>(
     };
   }, [load, refreshMs]);
 
-  return { data, loading, error };
+  return { data, loading, updating, error };
 }
 
 /** The common card chrome — matching border, radius, shadow and dark mode across all sections. */
