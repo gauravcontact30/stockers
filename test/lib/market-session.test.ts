@@ -8,6 +8,7 @@ import {
   marketSessionState,
   tradingDayKey,
 } from "../../app/lib/market-session";
+import { BSE_MARKET_HOLIDAYS, holidayCalendarThrough, holidayName } from "../../app/lib/bse-market-holidays";
 
 /**
  * The exchange clock.
@@ -72,6 +73,38 @@ describe("isTradingDay", () => {
     expect(isTradingDay("2026-08-18")).toBe(false);
     expect(isTradingDay("2026-10-02")).toBe(false);
     expect(isTradingDay("2026-08-19")).toBe(true);
+  });
+
+  // The regression this guards: with the list only in an environment variable, an unset variable
+  // and a correct one were the same thing, and the 8:50 lock would have predicted ten stocks for
+  // Gandhi Jayanti.
+  it("skips the committed calendar with nothing configured at all", () => {
+    delete process.env.BSE_MARKET_HOLIDAYS;
+    for (const holiday of BSE_MARKET_HOLIDAYS) expect(isTradingDay(holiday.date)).toBe(false);
+  });
+
+  it("adds the configured days to the calendar rather than replacing it", () => {
+    process.env.BSE_MARKET_HOLIDAYS = "2026-08-18";
+    expect(isTradingDay("2026-08-18")).toBe(false);
+    expect(isTradingDay("2026-12-25")).toBe(false); // still Christmas
+  });
+});
+
+describe("the committed holiday calendar", () => {
+  it("is ascending, unique, and written as IST calendar dates", () => {
+    const dates = BSE_MARKET_HOLIDAYS.map((holiday) => holiday.date);
+    expect(dates).toEqual([...dates].sort());
+    expect(new Set(dates).size).toBe(dates.length);
+    for (const date of dates) expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("names the day it is closed for, and nothing else", () => {
+    expect(holidayName("2026-12-25")).toBe("Christmas");
+    expect(holidayName("2026-12-24")).toBeNull();
+  });
+
+  it("reports how far it has been filled in", () => {
+    expect(holidayCalendarThrough()).toBe(BSE_MARKET_HOLIDAYS.at(-1)?.date);
   });
 });
 

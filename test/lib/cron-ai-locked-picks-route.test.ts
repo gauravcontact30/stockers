@@ -40,6 +40,7 @@ function run(action: PredictionLockAction) {
     model: "test/model",
     generatedAt: "2026-08-19T03:20:00.000Z",
     picks: { Large: 10, Mid: 10, Small: 10 },
+    holidayCalendarThrough: "2027-04-14",
     message: "ok",
   };
 }

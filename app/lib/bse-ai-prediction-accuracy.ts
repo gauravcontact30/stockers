@@ -12,6 +12,7 @@ import { aiModel, chatJson, extractJsonObject } from "./openrouter";
 // The exchange clock. It used to live here, and moved out when the market boards needed the same
 // answer — see ./market-session for why asking this module for it would have closed an import
 // cycle. The names this module has always exported are re-exported below, unchanged.
+import { holidayCalendarThrough, holidayName } from "./bse-market-holidays";
 import {
   isAfterMarketClose,
   isBeforeMarketOpen,
@@ -785,6 +786,15 @@ async function aiPicks(candidates: Candidate[], capTier: BseCapTier): Promise<Lo
 
   const result = await chatJson({
     feature: "bse-ai-prediction-accuracy",
+    // Forty-five seconds, against the module default of twenty-five.
+    //
+    // This is the largest prompt the app sends — the candidate list for a whole cap tier with its
+    // pre-open coverage — and the 20 August lock is what set the number: of the nine calls that
+    // morning, three were aborted at 25.0s and one that survived took 24.0s. A single tier timing
+    // out is not a partial answer, it demotes the *entire* day's list to the heuristic ranking, so
+    // the run reads "AI prediction" while naming ten stocks no model chose. Three tiers at this
+    // budget sit inside the route's own `maxDuration`.
+    timeoutMs: 45_000,
     system:
       `You pick ten ${capTier} cap BSE-listed Indian stocks most likely to outperform today before the 9:15 AM IST open. ` +
       "Use only the candidate list, its pre-open positive news signals, and recent exchange context supplied by the app. " +
@@ -985,6 +995,14 @@ export type PredictionLockRun = {
   model: string | null;
   generatedAt: string | null;
   picks: Record<BseCapTier, number>;
+  /**
+   * The last date the committed holiday calendar knows about, or null when it is empty.
+   *
+   * A holiday list does not fail loudly — it runs out, and every closure past the end is quietly
+   * treated as a session. Reporting the horizon on every run puts it in the scheduler's log each
+   * morning, where a date that has gone by is obvious.
+   */
+  holidayCalendarThrough: string | null;
   message: string;
 };
 
@@ -1017,6 +1035,7 @@ export async function runDailyPredictionLock(
     lockAt: predictionLockAt(date),
     nextLockAt: nextPredictionLockAt(now),
     tradingDay: isTradingDay(date),
+    holidayCalendarThrough: holidayCalendarThrough(),
   };
   const held = {
     ...base,
@@ -1031,11 +1050,14 @@ export async function runDailyPredictionLock(
   }
 
   if (!base.tradingDay && !force) {
+    const named = holidayName(date);
     return {
       ...held,
       ok: true,
       action: "skipped-holiday",
-      message: `${date} is not a BSE trading day. Holding the ${existing?.date ?? "previous"} picks.`,
+      message:
+        `${date}${named ? ` (${named})` : ""} is not a BSE trading day. ` +
+        `Holding the ${existing?.date ?? "previous"} picks.`,
     };
   }
 

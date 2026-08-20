@@ -11,6 +11,8 @@
 // board that renders "LIVE" has to be right about that at the moment it renders, not at the moment
 // its data was cached.
 
+import { BSE_MARKET_HOLIDAY_DATES } from "./bse-market-holidays";
+
 /** IANA zone for Indian market hours. Everything below is computed against this, never local time. */
 export const IST_TIME_ZONE = "Asia/Kolkata";
 
@@ -53,19 +55,25 @@ export function isAfterMarketClose(now = new Date()): boolean {
 }
 
 /**
- * Exchange holidays, as `YYYY-MM-DD` in `BSE_MARKET_HOLIDAYS`.
+ * Exchange holidays: the committed calendar in ./bse-market-holidays, plus anything an operator has
+ * added through `BSE_MARKET_HOLIDAYS` as comma-separated `YYYY-MM-DD`.
  *
- * Unset, only weekends are skipped — which is the safe direction to be wrong in: treating a
- * holiday as a session shows the previous day's figures under a "closed" label, whereas treating a
- * session as a holiday would tell a reader the exchange is shut while it is trading.
+ * The two are merged rather than one overriding the other. The calendar is what a checkout ships
+ * with and what a diff can be reviewed against; the variable is how a date announced after the
+ * deploy — the exchange does add them — gets in without one.
+ *
+ * A date missing from both is treated as a session, which is the safe direction to be wrong in:
+ * treating a holiday as a session shows the previous day's figures under a "closed" label, whereas
+ * treating a session as a holiday would tell a reader the exchange is shut while it is trading.
  */
 function marketHolidays(): Set<string> {
-  return new Set(
-    (process.env.BSE_MARKET_HOLIDAYS ?? "")
+  return new Set([
+    ...BSE_MARKET_HOLIDAY_DATES,
+    ...(process.env.BSE_MARKET_HOLIDAYS ?? "")
       .split(",")
       .map((entry) => entry.trim())
       .filter(Boolean),
-  );
+  ]);
 }
 
 export function isTradingDay(day: string): boolean {

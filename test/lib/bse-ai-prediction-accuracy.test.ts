@@ -446,6 +446,22 @@ describe("runDailyPredictionLock", () => {
     expect([early, holiday, late].every((run) => run.ok)).toBe(true);
     expect(write).not.toHaveBeenCalled();
   });
+
+  // A weekday the exchange is shut. Weekends the cron expression already declines to fire on; this
+  // is the case that needs the calendar, and the case that was silently predicting ten stocks for
+  // Diwali while `BSE_MARKET_HOLIDAYS` sat empty.
+  it("skips a weekday the committed holiday calendar closes, and names it", async () => {
+    // 2 October 2026 is a Friday, and Gandhi Jayanti. 03:20 UTC is the 08:50 IST lock.
+    const run = await runDailyPredictionLock(new Date("2026-10-02T03:20:00.000Z"));
+
+    expect(run.action).toBe("skipped-holiday");
+    expect(run.ok).toBe(true);
+    expect(run.tradingDay).toBe(false);
+    expect(run.message).toContain("Mahatma Gandhi Jayanti");
+    expect(run.holidayCalendarThrough).toBe("2027-04-14");
+    // Nothing is generated and nothing is written: the previous session's list is held.
+    expect(write).not.toHaveBeenCalled();
+  });
 });
 
 describe("getBseAiPredictionAccuracy", () => {

@@ -16,15 +16,18 @@ import { userFromRequest } from "../../../lib/store";
  */
 
 /**
- * A minute, because the run is not a lookup.
+ * Five minutes, because the run is not a lookup.
  *
- * Locking a day means the morning's searches and a model call on top of them — the 19 August lock
- * finished 24 seconds after the schedule fired it. A host's default of ten or fifteen seconds kills
- * that mid-generation, and the failure is silent from the outside: no list for the day, and a page
- * that quietly falls back to building its own after the open. Sixty is comfortably clear of the
- * measured time and is accepted on every Vercel plan; a Pro deployment may raise it to 300.
+ * Locking a day means the morning's searches plus one model call per cap tier, each with a 45s
+ * budget — call it two minutes on a slow morning, against a host default of ten or fifteen seconds.
+ * A run cut short is silent from the outside: no list for the day, and a page that quietly builds
+ * its own after the open. The 20 August run took 93 seconds wall-clock and three of its model calls
+ * were aborted at 25s, which is what both this number and that budget were set from.
+ *
+ * 300 is the Vercel Pro ceiling for a function; a Hobby deployment must lower this to 60 or the
+ * build refuses it.
  */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /** Vercel's scheduler sends the secret as a bearer token; other schedulers tend to use a header. */
 function presentedSecret(request: Request): string | null {
