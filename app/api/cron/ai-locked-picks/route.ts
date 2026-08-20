@@ -15,6 +15,17 @@ import { userFromRequest } from "../../../lib/store";
  * is reported back untouched rather than re-predicted.
  */
 
+/**
+ * A minute, because the run is not a lookup.
+ *
+ * Locking a day means the morning's searches and a model call on top of them — the 19 August lock
+ * finished 24 seconds after the schedule fired it. A host's default of ten or fifteen seconds kills
+ * that mid-generation, and the failure is silent from the outside: no list for the day, and a page
+ * that quietly falls back to building its own after the open. Sixty is comfortably clear of the
+ * measured time and is accepted on every Vercel plan; a Pro deployment may raise it to 300.
+ */
+export const maxDuration = 60;
+
 /** Vercel's scheduler sends the secret as a bearer token; other schedulers tend to use a header. */
 function presentedSecret(request: Request): string | null {
   const authorization = request.headers.get("authorization") ?? "";

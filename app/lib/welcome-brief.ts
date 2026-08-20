@@ -1,12 +1,25 @@
 import "server-only";
 
-// What a first-time visitor is shown five seconds after they arrive.
+// What a visitor is shown five seconds after they arrive.
 //
-// Two things, and the order matters. First two stocks worth *exploring* — the best six-month
+// Two things, and the order matters. First the stocks worth *exploring* — the best six-month
 // performers on the tracked catalogue that are currently trading within a couple of percent of
-// their lowest price of the past week. Then a short set of tips about the BSE, written by the model
-// against those two stocks and today's session, so they read as advice about this morning rather
-// than as a leaflet.
+// their lowest price of the past week. Then a single tip about the BSE, written by the model
+// against today's session, so it reads as advice about this morning rather than as a leaflet.
+//
+// ---------------------------------------------------------------------------
+// A pool, not a pair
+// ---------------------------------------------------------------------------
+//
+// The dialog names two stocks, but this sends every name that cleared the screen. The greeting
+// opens on every visit now, and a reader who comes back after lunch to the same two names is a
+// greeting that has stopped saying anything — so the brief carries the whole qualified set and the
+// visit draws its own pair from it, skipping the pair it drew last time. The screen stays the thing
+// that decides *which* stocks are eligible; only which two of them are shown is left to the arrival.
+//
+// That is also why the tip never names a stock: the pair on screen is chosen in the browser, after
+// this brief was written, so a tip that referred to "the two above" would be referring to two names
+// it never saw.
 //
 // ---------------------------------------------------------------------------
 // The screen, and why it is an intersection
@@ -25,16 +38,15 @@ import "server-only";
 // Why this is one cached brief rather than a request per visitor
 // ---------------------------------------------------------------------------
 //
-// It fires for everybody who has never been here before, which on a good day is most of the
-// traffic, and it fires five seconds in — while the landing page is still settling. A model call
+// It fires for everybody who arrives, and it fires five seconds in — while the landing page is still settling. A model call
 // and twenty-five price histories per arrival would be the most expensive thing on the site and
 // would say very nearly the same thing every time, because the inputs change once a session. So
 // the whole brief is built once, held for half an hour, and served from memory to everyone who
 // arrives inside that window.
 //
-// The tips have a written fallback underneath them. A deployment with no `OPENROUTER_API_KEY`, or
-// a model that times out, still greets its first visitor properly — with tips that are general
-// rather than about today, which is a smaller loss than an empty panel or no welcome at all.
+// The tip has a written fallback underneath it. A deployment with no `OPENROUTER_API_KEY`, or a
+// model that times out, still greets its visitor properly — with a tip that is general rather than
+// about today, which is a smaller loss than an empty panel or no welcome at all.
 
 import { CACHE_TAGS, revalidating } from "./cache";
 import { getReturnsForPeriod } from "./historical-returns";
@@ -43,31 +55,36 @@ import { mapWithConcurrency, type QuoteSubject } from "./market-data";
 import { marketSessionState, tradingDayKey, type MarketSessionState } from "./market-session";
 import { aiModel, chatJson, extractJsonObject } from "./openrouter";
 
-/** How many stocks the welcome names. Two: enough to be a suggestion, few enough to be read. */
+/** How many stocks one visit is shown. Two: enough to be a suggestion, few enough to be read. */
 export const WELCOME_PICK_COUNT = 2;
 
-/** How many tips the welcome carries. */
-const TIP_COUNT = 3;
+/**
+ * How many qualified names the brief carries for the browser to draw its two from.
+ *
+ * Eight is four different pairs — more visits than one reader makes inside the half hour a brief
+ * lives for — and it is bounded by what the screen actually produces on an ordinary session:
+ * measured against a live morning, nine of the top twenty-five qualified.
+ */
+export const WELCOME_POOL_SIZE = 8;
 
 /**
- * The hard ceiling on one tip, in characters.
+ * The hard ceiling on the tip, in characters.
  *
  * A backstop against a model that answers with an essay, not a length to design to — a tip cut off
  * at the limit reads worse than a long one, so the prompt asks for one or two short sentences and
- * this only catches the case where it did not. Sized so that two full sentences of ordinary
- * English fit underneath it.
+ * this only catches the case where it did not.
  */
-const MAX_TIP_LENGTH = 260;
+const MAX_TIP_LENGTH = 200;
 
 /**
  * How many of the six-month leaders are checked against the week's prices.
  *
  * Every one of these is a price-history request, so the number is a budget rather than a
- * preference. Twenty is comfortably enough to find two near their weekly low on an ordinary
- * session — measured against a live morning, nine of the top twenty-five qualified — and it is one
- * burst of requests every half hour rather than one per visitor.
+ * preference. Thirty is enough to fill the rotation pool on an ordinary session — measured against
+ * a live morning, nine of the top twenty-five qualified — and it is one burst of requests every
+ * half hour rather than one per visitor.
  */
-const SHORTLIST_SIZE = 20;
+const SHORTLIST_SIZE = 30;
 
 const HISTORY_CONCURRENCY = 10;
 
@@ -102,10 +119,11 @@ export type WelcomePick = {
 };
 
 export type WelcomeBrief = {
+  /** Everything that cleared the screen. The dialog draws two of these per visit. */
   picks: WelcomePick[];
-  tips: string[];
-  /** Whether the tips came from the model or from the written fallback. */
-  tipsSource: "ai" | "written";
+  tip: string;
+  /** Whether the tip came from the model or from the written fallback. */
+  tipSource: "ai" | "written";
   model: string | null;
   marketSession: MarketSessionState;
   /** The session the six-month figures were measured against. */
@@ -115,17 +133,14 @@ export type WelcomeBrief = {
 };
 
 /**
- * The tips a deployment with no model configured still greets its first visitor with.
+ * The tip a deployment with no model configured still greets its visitor with.
  *
- * Deliberately about how to use the exchange rather than about what to buy: a fixed list cannot
- * know today's market, and a fixed list that pretended to would be the one kind of wrong that
- * matters here.
+ * Deliberately about how to read the screen above it rather than about what to buy: a fixed line
+ * cannot know today's market, and a fixed line that pretended to would be the one kind of wrong
+ * that matters here.
  */
-const WRITTEN_TIPS = [
-  "The BSE trades 9:15 AM to 3:30 PM IST, Monday to Friday. The first and last fifteen minutes carry the widest spreads — a limit order costs nothing and protects you from both.",
-  "A stock at the bottom of its week is only a discount if the business is not. Read the six-month return next to it: strong over six months and low this week is a pullback, weak over six months and low this week is a trend.",
-  "Size a position before you place it. A holding you would not add to if it fell 20% was too big when you bought it.",
-];
+const WRITTEN_TIP =
+  "Strong over six months but back at this week's low is a pullback; flat over six months at the same low is a trend. Read both figures before acting on either.";
 
 function clip(value: string): string {
   const text = value.trim().replace(/\s+/g, " ");
@@ -179,7 +194,7 @@ async function weekWindowFor(subject: QuoteSubject): Promise<WeekWindow | null> 
   }
 }
 
-/** The two suggestions, or fewer when the session has fewer that clear both halves of the screen. */
+/** Everything that clears both halves of the screen, best six-month performer first. */
 async function screenPicks(): Promise<{ picks: WelcomePick[]; sessionDate: string | null }> {
   const returns = await getReturnsForPeriod("6mo");
 
@@ -203,9 +218,10 @@ async function screenPicks(): Promise<{ picks: WelcomePick[]; sessionDate: strin
         entry.window !== null && entry.window.price <= entry.window.weekLow * (1 + AT_LOW_BAND_PERCENT / 100),
     )
     // Both halves already hold for everything left, so the ranking is the half a reader is here
-    // for: which of them has performed best.
+    // for: which of them has performed best. Cut to the pool rather than to the pair — the two a
+    // given visit sees are drawn from this in the browser.
     .sort((left, right) => right.sixMonthReturn - left.sixMonthReturn)
-    .slice(0, WELCOME_PICK_COUNT);
+    .slice(0, WELCOME_POOL_SIZE);
 
   return {
     sessionDate: returns.date,
@@ -224,52 +240,47 @@ async function screenPicks(): Promise<{ picks: WelcomePick[]; sessionDate: strin
 }
 
 /**
- * Tips about this morning, or null when the model cannot be reached.
+ * One tip about this morning, or null when the model cannot be reached.
  *
- * The two suggested stocks are handed over so the tips can refer to them, and the model is told
- * not to add stocks of its own: everything a reader sees named on this panel has come off a
- * measured screen, and a model that could add a third name would quietly undo that.
+ * What the screen found is handed over — how many leaders are sitting at their weekly low, in which
+ * sectors, how far they have run — so the tip is about today rather than about markets in general.
+ * No stock is named in it: the panel names its own two, chosen in the browser after this is
+ * written, and a model free to name a third would quietly undo the measured screen above it.
  */
-async function aiTips(picks: WelcomePick[], session: MarketSessionState): Promise<string[] | null> {
+async function aiTip(picks: WelcomePick[], session: MarketSessionState): Promise<string | null> {
   return chatJson({
     feature: "welcome-brief",
     // Twelve seconds, not twenty-five: this is a greeting on a timer. A reader who has been on the
     // page for five seconds will not wait half a minute for the panel behind it.
     timeoutMs: 12_000,
     system:
-      `You write short, practical tips for somebody opening an Indian stock market site for the first time. ` +
-      `Give exactly ${TIP_COUNT} tips about trading and investing on the BSE. ` +
-      "Be concrete and specific — market hours, order types, position sizing, what today's session means, how to read a stock sitting at the bottom of its weekly range. " +
-      "Each tip must be one or two short sentences and under 200 characters, and must end as a complete sentence. " +
-      "Be warm and plain-spoken; the reader is new and should feel welcomed, not lectured. " +
-      "You may refer to the two stocks supplied, but never name any other stock, and never promise a return or a price target. " +
-      'Reply with JSON only: {"tips":["...","...","..."]}',
+      "You write one short, practical tip for somebody opening an Indian stock market site. " +
+      "Give exactly one tip they could act on today on the BSE: what this session means for how an order is placed, " +
+      "or how to read a stock that has led for six months and is now back at the bottom of its weekly range. " +
+      "One or two short sentences, under 160 characters, ending as a complete sentence. Concrete and specific — no platitudes, " +
+      "nothing that would read the same on any other day. " +
+      "Never name a stock, never promise a return or a price target, and do not mention this site. " +
+      'Reply with JSON only: {"tip":"..."}',
     user: JSON.stringify({
       session,
       day: tradingDayKey(),
-      suggestedStocks: picks.map((pick) => ({
-        ticker: pick.symbol,
-        name: pick.name,
-        sector: pick.sector,
-        sixMonthReturnPercent: pick.sixMonthReturn,
-        todayChangePercent: pick.changePercent,
-        percentAboveWeekLow: pick.aboveWeekLow,
-      })),
+      // Aggregates, not names: what the screen found today is the thing worth a tip about, and the
+      // two names a given visit ends up showing are not decided until the browser draws them.
+      screen: "six-month leaders trading within 2% of their lowest price this week",
+      qualifyingCount: picks.length,
+      sectors: [...new Set(picks.map((pick) => pick.sector))],
+      sixMonthReturnsPercent: picks.map((pick) => pick.sixMonthReturn),
+      todayChangesPercent: picks.map((pick) => pick.changePercent),
     }),
     temperature: 0.4,
     parse: (text) => {
-      const parsed = extractJsonObject(text) as { tips?: unknown } | null;
-      const tips = parsed?.tips;
-      if (!Array.isArray(tips)) return null;
+      const parsed = extractJsonObject(text) as { tip?: unknown } | null;
+      const tip = parsed?.tip;
 
-      const cleaned = tips
-        .filter((tip): tip is string => typeof tip === "string" && tip.trim().length > 0)
-        .map(clip)
-        .slice(0, TIP_COUNT);
-
-      // Short of the asked-for count is a truncated or confused reply, and the written tips are a
-      // better greeting than two thirds of a list.
-      return cleaned.length === TIP_COUNT ? cleaned : null;
+      // An empty or missing tip is a truncated or confused reply, and the written line is a better
+      // greeting than a blank panel.
+      if (typeof tip !== "string" || tip.trim().length === 0) return null;
+      return clip(tip);
     },
   });
 }
@@ -279,12 +290,12 @@ async function loadWelcomeBrief(): Promise<WelcomeBrief> {
   const screened = await screenPicks().catch(() => ({ picks: [] as WelcomePick[], sessionDate: null }));
   const session = marketSessionState(now);
 
-  const generated = screened.picks.length > 0 ? await aiTips(screened.picks, session) : null;
+  const generated = screened.picks.length > 0 ? await aiTip(screened.picks, session) : null;
 
   return {
     picks: screened.picks,
-    tips: generated ?? WRITTEN_TIPS,
-    tipsSource: generated ? "ai" : "written",
+    tip: generated ?? WRITTEN_TIP,
+    tipSource: generated ? "ai" : "written",
     model: generated ? aiModel() : null,
     marketSession: session,
     sessionDate: screened.sessionDate,
@@ -305,7 +316,7 @@ export const getWelcomeBrief = revalidating<WelcomeBrief>({
   // Named for the screen rather than the panel: a cached entry belongs to the question that
   // produced it, so changing the screen has to change the key rather than silently reuse rows
   // computed from a different one.
-  key: "welcome:six-month-leaders-at-week-low",
+  key: "welcome:six-month-leaders-at-week-low:pool",
   ttlMs: 30 * 60_000,
   ttlFor: (brief) => (brief.picks.length > 0 ? 30 * 60_000 : 2 * 60_000),
   tags: [CACHE_TAGS.bse, CACHE_TAGS.quotes, CACHE_TAGS.ai],

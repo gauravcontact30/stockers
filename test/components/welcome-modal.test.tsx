@@ -1,16 +1,26 @@
-// The first-visit greeting.
+// The welcome greeting.
 //
-// Three things have to hold, and they are the three ways a welcome dialog goes wrong.
+// Four things have to hold, and they are the four ways a welcome dialog goes wrong.
 //
 // It must not appear immediately — a modal on arrival is an interruption, not a welcome, and the
-// five-second wait is the whole reason this is tolerable. It must not appear twice: a browser that
-// has been greeted is greeted, whether or not the reader formally dismissed it. And it must not
-// cost anything for the great majority of arrivals who leave before it fires, which means nothing
-// is fetched until the timer does.
+// five-second wait is the whole reason this is tolerable. It must appear on every visit, and it
+// must not say the same thing twice: the two stocks are drawn from the qualified pool per arrival,
+// skipping whichever pair the last arrival saw. It must stay up until the reader closes it. And it
+// must not cost anything for the arrivals who leave before it fires, which means nothing is fetched
+// until the timer does.
 
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { WELCOME_DELAY_MS, WELCOME_SEEN_KEY, WelcomeModal, hasBeenWelcomed, sessionLine } from "../../app/components/welcome-modal";
+import {
+  LAST_PICKS_KEY,
+  WELCOME_DELAY_MS,
+  WELCOME_HEADLINES,
+  WelcomeModal,
+  drawHeadline,
+  drawPicks,
+  lastPicks,
+  sessionLine,
+} from "../../app/components/welcome-modal";
 
 function pick(symbol: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -30,8 +40,8 @@ function pick(symbol: string, overrides: Record<string, unknown> = {}) {
 function brief(overrides: Record<string, unknown> = {}) {
   return {
     picks: [pick("RRKABEL"), pick("BOSCHLTD")],
-    tips: ["Trade 9:15 to 3:30.", "Use limit orders.", "Size before you buy."],
-    tipsSource: "ai",
+    tip: "Both are back at the week's low after a six-month run — place a limit near that low, not a market order at the open.",
+    tipSource: "ai",
     model: "test/model",
     marketSession: "live",
     sessionDate: "2026-08-19",
@@ -48,6 +58,17 @@ function serve(payload: unknown = brief(), ok = true) {
   global.fetch = fetchMock as unknown as typeof fetch;
 }
 
+/**
+ * Fixes the draws for one visit: the greeting line first, then the two stock draws.
+ *
+ * Everything after the queue falls back to a real random, so a test that only cares about the
+ * headline does not have to spell out the rest.
+ */
+function draws(...values: number[]) {
+  const queue = [...values];
+  return jest.spyOn(Math, "random").mockImplementation(() => queue.shift() ?? 0);
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   serve();
@@ -55,6 +76,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 /** Runs the five seconds out and lets the brief's promise chain settle. */
@@ -68,7 +90,12 @@ async function waitForTheGreeting() {
   });
 }
 
-describe("the first-visit welcome", () => {
+/** Which of a session's qualifying tickers ended up on the cards. */
+function shownSymbols(candidates: string[]): string[] {
+  return candidates.filter((symbol) => screen.queryByText(symbol) !== null);
+}
+
+describe("the welcome", () => {
   it("stays out of the way for the first five seconds, and asks for nothing", async () => {
     jest.useFakeTimers();
     render(<WelcomeModal />);
@@ -82,7 +109,7 @@ describe("the first-visit welcome", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("greets a new browser with two measured stocks and today's tips", async () => {
+  it("greets the visitor with two measured stocks and one tip about today", async () => {
     jest.useFakeTimers();
     render(<WelcomeModal />);
     await waitForTheGreeting();
@@ -90,38 +117,42 @@ describe("the first-visit welcome", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/welcome", expect.anything());
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Thank you for stopping by")).toBeInTheDocument();
+    expect(WELCOME_HEADLINES).toContain(within(dialog).getByRole("heading").textContent);
+    expect(within(dialog).getByText("BSE live")).toBeInTheDocument();
     expect(within(dialog).getByText("RRKABEL")).toBeInTheDocument();
     expect(within(dialog).getByText("BOSCHLTD")).toBeInTheDocument();
     // Both halves of the screen: six months of gains, and a price at the bottom of the week.
     expect(within(dialog).getAllByText("+128.50%")).toHaveLength(2);
     expect(within(dialog).getAllByText("-2.40%")).toHaveLength(2);
     expect(within(dialog).getAllByText("₹2,775.00")).toHaveLength(2);
-    expect(within(dialog).getByText("AI tips for today's BSE")).toBeInTheDocument();
-    expect(within(dialog).getByText("Use limit orders.")).toBeInTheDocument();
+
+    // One tip, not a list.
+    expect(within(dialog).getByText("AI tip for today's BSE")).toBeInTheDocument();
+    expect(within(dialog).getByText(/place a limit near that low/)).toBeInTheDocument();
     expect(within(dialog).getByText(/The BSE is trading right now/)).toBeInTheDocument();
   });
 
   it.each([
-    ["pre-open", /The BSE opens at 9:15 AM IST/],
-    ["closed", /The BSE has closed for the day/],
-    ["holiday", /The BSE is shut today/],
-  ])("says what the exchange is doing when the session is %s", async (marketSession, line) => {
+    ["pre-open", /The BSE opens at 9:15 AM IST/, "Pre-open"],
+    ["closed", /The BSE has closed for the day/, "Closed"],
+    ["holiday", /The BSE is shut today/, "Holiday"],
+  ])("says what the exchange is doing when the session is %s", async (marketSession, line, pill) => {
     serve(brief({ marketSession }));
     jest.useFakeTimers();
     render(<WelcomeModal />);
     await waitForTheGreeting();
 
     expect(await screen.findByText(line)).toBeInTheDocument();
+    expect(screen.getByText(pill)).toBeInTheDocument();
   });
 
-  it("names the tips as written ones when no model composed them", async () => {
-    serve(brief({ tipsSource: "written", model: null }));
+  it("names the tip as a written one when no model composed it", async () => {
+    serve(brief({ tipSource: "written", model: null }));
     jest.useFakeTimers();
     render(<WelcomeModal />);
     await waitForTheGreeting();
 
-    expect(await screen.findByText("Tips for trading the BSE")).toBeInTheDocument();
+    expect(await screen.findByText("Tip for trading the BSE")).toBeInTheDocument();
   });
 
   // Strong over six months *and* at the week's low is an intersection; some sessions have nothing in it.
@@ -141,7 +172,7 @@ describe("the first-visit welcome", () => {
     await waitForTheGreeting();
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Reading today's session…")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Reading today's session…/)).toBeInTheDocument();
   });
 
   it("survives a request that rejects outright", async () => {
@@ -164,45 +195,66 @@ describe("the first-visit welcome", () => {
     expect(within(dialog).getAllByText("—").length).toBeGreaterThan(0);
   });
 
-  // The flag goes down when the dialog opens, not when it is dismissed: a reader who closes the
-  // tab mid-greeting has still been greeted.
-  it("greets a browser once and then never again", async () => {
+  // The greeting is per visit, not per browser: a reader who has seen it before is greeted again
+  // on the next arrival, and nothing is written down to stop that.
+  it("greets again on the next visit", async () => {
     jest.useFakeTimers();
     const first = render(<WelcomeModal />);
     await waitForTheGreeting();
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(window.localStorage.getItem(WELCOME_SEEN_KEY)).not.toBeNull();
     first.unmount();
 
     fetchMock.mockClear();
     render(<WelcomeModal />);
-    await act(async () => {
-      jest.advanceTimersByTime(WELCOME_DELAY_MS * 2);
-    });
+    await waitForTheGreeting();
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith("/api/welcome", expect.anything());
   });
 
-  it("stays silent when storage cannot be read at all", async () => {
-    const getItem = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
+  // The point of sending the whole qualified pool: the second visit of the day is a different pair.
+  it("deals two different stocks on the next visit", async () => {
+    serve(brief({ picks: [pick("AAA"), pick("BBB"), pick("CCC"), pick("DDD")] }));
+    draws(0, 0, 0);
+    jest.useFakeTimers();
+    const first = render(<WelcomeModal />);
+    await waitForTheGreeting();
+
+    const opening = shownSymbols(["AAA", "BBB", "CCC", "DDD"]);
+    expect(opening).toHaveLength(2);
+    expect([...JSON.parse(window.localStorage.getItem(LAST_PICKS_KEY) ?? "[]")].sort()).toEqual(opening);
+    first.unmount();
+
+    draws(0, 0, 0);
+    render(<WelcomeModal />);
+    await waitForTheGreeting();
+
+    const second = shownSymbols(["AAA", "BBB", "CCC", "DDD"]);
+    expect(second).toHaveLength(2);
+    expect(second.some((symbol) => opening.includes(symbol))).toBe(false);
+  });
+
+  // A session with three qualifying names cannot deal two new ones twice. Repeating one beats
+  // showing one.
+  it("repeats a stock only when the pool is too small to avoid it", async () => {
+    window.localStorage.setItem(LAST_PICKS_KEY, JSON.stringify(["AAA", "BBB"]));
+    serve(brief({ picks: [pick("AAA"), pick("BBB"), pick("CCC")] }));
+    draws(0, 0.9, 0.9);
     jest.useFakeTimers();
     render(<WelcomeModal />);
-    await act(async () => {
-      jest.advanceTimersByTime(WELCOME_DELAY_MS * 2);
-    });
+    await waitForTheGreeting();
 
-    // Not being able to remember that somebody was greeted means greeting them on every page load,
-    // which is worse than never greeting them.
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    getItem.mockRestore();
+    expect(shownSymbols(["AAA", "BBB", "CCC"])).toHaveLength(2);
   });
 
-  it("still greets when storage refuses the write", async () => {
-    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+  // Private-mode browsers throw on localStorage. The greeting still deals a pair; it just cannot
+  // promise the next one differs.
+  it("greets a browser that refuses storage", async () => {
+    jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage disabled");
+    });
+    jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("quota");
     });
     jest.useFakeTimers();
@@ -210,7 +262,21 @@ describe("the first-visit welcome", () => {
     await waitForTheGreeting();
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    setItem.mockRestore();
+    expect(shownSymbols(["RRKABEL", "BOSCHLTD"])).toHaveLength(2);
+  });
+
+  // Nothing closes the dialog but the reader: no timer takes it away while it is being read.
+  it("stays open until the reader closes it", async () => {
+    jest.useFakeTimers();
+    render(<WelcomeModal />);
+    await waitForTheGreeting();
+
+    await screen.findByRole("dialog");
+    await act(async () => {
+      jest.advanceTimersByTime(WELCOME_DELAY_MS * 10);
+    });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("closes on the dismissal and on the call to action", async () => {
@@ -251,25 +317,12 @@ describe("the first-visit welcome", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem(WELCOME_SEEN_KEY)).toBeNull();
   });
 });
 
-// The two answers the dialog is built on, asked directly — the component only ever reaches one
-// branch of each per render, and both have a case that only shows up on an unusual day.
-describe("the greeting's own two questions", () => {
-  it("reads the flag, and treats a storage it cannot reach as already greeted", () => {
-    expect(hasBeenWelcomed()).toBe(false);
-    window.localStorage.setItem(WELCOME_SEEN_KEY, "2026-08-19T00:00:00.000Z");
-    expect(hasBeenWelcomed()).toBe(true);
-
-    const getItem = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
-    expect(hasBeenWelcomed()).toBe(true);
-    getItem.mockRestore();
-  });
-
+// The three answers the dialog is built on, asked directly — the component reaches one branch of
+// each per render, and several of them only come up on an unusual session.
+describe("the greeting's own questions", () => {
   it.each([
     ["live", /trading right now/],
     ["pre-open", /opens at 9:15 AM IST/],
@@ -278,35 +331,61 @@ describe("the greeting's own two questions", () => {
   ])("says what the exchange is doing when it is %s", (marketSession, line) => {
     expect(sessionLine(brief({ marketSession }) as never)).toMatch(line);
   });
-});
 
-/**
- * The way back in.
- *
- * The flag is one-way by design, which makes the greeting impossible to look at twice — including
- * for the person who asked for it. `?welcome=1` is the explicit override, and it must not change
- * who gets greeted without asking.
- */
-describe("?welcome=1", () => {
-  afterEach(() => window.history.replaceState(null, "", "/"));
-
-  it("greets a browser that has already been greeted", async () => {
-    window.localStorage.setItem(WELCOME_SEEN_KEY, "2026-08-19T00:00:00.000Z");
-    window.history.replaceState(null, "", "/?welcome=1");
-
-    expect(hasBeenWelcomed()).toBe(false);
-
-    jest.useFakeTimers();
-    render(<WelcomeModal />);
-    await waitForTheGreeting();
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  it("draws a greeting line from the written set", () => {
+    draws(0.99);
+    expect(drawHeadline()).toBe(WELCOME_HEADLINES[WELCOME_HEADLINES.length - 1]);
   });
 
-  it("is the only value that overrides the flag", () => {
-    window.localStorage.setItem(WELCOME_SEEN_KEY, "2026-08-19T00:00:00.000Z");
-    window.history.replaceState(null, "", "/?welcome=yes");
+  describe("the pair a visit is dealt", () => {
+    const pool = [pick("AAA"), pick("BBB"), pick("CCC"), pick("DDD")];
 
-    expect(hasBeenWelcomed()).toBe(true);
+    it("shows the whole pool when there is nothing to choose between", () => {
+      expect(drawPicks([pick("AAA")], []).map((entry) => entry.symbol)).toEqual(["AAA"]);
+      expect(drawPicks(pool.slice(0, 2), ["AAA"]).map((entry) => entry.symbol)).toEqual(["AAA", "BBB"]);
+    });
+
+    it("draws two distinct names, wrapping round the end of the pool", () => {
+      draws(0.99, 0.99);
+      expect(drawPicks(pool, []).map((entry) => entry.symbol)).toEqual(["DDD", "CCC"]);
+    });
+
+    it("leaves out the names the last visit saw", () => {
+      draws(0, 0);
+      expect(drawPicks(pool, ["AAA", "BBB"]).map((entry) => entry.symbol)).toEqual(["CCC", "DDD"]);
+    });
+
+    it("falls back to the whole pool when too few names are left to avoid a repeat", () => {
+      draws(0, 0);
+      expect(drawPicks(pool, ["AAA", "BBB", "CCC"]).map((entry) => entry.symbol)).toEqual(["AAA", "BBB"]);
+    });
+  });
+
+  describe("what the last visit showed", () => {
+    it("reads the remembered pair back", () => {
+      window.localStorage.setItem(LAST_PICKS_KEY, JSON.stringify(["AAA", "BBB"]));
+      expect(lastPicks()).toEqual(["AAA", "BBB"]);
+    });
+
+    it("is empty when nothing has been remembered yet", () => {
+      expect(lastPicks()).toEqual([]);
+    });
+
+    it("keeps only the tickers out of a record that has been tampered with", () => {
+      window.localStorage.setItem(LAST_PICKS_KEY, JSON.stringify(["AAA", 7, null]));
+      expect(lastPicks()).toEqual(["AAA"]);
+    });
+
+    it("treats a record that is not a list as no memory at all", () => {
+      window.localStorage.setItem(LAST_PICKS_KEY, JSON.stringify({ symbol: "AAA" }));
+      expect(lastPicks()).toEqual([]);
+    });
+
+    it("treats a storage it cannot reach as no memory at all", () => {
+      jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("storage disabled");
+      });
+      expect(lastPicks()).toEqual([]);
+    });
   });
 });
