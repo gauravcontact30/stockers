@@ -54,7 +54,7 @@ async function generateChunkWithAI(chunk: ChangeInput[], entityLabel: string): P
     feature: "daily-predictions",
     system: `You are an AI research agent producing a one-day outlook for ${entityLabel}. Respond ONLY with a JSON array, one object per input item, in this exact shape: {"symbol": string, "outlook": "Bullish"|"Bearish"|"Neutral", "confidence": number (0-100), "note": string (max 140 characters)}. Do not include any text outside the JSON array.`,
     user: JSON.stringify(chunk),
-    temperature: 0.6,
+    temperature: 0.2,
     parse: (text) => {
       const match = text.match(/\[[\s\S]*\]/);
       if (!match) return null;

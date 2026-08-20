@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isSuperAdminEmail, SUPER_ADMIN_EMAIL } from "../../../lib/admin-access";
+import { isSuperAdminEmail } from "../../../lib/admin-access";
 import { logAuditEvent, logSecurityEvent } from "../../../lib/application-logger";
 import { appOrigin, passwordResetEmail, sendMail } from "../../../lib/mailer";
 import {
@@ -14,8 +14,6 @@ import {
 } from "../../../lib/store";
 import { renewedUntil, SUBSCRIPTION_DAYS, TRIAL_DAYS } from "../../../lib/subscription";
 import { todayIST } from "../../../lib/nse-client";
-
-export { SUPER_ADMIN_EMAIL };
 
 /**
  * Managing the people who have signed up.

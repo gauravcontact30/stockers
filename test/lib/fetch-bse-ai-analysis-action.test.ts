@@ -86,6 +86,29 @@ function rows(count = 65) {
   });
 }
 
+function yahooPayload(prices = rows()) {
+  return {
+    chart: {
+      result: [
+        {
+          timestamp: prices.map((row) => Math.floor(new Date(`${row.date}T00:00:00.000Z`).getTime() / 1000)),
+          indicators: {
+            quote: [
+              {
+                open: prices.map((row) => row.open),
+                high: prices.map((row) => row.high),
+                low: prices.map((row) => row.low),
+                close: prices.map((row) => row.close),
+                volume: prices.map((row) => row.volume),
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+}
+
 function upstream(payload: unknown, ok = true) {
   global.fetch = jest.fn(async () => ({ ok, status: ok ? 200 : 503, json: async () => payload })) as unknown as typeof fetch;
 }
@@ -93,8 +116,6 @@ function upstream(payload: unknown, ok = true) {
 beforeEach(() => {
   jest.clearAllMocks();
   global.fetch = jest.fn() as unknown as typeof fetch;
-  process.env.STOCKERS_BSE_MICROSERVICE_URL = "https://bse-internal.example";
-  process.env.STOCKERS_BSE_MICROSERVICE_TOKEN = "internal-service-token";
   mockedCookies.mockResolvedValue(cookieStore("session-token") as never);
   mockedVerifyToken.mockReturnValue("user_1");
   mockedFindUserById.mockResolvedValue(user as never);
@@ -114,11 +135,6 @@ beforeEach(() => {
       }),
     ),
   );
-});
-
-afterEach(() => {
-  delete process.env.STOCKERS_BSE_MICROSERVICE_URL;
-  delete process.env.STOCKERS_BSE_MICROSERVICE_TOKEN;
 });
 
 describe("fetchBseAiAnalysis", () => {
@@ -152,8 +168,8 @@ describe("fetchBseAiAnalysis", () => {
     expect(mockedChatJson).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed payloads from the internal BSE microservice", async () => {
-    upstream({ securityCode: "500002", currency: "INR", prices: [{ date: "2026-01-01", close: 100 }] });
+  it("rejects malformed payloads from the dynamic market history feed", async () => {
+    upstream({ chart: { result: [{ timestamp: [], indicators: { quote: [{}] } }] } });
 
     const result = await fetchBseAiAnalysis("500002");
 
@@ -161,21 +177,16 @@ describe("fetchBseAiAnalysis", () => {
     expect(mockedChatJson).not.toHaveBeenCalled();
   });
 
-  it("queries the internal service and returns computed measures plus schema-checked AI analysis", async () => {
-    upstream({ securityCode: "500002", companyName: "ABB India Ltd", currency: "INR", prices: rows() });
+  it("queries market history and returns computed measures plus schema-checked AI analysis", async () => {
+    upstream(yahooPayload());
 
     const result = await fetchBseAiAnalysis("500002");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
     expect(global.fetch).toHaveBeenCalledWith(
-      new URL("https://bse-internal.example/v1/bse/historical-prices"),
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({ Authorization: "Bearer internal-service-token" }),
-        body: JSON.stringify({ securityCode: "500002" }),
-        cache: "no-store",
-      }),
+      "https://query1.finance.yahoo.com/v8/finance/chart/ABB.NS?interval=1d&range=2y",
+      expect.objectContaining({ cache: "no-store" }),
     );
     expect(result.data).toMatchObject({
       securityCode: "500002",
@@ -191,7 +202,7 @@ describe("fetchBseAiAnalysis", () => {
 
   it("falls back to computed measures when the LLM response is unusable", async () => {
     mockedChatJson.mockResolvedValue(null);
-    upstream({ securityCode: "500002", currency: "INR", prices: rows() });
+    upstream(yahooPayload());
 
     const result = await fetchBseAiAnalysis("500002");
 

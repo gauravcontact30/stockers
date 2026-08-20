@@ -192,6 +192,7 @@ export function CompanyLogo({
       width={size}
       height={size}
       loading={eager ? "eager" : "lazy"}
+      decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setAttempt({ symbol, index: index + 1 })}
       className={`shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1 dark:border-slate-700 dark:bg-white ${className}`}

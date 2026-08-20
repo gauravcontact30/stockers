@@ -16,7 +16,7 @@ import {
 import { listUsers, userFromRequest } from "../../../lib/store";
 
 const DEFAULT_DAYS = 1;
-export const MAX_DAYS = PLATFORM_LOG_RETENTION_DAYS;
+const MAX_DAYS = PLATFORM_LOG_RETENTION_DAYS;
 let lastHealthLogDay: string | null = null;
 
 type CollectorBody = {
@@ -38,7 +38,7 @@ type CollectorEnvelope = CollectorBody & {
 const CORE_CATEGORIES = new Set<PlatformCoreLogCategory>(PLATFORM_LOG_GROUP_ORDER);
 const SEVERITIES = new Set<PlatformLogSeverity>(["star", "info", "warning", "error", "critical"]);
 
-export function rangeFrom(value: string | null): number {
+function rangeFrom(value: string | null): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_DAYS;
   return Math.min(Math.round(parsed), MAX_DAYS);

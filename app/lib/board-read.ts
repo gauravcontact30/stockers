@@ -195,7 +195,7 @@ function openRouterStream(brief: BoardBrief): Promise<StreamHandle | null> {
     feature: "board-read",
     system: SYSTEM_PROMPT,
     user: `Board: ${brief.subject}\nQuestion: ${brief.question}\n\nFigures:\n${facts}\n\nStandouts:\n${highlights}`,
-    temperature: 0.5,
+    temperature: 0.2,
   });
 }
 

@@ -2,7 +2,8 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { GET, POST, keysFrom, tagsFrom } from "../../app/api/admin/cache/route";
+import { GET, POST } from "../../app/api/admin/cache/route";
+import { keysFrom, tagsFrom } from "../../app/api/admin/cache/helpers";
 import { GET as ADVICE } from "../../app/api/admin/cache/advice/route";
 import { cacheInventory, clearMemoryCache, revalidating } from "../../app/lib/cache";
 import { createToken, type AppUser } from "../../app/lib/store";

@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { bseCatalogue } from "./bse-catalogue";
 import { CACHE_TAGS } from "./cache";
 import { chatJson, extractJsonObject } from "./openrouter";
 import { canUseFeature, getAccessStatus, readFeatureLocks, requiredPlanFor } from "./subscription";
@@ -178,44 +179,73 @@ function fallbackAnalysis(measures: FinancialMeasures): LlmAnalysis & { source: 
   };
 }
 
-function microserviceEndpoint(): URL | null {
-  const base = process.env.STOCKERS_BSE_MICROSERVICE_URL?.trim();
-  if (!base) return null;
-  try {
-    const url = new URL("/v1/bse/historical-prices", base);
-    if (url.protocol !== "https:" && process.env.NODE_ENV === "production") return null;
-    return url;
-  } catch {
-    return null;
+function catalogueEntryFor(securityCode: string) {
+  return bseCatalogue().find((entry) => entry.scripCode === securityCode) ?? null;
+}
+
+function priceRowsFromYahooPayload(payload: unknown): PriceRow[] {
+  const result = (payload as { chart?: { result?: unknown[] } })?.chart?.result?.[0] as
+    | {
+        timestamp?: unknown[];
+        indicators?: { quote?: { open?: unknown[]; high?: unknown[]; low?: unknown[]; close?: unknown[]; volume?: unknown[] }[] };
+      }
+    | undefined;
+  const timestamps = result?.timestamp ?? [];
+  const quote = result?.indicators?.quote?.[0];
+  if (!Array.isArray(timestamps) || !quote) return [];
+
+  const rows: PriceRow[] = [];
+  for (let index = 0; index < timestamps.length; index++) {
+    const stamp = timestamps[index];
+    const open = quote.open?.[index];
+    const high = quote.high?.[index];
+    const low = quote.low?.[index];
+    const close = quote.close?.[index];
+    const volume = quote.volume?.[index];
+    if (
+      typeof stamp !== "number" ||
+      typeof open !== "number" ||
+      typeof high !== "number" ||
+      typeof low !== "number" ||
+      typeof close !== "number"
+    ) {
+      continue;
+    }
+
+    rows.push({
+      date: new Date(stamp * 1000).toISOString().slice(0, 10),
+      open,
+      high,
+      low,
+      close,
+      volume: typeof volume === "number" && Number.isFinite(volume) && volume > 0 ? Math.round(volume) : 0,
+    });
   }
+
+  return rows;
 }
 
 async function fetchHistoricalPrices(securityCode: string): Promise<MicroservicePayload | BseAiAnalysisFailure> {
-  const endpoint = microserviceEndpoint();
-  const token = process.env.STOCKERS_BSE_MICROSERVICE_TOKEN?.trim();
-  if (!endpoint || !token) {
-    return { ok: false, code: "SERVICE_UNAVAILABLE", message: "The BSE historical price service is not configured." };
-  }
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ securityCode }),
+  const entry = catalogueEntryFor(securityCode);
+  const yahooSymbol = entry?.yahooSymbol ?? `${securityCode}.BO`;
+  const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2y`, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; stockers-app/1.0)" },
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {
-    return { ok: false, code: "SERVICE_UNAVAILABLE", message: "The BSE historical price service could not answer this request." };
+    return { ok: false, code: "SERVICE_UNAVAILABLE", message: "The live market history feed could not answer this request." };
   }
 
-  const parsed = MICRO_SERVICE_RESPONSE.safeParse(await response.json());
-  if (!parsed.success || parsed.data.securityCode !== securityCode) {
-    return { ok: false, code: "UPSTREAM_DATA_INVALID", message: "The BSE historical price service returned an invalid payload." };
+  const parsed = MICRO_SERVICE_RESPONSE.safeParse({
+    securityCode,
+    companyName: entry?.name,
+    currency: "INR",
+    prices: priceRowsFromYahooPayload(await response.json()),
+  });
+  if (!parsed.success) {
+    return { ok: false, code: "UPSTREAM_DATA_INVALID", message: "The live market history feed returned an invalid payload." };
   }
 
   return parsed.data;

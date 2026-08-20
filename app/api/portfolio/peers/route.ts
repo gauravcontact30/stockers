@@ -33,7 +33,7 @@ const CAP_RANK: Record<string, number> = { Large: 0, Mid: 1, Small: 2 };
  * and inventing a peer group for one would be worse than showing none: a rank is only meaningful
  * against a group that means something.
  */
-export function peersFor(symbol: string): string[] {
+function peersFor(symbol: string): string[] {
   const self = indianStocks.find((stock) => stock.symbol === symbol);
   if (!self) return [];
 

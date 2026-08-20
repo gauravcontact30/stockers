@@ -165,7 +165,7 @@ export async function generateAnalysis(stockInput: string): Promise<AnalysisResu
       "recommendation must be exactly one of \"Outperform\", \"Hold\", or \"Avoid\". recommendationReasons is an array of clear, specific reasons backing that call. keyInsights is an array of short, pointwise takeaways an investor should know right now. marketTrends is an array covering current market news and trend themes relevant to this stock (sector rotation, macro, flows, policy). companyActions is an array describing concrete steps the company/management is taking to perform better (cost cuts, expansion, new products, leadership changes, buybacks, etc). positiveNews is an array of only the genuinely positive news and developments about the company — do not include negatives there. " +
       "Accuracy rule: the user message supplies verified live market data. Every price or performance number you write must be copied from it verbatim. Never invent or estimate prices, returns, price targets, market caps, valuation multiples, or percentages.",
     user: `${buildMarketFacts(performance)}\n\nAnalyze ${stock} for Indian investors using current market news and trend themes. Give a clear Outperform, Hold, or Avoid recommendation with specific reasons. Cover key insights, positives, negatives, score, risk, next steps, prediction, newsFocus, outlook, current market trends, actions the company is taking to perform better, and a dedicated list of positive news about the company.`,
-    temperature: 0.7,
+    temperature: 0.2,
     parse: (text) => {
       const parsed = extractJsonObject(text);
       return parsed === null ? null : normalizeAnalysis(parsed, stock);

@@ -2,7 +2,8 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { GET, rangeFrom } from "../../app/api/admin/analytics/route";
+import { GET } from "../../app/api/admin/analytics/route";
+import { rangeFrom } from "../../app/api/admin/analytics/helpers";
 import { POST } from "../../app/api/analytics/track/route";
 import { istDay, resetAnalyticsThrottle, listEvents, VISITOR_COOKIE } from "../../app/lib/analytics";
 import { SUPER_ADMIN_EMAIL } from "../../app/lib/admin-access";

@@ -643,7 +643,7 @@ export function BseTrendingBoard({
     <MarketSection
       id="bse-trending"
       eyebrow="Trending on BSE"
-      title="What BSE crowded into today"
+      title={dated?.sessionDate ? `What BSE crowded into on ${formatDayDate(dated.sessionDate)}` : "What BSE crowded into today"}
       blurb="Both halves of the session's money, ranked by the exchange's own figures — rupee turnover, transaction count and share volume — split into the stocks being bought up and the ones being sold off."
       aside={
         <div className="flex flex-col items-start gap-2 lg:items-end">

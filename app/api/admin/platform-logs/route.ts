@@ -1,1 +1,1 @@
-export { GET, POST, MAX_DAYS, rangeFrom } from "../logs/route";
+export { GET, POST } from "../logs/route";

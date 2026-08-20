@@ -158,9 +158,9 @@ describe("HeroFallback", () => {
     const { container } = render(<HeroFallback />);
     const frame = container.querySelector("div")!;
 
-    expect(frame.className).toContain("min-h-[1040px]");
-    expect(frame.className).toContain("sm:min-h-[720px]");
-    expect(frame.className).toContain("lg:min-h-[590px]");
+    expect(frame.className).toContain("min-h-[850px]");
+    expect(frame.className).toContain("sm:min-h-[590px]");
+    expect(frame.className).toContain("lg:min-h-[470px]");
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(5);
   });
 });

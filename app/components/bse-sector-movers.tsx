@@ -482,7 +482,13 @@ function CategoryBlock({
  * the companies mapped so far. Opening a category pages through all of it — every name that rose
  * and every name that fell — rather than a top few.
  */
-export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSectorBoardResponse> }) {
+export function BseSectorMovers({
+  prefetched,
+  refreshNow = false,
+}: {
+  prefetched?: Prefetched<BseSectorBoardResponse>;
+  refreshNow?: boolean;
+}) {
   // Bumped by the refresh control to re-ask while the exchange is still being classified.
   const [nonce, setNonce] = useState(0);
   const [search, setSearch] = useState("");
@@ -498,6 +504,7 @@ export function BseSectorMovers({ prefetched }: { prefetched?: Prefetched<BseSec
   const { data, loading, error } = useMarketFeed<BseSectorBoardResponse>(
     url,
     query === "" && nonce === 0 ? prefetched : undefined,
+    { refreshNow: query === "" && nonce === 0 ? refreshNow : false },
   );
 
   useEffect(() => {

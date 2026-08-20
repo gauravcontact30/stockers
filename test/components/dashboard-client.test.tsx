@@ -1,8 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DashboardClient } from "../../app/components/dashboard-client";
-import { indianStocks } from "../../app/lib/indian-stocks";
-import { stockIcon } from "../../app/lib/company-logos";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -12,37 +10,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, refresh: mockRefresh }),
 }));
 
-jest.mock("../../app/components/ai-report-modal-lazy", () => ({
-  AiReportModal: (props: {
-    open: boolean;
-    onClose: () => void;
-    loading: boolean;
-    analysis: { stock: string } | null;
-    logoUrl?: string;
-    companyName?: string;
-  }) => (
-    <div
-      data-testid="ai-report-modal"
-      data-open={String(props.open)}
-      data-loading={String(props.loading)}
-      data-stock={props.analysis?.stock ?? ""}
-      data-company-name={props.companyName ?? ""}
-      data-logo-url={props.logoUrl ?? ""}
-    >
-      <button type="button" onClick={props.onClose}>
-        close-modal
-      </button>
-    </div>
-  ),
-}));
-
-// Each AI panel fetches its own live market data and is covered by its own test file; here they
-// stand in as markers so a test can tell which section the dashboard mounted.
 function mockPanel(testId: string) {
   const Stub = () => <div data-testid={testId} />;
   return Stub;
 }
 
+jest.mock("../../app/components/ai-intel-search", () => ({ AiIntelSearch: mockPanel("panel-intel") }));
 jest.mock("../../app/components/market-pulse", () => ({ MarketPulse: mockPanel("panel-market-pulse") }));
 jest.mock("../../app/components/top-picks-today", () => ({ TopPicksToday: mockPanel("panel-top-picks") }));
 jest.mock("../../app/components/buy-tomorrow-picks", () => ({ BuyTomorrowPicks: mockPanel("panel-buy-tomorrow") }));
@@ -50,7 +23,6 @@ jest.mock("../../app/components/dip-winners", () => ({ DipWinners: mockPanel("pa
 jest.mock("../../app/components/landing-research", () => ({ LandingResearch: mockPanel("panel-research") }));
 jest.mock("../../app/components/ai-stock-compare", () => ({ AiStockCompare: mockPanel("panel-compare") }));
 jest.mock("../../app/components/etf-research", () => ({ EtfResearch: mockPanel("panel-etf-research") }));
-// The exchange boards that moved in from the landing page, each covered by its own test file.
 jest.mock("../../app/components/bse-stock-directory", () => ({ BseStockDirectory: mockPanel("panel-directory") }));
 jest.mock("../../app/components/sector-trends", () => ({ SectorTrends: mockPanel("panel-sectors") }));
 jest.mock("../../app/components/most-traded", () => ({ MostTraded: mockPanel("panel-most-traded") }));
@@ -64,32 +36,18 @@ function setStoredUser(user: unknown) {
   window.localStorage.setItem("stockers-auth", JSON.stringify({ token: "tok", user }));
 }
 
-function installFetchMock(researchResponse?: unknown, researchOk = true) {
+function installFetchMock() {
   global.fetch = jest.fn((url: string) => {
-    if (url === "/api/news") {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
-    }
     if (url === "/api/ai/verdicts") {
       return Promise.resolve({ ok: true, body: null, text: () => Promise.resolve("") });
     }
     if (url.startsWith("/api/market/performance")) {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ rows: [], generatedAt: "2026-08-14T00:00:00.000Z" }) });
     }
-    if (url === "/api/research") {
-      return Promise.resolve({
-        ok: researchOk,
-        json: () => Promise.resolve(researchResponse),
-      });
-    }
     return Promise.reject(new Error(`unexpected url ${url}`));
   }) as unknown as typeof fetch;
 }
 
-const reliance = indianStocks.find((s) => s.symbol === "RELIANCE")!;
-
-// DashboardClient renders the real (unmocked) MarketNews child, which fires its own /api/news
-// fetch on mount. Flushing that microtask chain inside act() here keeps every test's render
-// free of "not wrapped in act(...)" warnings without each test needing to know about it.
 async function renderDashboard() {
   const result = render(<DashboardClient />);
   await act(async () => {
@@ -159,132 +117,35 @@ describe("DashboardClient", () => {
   });
 
   describe("initial render", () => {
-    it("shows the default no-analysis state and a closed report modal", async () => {
+    it("shows overview actions and keeps dedicated panels unmounted", async () => {
       await renderDashboard();
-      expect(screen.queryByText("View full AI report")).not.toBeInTheDocument();
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
-      expect(screen.getByText("RELIANCE outlook")).toBeInTheDocument();
+
+      expect(screen.getByRole("heading", { name: "Open one live tool at a time" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Open Stock Research/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Open Stocks in News/ })).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("e.g. HDFC BANK")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("panel-intel")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("panel-research")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("panel-stock-news")).not.toBeInTheDocument();
     });
 
-    // Both said the same thing the research card and the boards already say, so they were cut.
-    it("no longer carries the Suggested focus or Analytics cards", async () => {
+    it("opens stock research from the overview action grid", async () => {
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      await user.click(screen.getByRole("button", { name: /Open Stock Research/ }));
+
+      expect(await screen.findByTestId("panel-research")).toBeInTheDocument();
+      expect(window.location.pathname + window.location.hash).toBe("/stock-research");
+    });
+
+    it("no longer carries duplicated overview cards", async () => {
       await renderDashboard();
       expect(screen.queryByText("Suggested focus")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Open report" })).not.toBeInTheDocument();
       expect(screen.queryByText(/Portfolio analytics/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("What StockersAI watches")).not.toBeInTheDocument();
     });
-
-    // The explorer searches the whole catalogue and runs the analysis on selection, so there is
-    // no second click on "Research stock" to make.
-    it("researches a stock picked from the category explorer", async () => {
-      const user = userEvent.setup();
-      installFetchMock({ stock: "TCS", summary: "TCS summary." });
-      await renderDashboard();
-
-      await user.type(screen.getByRole("combobox", { name: "Search any listed stock" }), "TCS");
-      await user.click(screen.getByRole("option", { name: /Tata Consultancy Services/ }));
-
-      expect(await screen.findByText("Analysis ready for TCS.")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toHaveValue("TCS");
-      expect(screen.getByText("TCS outlook")).toBeInTheDocument();
-    });
-  });
-
-  describe("AI research flow", () => {
-    it("runs the research flow: shows the loading state, opens the modal, and displays the result", async () => {
-      const user = userEvent.setup();
-      let resolveResearch!: (value: unknown) => void;
-      global.fetch = jest.fn((url: string) => {
-        if (url === "/api/news") return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
-        if (url === "/api/ai/verdicts") return Promise.resolve({ ok: true, body: null, text: () => Promise.resolve("") });
-        if (url.startsWith("/api/market/performance")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ rows: [], generatedAt: "2026-08-14T00:00:00.000Z" }) });
-        }
-        if (url === "/api/research") {
-          return new Promise((resolve) => {
-            resolveResearch = resolve;
-          });
-        }
-        return Promise.reject(new Error(`unexpected url ${url}`));
-      }) as unknown as typeof fetch;
-
-      await renderDashboard();
-
-      const stockInput = screen.getByPlaceholderText("e.g. HDFC BANK");
-      await user.clear(stockInput);
-      await user.type(stockInput, "reliance");
-      await user.click(screen.getByRole("button", { name: "Research stock" }));
-
-      expect(await screen.findByRole("button", { name: "Researching..." })).toBeInTheDocument();
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true");
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-loading", "true");
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/research",
-        expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stock: "RELIANCE" }),
-        })
-      );
-      // selectedSymbol is upper-cased for display in the prediction panel immediately on submit
-      expect(screen.getByText("RELIANCE outlook")).toBeInTheDocument();
-
-      resolveResearch({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            stock: "RELIANCE",
-            summary: "Reliance looks strong this quarter.",
-            recommendation: "Outperform",
-            score: 82,
-          }),
-      });
-
-      expect(await screen.findByText("Analysis ready for RELIANCE.")).toBeInTheDocument();
-      expect(screen.getByText("Reliance looks strong this quarter.")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Research stock" })).toBeInTheDocument();
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-loading", "false");
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-stock", "RELIANCE");
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-company-name", reliance.name);
-      // Asserted through `stockIcon` rather than against a hand-built favicon URL, so this stays
-      // true to whichever real source it picks: the symbol store leads, because Google's favicon
-      // endpoint answers with a generic globe for a large share of the checked domains.
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute(
-        "data-logo-url",
-        stockIcon(reliance.symbol, reliance.domain)
-      );
-    });
-
-    it("leaves logoUrl and companyName undefined when the analyzed symbol isn't in the known stock list", async () => {
-      const user = userEvent.setup();
-      installFetchMock({ stock: "UNKNOWNSYM", summary: "Summary text.", recommendation: "Hold" });
-      await renderDashboard();
-
-      const stockInput = screen.getByPlaceholderText("e.g. HDFC BANK");
-      await user.clear(stockInput);
-      await user.type(stockInput, "unknownsym");
-      await user.click(screen.getByRole("button", { name: "Research stock" }));
-
-      await screen.findByText("Analysis ready for UNKNOWNSYM.");
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-company-name", "");
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-logo-url", "");
-    });
-
-    it("reopens the modal from the 'View full AI report' button after it was closed", async () => {
-      const user = userEvent.setup();
-      installFetchMock({ stock: "RELIANCE", summary: "Summary text.", recommendation: "Outperform" });
-      await renderDashboard();
-
-      await user.click(screen.getByRole("button", { name: "Research stock" }));
-      await screen.findByText("Analysis ready for RELIANCE.");
-
-      await user.click(screen.getByRole("button", { name: "close-modal" }));
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "false");
-
-      await user.click(screen.getByRole("button", { name: "View full AI report" }));
-      expect(screen.getByTestId("ai-report-modal")).toHaveAttribute("data-open", "true");
-    });
-
   });
 
   describe("AI section navigation", () => {
@@ -304,13 +165,13 @@ describe("DashboardClient", () => {
       expect(await screen.findByTestId("panel-market-pulse")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Market Pulse" })).toBeInTheDocument();
       expect(screen.getByText("Live breadth, indices and movers with an AI read on the day's mood.")).toBeInTheDocument();
-      // The overview is unmounted with its own fetches, so only one section is ever live.
       expect(screen.queryByPlaceholderText("e.g. HDFC BANK")).not.toBeInTheDocument();
       expect(window.location.pathname + window.location.hash).toBe("/market-pulse");
       expect(window.scrollTo).toHaveBeenCalled();
     });
 
     it.each([
+      ["Intelligence Search", "panel-intel"],
       ["Top Picks", "panel-top-picks"],
       ["Outperform Tomorrow", "panel-buy-tomorrow"],
       ["Dip Winners", "panel-dip-winners"],
@@ -330,7 +191,6 @@ describe("DashboardClient", () => {
       await renderDashboard();
 
       expect(await screen.findByTestId("panel-compare")).toBeInTheDocument();
-      // A deep link must not be rewritten on arrival.
       expect(window.location.hash).toBe("#compare");
     });
 
@@ -338,7 +198,7 @@ describe("DashboardClient", () => {
       window.history.replaceState(null, "", "/pricing");
       await renderDashboard();
 
-      expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Open one live tool at a time" })).toBeInTheDocument();
     });
 
     it("drops the hash again on the way back to the overview", async () => {
@@ -351,12 +211,10 @@ describe("DashboardClient", () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByPlaceholderText("e.g. HDFC BANK")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Open one live tool at a time" })).toBeInTheDocument();
       expect(window.location.pathname + window.location.hash).toBe("/overview");
     });
 
-    // The open section is read from the URL, so a hash change from outside React — the back
-    // button, or an in-page link — has to move the dashboard with it.
     it("follows a hash change it did not make itself", async () => {
       await renderDashboard();
       expect(screen.queryByTestId("panel-etf-research")).not.toBeInTheDocument();
@@ -377,19 +235,11 @@ describe("DashboardClient", () => {
     });
   });
 
-  it("renders the static watch-list of things StockersAI monitors and the supporting panels", async () => {
-    await renderDashboard();
-    expect(screen.getByText("What StockersAI watches")).toBeInTheDocument();
-    expect(screen.getByText(/Earnings momentum and guidance changes/)).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith("/api/news");
-  });
-
   describe("exchange boards and the guided tour", () => {
     afterEach(() => {
       window.history.replaceState(null, "", "/overview");
     });
 
-    // Each board is its own destination now, and mounting is still one section at a time.
     it.each([
       ["Company Directory", "panel-directory"],
       ["Sector Trends", "panel-sectors"],
@@ -410,7 +260,6 @@ describe("DashboardClient", () => {
       expect(await screen.findByTestId(testId)).toBeInTheDocument();
     });
 
-    // Getting Started has no AI layer, so it is the one section that is never wrapped in a gate.
     it("opens the guided tour without a paywall around it", async () => {
       const user = userEvent.setup();
       await renderDashboard();
@@ -430,7 +279,7 @@ describe("DashboardClient", () => {
       window.location.hash = "#support";
       await renderDashboard();
 
-      await user.click(screen.getByRole("button", { name: "Open Market Pulse →" }));
+      await user.click(screen.getByRole("button", { name: /Open Market Pulse/ }));
 
       expect(await screen.findByTestId("panel-market-pulse")).toBeInTheDocument();
       expect(window.location.pathname + window.location.hash).toBe("/market-pulse");

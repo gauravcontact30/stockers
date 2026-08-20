@@ -82,12 +82,17 @@ const runtimePath = (name: string) => path.join(RUNTIME_DIR, name);
 beforeEach(() => {
   files.clear();
   sharedRows.clear();
+  process.env.STOCKERS_ALLOW_BUNDLED_CACHE_WRITES = "true";
   supabaseIsConfigured = false;
   supabaseFails = false;
   tableIsMissing = false;
   sharedCalls = 0;
   refuseWritesUnder = null;
   resetCacheWritability();
+});
+
+afterEach(() => {
+  delete process.env.STOCKERS_ALLOW_BUNDLED_CACHE_WRITES;
 });
 
 describe("readJsonCache", () => {
@@ -114,6 +119,14 @@ describe("readJsonCache", () => {
 });
 
 describe("writeJsonCache", () => {
+  it("keeps generated caches out of app/data unless bundled writes are explicitly enabled", async () => {
+    delete process.env.STOCKERS_ALLOW_BUNDLED_CACHE_WRITES;
+
+    await expect(writeJsonCache("bse-sectors.json", { date: "2026-08-20" })).resolves.toBe("runtime");
+    expect(files.has(bundledCachePath("bse-sectors.json"))).toBe(false);
+    expect(files.get(runtimePath("bse-sectors.json"))).toContain("2026-08-20");
+  });
+
   it("writes to the application directory when it is writable", async () => {
     await expect(writeJsonCache("buy-tomorrow.json", { date: "2026-08-12" })).resolves.toBe("bundled");
     expect(files.get(bundledCachePath("buy-tomorrow.json"))).toContain("2026-08-12");

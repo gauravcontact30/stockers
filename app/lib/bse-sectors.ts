@@ -8,9 +8,8 @@
 // classified is used immediately, the progress is reported alongside it, and the rows actually on
 // screen jump the queue through the same cache. Nothing waits on the walk to finish.
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { fetchBse } from "./bse-client";
+import { readJsonCache, writeJsonCache } from "./data-cache";
 import { toText } from "./nse-client";
 
 export type SectorInfo = { sector: string | null; industry: string | null };
@@ -55,13 +54,13 @@ let failureStreak = 0;
 // hot reload — begins the half-hour walk again from nothing, which is why the categories never
 // filled: the work was being thrown away faster than it could be done. Same disk-cache pattern the
 // period returns already use.
-const CACHE_FILE = path.join(process.cwd(), "app", "data", "bse-sectors.json");
+const CACHE_FILE = "bse-sectors.json";
 // How often the walk writes what it has, so a restart resumes rather than repeats.
 const CHECKPOINT_EVERY = 200;
 
 type Snapshot = { savedAt: string; sectors: Record<string, SectorInfo> };
 
-let hydratedMtime = 0;
+let hydratedAt = 0;
 let hydrating: Promise<void> | null = null;
 let sinceCheckpoint = 0;
 
@@ -77,10 +76,11 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 function hydrate(): Promise<void> {
   hydrating ??= (async () => {
     try {
-      const stat = await fs.stat(CACHE_FILE);
-      if (stat.mtimeMs <= hydratedMtime) return;
+      const snapshot = await readJsonCache<Snapshot>(CACHE_FILE);
+      if (!snapshot) return;
+      const savedAt = new Date(snapshot.savedAt).getTime();
+      if (!Number.isFinite(savedAt) || savedAt <= hydratedAt) return;
 
-      const snapshot = JSON.parse(await fs.readFile(CACHE_FILE, "utf8")) as Snapshot;
       const age = Date.now() - new Date(snapshot.savedAt).getTime();
       if (!Number.isFinite(age) || age > TTL_MS) return;
 
@@ -88,7 +88,7 @@ function hydrate(): Promise<void> {
         // What this process already fetched wins: it is at least as fresh as the file.
         if (!classified.has(code)) classified.set(code, info);
       }
-      hydratedMtime = stat.mtimeMs;
+      hydratedAt = savedAt;
     } catch {
       // No cache yet, or an unreadable one: the walk simply starts from scratch.
     } finally {
@@ -101,12 +101,7 @@ function hydrate(): Promise<void> {
 
 async function save(): Promise<void> {
   const snapshot: Snapshot = { savedAt: new Date().toISOString(), sectors: Object.fromEntries(classified) };
-  try {
-    await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-    await fs.writeFile(CACHE_FILE, JSON.stringify(snapshot), "utf8");
-  } catch {
-    // A read-only deployment still works, it just re-walks on the next cold start.
-  }
+  await writeJsonCache(CACHE_FILE, snapshot);
 }
 
 /**
@@ -285,6 +280,6 @@ export function resetSectorsForTest(): void {
   walking = null;
   failureStreak = 0;
   hydrating = null;
-  hydratedMtime = 0;
+  hydratedAt = 0;
   sinceCheckpoint = 0;
 }

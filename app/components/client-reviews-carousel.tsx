@@ -70,6 +70,7 @@ function Signature({ review }: { review: ClientReview }) {
              what the layout note above is trying to achieve in the first place. */
           width={180}
           height={48}
+          decoding="async"
           className="h-9 w-auto max-w-full object-contain object-bottom mix-blend-multiply dark:mix-blend-screen dark:invert"
           fetchPriority="low"
         />

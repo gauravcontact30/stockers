@@ -10,7 +10,8 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { GET, MAX_DAYS, rangeFrom } from "../../app/api/admin/ai-usage/route";
+import { GET } from "../../app/api/admin/ai-usage/route";
+import { MAX_DAYS, rangeFrom } from "../../app/api/admin/ai-usage/helpers";
 import { SUPER_ADMIN_EMAIL } from "../../app/lib/admin-access";
 import { recordAiCall, resetAiTelemetry } from "../../app/lib/ai-telemetry";
 import type { AiUsageReport } from "../../app/lib/ai-usage-report";

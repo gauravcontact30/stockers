@@ -9,7 +9,8 @@ jest.mock("../../app/lib/mailer", () => ({
   sendMail: jest.fn(() => Promise.resolve({ ok: true, transport: "outbox" })),
 }));
 
-import { DELETE, PATCH, SUPER_ADMIN_EMAIL } from "../../app/api/admin/users/route";
+import { DELETE, PATCH } from "../../app/api/admin/users/route";
+import { SUPER_ADMIN_EMAIL } from "../../app/lib/admin-access";
 import { createToken, type AppUser } from "../../app/lib/store";
 
 // The per-worker store jest.setup.ts points `app/lib/store` at, so this suite writes the same file

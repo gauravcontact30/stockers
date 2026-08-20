@@ -46,6 +46,7 @@ function StockLogo({ src, name }: { src: string; name: string }) {
       width={36}
       height={36}
       loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
       className="h-9 w-9 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1.5 dark:border-slate-700"
     />

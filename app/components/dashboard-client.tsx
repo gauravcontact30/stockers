@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactElement } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import type { AnalysisResponse } from "./ai-analysis-report";
-import { AiReportModal } from "./ai-report-modal-lazy";
 import { GatedSection } from "./ai-gate";
+import { AiIntelSearch } from "./ai-intel-search";
+import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
+import { BseStockDirectory } from "./bse-stock-directory";
+import { BuyTomorrowPicks } from "./buy-tomorrow-picks";
 import { OverviewHeader } from "./dashboard-overview";
 import {
   DashboardSectionTabs,
@@ -19,53 +20,29 @@ import {
   type DashboardSection,
   type DashboardSectionId,
 } from "./dashboard-sidebar";
+import { DipWinners } from "./dip-winners";
+import { DividendBoard } from "./dividend-board";
+import { EtfBoard } from "./etf-board";
+import { EtfResearch } from "./etf-research";
+import { GettingStarted } from "./getting-started";
+import { IpoListings } from "./ipo-listings";
+import { LandingResearch } from "./landing-research";
+import { MarketPulse } from "./market-pulse";
+import { MostTraded } from "./most-traded";
+import { MtfTraded } from "./mtf-traded";
 import { PlanPill } from "./plan-pill";
+import { PortfolioWorkspace } from "./portfolio-workspace";
+import { SectorShowdowns } from "./sector-showdowns";
+import { SectorTrends } from "./sector-trends";
+import { StocksInNews } from "./stocks-in-news";
 import { TrialStatusCard } from "./trial-status-card";
-import { PredictionPanel } from "./prediction-panel";
-import { fetchResearch } from "./research-cache";
-import { StockExplorer } from "./stock-explorer";
+import { TopPicksToday } from "./top-picks-today";
+import { TripleCompare } from "./triple-compare";
 import { syncSessionCookie, useSubscription } from "./subscription-provider";
 import { WatchlistCard } from "./watchlist-card";
-import { indianStocks } from "../lib/indian-stocks";
 import { tierForPlan } from "../lib/plan-tiers";
 import { dashboardSectionIdFromPath, dashboardSectionPath } from "../lib/section-routes";
 import { track } from "../lib/track";
-import { stockIcon } from "../lib/company-logos";
-
-function PanelLoader() {
-  return (
-    <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900">
-      <div className="h-5 w-48 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
-      <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="h-24 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
-        <div className="h-24 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
-      </div>
-    </div>
-  );
-}
-
-const AiIntelSearch = dynamic(() => import("./ai-intel-search").then((module) => module.AiIntelSearch), { loading: PanelLoader });
-const AiStockCompare = dynamic(() => import("./ai-stock-compare").then((module) => module.AiStockCompare), { loading: PanelLoader });
-const BseStockDirectory = dynamic(() => import("./bse-stock-directory").then((module) => module.BseStockDirectory), { loading: PanelLoader });
-const BuyTomorrowPicks = dynamic(() => import("./buy-tomorrow-picks").then((module) => module.BuyTomorrowPicks), { loading: PanelLoader });
-const DipWinners = dynamic(() => import("./dip-winners").then((module) => module.DipWinners), { loading: PanelLoader });
-const DividendBoard = dynamic(() => import("./dividend-board").then((module) => module.DividendBoard), { loading: PanelLoader });
-const EtfBoard = dynamic(() => import("./etf-board").then((module) => module.EtfBoard), { loading: PanelLoader });
-const EtfResearch = dynamic(() => import("./etf-research").then((module) => module.EtfResearch), { loading: PanelLoader });
-const GettingStarted = dynamic(() => import("./getting-started").then((module) => module.GettingStarted), { loading: PanelLoader });
-const IpoListings = dynamic(() => import("./ipo-listings").then((module) => module.IpoListings), { loading: PanelLoader });
-const LandingResearch = dynamic(() => import("./landing-research").then((module) => module.LandingResearch), { loading: PanelLoader });
-const MarketNews = dynamic(() => import("./market-news").then((module) => module.MarketNews), { loading: PanelLoader });
-const MarketPulse = dynamic(() => import("./market-pulse").then((module) => module.MarketPulse), { loading: PanelLoader });
-const MostTraded = dynamic(() => import("./most-traded").then((module) => module.MostTraded), { loading: PanelLoader });
-const MtfTraded = dynamic(() => import("./mtf-traded").then((module) => module.MtfTraded), { loading: PanelLoader });
-const PortfolioWorkspace = dynamic(() => import("./portfolio-workspace").then((module) => module.PortfolioWorkspace), { loading: PanelLoader });
-const SectorShowdowns = dynamic(() => import("./sector-showdowns").then((module) => module.SectorShowdowns), { loading: PanelLoader });
-const SectorTrends = dynamic(() => import("./sector-trends").then((module) => module.SectorTrends), { loading: PanelLoader });
-const StocksInNews = dynamic(() => import("./stocks-in-news").then((module) => module.StocksInNews), { loading: PanelLoader });
-const TopPicksToday = dynamic(() => import("./top-picks-today").then((module) => module.TopPicksToday), { loading: PanelLoader });
-const TripleCompare = dynamic(() => import("./triple-compare").then((module) => module.TripleCompare), { loading: PanelLoader });
 
 type UserData = {
   id: string;
@@ -74,8 +51,8 @@ type UserData = {
   plan: string;
 };
 
-// Reads the session synchronously on the client so the dashboard never renders
-// a flash of empty state; on the server this always returns null (no window).
+// Reads the stored session after hydration. SSR cannot see localStorage, so the first render keeps
+// the server and client markup identical and avoids React hydration mismatches.
 function readStoredUser(): UserData | null {
   // Only reachable during real server-side rendering (no `window` global); a jsdom-based test
   // environment always provides `window`, so this branch can't be exercised from Jest.
@@ -161,10 +138,76 @@ function SectionShell({ section, children }: { section: DashboardSection; childr
   );
 }
 
+const OVERVIEW_ACTIONS: { section: DashboardSectionId; label: string; detail: string }[] = [
+  {
+    section: "intel",
+    label: "AI Intelligence Search",
+    detail: "Ask a cross-market question from the dedicated intelligence workspace.",
+  },
+  {
+    section: "research",
+    label: "Stock Research",
+    detail: "Open ticker search, measured outlooks and the full AI report modal.",
+  },
+  {
+    section: "market-pulse",
+    label: "Market Pulse",
+    detail: "Check live breadth, index tone, movers and the market read.",
+  },
+  {
+    section: "top-picks",
+    label: "Top Picks",
+    detail: "Review the current AI-ranked ideas from the live market universe.",
+  },
+  {
+    section: "stock-news",
+    label: "Stocks in News",
+    detail: "Scan company-linked exchange news in its own board.",
+  },
+  {
+    section: "portfolio",
+    label: "Portfolio",
+    detail: "Screen holdings, risk and allocation from the portfolio workspace.",
+  },
+];
+
+function OverviewActions({ onOpen }: { onOpen: (section: DashboardSectionId) => void }) {
+  return (
+    <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900">
+      <div>
+        <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Workspace</p>
+        <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Open one live tool at a time</h2>
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+          The overview links into live sections instead of mounting duplicate AI panels and market feeds on page load.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {OVERVIEW_ACTIONS.map((action) => (
+          <button
+            key={action.section}
+            type="button"
+            onClick={() => onOpen(action.section)}
+            className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10"
+          >
+            <span className="block text-sm font-semibold text-slate-900 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-300">
+              {action.label}
+            </span>
+            <span className="mt-1.5 block text-sm leading-relaxed text-slate-500 dark:text-slate-400">{action.detail}</span>
+            <span className="mt-3 inline-flex text-xs font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+              Open {action.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function DashboardClient({ initialSection = "overview" }: { initialSection?: DashboardSectionId }) {
   const router = useRouter();
   const { refresh: refreshSubscription, status: subscriptionStatus } = useSubscription();
-  const [user] = useState<UserData | null>(readStoredUser);
+  const [user, setUser] = useState<UserData | null>(null);
   // Reading the URL through useSyncExternalStore keeps the server and first client render in
   // agreement, then resyncs to the real URL right after hydration.
   const section = useSyncExternalStore(
@@ -172,40 +215,14 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
     () => readSectionFromLocation(initialSection),
     sectionOnServer(initialSection),
   );
-  const [stock, setStock] = useState("RELIANCE");
-  const [selectedSymbol, setSelectedSymbol] = useState("RELIANCE");
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-
   useEffect(() => {
-    if (!user) {
+    const stored = readStoredUser();
+    setUser(stored);
+    if (!stored) {
       router.replace("/signin");
     }
-  }, [user, router]);
-
-  /** The deep read of one stock: opens the report, then fills it in when the desk answers. */
-  const runAnalysis = async (symbol: string) => {
-    setStock(symbol);
-    setLoading(true);
-    setMessage(null);
-    setModalOpen(true);
-    setSelectedSymbol(symbol.toUpperCase());
-    // The deep read is the most expensive thing the desk does, so which names people spend it on
-    // is worth knowing separately from which ones they merely glanced at.
-    track("ai.report", symbol.toUpperCase());
-
-    const data = await fetchResearch(symbol);
-    setLoading(false);
-    setAnalysis(data);
-    setMessage(`Analysis ready for ${data.stock}.`);
-  };
-
-  const handleAnalyze = (event: React.FormEvent) => {
-    event.preventDefault();
-    return runAnalysis(stock);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the stored session is a hydration-time read; later auth changes go through logout/sign-in flows.
+  }, []);
 
   const logout = () => {
     // Reported before the session is torn down, while the server can still tell whose it was.
@@ -220,7 +237,6 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
     router.push("/");
   };
 
-  const analysisMeta = analysis ? indianStocks.find((s) => s.symbol === analysis.stock) : undefined;
   // The tier the server actually grants, not the plan on the account record. During the free trial
   // those disagree on purpose: nothing has been bought, so the record holds no plan, while access
   // runs at Elite for the length of the trial. Reading the record here badged a trial user "Starter" and made
@@ -230,89 +246,13 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
   const overview = (
     <div className="flex flex-col gap-6">
       <OverviewHeader name={user?.name || "investor"} />
-      {/* The one place a reader can ask their own question rather than pick one of ours, so it
-          sits above the standing panels rather than under them. The same panel has a section of
-          its own in the rail for anyone who came here to do nothing else. */}
-      <GatedSection feature="intel" label="AI intelligence search">
-        <AiIntelSearch />
-      </GatedSection>
-      <GatedSection feature="research" label="AI stock research">
-        <AiVerdictPanel section="overview" />
-      </GatedSection>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <GatedSection feature="research" label="AI stock research">
-      <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">AI research</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Analyze a stock</h2>
-          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-            Name a company, a ticker or a scrip code. The report that comes back is scored from measured returns —
-            the model writes the reasoning, not the call.
-          </p>
-        </div>
-
-        {/* Picking from the catalogue runs the analysis straight away — the extra click on
-            "Research stock" said nothing the selection had not already said. */}
-        <div className="mt-6">
-          <StockExplorer selected={selectedSymbol} onSelect={runAnalysis} />
-        </div>
-
-        <form onSubmit={handleAnalyze} className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <input
-            value={stock}
-            onChange={(event) => setStock(event.target.value)}
-            className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-            placeholder="e.g. HDFC BANK"
-          />
-          <button
-            type="submit"
-            className="rounded-full bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-500"
-          >
-            {loading ? "Researching..." : "Research stock"}
-          </button>
-        </form>
-
-        {message && <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">{message}</p>}
-
-        <div className="mt-6">
-          <PredictionPanel symbol={selectedSymbol} />
-        </div>
-
-        {analysis && (
-          <div>
-            <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{analysis.summary}</p>
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="mt-3 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
-            >
-              View full AI report
-            </button>
-          </div>
-        )}
-      </section>
-      </GatedSection>
-
-      <aside className="space-y-6">
-        <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)] transition-colors dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">What StockersAI watches</p>
-          <ul className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-400">
-            <li>• Earnings momentum and guidance changes</li>
-            <li>• FII/DII flow and macro sentiment</li>
-            <li>• Policy headlines and sector rotation</li>
-            <li>• Technical breakout and support levels</li>
-          </ul>
-        </div>
+      <OverviewActions onOpen={openSection} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.8fr]">
+        <GatedSection feature="research" label="AI stock research">
+          <AiVerdictPanel section="overview" />
+        </GatedSection>
         <WatchlistCard />
-      </aside>
       </div>
-
-      {/* News is a grid of cards with its own pager now, so it gets the full width rather than
-          being squeezed into the sidebar column it used to share. */}
-      <GatedSection feature="news" label="AI market news">
-        <MarketNews />
-      </GatedSection>
-
     </div>
   );
 
@@ -413,14 +353,6 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
         </div>
       </div>
 
-      <AiReportModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        loading={loading}
-        analysis={analysis}
-        logoUrl={analysisMeta ? stockIcon(analysisMeta.symbol, analysisMeta.domain) : undefined}
-        companyName={analysisMeta?.name}
-      />
     </div>
   );
 }

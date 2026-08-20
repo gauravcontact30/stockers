@@ -68,6 +68,10 @@ const RUNTIME_DIR = process.env.STOCKERS_CACHE_DIR?.trim() || path.join(os.tmpdi
  */
 let appDirIsReadOnly = false;
 
+function canWriteBundledCache(): boolean {
+  return process.env.STOCKERS_ALLOW_BUNDLED_CACHE_WRITES === "true";
+}
+
 /** The errors a read-only or permission-denied filesystem raises, as opposed to a real fault. */
 function isNotWritable(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException)?.code;
@@ -176,9 +180,9 @@ export async function readJsonCache<T>(fileName: string): Promise<T | null> {
  * other instances can read; the local write happens either way, so a warm instance still answers
  * from disk without a round trip and a deployment with no credentials is unaffected.
  *
- * The application directory is tried first for the local copy, so that local development keeps
- * updating the committed seeds exactly as it did before; only once it has refused does this fall
- * back to the temporary directory, for good.
+ * The application directory is only written when explicitly opted in. Generated market snapshots
+ * are runtime data, not source files, so ordinary development and test runs keep them out of the
+ * repository and write the local copy to the runtime cache instead.
  */
 export async function writeJsonCache(
   fileName: string,
@@ -187,7 +191,7 @@ export async function writeJsonCache(
   const contents = JSON.stringify(value, null, 2);
   const shared = await writeShared(fileName, value);
 
-  if (!appDirIsReadOnly) {
+  if (!appDirIsReadOnly && canWriteBundledCache()) {
     try {
       await fs.mkdir(BUNDLED_DIR, { recursive: true });
       await fs.writeFile(bundledCachePath(fileName), contents, "utf8");

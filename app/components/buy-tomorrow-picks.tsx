@@ -52,6 +52,7 @@ function PickLogo({ src, name }: { src: string | null; name: string }) {
       width={44}
       height={44}
       loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
       className="h-11 w-11 shrink-0 rounded-full border border-slate-200 bg-white object-contain p-1.5 dark:border-slate-700"
     />

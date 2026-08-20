@@ -1,9 +1,8 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { unstable_cache } from "next/cache";
 import { bseCatalogue } from "./bse-catalogue";
 import { getBseDirectory } from "./bse-market";
 import { CACHE_TAGS } from "./cache";
+import { readJsonCache } from "./data-cache";
 import { indianStocks } from "./indian-stocks";
 import { getPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
 import { getStockDetail, type DetailStock } from "./stock-detail";
@@ -98,13 +97,7 @@ export type AccuracyComparisonRow = {
 };
 
 async function readPredictionCache(): Promise<PredictionCache | null> {
-  try {
-    const file = path.join(process.cwd(), "app", "data", "daily-predictions.json");
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as PredictionCache;
-  } catch {
-    return null;
-  }
+  return readJsonCache<PredictionCache>("daily-predictions.json").catch(() => null);
 }
 
 function percentage(part: number, total: number): number {

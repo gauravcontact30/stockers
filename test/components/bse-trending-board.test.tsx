@@ -559,6 +559,7 @@ describe("BSE trending board", () => {
     await screen.findByText("HDFC Bank Ltd");
 
     expect(screen.getByText("Market closed")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What BSE crowded into on 14 Aug 2026" })).toBeInTheDocument();
     expect(screen.getByText("Ranked on the session of 14 Aug 2026")).toBeInTheDocument();
     // Nothing is refreshing, so nothing claims to be.
     expect(screen.queryByText(/Prices refresh every/)).not.toBeInTheDocument();

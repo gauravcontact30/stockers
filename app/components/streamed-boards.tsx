@@ -47,6 +47,34 @@ export function BoardFallback({ rows, height }: { rows: number; height: string }
  * wrong figures.
  */
 const OPENING_MOVERS = { tier: "all", direction: "gainers", period: "1y", term: "", move: "0", page: 1 } as const;
+export const SECTOR_PREFETCH_DEADLINE_MS = 8000;
+export const EMPTY_SECTOR_BOARD: BseSectorBoardResponse = {
+  sectors: [],
+  unclassified: 0,
+  classification: { done: 0, total: 0, ready: false },
+  sessionDate: null,
+};
+
+export function withBoardDeadline<T>(
+  work: Promise<T>,
+  fallback: T,
+  ms: number = SECTOR_PREFETCH_DEADLINE_MS,
+): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      },
+    );
+  });
+}
 
 export async function MoversBoard() {
   await io();
@@ -74,8 +102,16 @@ export async function MoversBoard() {
 export async function SectorBoard() {
   await io();
 
-  const board = await getBseSectorBoard();
-  return <BseSectorMovers prefetched={{ url: "/api/market/bse/sectors", data: board as BseSectorBoardResponse }} />;
+  const board = await withBoardDeadline<BseSectorBoardResponse>(
+    getBseSectorBoard() as Promise<BseSectorBoardResponse>,
+    EMPTY_SECTOR_BOARD,
+  );
+  return (
+    <BseSectorMovers
+      prefetched={{ url: "/api/market/bse/sectors", data: board }}
+      refreshNow={board === EMPTY_SECTOR_BOARD}
+    />
+  );
 }
 
 export function StreamedMoversBoard() {

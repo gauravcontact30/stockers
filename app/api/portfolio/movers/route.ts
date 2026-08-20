@@ -24,7 +24,7 @@ import { userFromRequest } from "../../../lib/store";
 const MAX_WATCHLIST = 20;
 
 /** The reader's watchlist, validated. Anything that is not ticker-shaped is dropped silently. */
-export function parseWatchParam(raw: string | null): string[] {
+function parseWatchParam(raw: string | null): string[] {
   if (!raw) return [];
   return [
     ...new Set(
@@ -43,7 +43,7 @@ export function parseWatchParam(raw: string | null): string[] {
  * A declared dividend the reader can still capture is the actionable one, so it wins even when a
  * larger payout went ex last month.
  */
-export function pickDividend(dividends: Dividend[]): MoverDividend | null {
+function pickDividend(dividends: Dividend[]): MoverDividend | null {
   if (dividends.length === 0) return null;
 
   const upcoming = dividends
@@ -58,7 +58,7 @@ export function pickDividend(dividends: Dividend[]): MoverDividend | null {
 }
 
 /** Which of the two lists a symbol came from. */
-export function sourceFor(held: boolean, watched: boolean): MoverSource {
+function sourceFor(held: boolean, watched: boolean): MoverSource {
   return held && watched ? "both" : held ? "holding" : "watchlist";
 }
 

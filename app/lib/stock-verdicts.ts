@@ -122,7 +122,7 @@ async function narrate(rows: { verdict: StockVerdict; summary: PerformanceSummar
     system:
       'You are stockers, an AI equity analyst writing for Indian investors. For each stock you are given the call that has already been decided from its returns. Write one specific sentence justifying that exact call using those numbers and what you know of the company and its sector. Never contradict the call. Return JSON only: {"rationales":[{"symbol":"SYM","rationale":"..."}]}',
     user: facts,
-    temperature: 0.6,
+    temperature: 0.2,
     parse: (text) => {
       const parsed = extractJsonObject(text) as { rationales?: unknown } | null;
       if (!parsed || !Array.isArray(parsed.rationales)) return null;

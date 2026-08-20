@@ -246,7 +246,7 @@ async function generateNarrativeWithAI(breadth: MarketBreadth): Promise<Narrativ
       topGainer: breadth.topGainer,
       topLoser: breadth.topLoser,
     })}. Write today's market pulse from this data.`,
-    temperature: 0.6,
+    temperature: 0.2,
     parse: (text) => {
       const parsed = extractJsonObject(text) as Record<string, unknown> | null;
       if (!parsed) return null;

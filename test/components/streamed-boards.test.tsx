@@ -2,10 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { Suspense } from "react";
 import {
   BoardFallback,
+  EMPTY_SECTOR_BOARD,
   MoversBoard,
+  SECTOR_PREFETCH_DEADLINE_MS,
   SectorBoard,
   StreamedMoversBoard,
   StreamedSectorMovers,
+  withBoardDeadline,
 } from "../../app/components/streamed-boards";
 // The page size is asserted through the constant rather than as a literal: the whole point of it
 // living in one module is that the server prefetch and the client board cannot disagree, and a
@@ -116,6 +119,7 @@ describe("SectorBoard", () => {
     const element = await SectorBoard();
 
     expect(element.props.prefetched).toEqual({ url: "/api/market/bse/sectors", data: sectorBoard });
+    expect(element.props.refreshNow).toBe(false);
   });
 
   /**
@@ -129,6 +133,35 @@ describe("SectorBoard", () => {
     expect(await screen.findAllByText(/Energy/)).not.toHaveLength(0);
     const asked = (global.fetch as jest.Mock).mock.calls.map(([url]) => String(url));
     expect(asked).not.toContain("/api/market/bse/sectors");
+  });
+
+  it("stops waiting on a cold sector classification and refreshes it in the browser", async () => {
+    jest.useFakeTimers();
+    try {
+      bseMarket.getBseSectorBoard.mockReturnValue(new Promise(() => {}));
+
+      const pending = SectorBoard();
+      await Promise.resolve();
+      jest.advanceTimersByTime(SECTOR_PREFETCH_DEADLINE_MS);
+      const element = await pending;
+
+      expect(element.props.prefetched).toEqual({ url: "/api/market/bse/sectors", data: EMPTY_SECTOR_BOARD });
+      expect(element.props.refreshNow).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe("withBoardDeadline", () => {
+  it("uses the real board when it resolves in time", async () => {
+    await expect(withBoardDeadline(Promise.resolve(sectorBoard), EMPTY_SECTOR_BOARD, 50)).resolves.toBe(sectorBoard);
+  });
+
+  it("uses the empty board when the prefetch rejects", async () => {
+    await expect(withBoardDeadline(Promise.reject(new Error("BSE unavailable")), EMPTY_SECTOR_BOARD, 50)).resolves.toBe(
+      EMPTY_SECTOR_BOARD,
+    );
   });
 });
 

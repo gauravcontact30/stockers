@@ -93,7 +93,7 @@ export function withDeadline<T>(work: Promise<T>, fallback: T, ms: number = HERO
 export function HeroFallback() {
   return (
     <section className="w-full bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-white">
-      <div className="relative min-h-[1040px] w-full overflow-hidden sm:min-h-[720px] lg:min-h-[590px]">
+      <div className="relative min-h-[850px] w-full overflow-hidden sm:min-h-[590px] lg:min-h-[470px]">
         <div className="flex h-full flex-col gap-6 p-2 sm:p-4 lg:p-5">
           <div className="h-8 w-64 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
           <div className="h-5 w-full max-w-2xl animate-pulse rounded-full bg-slate-200/70 dark:bg-slate-800/70" />

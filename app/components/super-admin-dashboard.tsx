@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
@@ -12,43 +11,19 @@ import type { FeatureUsage } from "../lib/analytics-report";
 import { formatPaise, type LedgerState } from "../lib/payments-format";
 import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
 import type { LivePresenceState } from "../lib/presence-report";
-import type { AdminSummary, AdminUser } from "./admin-users";
+import { AdminAiOperations } from "./admin-ai-operations";
+import { AdminAnalytics } from "./admin-analytics";
+import { AdminClientReviews } from "./admin-client-reviews";
+import { AdminLiveUsers } from "./admin-live-users";
+import { AdminPlatformLogs } from "./admin-platform-logs";
+import { AdminUsers, type AdminSummary, type AdminUser } from "./admin-users";
+import { CacheControl } from "./cache-control";
 import { DataTable, type Column } from "./data-table";
 import { PieChart } from "./pie-chart";
 import { StatTile, deltaOf } from "./stat-tile";
 import { authHeaders, syncSessionCookie, useSubscription } from "./subscription-provider";
 
 type IconProps = { className?: string };
-
-function AdminPanelLoader() {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-      Loading admin section...
-    </div>
-  );
-}
-
-const AdminAiOperations = dynamic(() => import("./admin-ai-operations").then((module) => module.AdminAiOperations), {
-  loading: AdminPanelLoader,
-});
-const AdminAnalytics = dynamic(() => import("./admin-analytics").then((module) => module.AdminAnalytics), {
-  loading: AdminPanelLoader,
-});
-const AdminClientReviews = dynamic(() => import("./admin-client-reviews").then((module) => module.AdminClientReviews), {
-  loading: AdminPanelLoader,
-});
-const AdminLiveUsers = dynamic(() => import("./admin-live-users").then((module) => module.AdminLiveUsers), {
-  loading: AdminPanelLoader,
-});
-const AdminPlatformLogs = dynamic(() => import("./admin-platform-logs").then((module) => module.AdminPlatformLogs), {
-  loading: AdminPanelLoader,
-});
-const AdminUsers = dynamic(() => import("./admin-users").then((module) => module.AdminUsers), {
-  loading: AdminPanelLoader,
-});
-const CacheControl = dynamic(() => import("./cache-control").then((module) => module.CacheControl), {
-  loading: AdminPanelLoader,
-});
 
 export type SuperAdminSectionId =
   | "overview"

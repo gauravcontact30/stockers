@@ -32,7 +32,7 @@ export type ResetChannel = {
 };
 
 /** `garvcontact30@gmail.com` -> `g••••••••30@gmail.com`. */
-export function maskEmail(email: string): string {
+function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!domain) return email;
   if (local.length <= 2) return `${local[0]}•@${domain}`;
@@ -40,7 +40,7 @@ export function maskEmail(email: string): string {
 }
 
 /** `9876543210` -> `••••••3210`. */
-export function maskMobile(mobile: string): string {
+function maskMobile(mobile: string): string {
   const digits = mobile.replace(/\D/g, "");
   if (digits.length < 4) return "••••";
   return `${"•".repeat(digits.length - 4)}${digits.slice(-4)}`;

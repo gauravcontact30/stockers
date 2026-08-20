@@ -29,7 +29,7 @@ function pick<T extends string>(value: string | null, allowed: readonly T[], fal
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-export function criteriaFrom(params: URLSearchParams): ScreenCriteria {
+function criteriaFrom(params: URLSearchParams): ScreenCriteria {
   return {
     tier: pick(params.get("tier"), TIERS, DEFAULT_CRITERIA.tier),
     minPrice: numberParam(params, "minPrice"),
