@@ -29,7 +29,13 @@ export type StockSuggestion = {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const limit = Number(params.get("limit"));
-  const { hits, total } = suggestStocks(params.get("q") ?? "", Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT);
+  // `all=1` is the opt-in for a box that should browse the whole exchange rather than the popular
+  // names when nothing has been typed. See `suggestStocks`.
+  const { hits, total } = suggestStocks(
+    params.get("q") ?? "",
+    Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT,
+    params.get("all") === "1",
+  );
 
   const tape = await getBseTape().catch(() => null);
 

@@ -76,6 +76,17 @@ describe("PricingPlans", () => {
     expect(screen.getAllByText("/month")).toHaveLength(PLANS.length);
   });
 
+  // One card per plan: the price, the Choose button and the feature count that justifies it all
+  // sit together, rather than the count living in a second grid further down the page.
+  it("leads each priced card with what that tier unlocks", () => {
+    render(<PricingPlans />);
+
+    for (const plan of PLANS) {
+      const card = screen.getByRole("button", { name: `Choose ${plan.name}` }).closest<HTMLElement>("div.rounded-3xl")!;
+      expect(within(card).getByLabelText(new RegExp(`^6 ${plan.name} AI features\\.`))).toBeInTheDocument();
+    }
+  });
+
   it("marks the most popular plan and offers every plan a way to subscribe", () => {
     render(<PricingPlans />);
 
@@ -100,7 +111,6 @@ describe("PricingPlans", () => {
     render(<PricingPlans />);
 
     expect(screen.getByRole("heading", { name: "Plans, and what each one unlocks" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI access by tier" })).toBeInTheDocument();
     expect(screen.getByText("All Starter AI features included")).toBeInTheDocument();
     expect(screen.getByText("All Starter + Pro AI features included.")).toBeInTheDocument();
     expect(screen.getByLabelText("6 Starter AI features. Starter AI features")).toBeInTheDocument();

@@ -21,6 +21,7 @@ import { StreamedHero } from "./components/streamed-hero";
 import { StreamedAiFeatures } from "./components/streamed-ai-features";
 import { StreamedTopPerformers } from "./components/streamed-top-performers";
 import { AiPredictionAccuracySection } from "./components/ai-prediction-accuracy-section";
+import { StockAnalysisSection } from "./components/stock-analysis-section";
 import { HOME_SECTION_ROUTES, type HomeSectionId } from "./lib/section-routes";
 import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "./lib/seo";
 
@@ -162,8 +163,14 @@ function LandingStack() {
         <StreamedHero />
       </div>
 
+      {/* First thing under the slider, and the only section on this page a visitor can put their own
+          question to. Everything below it is a board we chose the contents of; this one starts as an
+          empty search box and answers about whichever of the ~4,950 listed companies they type. It
+          fetches nothing until they do, so leading with it costs the page nothing. */}
+      <StockAnalysisSection />
+
       {/* Requested landing order after the hero: contest, dashboard preview, BSE trend, accuracy,
-          the numbered research bands, live exchange context, pricing, reviews and footer. */}
+          the numbered research bands, pricing, reviews and footer. */}
       <HeadToHead />
 
       <AiPredictionAccuracySection />
@@ -174,16 +181,12 @@ function LandingStack() {
 
       <AccuracyMatrixSection />
 
+      {/* The BSE category board moved into the signed-in dashboard's Sector trends section, where it
+          sits beside the other sector read rather than competing with it from a marketing page. It
+          keeps its public route too — the "BSE sectors" link in the header renders it through
+          SectionPageStack above. */}
       <BandHeading
-        eyebrow="01 - Sector-wise performance"
-        title="Every BSE category ranked by its session"
-        blurb="Sectors and categories get their own performance read, with gainers, losers, standout leaders and laggards separated instead of buried in the full exchange table."
-      />
-
-      <StreamedSectorMovers />
-
-      <BandHeading
-        eyebrow="02 - Stock performance"
+        eyebrow="01 - Stock performance"
         title="Single-stock performance across long windows"
         blurb="Rank individual companies by one-year, three-year, five-year and whole-history returns, then flip the same board to the deepest long-window losers."
       />
@@ -197,25 +200,22 @@ function LandingStack() {
         <StreamedTopPerformers />
       </PerformanceSection>
 
+      {/* The whole-exchange gainers and losers board is deliberately not here. Like the live board
+          below, it still has a home — the "BSE movers" link in the header renders it at its own
+          route through SectionPageStack above. The bands are renumbered rather than left with a gap
+          at 03, since the number is a running count of what this page actually shows. */}
       <BandHeading
-        eyebrow="03 - The session, both ways"
-        title="Every gainer and every loser on the BSE"
-        blurb="Two tabs over the whole exchange: everything that closed higher, and everything that closed lower. Each is paged on its own, in descending order of the move, and filters down to a single cap tier."
-      />
-
-      {/* Both resolved on the server and streamed into their slots - see ./components/streamed-boards. */}
-      <StreamedMoversBoard />
-
-      <BandHeading
-        eyebrow="04 - Who owns what"
+        eyebrow="02 - Who owns what"
         title="Every shareholder class, as the company files it"
         blurb="Promoters, foreign portfolio investors, domestic institutions, the government and several million individual shareholders. Search a company to see how its register splits, how many people are behind each slice, and how the promoter stake has moved over eight filed quarters."
       />
 
       <StreamedOwnershipBoard />
 
-      <LiveMarketBoard />
-
+      {/* The live exchange board is deliberately not here. It still has a home — the "Live market"
+          link in the header renders it at its own route through SectionPageStack below — but on the
+          landing page it sat between the ownership board and the prices, adding a fourth read of
+          the same session to a page that already opens on the hero's live figures. */}
       <PricingPlans />
 
       {/* Last thing before the footer: the boards make the case, the reviews close it. */}

@@ -18,11 +18,17 @@ import { recordPlatformLog } from "./app/lib/platform-logs";
  * Everything matched below ends in an OpenRouter call — a real invoice, per request, whether or not
  * anyone reads the answer:
  *
- *   /api/ai/intel       app/lib/market-intel.ts     the AI stock search
- *   /api/ai/board-read  app/lib/board-read.ts
- *   /api/ai/verdicts    app/lib/stock-verdicts.ts
- *   /api/research       app/lib/stock-analysis.ts   the research report
- *   /api/compare        app/lib/stock-compare.ts    (and /compare/custom beneath it)
+ *   /api/ai/intel           app/lib/market-intel.ts       the AI stock search
+ *   /api/ai/board-read      app/lib/board-read.ts
+ *   /api/ai/verdicts        app/lib/stock-verdicts.ts
+ *   /api/ai/stock-analysis  app/lib/stock-buy-analysis.ts the landing page's Stock Analysis section
+ *   /api/research           app/lib/stock-analysis.ts     the research report
+ *   /api/compare            app/lib/stock-compare.ts      (and /compare/custom beneath it)
+ *
+ * The `/api/ai/` prefix matters most for the last of those. Every other route here sits behind
+ * `guardFeature` as well, so a caller has to be a subscriber before they can spend anything; the
+ * Stock Analysis section is on the public landing page and has no such gate, which leaves this
+ * limiter as the only ceiling on what an anonymous visitor can run up.
  *
  * `/api/stocks/search` and `/api/stocks/suggest` are deliberately *not* here despite the names.
  * They search a local catalogue with no model behind them, and they back a typeahead — twenty

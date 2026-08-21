@@ -7,6 +7,7 @@ import { GatedSection } from "./ai-gate";
 import { AiIntelSearch } from "./ai-intel-search";
 import { AiStockCompare } from "./ai-stock-compare";
 import { AiVerdictPanel } from "./ai-verdict-panel";
+import { BseSectorMovers } from "./bse-sector-movers";
 import { BseStockDirectory } from "./bse-stock-directory";
 import { BuyTomorrowPicks } from "./buy-tomorrow-picks";
 import { OverviewHeader } from "./dashboard-overview";
@@ -275,7 +276,16 @@ export function DashboardClient({ initialSection = "overview" }: { initialSectio
     ),
     "etf-research": <EtfResearch />,
     directory: <BseStockDirectory />,
-    sectors: <SectorTrends />,
+    // Two reads of the same subject, in the order a reader wants them: the exchange's own
+    // categories ranked by this session, then the sectoral index trend over longer windows. The
+    // category board used to be a band on the landing page, which put the most detailed sector
+    // screener in the product in front of visitors and left subscribers to find it there.
+    sectors: (
+      <div className="flex flex-col gap-6">
+        <BseSectorMovers />
+        <SectorTrends />
+      </div>
+    ),
     "most-traded": <MostTraded />,
     mtf: <MtfTraded />,
     "stock-news": <StocksInNews />,

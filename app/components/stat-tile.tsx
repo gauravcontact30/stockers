@@ -1,19 +1,24 @@
 "use client";
 
 /**
- * Today against yesterday, as a direction and a phrase.
+ * One period against the one before it, as a direction and a phrase.
  *
  * Lives here rather than on the analytics page it was written for, because the tile below is what
  * renders it and putting it the other way round makes the two files import each other. "New" for a
- * figure that was zero yesterday: a percentage against nothing is either infinity or a divide by
+ * figure that was zero last time: a percentage against nothing is either infinity or a divide by
  * zero, and neither is a thing to print on a dashboard.
+ *
+ * `period` names what the comparison is against, because the caller is the only thing that knows.
+ * Yesterday is the default and covers every daily tile; a rolling thirty-day figure compared to the
+ * thirty days before it said "vs yesterday" for as long as the phrase was baked in here, which is
+ * the kind of wrong nobody reads twice.
  */
-export function deltaOf(now: number, before: number): { direction: "up" | "down" | "flat"; text: string } {
+export function deltaOf(now: number, before: number, period = "yesterday"): { direction: "up" | "down" | "flat"; text: string } {
   if (before === 0) return now === 0 ? { direction: "flat", text: "no change" } : { direction: "up", text: "new" };
   if (now === before) return { direction: "flat", text: "no change" };
 
   const change = Math.round(((now - before) / before) * 100);
-  return { direction: now > before ? "up" : "down", text: `${now > before ? "+" : "−"}${Math.abs(change)}% vs yesterday` };
+  return { direction: now > before ? "up" : "down", text: `${now > before ? "+" : "−"}${Math.abs(change)}% vs ${period}` };
 }
 
 /**
@@ -34,10 +39,10 @@ export function StatTile({
   value: number | string;
   tone: string;
   hint?: string;
-  /** Today against yesterday. Rendered as a direction, not another bare number. */
-  delta?: { now: number; before: number };
+  /** This period against the last. Rendered as a direction, not another bare number. */
+  delta?: { now: number; before: number; period?: string };
 }) {
-  const change = delta ? deltaOf(delta.now, delta.before) : null;
+  const change = delta ? deltaOf(delta.now, delta.before, delta.period) : null;
   const changeTone =
     change?.direction === "up"
       ? "text-emerald-600 dark:text-emerald-400"

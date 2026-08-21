@@ -173,13 +173,19 @@ export type SuggestResult = {
  * the way. The ranking is the same one, applied across the whole exchange rather than within a
  * bucket. A scrip code is matched in full only: typing "500325" should find Reliance, but the
  * digits of one code have no business surfacing the fifty codes that contain them.
+ *
+ * `browseAll` changes only what an *empty* box offers. By default that is the hand-classified
+ * catalogue, because a dropdown opening on 4,950 rows is a list nobody reads and the popular names
+ * are what somebody who has typed nothing is most likely reaching for. A caller whose box is the
+ * whole point of its panel — the landing page's Stock Analysis search — opts into the full exchange
+ * instead, so every listed company is reachable by scrolling and not only by knowing what to type.
+ * A typed query has always searched all of it either way.
  */
-export function suggestStocks(query: string, limit = 20): SuggestResult {
+export function suggestStocks(query: string, limit = 20, browseAll = false): SuggestResult {
   const term = query.trim().toLowerCase();
 
   const matches = searchIndex().filter((hit) => {
-    // Same as searchStocks: an empty box offers the browsable catalogue, not 4,950 rows.
-    if (!term) return hit.curated;
+    if (!term) return browseAll || hit.curated;
     return hit.symbol.toLowerCase().includes(term) || hit.name.toLowerCase().includes(term) || hit.scripCode === term;
   });
 

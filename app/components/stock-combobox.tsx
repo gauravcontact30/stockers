@@ -42,6 +42,7 @@ export function StockCombobox({
   onSelect,
   exclude = [],
   selectedSuggestion = null,
+  browseAll = false,
   placeholder,
   className = "",
 }: {
@@ -53,6 +54,13 @@ export function StockCombobox({
   exclude?: string[];
   /** Known details for a controlled value that was not picked during this component's lifetime. */
   selectedSuggestion?: Suggestion | null;
+  /**
+   * Offer the whole exchange when the box is empty, rather than the popular names.
+   *
+   * For a box that is the whole point of the panel around it. A typed query searches every listed
+   * company either way — see `suggestStocks` in ../lib/stock-search.
+   */
+  browseAll?: boolean;
   placeholder?: string;
   className?: string;
 }) {
@@ -111,9 +119,10 @@ export function StockCombobox({
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/stocks/suggest?q=${encodeURIComponent(query.trim())}&limit=${LIMIT}`, {
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/stocks/suggest?q=${encodeURIComponent(query.trim())}&limit=${LIMIT}${browseAll ? "&all=1" : ""}`,
+          { signal: controller.signal },
+        );
         if (!response.ok) throw new Error("Suggestions unavailable");
         const data = (await response.json()) as { suggestions?: Suggestion[]; total?: number };
         const excluded = new Set(excludeKey ? excludeKey.split(",") : []);
@@ -136,7 +145,7 @@ export function StockCombobox({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [excludeKey, open, query]);
+  }, [browseAll, excludeKey, open, query]);
 
   // Keeps the highlighted row inside the scroll box when the keyboard moves it. The list is only
   // in the DOM while the box is open, and scrollIntoView is absent in jsdom — neither is worth a
@@ -284,7 +293,7 @@ export function StockCombobox({
         <div className="absolute left-0 right-0 top-full z-[80] mt-2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2 dark:border-slate-800">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              {query.trim() ? "BSE listed matches" : "Popular BSE stocks"}
+              {query.trim() ? "BSE listed matches" : browseAll ? "Every BSE listed company" : "Popular BSE stocks"}
             </p>
             <p className="text-[11px] font-medium tabular-nums text-slate-400 dark:text-slate-500">
               {loading ? "Searching…" : total > suggestions.length ? `${suggestions.length} of ${total}` : `${total}`}

@@ -8,13 +8,22 @@ import { StockCombobox, formatChange, formatPrice, type Suggestion } from "../..
  * state — so every test drives it through the same small host rather than a bare uncontrolled
  * render, which would not reflect a chosen row back into the input.
  */
-function Host({ onSelect, className }: { onSelect?: (symbol: string) => void; className?: string }) {
+function Host({
+  onSelect,
+  className,
+  browseAll,
+}: {
+  onSelect?: (symbol: string) => void;
+  className?: string;
+  browseAll?: boolean;
+}) {
   const [value, setValue] = useState("");
   return (
     <StockCombobox
       value={value}
       onChange={setValue}
       onSelect={onSelect}
+      browseAll={browseAll}
       className={className}
       placeholder="Try HDFC BANK or TCS"
     />
@@ -102,6 +111,23 @@ describe("StockCombobox", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/stocks/suggest?q=&limit=24", expect.objectContaining({ signal: expect.anything() }));
     expect(await screen.findByText("Popular BSE stocks")).toBeInTheDocument();
     expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
+
+  // A box that is the whole point of its panel browses the exchange rather than the shortlist. A
+  // typed query searches every listed company either way; this is only about the empty state.
+  it("offers every listed company when the caller asks to browse them all", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockSuggestions({ suggestions: [RELIANCE, TCS], total: 4949 });
+    render(<Host browseAll />);
+
+    await openList(user);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stocks/suggest?q=&limit=24&all=1",
+      expect.objectContaining({ signal: expect.anything() }),
+    );
+    expect(await screen.findByText("Every BSE listed company")).toBeInTheDocument();
+    expect(screen.getByText("2 of 4949")).toBeInTheDocument();
   });
 
   it("shows each suggestion with its logo, name, ticker, sector and live price", async () => {

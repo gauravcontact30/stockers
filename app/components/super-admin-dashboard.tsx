@@ -8,7 +8,7 @@ import type { HealthReport, CheckState } from "../lib/admin-health";
 import type { FeatureUsage } from "../lib/analytics-report";
 // From the pure half, never `./payments-ledger` — the reader pulls Supabase and `next/cache` in
 // behind it, and this is a client component.
-import { formatPaise, type LedgerState } from "../lib/payments-format";
+import type { LedgerState } from "../lib/payments-format";
 import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
 import type { LivePresenceState } from "../lib/presence-report";
 import { AdminAiOperations } from "./admin-ai-operations";
@@ -16,11 +16,12 @@ import { AdminAnalytics } from "./admin-analytics";
 import { AdminClientReviews } from "./admin-client-reviews";
 import { AdminLiveUsers } from "./admin-live-users";
 import { AdminPlatformLogs } from "./admin-platform-logs";
+import { AdminRevenue } from "./admin-revenue";
 import { AdminUsers, type AdminSummary, type AdminUser } from "./admin-users";
 import { CacheControl } from "./cache-control";
 import { DataTable, type Column } from "./data-table";
 import { PieChart } from "./pie-chart";
-import { StatTile, deltaOf } from "./stat-tile";
+import { StatTile } from "./stat-tile";
 import { authHeaders, syncSessionCookie, useSubscription } from "./subscription-provider";
 
 type IconProps = { className?: string };
@@ -613,128 +614,6 @@ function SystemHealth({ report, age }: { report: HealthReport | null; age: numbe
   );
 }
 
-/** What the app has been paid — the ledger that was being written and never read. */
-function RevenuePanel({ ledger }: { ledger: LedgerState | null }) {
-  if (!ledger) return <p className="text-sm text-slate-500 dark:text-slate-400">Reading the ledger…</p>;
-
-  if (!ledger.available) {
-    return (
-      <p className="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-        {ledger.message}
-      </p>
-    );
-  }
-
-  const { summary } = ledger;
-  const rolling = deltaOf(summary.last30Paise, summary.previous30Paise);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label="This month"
-          value={formatPaise(summary.monthPaise)}
-          hint={`${summary.monthCount} payment${summary.monthCount === 1 ? "" : "s"}`}
-          tone="border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10"
-        />
-        <StatTile
-          label="Last 30 days"
-          value={formatPaise(summary.last30Paise)}
-          hint={rolling.text}
-          tone="border-sky-200 bg-sky-50 dark:border-sky-500/25 dark:bg-sky-500/10"
-        />
-        <StatTile
-          label="All time"
-          value={formatPaise(summary.allTimePaise)}
-          hint={`${summary.paymentCount} payment${summary.paymentCount === 1 ? "" : "s"}`}
-          tone="border-violet-200 bg-violet-50 dark:border-violet-500/25 dark:bg-violet-500/10"
-        />
-        <StatTile
-          label="Average payment"
-          value={formatPaise(summary.averagePaise)}
-          hint={`${summary.payingAccounts} paying account${summary.payingAccounts === 1 ? "" : "s"}`}
-          tone="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-        />
-      </div>
-
-      {summary.byPlan.length > 0 && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Revenue by plan</p>
-            <PieChart
-              slices={summary.byPlan.map((slice) => ({
-                key: slice.key,
-                label: slice.label,
-                // Rupees rather than paise: the centre readout and the legend are money, and a
-                // legend reading "4900000" for ₹49,000 is a number nobody can parse at a glance.
-                value: Math.round(slice.paise / 100),
-                meta: `${slice.count} payment${slice.count === 1 ? "" : "s"}`,
-              }))}
-              total="Rupees billed"
-              unit="rupees"
-              empty="No payment has been recorded yet."
-            />
-          </div>
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Revenue by billing cycle</p>
-            <PieChart
-              slices={summary.byCycle.map((slice) => ({
-                key: slice.key,
-                label: slice.label,
-                value: Math.round(slice.paise / 100),
-                meta: `${slice.count} payment${slice.count === 1 ? "" : "s"}`,
-              }))}
-              total="Rupees billed"
-              unit="rupees"
-              empty="No payment has been recorded yet."
-            />
-          </div>
-        </div>
-      )}
-
-      {summary.discounted > 0 && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {summary.discounted} of {summary.paymentCount} payments carried a promo or referral code.
-        </p>
-      )}
-
-      {summary.recent.length > 0 && (
-        <DataTable
-          rows={summary.recent}
-          columns={[
-            {
-              key: "paidAt",
-              header: "Paid",
-              cell: (row) => new Date(row.paidAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }),
-              sortValue: (row) => row.paidAt,
-              className: "whitespace-nowrap",
-            },
-            { key: "plan", header: "Plan", cell: (row) => row.plan, sortValue: (row) => row.plan },
-            { key: "cycle", header: "Cycle", cell: (row) => row.cycle, sortValue: (row) => row.cycle },
-            {
-              key: "amount",
-              header: "Amount",
-              align: "right",
-              cell: (row) => formatPaise(row.amountPaise),
-              sortValue: (row) => row.amountPaise,
-              className: "tabular-nums font-semibold text-slate-900 dark:text-white",
-            },
-            { key: "code", header: "Code", cell: (row) => row.promoCode ?? row.referralCode ?? "—" },
-            { key: "until", header: "Paid up to", cell: (row) => row.subscribedUntil ?? "—", sortValue: (row) => row.subscribedUntil, className: "whitespace-nowrap" },
-          ]}
-          rowKey={(row) => row.paymentId}
-          caption="The most recent payments"
-          searchFields={(row) => [row.plan, row.cycle, row.promoCode, row.referralCode, row.paymentId]}
-          searchPlaceholder="Search plan, cycle or code"
-          pageSize={5}
-          minWidth={640}
-          empty="No payment matches these filters."
-        />
-      )}
-    </div>
-  );
-}
-
 function AdminAccessGate({ children, requireSuperAdmin = false }: { children: React.ReactNode; requireSuperAdmin?: boolean }) {
   const { status, loading } = useSubscription();
 
@@ -980,7 +859,7 @@ function SuperAdminOverview() {
           <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">
             Straight from the payment ledger — what was actually billed, not what the plan column says.
           </p>
-          <RevenuePanel ledger={ledger} />
+          <AdminRevenue ledger={ledger} />
         </section>
 
         <div className="grid gap-4 xl:grid-cols-2">
