@@ -152,6 +152,26 @@ const GROUP_GLYPH: Record<OwnerGroup, React.ReactNode> = {
 };
 
 /**
+ * What each class of shareholder actually is, in one line.
+ *
+ * The filing's own category names are the ones this board shows, and they have to be: they are what
+ * the company wrote. But "Promoters & insiders" and "Domestic institutional investors" are terms of
+ * art, and a reader who does not already know them learns nothing from a card that pairs one with a
+ * percentage. These sit under the figure and say who is actually behind it - the founding family,
+ * the mutual funds, the people. Nothing here is inferred; each line describes the class the filing
+ * defines.
+ */
+const GROUP_MEANING: Record<OwnerGroup, string> = {
+  promoters: "The founders, and the family or group that runs the company.",
+  fii: "Funds and investors based outside India that have bought into it.",
+  dii: "Indian mutual funds, insurers, banks and pension funds.",
+  government: "Central and state government holdings outside the promoter group.",
+  retail: "Ordinary individual investors, from a handful of shares upwards.",
+  bodies: "Other companies, trusts and corporate bodies on the register.",
+  others: "Shares the filing does not place in any of the classes above.",
+};
+
+/**
  * The colour and the glyph for a bucket, for any value the payload actually carries.
  *
  * Not simply `TONE[key]`: this board reads a cached answer, and a cache written before a field
@@ -247,6 +267,172 @@ function formatSignedPercent(value: number | null): string {
 function returnTone(value: number | null) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "text-slate-500 dark:text-slate-400";
   return value >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300";
+}
+
+/** A figure inside a sentence, weighted so the sentence can be skimmed for its numbers alone. */
+function Figure({ children }: { children: React.ReactNode }) {
+  return <strong className="font-bold text-slate-900 dark:text-white">{children}</strong>;
+}
+
+/** Percentage *points* moved, which is not the same thing as a percentage and is not written like one. */
+export function formatPoints(value: number): string {
+  return `${Math.abs(value).toFixed(2)} points`;
+}
+
+/** One sentence of the read, tied to the class it is about so it carries that class's colour. */
+type ReadPoint = { key: OwnerGroup; title: string; body: React.ReactNode };
+
+/**
+ * The filing, read back in sentences.
+ *
+ * Everything else on this board is the filing's own numbers, laid out - which is the right default,
+ * and the reason the footnote can say nothing here is inferred. But a table of percentages answers
+ * "how much" and never answers "so what", and "so what" is the entire reason somebody opens a
+ * shareholding pattern in the first place. A card reading PROMOTERS & INSIDERS 50.48% tells a
+ * reader who does not already know the term precisely nothing.
+ *
+ * So these are structural readings: who can outvote whom, how much professional money is in, how
+ * many people are on the register, and which way the promoter stake has moved across the quarters
+ * that have been filed. Every one is arithmetic on figures already on this screen.
+ *
+ * What they deliberately are not is a view on the share price. This board has never had one - it
+ * reads a filing, not a chart - and a sentence like "insiders buying is a sign of confidence" would
+ * be exactly the kind of inference the source note at the bottom promises is absent. The stake
+ * moved; by how much and in which direction is the whole of what is said about it.
+ */
+function filingRead(shown: Ownership): ReadPoint[] {
+  const percentOf = (key: OwnerGroup) => shown.groups.find((group) => group.key === key)?.percent ?? 0;
+  const holdersOf = (key: OwnerGroup) => shown.groups.find((group) => group.key === key)?.holders ?? null;
+
+  const promoters = percentOf("promoters");
+  const fii = percentOf("fii");
+  const dii = percentOf("dii");
+  const institutions = Math.round((fii + dii) * 100) / 100;
+  const retail = percentOf("retail");
+  const retailHolders = holdersOf("retail");
+
+  const points: ReadPoint[] = [];
+
+  // Half the register is the line that matters, because it is the line a vote is decided on.
+  points.push({
+    key: "promoters",
+    title: "Who controls it",
+    body:
+      promoters >= 50 ? (
+        <>
+          Promoters hold <Figure>{formatPercent(promoters)}</Figure> — more than half the company. Control sits with the
+          founding group, and the rest of the register cannot outvote them.
+        </>
+      ) : promoters > 0 ? (
+        <>
+          Promoters hold <Figure>{formatPercent(promoters)}</Figure>, short of the half that decides a vote. Everybody
+          else on the register — institutions, individuals and other bodies — together holds more.
+        </>
+      ) : (
+        <>
+          No promoter stake is filed. Nobody is registered as this company&apos;s founding or controlling group, so it is
+          owned outright by its public shareholders.
+        </>
+      ),
+  });
+
+  points.push({
+    key: "dii",
+    title: "Professional money",
+    body:
+      institutions > 0 ? (
+        <>
+          Funds and institutions hold <Figure>{formatPercent(institutions)}</Figure> between them —{" "}
+          <Figure>{formatPercent(dii)}</Figure> Indian mutual funds, insurers and pension money, and{" "}
+          <Figure>{formatPercent(fii)}</Figure> from institutions outside India.
+        </>
+      ) : (
+        <>
+          No fund or institution has filed a holding this quarter. Everything outside the promoter group is held by
+          individuals and other bodies.
+        </>
+      ),
+  });
+
+  points.push({
+    key: "retail",
+    title: "The public",
+    body:
+      retailHolders === null ? (
+        <>
+          Individual investors hold <Figure>{formatPercent(retail)}</Figure> of the company. The filing does not break
+          out how many of them there are.
+        </>
+      ) : (
+        <>
+          <Figure>{formatHolders(retailHolders)}</Figure> individual investors hold{" "}
+          <Figure>{formatPercent(retail)}</Figure> between them.
+        </>
+      ),
+  });
+
+  // One quarter is a photograph rather than a direction, so this is only said when there are two.
+  const first = shown.history[0];
+  const last = shown.history[shown.history.length - 1];
+  if (shown.history.length > 1 && first && last) {
+    const move = Math.round((last.promoter - first.promoter) * 100) / 100;
+    const quarters = <Figure>{shown.history.length}</Figure>;
+
+    points.push({
+      key: "promoters",
+      title: "Which way it is moving",
+      body:
+        move === 0 ? (
+          <>
+            Across the {quarters} quarters filed here the promoter stake has not moved from{" "}
+            <Figure>{formatPercent(last.promoter)}</Figure>.
+          </>
+        ) : move > 0 ? (
+          <>
+            Across the {quarters} quarters filed here promoters have added <Figure>{formatPoints(move)}</Figure>, from{" "}
+            {formatPercent(first.promoter)} to {formatPercent(last.promoter)}.
+          </>
+        ) : (
+          <>
+            Across the {quarters} quarters filed here promoters have given up <Figure>{formatPoints(move)}</Figure>,
+            from {formatPercent(first.promoter)} to {formatPercent(last.promoter)}.
+          </>
+        ),
+    });
+  }
+
+  return points;
+}
+
+/** The read, above the figures it is drawn from. */
+function FilingRead({ shown }: { shown: Ownership }) {
+  return (
+    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-950/40">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+        What this filing tells you
+      </p>
+      <ul className="mt-3 grid gap-3.5 sm:grid-cols-2">
+        {filingRead(shown).map((point) => (
+          <li key={point.title} className="flex gap-3">
+            <span
+              aria-hidden="true"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${toneFor(point.key).card} ${
+                toneFor(point.key).text
+              }`}
+            >
+              <GroupIcon group={point.key} className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                {point.title}
+              </span>
+              <span className="mt-1 block text-sm leading-relaxed text-slate-600 dark:text-slate-300">{point.body}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function MarketSnapshot({ market }: { market: NonNullable<Ownership["market"]> }) {
@@ -511,8 +697,16 @@ export function OwnershipBoard({
 
             {shown.market && <MarketSnapshot market={shown.market} />}
 
+            <FilingRead shown={shown} />
+
             {/* One bar for the whole register: the quickest read of who holds the company. */}
-            <div className="mt-5 flex h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <div
+              role="img"
+              aria-label={`The whole register: ${shown.groups
+                .map((group) => `${group.label} ${formatPercent(group.percent)}`)
+                .join(", ")}`}
+              className="mt-5 flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+            >
               {shown.groups.map((group) => (
                 <span
                   key={`${group.key ?? group.label}-bar`}
@@ -522,6 +716,33 @@ export function OwnershipBoard({
                 />
               ))}
             </div>
+
+            {/* What the colours mean, on the page rather than in a tooltip.
+                The bar was decodable only by hovering each band, which is a gesture a phone does not
+                have - so on the device most of this page is read on, it was six colours and no key.
+                The cards below carry the same colours and say far more, but they are a scroll away;
+                this row is the one line that makes the bar above it readable where it stands. */}
+            <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+              {shown.groups.map((group) => (
+                <li key={`${group.key ?? group.label}-key`} className="flex items-center gap-1.5 text-[11px]">
+                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${toneFor(group.key).dot}`} />
+                  <span className="text-slate-600 dark:text-slate-300">{group.label}</span>
+                  <span className="font-bold tabular-nums text-slate-900 dark:text-white">
+                    {formatPercent(group.percent)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {/* The reconciliation, beside the bar it reconciles rather than in a panel further down:
+                it is the claim that the band above is the whole company and not a selection from it. */}
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <svg viewBox="0 0 20 20" aria-hidden="true" className="h-3.5 w-3.5">
+                <path d="m5 10.5 3.2 3.2L15 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Every class accounted for — {formatPercent(shown.groups.reduce((sum, group) => sum + group.percent, 0))} of
+              shares
+            </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {shown.groups.map((group) => {
@@ -536,7 +757,10 @@ export function OwnershipBoard({
                         >
                           <GroupIcon group={group.key} className="h-4 w-4" />
                         </span>
-                        <span className="truncate text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                        {/* Wrapped rather than truncated: "Domestic institutional investors" is a
+                            filing category, not a company name, and clipping it to "Domestic
+                            institutional investo…" loses the only word that says whose money it is. */}
+                        <span className="text-xs font-bold uppercase leading-snug tracking-wide text-slate-600 dark:text-slate-300">
                           {group.label}
                         </span>
                       </span>
@@ -545,7 +769,11 @@ export function OwnershipBoard({
                       </span>
                     </div>
 
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                      {(group.key && GROUP_MEANING[group.key]) || GROUP_MEANING.others}
+                    </p>
+
+                    <p className="mt-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                       {group.holders === null
                         ? "Holder count not broken out"
                         : `${formatHolders(group.holders)} shareholders`}
@@ -580,51 +808,22 @@ export function OwnershipBoard({
               })}
             </div>
 
-            <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  By investor type
-                </p>
-                <ul className="mt-3 space-y-2.5">
-                  {shown.investorTypes.map((type) => (
-                    <li key={type.label}>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span aria-hidden="true" className={toneFor(type.key).text}>
-                            <GroupIcon group={type.key} className="h-3.5 w-3.5" />
-                          </span>
-                          <span className="truncate text-slate-600 dark:text-slate-300">{type.label}</span>
-                        </span>
-                        <span className="shrink-0 font-semibold tabular-nums text-slate-900 dark:text-white">
-                          {formatPercent(type.percent)}
-                        </span>
-                      </div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div className={`h-full rounded-full ${toneFor(type.key).bar}`} style={{ width: `${type.percent}%` }} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* The reconciliation, stated rather than assumed: these are the filing's own
-                    classes, and they are shown adding up to the whole register. */}
-                <p className="mt-3 flex items-center gap-1.5 border-t border-slate-200 pt-3 text-[11px] font-semibold text-emerald-700 dark:border-slate-800 dark:text-emerald-400">
-                  <svg viewBox="0 0 20 20" aria-hidden="true" className="h-3.5 w-3.5">
-                    <path d="m5 10.5 3.2 3.2L15 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  Every class accounted for — {formatPercent(shown.groups.reduce((sum, group) => sum + group.percent, 0))} of
-                  shares
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Promoter stake, quarter by quarter
-                </p>
-                {/* A trend line on an axis fitted to the data — see ./promoter-trend-chart for why
-                    the bars this replaced could not show a stake moving by tenths of a percent. */}
-                <PromoterTrendChart history={shown.history} />
-              </div>
+            {/* The register, over time. It used to sit in the right half of a two-column row, with a
+                "By investor type" panel beside it - the same split a fourth time, after the bar, the
+                legend and the six cards, differing only in that it merged FII with DII and bodies
+                with others. The one figure that made it worth keeping, institutions as a single
+                number, is now a sentence in the read at the top of this board, which says it in
+                words rather than making the reader add two bars together. Dropping it takes a
+                repetition off a board whose whole difficulty was repetition, and gives the chart the
+                width it was always drawn for - the panel it left behind was two-thirds empty space
+                next to a chart this tall. */}
+            <div className="mt-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Promoter stake, quarter by quarter
+              </p>
+              {/* A trend line on an axis fitted to the data — see ./promoter-trend-chart for why
+                  the bars this replaced could not show a stake moving by tenths of a percent. */}
+              <PromoterTrendChart history={shown.history} />
             </div>
 
             <p className="mt-5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">

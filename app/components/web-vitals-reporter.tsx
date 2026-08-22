@@ -30,7 +30,11 @@ const reportWebVitals: ReportWebVitalsCallback = (metric) => {
     headers: { "Content-Type": "application/json" },
     body,
     keepalive: true,
-  }).catch(() => undefined);
+  })
+    // Drained rather than ignored - an unread response is reported as an aborted request in the
+    // console, however well it went. See the note in ./presence-tracker.
+    .then((response) => response.arrayBuffer())
+    .catch(() => undefined);
 };
 
 export function WebVitalsReporter() {

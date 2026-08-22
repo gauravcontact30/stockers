@@ -61,7 +61,11 @@ export function track(action: ActionKey, label?: string | null): void {
         visitorId: idFrom("localStorage", VISITOR_KEY, "v"),
         sessionId: idFrom("sessionStorage", SESSION_KEY, "s"),
       }),
-    }).catch(() => undefined);
+    })
+      // Drained rather than ignored - an unread response is reported as an aborted request in the
+      // console, however well it went. See the note in ../components/presence-tracker.
+      .then((response) => response.arrayBuffer())
+      .catch(() => undefined);
   } catch {
     // No fetch, no window, no storage — none of which is worth an error in a reader's console.
   }

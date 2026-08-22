@@ -55,7 +55,6 @@ const isDev = process.env.NODE_ENV === "development";
  *   *.razorpay.com          lumberjack.* telemetry the checkout bundle beacons to; wildcarded
  *                           because the subdomain it picks varies by payment method
  *   images.dhan.co          the ticker logo store — app/lib/company-logos.ts
- *   logo.clearbit.com       logos in the AI report — app/components/ai-report-modal.tsx
  *   www.google.com          the s2 favicon fallback in app/components/company-logo.tsx
  *   *.gstatic.com           where that s2 favicon request *lands*. `www.google.com/s2/favicons`
  *                           answers with a 302 to `t0`–`t3.gstatic.com`, and a redirect is checked
@@ -66,11 +65,17 @@ const isDev = process.env.NODE_ENV === "development";
  *                           myvi.in, solargroup.com …) failed this way, each one logging a CSP
  *                           violation to the console and leaving the company's logo undrawn.
  *                           Wildcarded because Google picks the `tN` subdomain per request.
- *   assets-netstorage.groww.in,
- *   static.tickertape.in    the two extra logo sources `preferReal` tries in
+ *   icons.duckduckgo.com    the extra logo source `preferReal` tries in
  *                           app/components/company-logo.tsx before falling back to a monogram.
- *                           Referenced in that file since it was written, never named here, so
- *                           the `preferReal` path could not draw anything but a monogram.
+ *                           Referenced in that file since `preferReal` was written, never named
+ *                           here, so the last source in the chain could only ever be blocked.
+ *   va.vercel-scripts.com   `<Analytics />` in app/layout.tsx, in development only — see the note
+ *                           on `script-src` below for why it is not needed in production.
+ *
+ * Three hosts that used to be listed here are gone: logo.clearbit.com, assets-netstorage.groww.in
+ * and static.tickertape.in. All three were dropped from `logoSources` in
+ * app/components/company-logo.tsx when they were measured dead — clearbit does not answer at all —
+ * and an allowance for traffic nothing sends is a rule that can only ever be wrong later.
  *
  * `blob:` in `img-src` is the profile-picture preview in app/components/admin-client-reviews.tsx,
  * which calls `URL.createObjectURL`. `data:` covers inlined SVG and the font subsets.
@@ -81,9 +86,25 @@ const isDev = process.env.NODE_ENV === "development";
 const csp = [
   `default-src 'self'`,
   // 'unsafe-eval' is React's dev-only error overlay reconstructing server stacks. Never in prod.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
+  //
+  // va.vercel-scripts.com is `<Analytics />` in app/layout.tsx, and is dev-only for the same reason
+  // it is listed that way: the package loads `script.debug.js` from that host while developing and
+  // the same-origin `/_vercel/insights/script.js` once deployed. Unlisted, the dev script was
+  // blocked on every page load and the block was reported as a console error - one the reader of
+  // this repo's console has no way to act on, since nothing is wrong.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""} https://checkout.razorpay.com`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https://images.dhan.co https://logo.clearbit.com https://www.google.com https://*.gstatic.com https://assets-netstorage.groww.in https://static.tickertape.in https://*.razorpay.com`,
+  // Named because app/components/company-logo.tsx asks them for a company's mark, in this order:
+  // images.dhan.co (the symbol store), www.google.com/s2/favicons and the *.gstatic.com hosts it
+  // redirects to, then icons.duckduckgo.com behind `preferReal`.
+  //
+  // That last one was missing while the code has requested it since `preferReal` was written, so
+  // the final source in the chain was blocked on arrival and logged a CSP violation instead of
+  // drawing a logo. The three hosts it replaces here - logo.clearbit.com, assets-netstorage.groww.in
+  // and static.tickertape.in - are the reverse mistake: all three were dropped from `logoSources`
+  // when they were measured as dead (see the note in that file) and nothing has asked for them
+  // since, so they were an allowance for traffic that no longer exists.
+  `img-src 'self' data: blob: https://images.dhan.co https://www.google.com https://*.gstatic.com https://icons.duckduckgo.com https://*.razorpay.com`,
   `font-src 'self' data: https://checkout.razorpay.com`,
   // ws: is the dev server's HMR socket, and is not emitted in production.
   `connect-src 'self' https://api.razorpay.com https://*.razorpay.com${isDev ? " ws: http://localhost:*" : ""}`,

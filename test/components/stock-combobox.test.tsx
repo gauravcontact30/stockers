@@ -12,18 +12,24 @@ function Host({
   onSelect,
   className,
   browseAll,
+  initial = "",
+  logoSymbol,
 }: {
   onSelect?: (symbol: string) => void;
   className?: string;
   browseAll?: boolean;
+  /** What the panel pre-filled the box with, for the cases where nobody has picked a row. */
+  initial?: string;
+  logoSymbol?: string | null;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initial);
   return (
     <StockCombobox
       value={value}
       onChange={setValue}
       onSelect={onSelect}
       browseAll={browseAll}
+      logoSymbol={logoSymbol}
       className={className}
       placeholder="Try HDFC BANK or TCS"
     />
@@ -381,6 +387,42 @@ describe("StockCombobox", () => {
     expect(screen.getByText("Reliance Industries · Energy & Petrochemicals")).toBeInTheDocument();
     expect(screen.getByText("₹1,487.60")).toBeInTheDocument();
     expect(screen.getByText("+1.24%")).toBeInTheDocument();
+  });
+
+  // The section this box leads pre-fills it with today's top gainer, which nobody picked from the
+  // list — so without the caller vouching for that ticker the field opened on a magnifying glass
+  // over a company it could name.
+  it("draws the mark of a ticker the caller vouched for, with no row ever picked", () => {
+    mockSuggestions({ suggestions: [RELIANCE], total: 1 });
+    render(<Host initial="RELIANCE" logoSymbol="RELIANCE" />);
+
+    expect(screen.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
+    // Vouching for a ticker says which company the box is about. It does not claim a row was
+    // picked, so the field stays a search box rather than growing the chosen company's chrome.
+    expect(screen.queryByText("Reliance Industries · Energy & Petrochemicals")).not.toBeInTheDocument();
+  });
+
+  it("drops that mark the moment the text stops naming the vouched ticker", () => {
+    mockSuggestions({ suggestions: [RELIANCE], total: 1 });
+    render(<Host initial="REL" logoSymbol="RELIANCE" />);
+
+    expect(screen.queryByAltText(/logo$/)).not.toBeInTheDocument();
+  });
+
+  it("draws the mark for a ticker typed in full that the open list already carries", async () => {
+    const user = userEvent.setup();
+    mockSuggestions({ suggestions: [TCS], total: 1 });
+    render(<Host />);
+    const input = await openList(user);
+
+    await user.type(input, "TC");
+    // A part-typed query names no company, so the icon does not flicker through a monogram on the
+    // way to a full ticker: the list row carries the only logo on screen.
+    await waitFor(() => expect(screen.getAllByAltText(/\(TCS\) logo$/)).toHaveLength(1));
+
+    await user.type(input, "S");
+
+    await waitFor(() => expect(screen.getAllByAltText(/\(TCS\) logo$/)).toHaveLength(2));
   });
 
   it("prices a chosen scrip that never traded without inventing a move", async () => {

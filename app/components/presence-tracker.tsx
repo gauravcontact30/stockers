@@ -52,7 +52,18 @@ export function PresenceTracker() {
             visitorId: visitorId(),
             sessionId: idFrom("sessionStorage", SESSION_KEY, "s"),
           }),
-        }).catch(() => undefined);
+        })
+          // The empty body of the 204 is read, and thrown away, on purpose.
+          //
+          // Nothing here wants the answer - the route has none, by design - but a response nobody
+          // reads is not free: Chrome cancels the unread stream and reports the request as
+          // `net::ERR_ABORTED`, so every heartbeat this component sent turned up in the reader's
+          // console as a failed request against a 204 that had in fact succeeded. Draining it is
+          // what tells the browser the exchange is finished. Measured both ways in a headless
+          // Chrome against the running app: unread aborts, drained does not, and the same is true
+          // of a plain fetch as of a `keepalive` one.
+          .then((response) => response.arrayBuffer())
+          .catch(() => undefined);
       } catch {
         // No fetch, no storage, no network. None of it is worth an error in a reader's console,
         // and none of it changes the page they came for.

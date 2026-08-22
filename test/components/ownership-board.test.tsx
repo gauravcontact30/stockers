@@ -1,6 +1,6 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { OwnershipBoard, formatHolders, formatPercent, type Ownership } from "../../app/components/ownership-board";
+import { OwnershipBoard, formatHolders, formatPercent, formatPoints, type Ownership } from "../../app/components/ownership-board";
 
 // The board embeds the exchange-wide search box, which has a suite of its own. Stubbed here to an
 // input plus a "pick" button so these tests are about the ownership board, not the combobox.
@@ -162,6 +162,15 @@ describe("formatHolders", () => {
   });
 });
 
+describe("formatPoints", () => {
+  // A stake moving from 50.00% to 50.48% moved 0.48 *points*, not 0.48 per cent - 0.48 per cent of
+  // 50 would be 0.24. The direction is carried by the sentence around it, so the figure is bare.
+  it("reads a move in percentage points, unsigned", () => {
+    expect(formatPoints(0.48)).toBe("0.48 points");
+    expect(formatPoints(-0.48)).toBe("0.48 points");
+  });
+});
+
 describe("OwnershipBoard", () => {
   it("opens on Reliance and asks for its filing", async () => {
     const fetchMock = mockRouted(() => ({ ok: true, body: RELIANCE }));
@@ -222,14 +231,10 @@ describe("OwnershipBoard", () => {
     expect(screen.queryByText("Promoter bodies (Indian)")).not.toBeInTheDocument();
   });
 
-  it("splits the register by investor type and tracks the promoter stake by quarter", async () => {
+  it("tracks the promoter stake by quarter", async () => {
     mockRouted(() => ({ ok: true, body: RELIANCE }));
     render(<OwnershipBoard />);
     await screen.findByText("Reliance Industries Limited");
-
-    expect(screen.getByText("By investor type")).toBeInTheDocument();
-    expect(screen.getByText("Retail & individuals")).toBeInTheDocument();
-    expect(screen.getByText("38.37%")).toBeInTheDocument();
 
     expect(screen.getByText("Promoter stake, quarter by quarter")).toBeInTheDocument();
     // The trend chart carries the series: every filed quarter is its own button, and the pie
@@ -239,6 +244,96 @@ describe("OwnershipBoard", () => {
     expect(
       screen.getByRole("img", { name: /Jun '26 ownership pie chart, promoter holding 50\.48 percent/ }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * The read, which is the only part of this board that says anything rather than tabulating it.
+   *
+   * Each case below is a register of a genuinely different shape - a controlled company, one with
+   * no controlling group, one no institution has touched - because the sentences are the board's
+   * one claim to being readable by somebody who does not already know what a promoter is, and a
+   * sentence that is right for Reliance and wrong for a professionally managed mid cap would be
+   * worse than no sentence at all.
+   */
+  describe("the read", () => {
+    /** Renders a register built by reshaping the Reliance filing, and waits for it to land. */
+    async function readOf(overrides: Partial<Ownership>) {
+      mockRouted(() => ({ ok: true, body: { ...RELIANCE, ...overrides } }));
+      render(<OwnershipBoard />);
+      await screen.findByText("Reliance Industries Limited");
+    }
+
+    /** The read's sentences are woven from several elements, so they are matched by text content. */
+    function sentence(match: RegExp) {
+      return screen.getByText((_, element) => {
+        if (!element || element.tagName !== "SPAN") return false;
+        const own = element.textContent ?? "";
+        return match.test(own) && !Array.from(element.children).some((child) => match.test(child.textContent ?? ""));
+      });
+    }
+
+    it("says who controls a company whose promoters hold more than half of it", async () => {
+      await readOf({});
+
+      expect(screen.getByText("What this filing tells you")).toBeInTheDocument();
+      expect(sentence(/Promoters hold 50\.48% — more than half the company/)).toBeInTheDocument();
+      expect(sentence(/Funds and institutions hold 38\.37% between them — 21\.18% Indian mutual funds/)).toBeInTheDocument();
+      expect(sentence(/45\.69 lakh individual investors hold 9\.15% between them/)).toBeInTheDocument();
+    });
+
+    it("says plainly when the promoters cannot outvote everybody else", async () => {
+      await readOf({
+        groups: RELIANCE.groups.map((group) => (group.key === "promoters" ? { ...group, percent: 26.4 } : group)),
+      });
+
+      expect(sentence(/Promoters hold 26\.40%, short of the half that decides a vote/)).toBeInTheDocument();
+    });
+
+    it("says when nobody is registered as the controlling group at all", async () => {
+      await readOf({ groups: RELIANCE.groups.filter((group) => group.key !== "promoters") });
+
+      expect(sentence(/No promoter stake is filed/)).toBeInTheDocument();
+    });
+
+    it("says when no institution has filed a holding", async () => {
+      await readOf({ groups: RELIANCE.groups.filter((group) => group.key !== "fii" && group.key !== "dii") });
+
+      expect(sentence(/No fund or institution has filed a holding this quarter/)).toBeInTheDocument();
+    });
+
+    it("does not invent a headcount the filing does not break out", async () => {
+      await readOf({
+        groups: RELIANCE.groups.map((group) => (group.key === "retail" ? { ...group, holders: null } : group)),
+      });
+
+      expect(sentence(/Individual investors hold 9\.15% of the company/)).toBeInTheDocument();
+    });
+
+    it("reads the promoter stake across every quarter filed, in both directions", async () => {
+      await readOf({});
+      expect(sentence(/promoters have added 0\.48 points, from 50\.00% to 50\.48%/)).toBeInTheDocument();
+
+      cleanup();
+      await readOf({ history: [...RELIANCE.history].reverse() });
+      expect(sentence(/promoters have given up 0\.48 points, from 50\.48% to 50\.00%/)).toBeInTheDocument();
+    });
+
+    it("says a stake has not moved rather than reporting a change of nothing", async () => {
+      await readOf({
+        history: RELIANCE.history.map((entry) => ({ ...entry, promoter: 50.48 })),
+      });
+
+      expect(sentence(/the promoter stake has not moved from 50\.48%/)).toBeInTheDocument();
+    });
+
+    // One filed quarter is a photograph, not a direction, and a direction drawn from it would be
+    // a line between a point and itself.
+    it("says nothing about direction when only one quarter has been filed", async () => {
+      await readOf({ history: RELIANCE.history.slice(0, 1) });
+
+      expect(screen.queryByText("Which way it is moving")).not.toBeInTheDocument();
+      expect(screen.getByText("Who controls it")).toBeInTheDocument();
+    });
   });
 
   it("names its source and says plainly that no state-wise split exists", async () => {
@@ -385,7 +480,8 @@ describe("OwnershipBoard", () => {
 
     expect(await screen.findByText("Reliance Industries Limited")).toBeInTheDocument();
     expect(screen.getAllByText("Promoters & insiders")).toHaveLength(4);
-    expect(screen.getByText("By investor type")).toBeInTheDocument();
+    // The read is drawn from the same payload, so a legacy entry has to survive it too.
+    expect(screen.getByText("What this filing tells you")).toBeInTheDocument();
   });
 
   it("draws the whole register as one bar", async () => {
@@ -395,5 +491,12 @@ describe("OwnershipBoard", () => {
 
     const bar = within(container).getByTitle("Promoters & insiders — 50.48%");
     expect(bar).toHaveStyle({ width: "50.48%" });
+
+    // A phone cannot hover a band, so the colours are keyed on the page and the whole bar is
+    // named for a reader who cannot see it at all.
+    expect(
+      screen.getByRole("img", { name: /The whole register: Promoters & insiders 50\.48%, .*Government 0\.09%/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Every class accounted for — 100.00% of shares")).toBeInTheDocument();
   });
 });

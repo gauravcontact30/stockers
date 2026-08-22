@@ -84,9 +84,13 @@ export function VisitTracker() {
       // `keepalive` so a view reported as the visitor navigates away still goes out.
       keepalive: true,
       body: JSON.stringify({ path: pathname, referrer: document.referrer, visitorId: visitorId() }),
-    }).catch(() => {
-      // Counting a visit is never worth an error in a visitor's console.
-    });
+    })
+      // Drained rather than ignored - an unread response is reported as an aborted request in the
+      // console, however well it went. See the note in ./presence-tracker.
+      .then((response) => response.arrayBuffer())
+      .catch(() => {
+        // Counting a visit is never worth an error in a visitor's console.
+      });
   }, [pathname]);
 
   return null;

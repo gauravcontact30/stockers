@@ -169,13 +169,11 @@ function LandingStack() {
           fetches nothing until they do, so leading with it costs the page nothing. */}
       <StockAnalysisSection />
 
-      {/* Requested landing order after the hero: contest, dashboard preview, BSE trend, accuracy,
-          the numbered research bands, pricing, reviews and footer. */}
+      {/* Requested landing order after the hero: contest, accuracy, BSE trend, the numbered
+          research bands, the dashboard preview, pricing, reviews and footer. */}
       <HeadToHead />
 
       <AiPredictionAccuracySection />
-
-      <StreamedAiFeatures />
 
       <StreamedTrendingBoard />
 
@@ -216,6 +214,13 @@ function LandingStack() {
           link in the header renders it at its own route through SectionPageStack below — but on the
           landing page it sat between the ownership board and the prices, adding a fourth read of
           the same session to a page that already opens on the hero's live figures. */}
+
+      {/* The feature list sits directly on top of the price list, because it is the answer to the
+          only question the price list raises. Read on its own, further up the page, "Elite" was a
+          tier name with eighteen features scattered somewhere above it; read here, the three
+          groups are the three columns priced immediately below, in the same order. */}
+      <StreamedAiFeatures />
+
       <PricingPlans />
 
       {/* Last thing before the footer: the boards make the case, the reviews close it. */}

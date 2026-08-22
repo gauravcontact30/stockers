@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { normaliseTicker } from "../lib/company-logos";
 import { CompanyLogo } from "./company-logo";
 
 export type Suggestion = {
@@ -42,6 +43,7 @@ export function StockCombobox({
   onSelect,
   exclude = [],
   selectedSuggestion = null,
+  logoSymbol = null,
   browseAll = false,
   placeholder,
   className = "",
@@ -54,6 +56,16 @@ export function StockCombobox({
   exclude?: string[];
   /** Known details for a controlled value that was not picked during this component's lifetime. */
   selectedSuggestion?: Suggestion | null;
+  /**
+   * A ticker the caller vouches for, so the field can draw that company's own mark.
+   *
+   * The field's logo otherwise only appears for a row picked from the dropdown, which leaves a box
+   * the parent pre-filled - today's top gainer, a symbol clicked in a table - showing a magnifying
+   * glass for a company we know the identity of. Naming it here draws the logo instead. It is used
+   * only while the text in the box still names that ticker, so a reader typing over it is not left
+   * looking at the mark of the company they are typing away from.
+   */
+  logoSymbol?: string | null;
   /**
    * Offer the whole exchange when the box is empty, rather than the popular names.
    *
@@ -100,6 +112,25 @@ export function StockCombobox({
       : selectedSuggestion && selectedSuggestion.symbol === value
         ? selectedSuggestion
         : null;
+
+  /**
+   * The mark at the head of the field: the company the box is currently about, or the magnifier.
+   *
+   * Three ways a ticker earns its logo here, all of them meaning "we know which company this is":
+   * a row picked from the dropdown, a ticker the parent vouched for through `logoSymbol`, and a
+   * typed value that exactly matches one of the rows the dropdown has already fetched. A partial
+   * query matches none of them, so the icon does not flicker through a monogram per keystroke on
+   * the way to a full ticker.
+   */
+  const typed = normaliseTicker(value);
+  const listed = typed ? suggestions.find((suggestion) => normaliseTicker(suggestion.symbol) === typed) : undefined;
+  const fieldLogo = selected
+    ? selected.symbol
+    : !typed
+      ? null
+      : logoSymbol && normaliseTicker(logoSymbol) === typed
+        ? typed
+        : (listed?.symbol ?? null);
 
   useEffect(() => {
     if (!open) return;
@@ -215,8 +246,8 @@ export function StockCombobox({
           selected ? "border-emerald-200 dark:border-emerald-500/40" : "border-slate-200 dark:border-slate-700"
         }`}
       >
-        {selected ? (
-          <CompanyLogo symbol={selected.symbol} size={36} preferReal />
+        {fieldLogo ? (
+          <CompanyLogo symbol={fieldLogo} size={36} preferReal />
         ) : (
           <svg viewBox="0 0 20 20" aria-hidden="true" className="ml-1 h-5 w-5 shrink-0 text-slate-400 dark:text-slate-500">
             <path

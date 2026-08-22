@@ -438,6 +438,22 @@ export function StockAnalysisSection() {
     void analyse(picked);
   };
 
+  /**
+   * The company the box is about, for the mark drawn inside it.
+   *
+   * Nobody picks the ticker this section opens on - it is pre-filled with today's leader, or with
+   * RELIANCE until the movers feed answers - so the combobox has no chosen row to take a logo from
+   * and the field opened on a magnifying glass over a company we can name. Handing it the symbol
+   * puts the real mark there from the first paint, and keeps it there through the analysis and the
+   * report that follows. The combobox ignores it the moment the text stops naming that ticker.
+   */
+  const subject =
+    status.kind === "ready"
+      ? status.report.stock.symbol
+      : status.kind === "loading"
+        ? status.symbol
+        : (leader?.symbol ?? DEFAULT_SYMBOL);
+
   return (
     <MarketSection
       id="stock-analysis"
@@ -458,6 +474,7 @@ export function StockAnalysisSection() {
           value={symbol}
           onChange={onQueryChange}
           onSelect={onSelect}
+          logoSymbol={subject}
           browseAll
           className="flex-1"
           placeholder="Search any of the ~4,950 BSE listed stocks - try TCS, HDFC BANK or 500325"
