@@ -27,10 +27,10 @@ import { cacheLife, cacheTag } from "next/cache";
 import { HeroCarousel } from "./hero-carousel";
 import { CACHE_TAGS } from "../lib/cache";
 import {
-  capitalGoodsTrio,
-  healthcareTrio,
-  investorHeldTrio,
-  monthGainerTrio,
+  defenceTrio,
+  investorBuyingTrio,
+  retailTrio,
+  threeYearGainerTrio,
   type DynamicTrio,
 } from "../lib/hero-trios";
 import { getMostBoughtToday, type MostBoughtBoard } from "../lib/most-bought";
@@ -127,26 +127,26 @@ export async function HeroPayload() {
   cacheLife("market");
   cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes, CACHE_TAGS.nse);
 
-  const [capitalGoods, healthcare, monthGainers, investorFavourites, mostBought] = await Promise.all([
-    withDeadline<DynamicTrio | null>(capitalGoodsTrio(), null),
-    withDeadline<DynamicTrio | null>(healthcareTrio(), null),
-    withDeadline<DynamicTrio | null>(monthGainerTrio(), null),
-    withDeadline<DynamicTrio | null>(investorHeldTrio(), null),
+  const [defence, retail, threeYearGainers, investorBuying, mostBought] = await Promise.all([
+    withDeadline<DynamicTrio | null>(defenceTrio(), null),
+    withDeadline<DynamicTrio | null>(retailTrio(), null),
+    withDeadline<DynamicTrio | null>(threeYearGainerTrio(), null),
+    withDeadline<DynamicTrio | null>(investorBuyingTrio(), null),
     // The ribbon's opening board. It polls for itself after hydration, so a deadline miss here
     // costs the first paint its rows and nothing more.
     withDeadline<MostBoughtBoard | null>(getMostBoughtToday(), null),
   ]);
 
-  const symbols = heroPerformanceSymbols([capitalGoods, healthcare, monthGainers, investorFavourites]);
+  const symbols = heroPerformanceSymbols([defence, retail, threeYearGainers, investorBuying]);
   const initialPerformance = await withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(symbols), []);
 
   return (
     <HeroCarousel
       initialPerformance={initialPerformance}
-      capitalGoods={capitalGoods}
-      healthcare={healthcare}
-      monthGainers={monthGainers}
-      investorFavourites={investorFavourites}
+      defence={defence}
+      retail={retail}
+      threeYearGainers={threeYearGainers}
+      investorBuying={investorBuying}
       mostBought={mostBought}
     />
   );

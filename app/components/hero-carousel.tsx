@@ -5,10 +5,10 @@ import type { DynamicTrio } from "../lib/hero-trios";
 import type { MostBoughtBoard } from "../lib/most-bought";
 import { MostBoughtRibbon } from "./most-bought-ribbon";
 import {
-  CapitalGoodsScene,
-  HealthcareScene,
-  InvestorFavouritesScene,
-  MonthGainersScene,
+  DefenceLeadersScene,
+  InvestorBuyingScene,
+  RetailLeadersScene,
+  ThreeYearGainersScene,
   type Trio,
 } from "./hero-scenes";
 import type { StockPerformance } from "./use-stock-performance";
@@ -25,20 +25,20 @@ type Slide = {
 export type HeroCarouselProps = {
   initialPerformance?: readonly StockPerformance[];
   /**
-   * The three strongest capital goods names of the last year, resolved on the server.
+   * The three strongest of India's listed defence names over the last year, resolved on the server.
    *
    * A prop rather than a fetch in here for the same reason every other figure on this page is: the
    * hero is server-rendered and then hydrated, and a ranking computed independently in the browser
    * would differ from the one already in the markup. Null when the board could not be built, which
    * the scene renders as "reading" rather than as an error.
    */
-  capitalGoods?: DynamicTrio | null;
-  /** The same over healthcare — drugmakers and hospitals together. Same contract. */
-  healthcare?: DynamicTrio | null;
-  /** The three biggest one-month runs in the tracked universe. Same contract. */
-  monthGainers?: DynamicTrio | null;
-  /** The three held furthest outside their promoter groups, as filed. Same contract. */
-  investorFavourites?: DynamicTrio | null;
+  defence?: DynamicTrio | null;
+  /** The same over retail — chains, quick commerce and restaurants together. Same contract. */
+  retail?: DynamicTrio | null;
+  /** The three biggest three-year runs in the tracked universe. Same contract. */
+  threeYearGainers?: DynamicTrio | null;
+  /** The three the week's buyers have crowded into, from broker lists and the tape. Same contract. */
+  investorBuying?: DynamicTrio | null;
   /**
    * Today's buying board, for the ribbon under the slider.
    *
@@ -55,11 +55,11 @@ export type HeroCarouselProps = {
  * Two sectors first, then two boards over the whole market — narrow to wide, which is the order a
  * visitor reads them in:
  *
- *   1. Capital goods — the sector's three strongest one-year returns
- *   2. Healthcare — the same, over drugmakers and hospital chains together
- *   3. Most gainers, last one month — the three biggest short-run moves on the board
- *   4. Where investors are invested — the three held furthest outside their promoter groups,
- *      by FIIs, DIIs, the government and retail investors, as filed each quarter
+ *   1. Defence — the three strongest one-year returns among India's listed defence companies
+ *   2. Retail — the same, over the chains, the quick-commerce platforms and the restaurant groups
+ *   3. Most gainers, last three years — the three biggest long-run moves on the board
+ *   4. Where investors are buying — the three the week's buyers have crowded into, from the
+ *      brokers' own most-bought lists and the exchange's trade counts
  *
  * Every one of the four gets its companies out of the data — a hard-coded "top three" is a claim
  * that stops being true the week after it is written — and every one of them arrives as a prop
@@ -75,40 +75,40 @@ export type HeroCarouselProps = {
  */
 export function slidesFor({
   initialPerformance,
-  capitalGoods,
-  healthcare,
-  monthGainers,
-  investorFavourites,
+  defence,
+  retail,
+  threeYearGainers,
+  investorBuying,
 }: Required<Omit<HeroCarouselProps, "mostBought">>): Slide[] {
   return [
     {
-      caption: "Capital goods: the sector's three strongest stocks",
-      scene: <CapitalGoodsScene trio={capitalGoods as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Defence: the sector's three strongest stocks",
+      scene: <DefenceLeadersScene trio={defence as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Healthcare: the sector's three strongest stocks",
-      scene: <HealthcareScene trio={healthcare as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Retail: the sector's three strongest stocks",
+      scene: <RetailLeadersScene trio={retail as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Most gainers: the three biggest one-month runs",
-      scene: <MonthGainersScene trio={monthGainers as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Most gainers: the three biggest three-year runs",
+      scene: <ThreeYearGainersScene trio={threeYearGainers as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Where investors are invested: the three most widely held outside their promoters",
-      scene: <InvestorFavouritesScene trio={investorFavourites as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Where investors are buying: the three most bought this week",
+      scene: <InvestorBuyingScene trio={investorBuying as Trio | null} initialPerformances={initialPerformance} />,
     },
   ];
 }
 
 export function HeroCarousel({
   initialPerformance = [],
-  capitalGoods = null,
-  healthcare = null,
-  monthGainers = null,
-  investorFavourites = null,
+  defence = null,
+  retail = null,
+  threeYearGainers = null,
+  investorBuying = null,
   mostBought = null,
 }: HeroCarouselProps) {
-  const slides = slidesFor({ initialPerformance, capitalGoods, healthcare, monthGainers, investorFavourites });
+  const slides = slidesFor({ initialPerformance, defence, retail, threeYearGainers, investorBuying });
   const [activeSlide, setActiveSlide] = useState(0);
   /**
    * Which scenes have earned the right to exist yet.

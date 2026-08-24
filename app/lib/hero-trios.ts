@@ -3,16 +3,16 @@
 // The slider used to open on two fixed sector themes — data centres and defence — with two rankings
 // behind them. All four are rankings now:
 //
-//   1. "Capital goods"        the three strongest one-year returns filed under capital goods
-//   2. "Healthcare"           the same, over pharma and hospitals together, as BSE buckets them
-//   3. "Most gainers, 1M"     the three strongest one-month returns in the tracked universe
-//   4. "Investor favourites"  the three most widely held outside the promoter group, as filed
+//   1. "Defence"              the three strongest one-year returns among India's listed defence names
+//   2. "Retail"               the same, over the organised retail and quick-commerce sector
+//   3. "Most gainers, 3Y"     the three strongest three-year returns in the tracked universe
+//   4. "Investor favourites"  the three the market's buyers have crowded into this week
 //
-// The first three are read from the committed return caches, which cost nothing at request time and
-// cannot disagree with the returns tables further down the page. The fourth is the only one that
-// reaches a feed: it reads the companies' own quarterly shareholding patterns, which is the only
-// source for "where FIIs, DIIs, the government and retail investors are actually invested" that is
-// not an inference from price or volume.
+// The first three are read from the daily return caches, which cost nothing at request time once
+// warm and cannot disagree with the returns tables further down the page. The fourth is the only
+// one that reaches a live feed: it reads the brokers' own published most-bought lists and the
+// exchange's trade-count tape, which is the closest thing to "where investors are actually putting
+// money right now" that anybody publishes.
 //
 // All four are resolved on the server and handed to the carousel as props, because the hero is
 // server-rendered and then hydrated, and a list computed independently in the browser would differ
@@ -24,10 +24,9 @@
 
 import "server-only";
 
-import { getBseMovers } from "./bse-market";
-import { getOneMonthReturns, getOneYearReturns, type PeriodReturnsCache } from "./historical-returns";
+import { getBseMovers, getBseTrending, type BseTrendingRow, type TrendingRank } from "./bse-market";
+import { getOneYearReturns, getReturnsForPeriod, type PeriodReturnsCache } from "./historical-returns";
 import { indianStocks, type StockMeta } from "./indian-stocks";
-import { getOwnership, type Ownership } from "./shareholding";
 import { getCachedPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
 
 /**
@@ -46,13 +45,20 @@ export type DynamicTrioStock = {
   tier: "Large" | "Mid" | "Small";
   sector: string;
   /**
-   * The filed ownership split, on the one slide that is ranked by it.
+   * The buying evidence, on the one slide that is ranked by it.
    *
-   * Optional because only the investor slide has it, and absent rather than zeroed when a company
-   * has not filed: a card drawing "FII 0.0%" against a company nobody has read the filing for would
-   * be inventing a fact. Percentages of total shares, straight from the quarterly pattern.
+   * Optional because only the investor slide has it, and absent rather than zeroed when a figure
+   * was not published: a card drawing "0 trades" against a company whose tape nobody read would be
+   * inventing a fact. Every field here is a published number — a broker's own placing, the
+   * exchange's trade count and traded value, and the measured one-week move.
    */
-  ownership?: { fii: number; dii: number; government: number; retail: number; outsidePromoters: number };
+  flow?: {
+    brokerRank: number | null;
+    brokers: string[];
+    weekPercent: number | null;
+    trades: number | null;
+    turnoverCr: number | null;
+  };
 };
 
 export type DynamicTrio = readonly [DynamicTrioStock, DynamicTrioStock, DynamicTrioStock];
@@ -92,11 +98,32 @@ function trioOf(entries: Omit<DynamicTrioStock, "accent" | "wash">[]): DynamicTr
 const STOCK_BY_SYMBOL = new Map(indianStocks.map((stock) => [stock.symbol, stock]));
 const TICKER_SUMMARY_DEADLINE_MS = 1200;
 
-/** The catalogue's own sector names for the two sector slides. */
-export const CAPITAL_GOODS_SECTORS = ["Capital Goods & Industrials"] as const;
-// BSE files drugmakers and hospitals under one "Healthcare" bucket; the catalogue splits them into
-// a finer pair. The slide is about the sector as the exchange means it, so it takes both back.
-export const HEALTHCARE_SECTORS = ["Pharmaceuticals", "Healthcare Services"] as const;
+/**
+ * India's listed defence names, as a named pool.
+ *
+ * A pool rather than a sector filter, and that is forced by the classification rather than chosen:
+ * neither the catalogue nor BSE's own industry list has a "Defence" bucket. The exchange files
+ * every one of these under capital goods — and Solar Industries, which makes the ammunition and
+ * the propellants, under chemicals — so a sector filter would return turbines and switchgear beside
+ * them and call the result a defence board.
+ *
+ * These are the listed companies whose order books are defence programmes: the aircraft, the
+ * warships, the missiles, the optics and electronics that go inside them, and the explosives they
+ * carry. Which three of them lead is still the data's to decide.
+ */
+export const DEFENCE_POOL = [
+  "HAL",
+  "BEL",
+  "BDL",
+  "MAZDOCK",
+  "COCHINSHIP",
+  "GRSE",
+  "PARAS",
+  "SOLARINDS",
+] as const;
+
+/** The catalogue's own sector name for the retail slide. */
+export const RETAIL_SECTORS = ["Retail"] as const;
 
 /**
  * The tracked companies with a measured return over this period, strongest first.
@@ -120,17 +147,16 @@ function rankedByReturn(
 }
 
 /**
- * The three strongest one-year returns inside one set of sectors.
+ * The three strongest one-year returns inside a named set of companies.
  *
  * Read from the same cached return set the returns tables use, so the hero cannot disagree with the
  * page a reader lands on after clicking it. "Top three" is decided by measured return rather than by
  * size: a slide that simply listed a sector's largest companies would say the same thing every day
  * for a year, and would not be a ranking at all.
  */
-async function sectorLeaderTrio(sectors: readonly string[], label: string): Promise<DynamicTrio | null> {
+async function leaderTrio(keep: (stock: StockMeta) => boolean, label: string): Promise<DynamicTrio | null> {
   try {
-    const wanted = new Set<string>(sectors);
-    const ranked = rankedByReturn(await getOneYearReturns(), (stock) => wanted.has(stock.sector));
+    const ranked = rankedByReturn(await getOneYearReturns(), keep);
 
     return trioOf(
       ranked.map(({ symbol, gain, stock }, index) => ({
@@ -148,31 +174,34 @@ async function sectorLeaderTrio(sectors: readonly string[], label: string): Prom
   }
 }
 
-/** The three strongest capital goods names of the last year. */
-export function capitalGoodsTrio(): Promise<DynamicTrio | null> {
-  return sectorLeaderTrio(CAPITAL_GOODS_SECTORS, "capital goods");
+/** The three strongest defence names of the last year. */
+export function defenceTrio(): Promise<DynamicTrio | null> {
+  const pool = new Set<string>(DEFENCE_POOL);
+  return leaderTrio((stock) => pool.has(stock.symbol), "defence");
 }
 
-/** The same, across drugmakers and hospital chains together. */
-export function healthcareTrio(): Promise<DynamicTrio | null> {
-  return sectorLeaderTrio(HEALTHCARE_SECTORS, "healthcare");
+/** The same, across the organised retail chains, quick-commerce platforms and restaurant groups. */
+export function retailTrio(): Promise<DynamicTrio | null> {
+  const wanted = new Set<string>(RETAIL_SECTORS);
+  return leaderTrio((stock) => wanted.has(stock.sector), "retail");
 }
 
 /**
- * The three strongest one-month returns in the tracked universe.
+ * The three strongest three-year returns in the tracked universe.
  *
- * A month rather than a year on purpose: the slide beside it already reports a year, and the two
- * windows almost never name the same companies — which is the point of showing both.
+ * Three years rather than one: the two sector slides beside it already report a year, and a window
+ * that spans a whole cycle names very different companies from one that spans a rally — which is
+ * the point of showing both.
  */
-export async function monthGainerTrio(): Promise<DynamicTrio | null> {
+export async function threeYearGainerTrio(): Promise<DynamicTrio | null> {
   try {
-    const ranked = rankedByReturn(await getOneMonthReturns());
+    const ranked = rankedByReturn(await getReturnsForPeriod("3y"));
 
     return trioOf(
       ranked.map(({ symbol, gain, stock }) => ({
         symbol,
         company: stock.name,
-        blurb: `Up ${Math.round(gain)}% over the last month — the ${stock.sector.toLowerCase()} name that ran hardest.`,
+        blurb: `Up ${Math.round(gain)}% over three years — the ${stock.sector.toLowerCase()} name that compounded hardest.`,
         tier: tierOf(stock.capTier),
         sector: stock.sector,
       })),
@@ -182,78 +211,108 @@ export async function monthGainerTrio(): Promise<DynamicTrio | null> {
   }
 }
 
-/**
- * The candidates the investor slide ranks.
- *
- * A named pool rather than the whole catalogue, and that is a real constraint rather than a
- * shortcut: an ownership split is one company's own quarterly filing, read one company at a time,
- * so ranking four hundred of them would mean four hundred reads of a feed this app does not own.
- * These are the widely-followed names a reader is most likely to be weighing, every one of them
- * NSE-listed and therefore filing a pattern each quarter.
- */
-export const INVESTOR_POOL = [
-  "RELIANCE",
-  "HDFCBANK",
-  "ICICIBANK",
-  "INFY",
-  "SBIN",
-  "ITC",
-  "LT",
-  "AXISBANK",
-] as const;
+/** How deep into each buying board to look before intersecting it with the tracked catalogue. */
+const BUYING_CANDIDATES = 50;
 
-/** A percentage from the filing, rounded the way the board rounds it. */
-const owned = (ownership: Ownership, key: "fii" | "dii" | "government" | "retail"): number =>
-  ownership.groups.find((group) => group.key === key)?.percent ?? 0;
+type BuyingCandidate = { row: BseTrendingRow; stock: StockMeta };
 
 /**
- * The three companies of the pool whose registers sit furthest outside the promoter group.
+ * One buying board, narrowed to companies the catalogue knows.
  *
- * "Where investors are most invested", answered from the filings rather than from turnover: the
- * ranking is FII + DII + government + retail as a share of total shares, which is exactly the part
- * of a company owned by somebody who chose to buy it. A promoter's own holding is not an investment
- * decision anybody made this quarter, so it is what the ranking measures against rather than part
- * of it.
+ * The intersection is not tidiness. The trending boards cover all ~4,950 listed scrips, and a card
+ * for one outside the catalogue would carry no cap tier, no sector the pill can draw, and — because
+ * the performance endpoint would have to guess its Yahoo symbol — a fair chance of a dash where the
+ * price belongs. A hero card with three blanks on it is worse than a different company.
  *
- * `allSettled` rather than `all`: one company whose filing could not be read costs itself its place
- * on the board, not the whole slide.
+ * The direction filter is the difference between the two boards, and it is deliberate.
+ *
+ * On the **tape** board it has to be applied: the exchange publishes no buy/sell split, so trading
+ * above the previous close is the only stand-in there is for "being bought", and without it the
+ * board would rank the scrips being dumped just as highly. The scene's footnote says so rather than
+ * hiding it behind the word "bought".
+ *
+ * On the **broker** board it must not be. A broker's published most-bought list already *is* a
+ * record of what its customers bought; the session's price direction is a second, weaker signal,
+ * and requiring both throws away the better one. That is not hypothetical — on a session where the
+ * whole broker list closed down, filtering it left the board with nothing and the slide fell to the
+ * tape for all three cards.
  */
-export async function investorHeldTrio(): Promise<DynamicTrio | null> {
+async function buyingCandidates(rank: TrendingRank): Promise<BuyingCandidate[]> {
+  const board = await getBseTrending({
+    rank,
+    direction: rank === "brokers" ? "all" : "bought",
+    // The window the slide is about. Each row reports its own measured one-week move, which is what
+    // the cards draw beside the broker placing.
+    returnPeriod: "1w",
+    page: 1,
+    pageSize: BUYING_CANDIDATES,
+  });
+
+  return board.rows.flatMap((row) => {
+    const stock = STOCK_BY_SYMBOL.get(row.ticker.toUpperCase());
+    return stock ? [{ row, stock }] : [];
+  });
+}
+
+/** Why this company is on the buying slide, in one line. */
+function buyingBlurb(row: BseTrendingRow): string {
+  const week = row.returnPercent;
+  const move = typeof week === "number" && Number.isFinite(week) ? `, up ${Math.round(week)}% over the week` : "";
+  const broker = row.brokers[0]?.brokerName;
+
+  return broker && row.brokerRank !== null
+    ? `#${row.brokerRank} most bought on ${broker}${move}.`
+    : `Among the week's most heavily traded names on the bid${move}.`;
+}
+
+/**
+ * The three companies the market's buyers have crowded into this week.
+ *
+ * "Where investors are most invested" answered from what is actually published rather than from a
+ * flow figure nobody discloses. Two real sources, in that order of preference:
+ *
+ *   the brokers   Groww and the other tracked platforms publish their own most-bought lists. That
+ *                 is a true buying signal for their customers and nobody else's, and it is the
+ *                 nearest thing there is to a retail investor saying what they bought.
+ *   the tape      the exchange publishes, per scrip, how many separate transactions printed. A
+ *                 stock printing tens of thousands of small trades while it rises is one a crowd is
+ *                 buying into. It fills the board when the broker lists come back short.
+ *
+ * Each card reports its measured one-week return beside the placing, so the slide's week is a
+ * measured week rather than an asserted one.
+ *
+ * `allSettled` rather than `all`: the broker lists are somebody else's marketing page rather than a
+ * contract, and one of them refusing should cost itself its rows, not the whole slide.
+ */
+export async function investorBuyingTrio(): Promise<DynamicTrio | null> {
   try {
-    const settled = await Promise.allSettled(INVESTOR_POOL.map((symbol) => getOwnership(symbol)));
+    const [listed, crowded] = await Promise.allSettled([buyingCandidates("brokers"), buyingCandidates("trades")]);
+    const onList = (listed.status === "fulfilled" ? listed.value : [])
+      .filter((candidate) => candidate.row.brokerRank !== null)
+      .sort((left, right) => (left.row.brokerRank ?? 0) - (right.row.brokerRank ?? 0));
 
-    const ranked = settled
-      .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
-      .flatMap((ownership) => {
-        const stock = STOCK_BY_SYMBOL.get(ownership.symbol);
-        if (!stock) return [];
+    const seen = new Set(onList.map((candidate) => candidate.stock.symbol));
+    const ordered = [
+      ...onList,
+      ...(crowded.status === "fulfilled" ? crowded.value : []).filter((candidate) => !seen.has(candidate.stock.symbol)),
+    ];
 
-        const split = {
-          fii: owned(ownership, "fii"),
-          dii: owned(ownership, "dii"),
-          government: owned(ownership, "government"),
-          retail: owned(ownership, "retail"),
-        };
-        const outsidePromoters = Math.round((split.fii + split.dii + split.government + split.retail) * 10) / 10;
-        // Nothing measured means the filing was read but carried no split — which is not a company
-        // held by nobody, it is a filing this parser got nothing out of. It has no place in a
-        // ranking of who holds the most.
-        if (outsidePromoters <= 0) return [];
-
-        return [
-          {
-            symbol: ownership.symbol,
-            company: stock.name,
-            blurb: `${outsidePromoters}% of the register is held outside the promoter group, as filed for ${ownership.quarter}.`,
-            tier: tierOf(stock.capTier),
-            sector: stock.sector,
-            ownership: { ...split, outsidePromoters },
-          },
-        ];
-      })
-      .sort((a, b) => b.ownership.outsidePromoters - a.ownership.outsidePromoters);
-
-    return trioOf(ranked);
+    return trioOf(
+      ordered.map(({ row, stock }) => ({
+        symbol: stock.symbol,
+        company: stock.name,
+        blurb: buyingBlurb(row),
+        tier: tierOf(stock.capTier),
+        sector: stock.sector,
+        flow: {
+          brokerRank: row.brokerRank,
+          brokers: row.brokers.map((pick) => pick.brokerName),
+          weekPercent: row.returnPercent,
+          trades: row.trades,
+          turnoverCr: row.turnoverCr,
+        },
+      })),
+    );
   } catch {
     return null;
   }

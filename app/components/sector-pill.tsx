@@ -75,6 +75,15 @@ const FAMILIES: Family[] = [
     icon: path("M5.5 1 4 4H1v1.5h1L3 14h10l1-8.5h1V4h-3l-1.5-3h-1l1.5 3h-4L6.5 1h-1Z"),
   },
   {
+    key: "defence",
+    // Ahead of "infra", which claims "capital goods": a sector that names defence outright means the
+    // defence bucket, and the exchange's broader capital-goods label still falls through to infra.
+    match: ["defence", "defense", "aerospace", "shipbuild"],
+    chrome: "bg-slate-200 text-slate-800 dark:bg-slate-500/20 dark:text-slate-200",
+    // A shield.
+    icon: path("M8 1 2 3.2v4.4c0 3.4 2.4 6.5 6 7.4 3.6-.9 6-4 6-7.4V3.2L8 1Z"),
+  },
+  {
     key: "infra",
     match: ["realty", "real estate", "construct", "infra", "port", "logistic", "capital goods", "industrial"],
     chrome: "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300",

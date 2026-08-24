@@ -23,10 +23,10 @@ import {
 import type { DynamicTrio } from "../../app/lib/hero-trios";
 
 jest.mock("../../app/lib/hero-trios", () => ({
-  capitalGoodsTrio: jest.fn(),
-  healthcareTrio: jest.fn(),
-  monthGainerTrio: jest.fn(),
-  investorHeldTrio: jest.fn(),
+  defenceTrio: jest.fn(),
+  retailTrio: jest.fn(),
+  threeYearGainerTrio: jest.fn(),
+  investorBuyingTrio: jest.fn(),
   // The strips that frame every slide read this one. A mocked module replaces the whole thing, so
   // leaving an export out makes the real one unreachable and the component throws before any
   // assertion can run.
@@ -39,10 +39,10 @@ jest.mock("../../app/lib/stock-performance", () => ({
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- the mocked modules, for arranging return values.
 const trios = require("../../app/lib/hero-trios") as {
-  capitalGoodsTrio: jest.Mock;
-  healthcareTrio: jest.Mock;
-  monthGainerTrio: jest.Mock;
-  investorHeldTrio: jest.Mock;
+  defenceTrio: jest.Mock;
+  retailTrio: jest.Mock;
+  threeYearGainerTrio: jest.Mock;
+  investorBuyingTrio: jest.Mock;
   topWeeklyGainers: jest.Mock;
 };
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- as above.
@@ -62,17 +62,17 @@ function trioOf(symbols: [string, string, string], sector: string): DynamicTrio 
   })) as unknown as DynamicTrio;
 }
 
-const CAPITAL_GOODS = trioOf(["BEL", "HAL", "SIEMENS"], "Capital Goods & Industrials");
-const HEALTHCARE = trioOf(["SUNPHARMA", "APOLLOHOSP", "CIPLA"], "Pharmaceuticals");
-const MONTH_GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
-const FAVOURITES = trioOf(["RELIANCE", "ITC", "SBIN"], "Energy & Petrochemicals");
+const DEFENCE = trioOf(["BEL", "HAL", "MAZDOCK"], "Capital Goods & Industrials");
+const RETAIL = trioOf(["DMART", "TRENT", "ETERNAL"], "Retail");
+const THREE_YEAR_GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
+const BUYING = trioOf(["RELIANCE", "ITC", "SBIN"], "Energy & Petrochemicals");
 
 beforeEach(() => {
   performance.getCachedPerformanceSummaries.mockResolvedValue([]);
-  trios.capitalGoodsTrio.mockResolvedValue(CAPITAL_GOODS);
-  trios.healthcareTrio.mockResolvedValue(HEALTHCARE);
-  trios.monthGainerTrio.mockResolvedValue(MONTH_GAINERS);
-  trios.investorHeldTrio.mockResolvedValue(FAVOURITES);
+  trios.defenceTrio.mockResolvedValue(DEFENCE);
+  trios.retailTrio.mockResolvedValue(RETAIL);
+  trios.threeYearGainerTrio.mockResolvedValue(THREE_YEAR_GAINERS);
+  trios.investorBuyingTrio.mockResolvedValue(BUYING);
   trios.topWeeklyGainers.mockResolvedValue([]);
   // The scenes fetch live figures on mount; left unstubbed they reject against jsdom and push a
   // state update through outside act(), which is noise rather than a finding.
@@ -129,22 +129,22 @@ describe("withDeadline", () => {
 
 describe("heroPerformanceSymbols", () => {
   it("gathers every company the rankings named", () => {
-    expect(heroPerformanceSymbols([CAPITAL_GOODS, HEALTHCARE])).toEqual([
+    expect(heroPerformanceSymbols([DEFENCE, RETAIL])).toEqual([
       "BEL",
       "HAL",
-      "SIEMENS",
-      "SUNPHARMA",
-      "APOLLOHOSP",
-      "CIPLA",
+      "MAZDOCK",
+      "DMART",
+      "TRENT",
+      "ETERNAL",
     ]);
   });
 
   it("asks for a company topping two boards only once", () => {
-    expect(heroPerformanceSymbols([CAPITAL_GOODS, CAPITAL_GOODS])).toEqual(["BEL", "HAL", "SIEMENS"]);
+    expect(heroPerformanceSymbols([DEFENCE, DEFENCE])).toEqual(["BEL", "HAL", "MAZDOCK"]);
   });
 
   it("skips a ranking that could not be built", () => {
-    expect(heroPerformanceSymbols([null, MONTH_GAINERS, null])).toEqual(["STLTECH", "HFCL", "SKYGOLD"]);
+    expect(heroPerformanceSymbols([null, THREE_YEAR_GAINERS, null])).toEqual(["STLTECH", "HFCL", "SKYGOLD"]);
   });
 });
 
@@ -172,10 +172,10 @@ describe("HeroPayload", () => {
     expect(performance.getCachedPerformanceSummaries).toHaveBeenCalledWith([
       "BEL",
       "HAL",
-      "SIEMENS",
-      "SUNPHARMA",
-      "APOLLOHOSP",
-      "CIPLA",
+      "MAZDOCK",
+      "DMART",
+      "TRENT",
+      "ETERNAL",
       "STLTECH",
       "HFCL",
       "SKYGOLD",
@@ -188,15 +188,15 @@ describe("HeroPayload", () => {
   it("hands all four rankings to the carousel", async () => {
     const element = await HeroPayload();
 
-    expect(element.props.capitalGoods).toBe(CAPITAL_GOODS);
-    expect(element.props.healthcare).toBe(HEALTHCARE);
-    expect(element.props.monthGainers).toBe(MONTH_GAINERS);
-    expect(element.props.investorFavourites).toBe(FAVOURITES);
+    expect(element.props.defence).toBe(DEFENCE);
+    expect(element.props.retail).toBe(RETAIL);
+    expect(element.props.threeYearGainers).toBe(THREE_YEAR_GAINERS);
+    expect(element.props.investorBuying).toBe(BUYING);
   });
 
-  it("opens the slider on the capital goods slide", async () => {
+  it("opens the slider on the defence slide", async () => {
     render(await HeroPayload());
-    expect(screen.getByText("The three strongest capital goods stocks")).toBeInTheDocument();
+    expect(screen.getByText("The three strongest defence stocks")).toBeInTheDocument();
   });
 
   /**
@@ -204,11 +204,11 @@ describe("HeroPayload", () => {
    * entire page — header, boards, pricing and footer — on `app/loading.tsx`.
    */
   it("still opens when a ranking cannot be built", async () => {
-    trios.investorHeldTrio.mockRejectedValue(new Error("NSE refused the filing index"));
+    trios.investorBuyingTrio.mockRejectedValue(new Error("the broker list refused"));
     const element = await HeroPayload();
 
-    expect(element.props.investorFavourites).toBeNull();
-    expect(element.props.capitalGoods).toBe(CAPITAL_GOODS);
+    expect(element.props.investorBuying).toBeNull();
+    expect(element.props.defence).toBe(DEFENCE);
   });
 
   it("still opens when the live figures cannot be read", async () => {
