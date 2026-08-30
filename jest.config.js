@@ -26,6 +26,9 @@ const customJestConfig = {
     },
   },
   coverageReporters: ["text", "text-summary"],
+  moduleNameMapper: {
+    "^marked$": require.resolve("./node_modules/marked/lib/marked.umd.js"),
+  },
 };
 
 module.exports = createJestConfig(customJestConfig);
