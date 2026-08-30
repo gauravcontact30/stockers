@@ -59,3 +59,6 @@ app/data/analytics-events.json
 
 # Portfolios when no Supabase project is configured: what real people own and what they paid.
 app/data/portfolio-holdings.json
+
+# Subagent-driven-development scratch: ledgers, briefs, reports and review packages per plan.
+.superpowers/
