@@ -59,6 +59,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: absoluteUrl("/blog"),
+      images: [siteImage],
+      lastModified: built,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
       url: absoluteUrl("/about"),
       images: [siteImage],
       lastModified: policyUpdated,

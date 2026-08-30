@@ -54,6 +54,7 @@ export const PUBLIC_ROUTES = [
   "/shareholding",
   "/accuracy",
   "/pricing",
+  "/blog",
   "/news",
   "/about",
   "/contact",
