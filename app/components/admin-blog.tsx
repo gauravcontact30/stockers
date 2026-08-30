@@ -143,7 +143,7 @@ export function AdminBlog() {
       <form ref={formRef} onSubmit={submitDraft} className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Write a post</h2>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Saves as a draft. Approve, then publish it from the list once it's ready for the blog.
+          Saves as a draft. Approve, then publish it from the list once it&apos;s ready for the blog.
         </p>
 
         <label className="mt-5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
