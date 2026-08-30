@@ -13,6 +13,7 @@ import { AI_FEATURES, TIER_LABEL } from "../lib/plan-tiers";
 import type { LivePresenceState } from "../lib/presence-report";
 import { AdminAiOperations } from "./admin-ai-operations";
 import { AdminAnalytics } from "./admin-analytics";
+import { AdminBlog } from "./admin-blog";
 import { AdminClientReviews } from "./admin-client-reviews";
 import { AdminLiveUsers } from "./admin-live-users";
 import { AdminPlatformLogs } from "./admin-platform-logs";
@@ -36,6 +37,7 @@ export type SuperAdminSectionId =
   | "users"
   | "subscriptions"
   | "reviews"
+  | "blog"
   | "features"
   | "cache"
   | "application";
@@ -154,6 +156,15 @@ function ReviewsIcon({ className }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H9l-5 4V5.5Z" />
       <path d="m12 6.2 1 2 2.2.3-1.6 1.5.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.5 2.2-.3Z" />
+    </svg>
+  );
+}
+
+function BlogIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M9 12h6M9 16h6M9 8h3" />
     </svg>
   );
 }
@@ -282,6 +293,13 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
     description: "Upload client review comments, profile images, signatures and star ratings for the landing page.",
     href: "/reviews",
     icon: ReviewsIcon,
+  },
+  {
+    id: "blog",
+    label: "Blog Posts",
+    description: "Write, approve and publish posts for the public blog.",
+    href: "/posts",
+    icon: BlogIcon,
   },
   {
     id: "features",
@@ -1409,6 +1427,12 @@ function SectionContent({ active }: { active: SuperAdminSectionId }) {
       return (
         <AdminAccessGate>
           <AdminClientReviews />
+        </AdminAccessGate>
+      );
+    case "blog":
+      return (
+        <AdminAccessGate>
+          <AdminBlog />
         </AdminAccessGate>
       );
     case "features":

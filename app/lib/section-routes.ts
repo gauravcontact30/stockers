@@ -283,6 +283,7 @@ export const ADMIN_ROUTE_PATHS = [
   "/users",
   "/subscriptions",
   "/reviews",
+  "/posts",
   "/features",
   "/cache",
   "/application",
