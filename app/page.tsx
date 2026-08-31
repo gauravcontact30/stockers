@@ -300,18 +300,18 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
             ))}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
             {/* The trial chip and the theme switch, as one control - see ./components/account-menu
                 for why two separate ones were the wrong shape for this corner of the bar. */}
             <AccountMenu />
             <HeaderSubscriptionCta />
             <Link
               href="/signin"
-              className="hidden items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="hidden h-7 items-center gap-1 rounded-full border border-slate-200 px-2.5 text-[13px] font-medium whitespace-nowrap text-slate-700 transition hover:bg-slate-100 sm:inline-flex dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               {/* An arrow into a door: the standard mark for signing in, and the one that reads
                   without its label at small sizes. */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
                 <path d="M10 17l5-5-5-5" />
                 <path d="M15 12H3" />
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -320,11 +320,11 @@ export default function Home({ sectionId, seo }: HomeProps = {}) {
             </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.6)] transition hover:from-emerald-500 hover:to-teal-500"
+              className="inline-flex h-7 items-center gap-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 text-[13px] font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_-8px_rgba(5,150,105,0.6)] transition hover:from-emerald-500 hover:to-teal-500"
             >
               {/* A spark rather than another arrow: this is the primary action beside a secondary
                   one, and two arrows next to each other would read as the same control twice. */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
                 <path d="m12 3 2.1 4.9L19 10l-4.9 2.1L12 17l-2.1-4.9L5 10l4.9-2.1L12 3Z" />
               </svg>
               Get started

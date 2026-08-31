@@ -159,8 +159,8 @@ export function AccountMenu() {
            calls to action are "Sign in" and "Get started" sitting right beside it. It is a
            preference switch, so it should not out-weigh them. Still a usable target, and the label
            state keeps the same padding so the trial countdown is unaffected. */
-        className={`inline-flex h-8 items-center gap-2 rounded-full border text-sm font-semibold transition hover:border-emerald-300 dark:hover:border-emerald-500/40 ${
-          state.label ? "px-3" : "w-8 justify-center"
+        className={`inline-flex h-7 items-center gap-1.5 rounded-full border text-[13px] font-semibold transition hover:border-emerald-300 dark:hover:border-emerald-500/40 ${
+          state.label ? "px-2.5" : "w-7 justify-center"
         } ${state.chrome}`}
       >
         {state.icon ?? (isDark ? <MoonIcon className="h-4 w-4" /> : <SunIcon className="h-4 w-4" />)}

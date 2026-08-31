@@ -47,7 +47,7 @@ export function HeaderSubscriptionCta() {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={`group inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-px hover:border-emerald-300 hover:shadow-[0_10px_24px_-14px_rgba(5,150,105,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-500/45 dark:focus-visible:ring-offset-slate-900 ${
+        className={`group inline-flex h-7 items-center gap-1.5 rounded-full border bg-white px-2.5 text-[13px] font-semibold text-slate-800 shadow-sm transition hover:-translate-y-px hover:border-emerald-300 hover:shadow-[0_10px_24px_-14px_rgba(5,150,105,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-500/45 dark:focus-visible:ring-offset-slate-900 ${
           open
             ? "border-emerald-300 shadow-[0_10px_24px_-14px_rgba(5,150,105,0.7)] dark:border-emerald-500/45"
             : "border-slate-200 dark:border-slate-700"
@@ -55,7 +55,7 @@ export function HeaderSubscriptionCta() {
       >
         {/* Small emerald mark keeps the commercial intent readable without turning the whole
             control into a second primary button next to "Get started". */}
-        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-400">
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400">
           <path
             d="M3.5 7.5h13M6 4.5h8a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 13V7A2.5 2.5 0 0 1 6 4.5Z"
             fill="none"
