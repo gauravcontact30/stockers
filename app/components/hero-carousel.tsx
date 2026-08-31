@@ -155,7 +155,7 @@ export function HeroCarousel({
              slide needs — the narrow case, where three comparison cards stack into a column instead
              of sitting in a row. Measured against the real scenes at each breakpoint rather than
              guessed. */
-          className="relative min-h-[850px] w-full overflow-hidden sm:min-h-[590px] lg:min-h-[470px]"
+          className="relative min-h-[1020px] w-full overflow-hidden sm:min-h-[620px] md:min-h-[500px] lg:min-h-[470px]"
           aria-roledescription="carousel"
           aria-label="StockersAI product scenes"
         >
@@ -181,26 +181,28 @@ export function HeroCarousel({
             </div>
           ))}
 
-          <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center justify-between px-2 sm:px-4">
-            <button
-              type="button"
-              aria-label={`Previous slide: ${slides[(activeSlide - 1 + slides.length) % slides.length].caption}`}
-              className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/75 bg-white/70 text-xl font-black text-slate-700 shadow-sm backdrop-blur transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-slate-500/40 sm:h-11 sm:w-11"
-              onClick={() => goToAdjacentSlide(-1)}
-            >
-              <span aria-hidden="true">&lt;</span>
-            </button>
-            <div className="rounded-full border border-white/70 bg-white/65 px-3 py-1 text-xs font-black tabular-nums text-slate-600 shadow-sm backdrop-blur">
-              {activeSlide + 1} / {slides.length}
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:bottom-4">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/75 bg-white/75 p-1 shadow-sm backdrop-blur">
+              <button
+                type="button"
+                aria-label={`Previous slide: ${slides[(activeSlide - 1 + slides.length) % slides.length].caption}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-black text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-500/40"
+                onClick={() => goToAdjacentSlide(-1)}
+              >
+                <span aria-hidden="true">&lt;</span>
+              </button>
+              <div className="px-2 text-xs font-black tabular-nums text-slate-600">
+                {activeSlide + 1} / {slides.length}
+              </div>
+              <button
+                type="button"
+                aria-label={`Next slide: ${slides[(activeSlide + 1) % slides.length].caption}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-black text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-500/40"
+                onClick={() => goToAdjacentSlide(1)}
+              >
+                <span aria-hidden="true">&gt;</span>
+              </button>
             </div>
-            <button
-              type="button"
-              aria-label={`Next slide: ${slides[(activeSlide + 1) % slides.length].caption}`}
-              className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/75 bg-white/70 text-xl font-black text-slate-700 shadow-sm backdrop-blur transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-slate-500/40 sm:h-11 sm:w-11"
-              onClick={() => goToAdjacentSlide(1)}
-            >
-              <span aria-hidden="true">&gt;</span>
-            </button>
           </div>
         </div>
       </section>

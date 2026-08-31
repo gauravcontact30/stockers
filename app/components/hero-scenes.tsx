@@ -703,19 +703,21 @@ export function TrioCard({
   performance,
   loading,
   periods = TRIO_PERIODS,
+  compact = false,
 }: {
   stock: TrioStock;
   performance: StockPerformance | null;
   loading: boolean;
   periods?: readonly TrioPeriod[];
+  compact?: boolean;
 }) {
   const day = performance?.oneDay ?? null;
   const matrixRows = periods.map((period) => ({ ...period, value: performance?.[period.key] ?? null }));
 
   return (
     <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_12px_32px_-20px_rgba(15,23,42,0.5)] ${stock.accent} ${stock.wash}`}>
-      <div className="flex items-start gap-3 px-3 pt-3">
-        <CompanyLogo symbol={stock.symbol} size={48} />
+      <div className={`${compact ? "gap-2 px-2.5 pt-2.5" : "gap-3 px-3 pt-3"} flex items-start`}>
+        <CompanyLogo symbol={stock.symbol} size={compact ? 40 : 48} eager />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-black leading-tight text-slate-900">{stock.symbol}</p>
           <p className="truncate text-xs font-medium text-slate-600">{stock.company}</p>
@@ -735,11 +737,11 @@ export function TrioCard({
         <p className="mt-2 line-clamp-2 px-3 text-[11px] leading-relaxed text-slate-500">{stock.blurb}</p>
       )}
 
-      <div className="mt-2.5 rounded-xl border border-white/80 bg-white/65 p-2.5 mx-3">
+      <div className={`${compact ? "mx-2.5 mt-2 p-2" : "mx-3 mt-2.5 p-2.5"} rounded-xl border border-white/80 bg-white/65`}>
         <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-black tracking-wide text-slate-500 uppercase">Last Price</p>
-          <p className="text-lg font-black leading-tight tabular-nums text-slate-900">
+          <p className={`${compact ? "text-base" : "text-lg"} font-black leading-tight tabular-nums text-slate-900`}>
             {loading ? <span className="inline-block h-6 w-24 animate-pulse rounded bg-white/80" /> : trioPrice(performance?.price)}
           </p>
         </div>
@@ -757,8 +759,8 @@ export function TrioCard({
         </p>
       </div>
 
-      <div className="mx-3 mt-2 overflow-hidden rounded-xl border border-white/80 bg-white/70">
-        <div className="flex items-center justify-between border-b border-white/80 px-2.5 py-1.5">
+      <div className={`${compact ? "mx-2.5 mt-1.5" : "mx-3 mt-2"} overflow-hidden rounded-xl border border-white/80 bg-white/70`}>
+        <div className={`${compact ? "px-2 py-1" : "px-2.5 py-1.5"} flex items-center justify-between border-b border-white/80`}>
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Performance Matrix</p>
           <p className="text-[9px] font-semibold text-slate-400">Latest feed</p>
         </div>
@@ -766,7 +768,7 @@ export function TrioCard({
         {matrixRows.map((period) => {
           const value = period.value;
           return (
-            <div key={period.label} className="px-1 py-2 text-center">
+            <div key={period.label} className={`${compact ? "py-1.5" : "py-2"} px-1 text-center`}>
               <dt className="text-[10px] font-black tracking-wide text-slate-500 uppercase">{period.label}</dt>
               <dd className={`mt-1 text-[11px] font-black tabular-nums ${value === null ? "text-slate-300" : tone(value)}`}>
                 {loading ? "…" : trioReturn(value)}
@@ -796,6 +798,7 @@ function StockTrioScene({
   stocks,
   periods = TRIO_PERIODS,
   initialPerformances = [],
+  forceCompact = false,
 }: {
   palette: ScenePalette;
   eyebrow: string;
@@ -805,6 +808,7 @@ function StockTrioScene({
   stocks: Trio;
   periods?: readonly TrioPeriod[];
   initialPerformances?: readonly StockPerformance[];
+  forceCompact?: boolean;
 }) {
   const initialBySymbol = new Map(initialPerformances.map((performance) => [performance.symbol, performance]));
   // Written out rather than looped: hooks cannot be called in a loop, and a trio is always three.
@@ -813,12 +817,20 @@ function StockTrioScene({
   const second = useStockPerformance(stocks[1].symbol, initialBySymbol.get(stocks[1].symbol) ?? null);
   const third = useStockPerformance(stocks[2].symbol, initialBySymbol.get(stocks[2].symbol) ?? null);
   const rows = [first, second, third];
+  const compactCards = forceCompact || stocks.some((stock) => stock.flow);
 
   return (
     <SceneCard palette={palette} eyebrow={eyebrow} title={title} badge={badge} footnote={footnote}>
-      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={`grid grid-cols-1 items-start gap-3 ${compactCards ? "sm:grid-cols-2 md:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
         {stocks.map((stock, index) => (
-          <TrioCard key={stock.symbol} stock={stock} performance={rows[index].performance} loading={rows[index].loading} periods={periods} />
+          <TrioCard
+            key={stock.symbol}
+            stock={stock}
+            performance={rows[index].performance}
+            loading={rows[index].loading}
+            periods={periods}
+            compact={compactCards}
+          />
         ))}
       </div>
     </SceneCard>
@@ -1214,6 +1226,7 @@ function RankingScene({
   trio,
   periods,
   initialPerformances = [],
+  forceCompact = false,
 }: {
   palette: ScenePalette;
   eyebrow: string;
@@ -1223,6 +1236,7 @@ function RankingScene({
   trio: Trio | null;
   periods?: readonly TrioPeriod[];
   initialPerformances?: readonly StockPerformance[];
+  forceCompact?: boolean;
 }) {
   if (!trio) {
     return (
@@ -1244,6 +1258,7 @@ function RankingScene({
       stocks={trio}
       periods={periods}
       initialPerformances={initialPerformances}
+      forceCompact={forceCompact}
     />
   );
 }
@@ -1355,14 +1370,15 @@ export function HealthcareInvestorScene({
     <RankingScene
       palette={SAND}
       eyebrow="Healthcare investor buying"
-      title="Top 3 healthcare stocks investors are buying"
-      badge="THIS WEEK"
+      title="Top 3 healthcare BSE stocks in focus"
+      badge="LIVE FIGURES"
       periods={TRIO_PERIODS}
       // Attributed, not asserted: no exchange publishes a net buy figure, and this says what stands
       // in for one instead of hiding behind the word "bought".
-      footnote="Healthcare and pharma names ranked on brokers' published most-bought lists, then on exchange trade counts for scrips trading above their previous close. One-week returns are measured. Prices are live · not investment advice."
+      footnote="Healthcare and pharma names use broker most-bought lists and exchange trade counts when available, then measured healthcare return leaders as fallback. Prices are live - not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
+      forceCompact
     />
   );
 }

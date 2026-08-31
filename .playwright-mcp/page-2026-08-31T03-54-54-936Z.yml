@@ -1,0 +1,1885 @@
+- generic [active] [ref=f1e1]:
+  - main [ref=f1e2]:
+    - generic [ref=f1e5]:
+      - link "StockersAI StockersAI" [ref=f1e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e7]:
+          - img "StockersAI" [ref=f1e8]
+          - generic [ref=f1e17]: StockersAI
+      - navigation [ref=f1e19]:
+        - link "Live market" [ref=f1e20] [cursor=pointer]:
+          - /url: /live-market
+        - link "Beat the AI" [ref=f1e21] [cursor=pointer]:
+          - /url: /beat-the-ai
+        - link "Gainers & Losers" [ref=f1e22] [cursor=pointer]:
+          - /url: /bse-gainers-losers
+        - link "BSE sectors" [ref=f1e23] [cursor=pointer]:
+          - /url: /bse-sectors
+        - link "Shareholding" [ref=f1e24] [cursor=pointer]:
+          - /url: /shareholding
+        - link "Accuracy" [ref=f1e25] [cursor=pointer]:
+          - /url: /accuracy
+        - link "Pricing" [ref=f1e26] [cursor=pointer]:
+          - /url: /pricing
+        - link "Blog" [ref=f1e27] [cursor=pointer]:
+          - /url: /blog
+      - generic [ref=f1e28]:
+        - button "Appearance and account" [ref=f1e30]
+        - button "Buy plan" [ref=f1e35]
+        - link "Sign in" [ref=f1e40] [cursor=pointer]:
+          - /url: /signin
+        - link "Get started" [ref=f1e44] [cursor=pointer]:
+          - /url: /signup
+    - generic [ref=f1e48]:
+      - generic [ref=f1e49]:
+        - heading "StockersAI — AI stock research for Indian investors" [level=1] [ref=f1e50]
+        - generic "StockersAI product scenes" [ref=f1e52]:
+          - generic [ref=f1e55]:
+            - generic [ref=f1e56]:
+              - generic [ref=f1e57]:
+                - paragraph [ref=f1e58]: Agriculture
+                - paragraph [ref=f1e59]: Top 3 agricultural stocks
+              - generic [ref=f1e60]: RANKED BY 1Y
+            - generic [ref=f1e63]:
+              - generic [ref=f1e64]:
+                - generic [ref=f1e65]:
+                  - img "GSPCROP (GSPCROP) logo" [ref=f1e66]
+                  - generic [ref=f1e67]:
+                    - paragraph [ref=f1e68]: GSPCROP
+                    - paragraph [ref=f1e69]: GSP Crop Science Ltd
+                    - generic "Chemicals" [ref=f1e70]
+                  - generic [ref=f1e74]: Small
+                - paragraph [ref=f1e75]: "#1 agriculture-linked stock on one-year return, up 76%."
+                - generic [ref=f1e76]:
+                  - generic [ref=f1e77]:
+                    - generic [ref=f1e78]:
+                      - paragraph [ref=f1e79]: Last Price
+                      - paragraph [ref=f1e80]: ₹627.80
+                    - generic [ref=f1e81]: +0.0%
+                  - paragraph [ref=f1e82]: Updated 28 Aug, 03:29 pm · Yahoo Finance
+                - generic [ref=f1e83]:
+                  - generic [ref=f1e84]:
+                    - paragraph [ref=f1e85]: Performance Matrix
+                    - paragraph [ref=f1e86]: Latest feed
+                  - generic [ref=f1e87]:
+                    - generic [ref=f1e88]:
+                      - term [ref=f1e89]: 1M
+                      - definition [ref=f1e90]: +7.1%
+                    - generic [ref=f1e91]:
+                      - term [ref=f1e92]: 1Y
+                      - definition [ref=f1e93]: —
+                    - generic [ref=f1e94]:
+                      - term [ref=f1e95]: 3Y
+                      - definition [ref=f1e96]: —
+                    - generic [ref=f1e97]:
+                      - term [ref=f1e98]: 5Y
+                      - definition [ref=f1e99]: —
+                    - generic [ref=f1e100]:
+                      - term [ref=f1e101]: Overall
+                      - definition [ref=f1e102]: +76.2%
+              - generic [ref=f1e103]:
+                - generic [ref=f1e104]:
+                  - img "GNFC (GNFC) logo" [ref=f1e105]
+                  - generic [ref=f1e106]:
+                    - paragraph [ref=f1e107]: GNFC
+                    - paragraph [ref=f1e108]: Gujarat Narmada Valley Fertilizers & Chemicals Ltd
+                    - generic "Chemicals" [ref=f1e109]
+                  - generic [ref=f1e113]: Small
+                - paragraph [ref=f1e114]: "#2 agriculture-linked stock on one-year return, up 11%."
+                - generic [ref=f1e115]:
+                  - generic [ref=f1e116]:
+                    - generic [ref=f1e117]:
+                      - paragraph [ref=f1e118]: Last Price
+                      - paragraph [ref=f1e119]: ₹581.90
+                    - generic [ref=f1e120]: +0.8%
+                  - paragraph [ref=f1e121]: Updated 28 Aug, 03:29 pm · Yahoo Finance
+                - generic [ref=f1e122]:
+                  - generic [ref=f1e123]:
+                    - paragraph [ref=f1e124]: Performance Matrix
+                    - paragraph [ref=f1e125]: Latest feed
+                  - generic [ref=f1e126]:
+                    - generic [ref=f1e127]:
+                      - term [ref=f1e128]: 1M
+                      - definition [ref=f1e129]: +10.4%
+                    - generic [ref=f1e130]:
+                      - term [ref=f1e131]: 1Y
+                      - definition [ref=f1e132]: +11.3%
+                    - generic [ref=f1e133]:
+                      - term [ref=f1e134]: 3Y
+                      - definition [ref=f1e135]: −3.8%
+                    - generic [ref=f1e136]:
+                      - term [ref=f1e137]: 5Y
+                      - definition [ref=f1e138]: +77.4%
+                    - generic [ref=f1e139]:
+                      - term [ref=f1e140]: Overall
+                      - definition [ref=f1e141]: +1862.6%
+              - generic [ref=f1e142]:
+                - generic [ref=f1e143]:
+                  - img "DEEPAKFERT (DEEPAKFERT) logo" [ref=f1e144]
+                  - generic [ref=f1e145]:
+                    - paragraph [ref=f1e146]: DEEPAKFERT
+                    - paragraph [ref=f1e147]: Deepak Fertilisers & Petrochemicals Corporation Ltd
+                    - generic "Chemicals" [ref=f1e148]
+                  - generic [ref=f1e152]: Small
+                - paragraph [ref=f1e153]: "#3 agriculture-linked stock on one-year return, up 4%."
+                - generic [ref=f1e154]:
+                  - generic [ref=f1e155]:
+                    - generic [ref=f1e156]:
+                      - paragraph [ref=f1e157]: Last Price
+                      - paragraph [ref=f1e158]: ₹1,438.00
+                    - generic [ref=f1e159]: −1.2%
+                  - paragraph [ref=f1e160]: Updated 28 Aug, 03:29 pm · Yahoo Finance
+                - generic [ref=f1e161]:
+                  - generic [ref=f1e162]:
+                    - paragraph [ref=f1e163]: Performance Matrix
+                    - paragraph [ref=f1e164]: Latest feed
+                  - generic [ref=f1e165]:
+                    - generic [ref=f1e166]:
+                      - term [ref=f1e167]: 1M
+                      - definition [ref=f1e168]: −6.2%
+                    - generic [ref=f1e169]:
+                      - term [ref=f1e170]: 1Y
+                      - definition [ref=f1e171]: +3.6%
+                    - generic [ref=f1e172]:
+                      - term [ref=f1e173]: 3Y
+                      - definition [ref=f1e174]: +138.7%
+                    - generic [ref=f1e175]:
+                      - term [ref=f1e176]: 5Y
+                      - definition [ref=f1e177]: +245.8%
+                    - generic [ref=f1e178]:
+                      - term [ref=f1e179]: Overall
+                      - definition [ref=f1e180]: +12006.7%
+            - paragraph [ref=f1e181]: Ranked on measured one-year returns across listed farm-inputs and agriculture-linked companies. Prices are live · not investment advice.
+          - generic:
+            - 'button "Previous slide: Healthcare: the three most bought this week" [ref=f1e185]':
+              - generic [ref=f1e186]: <
+            - generic: 1 / 4
+            - 'button "Next slide: Financial: the sector''s three strongest stocks" [ref=f1e187]':
+              - generic [ref=f1e188]: ">"
+        - generic "Most bought BSE stocks today, ranked; ribbon rotates continuously, hover to pause" [ref=f1e190]:
+          - paragraph [ref=f1e191]:
+            - text: Most bought today
+            - generic [ref=f1e192]: Live · today's prices, 4 of 12 quoted live
+            - generic [ref=f1e194]: Next refresh · Mon, 31 Aug 2026, 09:23 am IST (every 30s while open)
+            - generic [ref=f1e195]: Open · live until 15:30 IST
+            - generic [ref=f1e196]: "Live BSE session: buying ranks update as the tape does."
+          - generic [ref=f1e197]:
+            - 'generic "#1 most bought today: MV Electrosystems Ltd (MVELECTRO) · buy score 67/100 · 47,754 trades · Retail-sized trades · Crowded tape · Heavy turnover · Strong move" [ref=f1e198]':
+              - img "MVELECTRO (MVELECTRO) logo" [ref=f1e199]
+              - generic [ref=f1e200]:
+                - generic [ref=f1e201]: MV Electrosystems
+                - generic [ref=f1e202]: MVELECTRO
+              - generic [ref=f1e203]: "#1"
+              - generic [ref=f1e205]:
+                - generic "Industrials" [ref=f1e206]
+                - generic [ref=f1e210]: ₹721.85
+                - generic [ref=f1e211]: +11.44%
+              - generic [ref=f1e212]:
+                - generic [ref=f1e213]: Buy score 67
+                - generic [ref=f1e214]: 47,754 trades
+            - 'generic "#2 most bought today: Tejas Networks Ltd (TEJASNET) · buy score 61/100 · 37,960 trades · Retail-sized trades · Crowded tape · Heavy turnover · Strong move" [ref=f1e215]':
+              - img "TEJASNET (TEJASNET) logo" [ref=f1e216]
+              - generic [ref=f1e217]:
+                - generic [ref=f1e218]: Tejas Networks
+                - generic [ref=f1e219]: TEJASNET
+              - generic [ref=f1e220]: "#2"
+              - generic [ref=f1e222]:
+                - generic "Telecommunication" [ref=f1e223]
+                - generic [ref=f1e227]: ₹551.50
+                - generic [ref=f1e228]: +7.96%
+              - generic [ref=f1e229]:
+                - generic [ref=f1e230]: Buy score 61
+                - generic [ref=f1e231]: 37,960 trades
+            - 'generic "#3 most bought today: Bharti Airtel Ltd (BHARTIARTL) · buy score 60/100 · 91,512 trades · Retail-sized trades · Crowded tape" [ref=f1e232]':
+              - img "Bharti Airtel (BHARTIARTL) logo" [ref=f1e233]
+              - generic [ref=f1e234]:
+                - generic [ref=f1e235]: Bharti Airtel
+                - generic [ref=f1e236]: BHARTIARTL
+              - generic [ref=f1e237]: "#3"
+              - generic [ref=f1e239]:
+                - generic "Telecommunication" [ref=f1e240]
+                - generic [ref=f1e244]: ₹1,882.00
+                - generic [ref=f1e245]: +0.21%
+              - generic [ref=f1e246]:
+                - generic [ref=f1e247]: Buy score 60
+                - generic [ref=f1e248]: 91,512 trades
+            - 'generic "#4 most bought today: Ather Energy Ltd (ATHERENERG) · buy score 52/100 · 22,240 trades · Retail-sized trades · Crowded tape · Heavy turnover · Strong move" [ref=f1e249]':
+              - img "Ather Energy (ATHERENERG) logo" [ref=f1e250]
+              - generic [ref=f1e251]:
+                - generic [ref=f1e252]: Ather Energy
+                - generic [ref=f1e253]: ATHERENERG
+              - generic [ref=f1e254]: "#4"
+              - generic [ref=f1e256]:
+                - generic "Consumer Discretionary" [ref=f1e257]
+                - generic [ref=f1e261]: ₹1,612.00
+                - generic [ref=f1e262]: +9.29%
+              - generic [ref=f1e263]:
+                - generic [ref=f1e264]: Buy score 52
+                - generic [ref=f1e265]: 22,240 trades
+            - 'generic "#5 most bought today: Patanjali Foods Ltd (PATANJALI) · buy score 46/100 · 68,524 trades · Retail-sized trades · Crowded tape" [ref=f1e266]':
+              - img "Patanjali Foods (PATANJALI) logo" [ref=f1e267]
+              - generic [ref=f1e268]:
+                - generic [ref=f1e269]: Patanjali Foods
+                - generic [ref=f1e270]: PATANJALI
+              - generic [ref=f1e271]: "#5"
+              - generic [ref=f1e273]:
+                - generic "Fast Moving Consumer Goods" [ref=f1e274]
+                - generic [ref=f1e278]: ₹348.75
+                - generic [ref=f1e279]: +0.03%
+              - generic [ref=f1e280]:
+                - generic [ref=f1e281]: Buy score 46
+                - generic [ref=f1e282]: 68,524 trades
+            - 'generic "#6 most bought today: IFCI Ltd (IFCI) · buy score 45/100 · 25,145 trades · Retail-sized trades · Crowded tape · Strong move" [ref=f1e283]':
+              - img "IFCI (IFCI) logo" [ref=f1e284]
+              - generic [ref=f1e285]:
+                - generic [ref=f1e286]: IFCI
+                - generic [ref=f1e287]: IFCI
+              - generic [ref=f1e288]: "#6"
+              - generic [ref=f1e290]:
+                - generic "Financial Services" [ref=f1e291]
+                - generic [ref=f1e295]: ₹89.93
+                - generic [ref=f1e296]: +6.78%
+              - generic [ref=f1e297]:
+                - generic [ref=f1e298]: Buy score 45
+                - generic [ref=f1e299]: 25,145 trades
+            - 'generic "#7 most bought today: Federal-Mogul Goetze (India) Ltd (FMGOETZE) · buy score 41/100 · 18,409 trades · Retail-sized trades · Strong move" [ref=f1e300]':
+              - img "FMGOETZE (FMGOETZE) logo" [ref=f1e301]
+              - generic [ref=f1e302]:
+                - generic [ref=f1e303]: Federal-Mogul Goetze...
+                - generic [ref=f1e304]: FMGOETZE
+              - generic [ref=f1e305]: "#7"
+              - generic [ref=f1e307]:
+                - generic "Consumer Discretionary" [ref=f1e308]
+                - generic [ref=f1e312]: ₹616.00
+                - generic [ref=f1e313]: +12.91%
+              - generic [ref=f1e314]:
+                - generic [ref=f1e315]: Buy score 41
+                - generic [ref=f1e316]: 18,409 trades
+                - generic [ref=f1e317]: Live
+            - 'generic "#8 most bought today: Nazara Technologies Ltd (NAZARA) · buy score 40/100 · 19,331 trades · Retail-sized trades · Strong move" [ref=f1e318]':
+              - img "Nazara Technologies (NAZARA) logo" [ref=f1e319]
+              - generic [ref=f1e320]:
+                - generic [ref=f1e321]: Nazara Technologies
+                - generic [ref=f1e322]: NAZARA
+              - generic [ref=f1e323]: "#8"
+              - generic [ref=f1e325]:
+                - generic "Consumer Discretionary" [ref=f1e326]
+                - generic [ref=f1e330]: ₹376.60
+                - generic [ref=f1e331]: +6.23%
+              - generic [ref=f1e332]:
+                - generic [ref=f1e333]: Buy score 40
+                - generic [ref=f1e334]: 19,331 trades
+                - generic [ref=f1e335]: Live
+            - 'generic "#9 most bought today: Coforge Ltd (COFORGE) · buy score 39/100 · 14,683 trades · Retail-sized trades · Strong move" [ref=f1e336]':
+              - img "Coforge (COFORGE) logo" [ref=f1e337]
+              - generic [ref=f1e338]:
+                - generic [ref=f1e339]: Coforge
+                - generic [ref=f1e340]: COFORGE
+              - generic [ref=f1e341]: "#9"
+              - generic [ref=f1e343]:
+                - generic "Information Technology" [ref=f1e344]
+                - generic [ref=f1e348]: ₹2,015.00
+                - generic [ref=f1e349]: +5.95%
+              - generic [ref=f1e350]:
+                - generic [ref=f1e351]: Buy score 39
+                - generic [ref=f1e352]: 14,683 trades
+                - generic [ref=f1e353]: Live
+            - 'generic "#10 most bought today: Tata Consultancy Services Ltd (TCS) · buy score 38/100 · 16,994 trades · Retail-sized trades · Strong move" [ref=f1e354]':
+              - img "Tata Consultancy Services (TCS) logo" [ref=f1e355]
+              - generic [ref=f1e356]:
+                - generic [ref=f1e357]: Tata Consultancy Serv...
+                - generic [ref=f1e358]: TCS
+              - generic [ref=f1e359]: "#10"
+              - generic [ref=f1e361]:
+                - generic "Information Technology" [ref=f1e362]
+                - generic [ref=f1e366]: ₹2,342.00
+                - generic [ref=f1e367]: +4.16%
+              - generic [ref=f1e368]:
+                - generic [ref=f1e369]: Buy score 38
+                - generic [ref=f1e370]: 16,994 trades
+                - generic [ref=f1e371]: Live
+            - 'generic "#11 most bought today: Lalithaa Jewellery Mart Ltd (LALITHAA) · buy score 37/100 · 13,571 trades · Retail-sized trades · Strong move" [ref=f1e372]':
+              - img "LALITHAA (LALITHAA) logo" [ref=f1e373]
+              - generic [ref=f1e374]:
+                - generic [ref=f1e375]: Lalithaa Jewellery Mart
+                - generic [ref=f1e376]: LALITHAA
+              - generic [ref=f1e377]: "#11"
+              - generic [ref=f1e379]:
+                - generic "Consumer Discretionary" [ref=f1e380]
+                - generic [ref=f1e384]: ₹265.65
+                - generic [ref=f1e385]: +7.92%
+              - generic [ref=f1e386]:
+                - generic [ref=f1e387]: Buy score 37
+                - generic [ref=f1e388]: 13,571 trades
+            - 'generic "#12 most bought today: NMDC Steel Ltd (NSLNISP) · buy score 37/100 · 13,101 trades · Retail-sized trades · Strong move" [ref=f1e389]':
+              - img "NSLNISP (NSLNISP) logo" [ref=f1e390]
+              - generic [ref=f1e391]:
+                - generic [ref=f1e392]: NMDC Steel
+                - generic [ref=f1e393]: NSLNISP
+              - generic [ref=f1e394]: "#12"
+              - generic [ref=f1e396]:
+                - generic "Commodities" [ref=f1e397]
+                - generic [ref=f1e401]: ₹49.09
+                - generic [ref=f1e402]: +9.04%
+              - generic [ref=f1e403]:
+                - generic [ref=f1e404]: Buy score 37
+                - generic [ref=f1e405]: 13,101 trades
+            - generic [ref=f1e406]:
+              - generic [ref=f1e408]:
+                - generic [ref=f1e409]: MV Electrosystems
+                - generic [ref=f1e410]: MVELECTRO
+              - generic [ref=f1e411]: "#1"
+              - generic [ref=f1e413]:
+                - generic [ref=f1e414]: Industrials
+                - generic [ref=f1e418]: ₹721.85
+                - generic [ref=f1e419]: +11.44%
+              - generic [ref=f1e420]:
+                - generic [ref=f1e421]: Buy score 67
+                - generic [ref=f1e422]: 47,754 trades
+            - generic [ref=f1e423]:
+              - generic [ref=f1e425]:
+                - generic [ref=f1e426]: Tejas Networks
+                - generic [ref=f1e427]: TEJASNET
+              - generic [ref=f1e428]: "#2"
+              - generic [ref=f1e430]:
+                - generic [ref=f1e431]: Telecommunication
+                - generic [ref=f1e435]: ₹551.50
+                - generic [ref=f1e436]: +7.96%
+              - generic [ref=f1e437]:
+                - generic [ref=f1e438]: Buy score 61
+                - generic [ref=f1e439]: 37,960 trades
+            - generic [ref=f1e440]:
+              - generic [ref=f1e442]:
+                - generic [ref=f1e443]: Bharti Airtel
+                - generic [ref=f1e444]: BHARTIARTL
+              - generic [ref=f1e445]: "#3"
+              - generic [ref=f1e447]:
+                - generic [ref=f1e448]: Telecommunication
+                - generic [ref=f1e452]: ₹1,882.00
+                - generic [ref=f1e453]: +0.21%
+              - generic [ref=f1e454]:
+                - generic [ref=f1e455]: Buy score 60
+                - generic [ref=f1e456]: 91,512 trades
+            - generic [ref=f1e457]:
+              - generic [ref=f1e459]:
+                - generic [ref=f1e460]: Ather Energy
+                - generic [ref=f1e461]: ATHERENERG
+              - generic [ref=f1e462]: "#4"
+              - generic [ref=f1e464]:
+                - generic [ref=f1e465]: Consumer Discretionary
+                - generic [ref=f1e469]: ₹1,612.00
+                - generic [ref=f1e470]: +9.29%
+              - generic [ref=f1e471]:
+                - generic [ref=f1e472]: Buy score 52
+                - generic [ref=f1e473]: 22,240 trades
+            - generic [ref=f1e474]:
+              - generic [ref=f1e476]:
+                - generic [ref=f1e477]: Patanjali Foods
+                - generic [ref=f1e478]: PATANJALI
+              - generic [ref=f1e479]: "#5"
+              - generic [ref=f1e481]:
+                - generic [ref=f1e482]: Fast Moving Consumer Goods
+                - generic [ref=f1e486]: ₹348.75
+                - generic [ref=f1e487]: +0.03%
+              - generic [ref=f1e488]:
+                - generic [ref=f1e489]: Buy score 46
+                - generic [ref=f1e490]: 68,524 trades
+            - generic [ref=f1e491]:
+              - generic [ref=f1e493]:
+                - generic [ref=f1e494]: IFCI
+                - generic [ref=f1e495]: IFCI
+              - generic [ref=f1e496]: "#6"
+              - generic [ref=f1e498]:
+                - generic [ref=f1e499]: Financial Services
+                - generic [ref=f1e503]: ₹89.93
+                - generic [ref=f1e504]: +6.78%
+              - generic [ref=f1e505]:
+                - generic [ref=f1e506]: Buy score 45
+                - generic [ref=f1e507]: 25,145 trades
+            - generic [ref=f1e508]:
+              - generic [ref=f1e510]:
+                - generic [ref=f1e511]: Federal-Mogul Goetze...
+                - generic [ref=f1e512]: FMGOETZE
+              - generic [ref=f1e513]: "#7"
+              - generic [ref=f1e515]:
+                - generic [ref=f1e516]: Consumer Discretionary
+                - generic [ref=f1e520]: ₹616.00
+                - generic [ref=f1e521]: +12.91%
+              - generic [ref=f1e522]:
+                - generic [ref=f1e523]: Buy score 41
+                - generic [ref=f1e524]: 18,409 trades
+                - generic [ref=f1e525]: Live
+            - generic [ref=f1e526]:
+              - generic [ref=f1e528]:
+                - generic [ref=f1e529]: Nazara Technologies
+                - generic [ref=f1e530]: NAZARA
+              - generic [ref=f1e531]: "#8"
+              - generic [ref=f1e533]:
+                - generic [ref=f1e534]: Consumer Discretionary
+                - generic [ref=f1e538]: ₹376.60
+                - generic [ref=f1e539]: +6.23%
+              - generic [ref=f1e540]:
+                - generic [ref=f1e541]: Buy score 40
+                - generic [ref=f1e542]: 19,331 trades
+                - generic [ref=f1e543]: Live
+            - generic [ref=f1e544]:
+              - generic [ref=f1e546]:
+                - generic [ref=f1e547]: Coforge
+                - generic [ref=f1e548]: COFORGE
+              - generic [ref=f1e549]: "#9"
+              - generic [ref=f1e551]:
+                - generic [ref=f1e552]: Information Technology
+                - generic [ref=f1e556]: ₹2,015.00
+                - generic [ref=f1e557]: +5.95%
+              - generic [ref=f1e558]:
+                - generic [ref=f1e559]: Buy score 39
+                - generic [ref=f1e560]: 14,683 trades
+                - generic [ref=f1e561]: Live
+            - generic [ref=f1e562]:
+              - generic [ref=f1e564]:
+                - generic [ref=f1e565]: Tata Consultancy Serv...
+                - generic [ref=f1e566]: TCS
+              - generic [ref=f1e567]: "#10"
+              - generic [ref=f1e569]:
+                - generic [ref=f1e570]: Information Technology
+                - generic [ref=f1e574]: ₹2,342.00
+                - generic [ref=f1e575]: +4.16%
+              - generic [ref=f1e576]:
+                - generic [ref=f1e577]: Buy score 38
+                - generic [ref=f1e578]: 16,994 trades
+                - generic [ref=f1e579]: Live
+            - generic [ref=f1e580]:
+              - generic [ref=f1e582]:
+                - generic [ref=f1e583]: Lalithaa Jewellery Mart
+                - generic [ref=f1e584]: LALITHAA
+              - generic [ref=f1e585]: "#11"
+              - generic [ref=f1e587]:
+                - generic [ref=f1e588]: Consumer Discretionary
+                - generic [ref=f1e592]: ₹265.65
+                - generic [ref=f1e593]: +7.92%
+              - generic [ref=f1e594]:
+                - generic [ref=f1e595]: Buy score 37
+                - generic [ref=f1e596]: 13,571 trades
+            - generic [ref=f1e597]:
+              - generic [ref=f1e599]:
+                - generic [ref=f1e600]: NMDC Steel
+                - generic [ref=f1e601]: NSLNISP
+              - generic [ref=f1e602]: "#12"
+              - generic [ref=f1e604]:
+                - generic [ref=f1e605]: Commodities
+                - generic [ref=f1e609]: ₹49.09
+                - generic [ref=f1e610]: +9.04%
+              - generic [ref=f1e611]:
+                - generic [ref=f1e612]: Buy score 37
+                - generic [ref=f1e613]: 13,101 trades
+      - generic [ref=f1e614]:
+        - generic [ref=f1e615]:
+          - generic [ref=f1e616]:
+            - paragraph [ref=f1e617]: Stock Analysis
+            - heading "Search any BSE stock and ask whether it is worth buying" [level=3] [ref=f1e618]
+            - paragraph [ref=f1e619]: Type a company or a ticker. The left panel is the verdict on it - its market value, its measured returns, and the case for and against buying it. The right panel is the ten stocks that scored better on those same measurements, so you can see what else the same money could buy.
+          - generic [ref=f1e620]: Every listed BSE company
+        - generic [ref=f1e621]:
+          - generic [ref=f1e623]:
+            - img "Reliance Industries (RELIANCE) logo" [ref=f1e624]
+            - combobox "Search any of the ~4,950 BSE listed stocks - try TCS, HDFC BANK or 500325" [ref=f1e626]: RELIANCE
+            - button "Clear search" [ref=f1e627]
+          - button "Analyse stock" [ref=f1e630]
+        - paragraph [ref=f1e631]: Search a company above to get its buy verdict and the ten alternatives ranked against it.
+        - paragraph [ref=f1e632]: Not financial advice. Every price, return and market capitalisation comes from the app's BSE and quote feeds, never from the AI; the Buy, Hold and Avoid calls are computed from those measured returns, and the AI only writes them up.
+      - generic [ref=f1e633]:
+        - generic [ref=f1e634]:
+          - paragraph [ref=f1e635]: Head to head
+          - heading "You against the AI, five stocks each" [level=2] [ref=f1e636]
+          - paragraph [ref=f1e637]: Pick any five companies on the BSE and lock them in. Only then does the AI answer with five of its own — drawn on the exchange's long-run record and its own forward view, never the formula it is about to be marked on. Both sides are then scored on the same real returns, out of 100. It is a fair fight, and the AI does not always take it.
+        - generic [ref=f1e638]:
+          - paragraph [ref=f1e639]: Your five
+          - generic [ref=f1e640]:
+            - generic [ref=f1e641]:
+              - generic [ref=f1e642]: Pick 1
+              - combobox "Search a company" [ref=f1e648]
+            - generic [ref=f1e649]:
+              - generic [ref=f1e650]: Pick 2
+              - combobox "Search a company" [ref=f1e656]
+            - generic [ref=f1e657]:
+              - generic [ref=f1e658]: Pick 3
+              - combobox "Search a company" [ref=f1e664]
+            - generic [ref=f1e665]:
+              - generic [ref=f1e666]: Pick 4
+              - combobox "Search a company" [ref=f1e672]
+            - generic [ref=f1e673]:
+              - generic [ref=f1e674]: Pick 5
+              - combobox "Search a company" [ref=f1e680]
+        - generic [ref=f1e681]:
+          - paragraph [ref=f1e682]: The AI's five — chosen when you lock yours in
+          - generic [ref=f1e683]:
+            - generic [ref=f1e684]:
+              - generic [ref=f1e685]: AI pick 1
+              - combobox "AI pick 1" [disabled] [ref=f1e686]:
+                - option "▮▮▮▮▮▮" [selected]
+            - generic [ref=f1e687]:
+              - generic [ref=f1e688]: AI pick 2
+              - combobox "AI pick 2" [disabled] [ref=f1e689]:
+                - option "▮▮▮▮▮▮" [selected]
+            - generic [ref=f1e690]:
+              - generic [ref=f1e691]: AI pick 3
+              - combobox "AI pick 3" [disabled] [ref=f1e692]:
+                - option "▮▮▮▮▮▮" [selected]
+            - generic [ref=f1e693]:
+              - generic [ref=f1e694]: AI pick 4
+              - combobox "AI pick 4" [disabled] [ref=f1e695]:
+                - option "▮▮▮▮▮▮" [selected]
+            - generic [ref=f1e696]:
+              - generic [ref=f1e697]: AI pick 5
+              - combobox "AI pick 5" [disabled] [ref=f1e698]:
+                - option "▮▮▮▮▮▮" [selected]
+          - paragraph [ref=f1e699]: Pick your five, then lock them in. Only then does the AI choose — so there is nothing here to copy.
+        - generic [ref=f1e700]:
+          - button "Lock Now" [disabled] [ref=f1e701]
+          - paragraph [ref=f1e702]: 5 more to pick.
+      - generic [ref=f1e703]:
+        - generic [ref=f1e704]:
+          - generic [ref=f1e705]:
+            - paragraph [ref=f1e706]: AI prediction accuracy
+            - heading "Toughest AI prediction versus the live BSE session" [level=3] [ref=f1e707]
+            - paragraph [ref=f1e708]: Every trading morning at 8:50, 25 minutes before the market opens, the AI reads positive news, market context and cap-tier data, then locks its picks for the day. This view shows only the closest live fight against the current BSE leader.
+          - generic [ref=f1e709]: Loading AI accuracy
+        - paragraph [ref=f1e715]: Predictions are experimental and not financial advice. Live prices and returns are never generated by AI; they come from the app's BSE market feed and are refreshed every minute.
+      - generic [ref=f1e716]:
+        - generic [ref=f1e717]:
+          - generic [ref=f1e718]:
+            - paragraph [ref=f1e719]: Trending on BSE
+            - heading "What BSE crowded into on 28 Aug 2026" [level=3] [ref=f1e720]
+            - paragraph [ref=f1e721]: Both halves of the session's money, ranked by the exchange's own figures — rupee turnover, transaction count and share volume — split into the stocks being bought up and the ones being sold off.
+          - generic [ref=f1e722]:
+            - generic [ref=f1e723]: Market live
+            - generic [ref=f1e727]: 4,464 traded
+            - paragraph [ref=f1e728]: Ranked on the session of 28 Aug 2026
+            - paragraph [ref=f1e729]: Prices refresh every 30s while the market is open
+        - group "Ranking method" [ref=f1e730]:
+          - button "By turnover (₹)" [pressed] [ref=f1e731]
+          - button "By trade count" [ref=f1e732]
+          - button "By volume (shares)" [ref=f1e733]
+        - paragraph [ref=f1e734]: Ranked by the rupees that changed hands.
+        - generic [ref=f1e735]:
+          - combobox "Search any BSE company, ticker or scrip code" [ref=f1e742]
+          - generic [ref=f1e743]:
+            - generic [ref=f1e744]: Market cap tier
+            - combobox "Market cap tier" [ref=f1e745]:
+              - option "All caps" [selected]
+              - option "Large cap"
+              - option "Mid cap"
+              - option "Small cap"
+            - generic [ref=f1e746]: Return period
+            - combobox "Return period" [ref=f1e747]:
+              - 'option "Return: 1 month" [selected]'
+              - 'option "Return: 1 year"'
+              - 'option "Return: 3 years"'
+              - 'option "Return: 5 years"'
+            - generic [ref=f1e748]: Minimum move
+            - combobox "Minimum move" [ref=f1e749]:
+              - option "Any move" [selected]
+              - option "Moved 2%+"
+              - option "Moved 5%+"
+              - option "Moved 10%+"
+        - group "Popular stock shortcuts" [ref=f1e750]:
+          - button "All Platform" [pressed] [ref=f1e751]
+          - button "Premier Energies (PREMIERENE) logo Premier Energies PREMIERENE Industrials Mid ₹1,014.00 +1.01%" [ref=f1e752]:
+            - img "Premier Energies (PREMIERENE) logo" [ref=f1e753]
+            - generic [ref=f1e754]:
+              - generic [ref=f1e755]:
+                - generic [ref=f1e756]: Premier Energies
+                - generic [ref=f1e757]: PREMIERENE
+              - generic [ref=f1e758]:
+                - generic [ref=f1e759]: Industrials
+                - generic [ref=f1e764]: Mid
+              - generic [ref=f1e765]:
+                - generic [ref=f1e766]: ₹1,014.00
+                - generic [ref=f1e767]: +1.01%
+          - button "CGCL (CGCL) logo Capri Global Capital CGCL Financial Services Small ₹257.65 +5.29%" [ref=f1e768]:
+            - img "CGCL (CGCL) logo" [ref=f1e769]
+            - generic [ref=f1e770]:
+              - generic [ref=f1e771]:
+                - generic [ref=f1e772]: Capri Global Capital
+                - generic [ref=f1e773]: CGCL
+              - generic [ref=f1e774]:
+                - generic [ref=f1e775]: Financial Services
+                - generic [ref=f1e779]: Small
+              - generic [ref=f1e780]:
+                - generic [ref=f1e781]: ₹257.65
+                - generic [ref=f1e782]: +5.29%
+          - button "MVELECTRO (MVELECTRO) logo MV Electrosystems MVELECTRO Industrials Small ₹721.85 +11.44%" [ref=f1e783]:
+            - img "MVELECTRO (MVELECTRO) logo" [ref=f1e784]
+            - generic [ref=f1e785]:
+              - generic [ref=f1e786]:
+                - generic [ref=f1e787]: MV Electrosystems
+                - generic [ref=f1e788]: MVELECTRO
+              - generic [ref=f1e789]:
+                - generic [ref=f1e790]: Industrials
+                - generic [ref=f1e795]: Small
+              - generic [ref=f1e796]:
+                - generic [ref=f1e797]: ₹721.85
+                - generic [ref=f1e798]: +11.44%
+          - button "Titan Company (TITAN) logo Titan TITAN Consumer Discretionary Large ₹5,165.00 +1.17%" [ref=f1e799]:
+            - img "Titan Company (TITAN) logo" [ref=f1e800]
+            - generic [ref=f1e801]:
+              - generic [ref=f1e802]:
+                - generic [ref=f1e803]: Titan
+                - generic [ref=f1e804]: TITAN
+              - generic [ref=f1e805]:
+                - generic [ref=f1e806]: Consumer Discretionary
+                - generic [ref=f1e811]: Large
+              - generic [ref=f1e812]:
+                - generic [ref=f1e813]: ₹5,165.00
+                - generic [ref=f1e814]: +1.17%
+          - button "TEJASNET (TEJASNET) logo Tejas Networks TEJASNET Telecommunication Small ₹551.50 +7.96%" [ref=f1e815]:
+            - img "TEJASNET (TEJASNET) logo" [ref=f1e816]
+            - generic [ref=f1e817]:
+              - generic [ref=f1e818]:
+                - generic [ref=f1e819]: Tejas Networks
+                - generic [ref=f1e820]: TEJASNET
+              - generic [ref=f1e821]:
+                - generic [ref=f1e822]: Telecommunication
+                - generic [ref=f1e827]: Small
+              - generic [ref=f1e828]:
+                - generic [ref=f1e829]: ₹551.50
+                - generic [ref=f1e830]: +7.96%
+        - paragraph [ref=f1e831]: 2,275 BSE stocks closed above their previous close this session and 2,012 closed below it, across 4,464 scrips that traded.
+        - generic [ref=f1e832]:
+          - region "Most bought on BSE this session" [ref=f1e833]:
+            - generic [ref=f1e834]:
+              - generic [ref=f1e835]:
+                - heading "Most bought" [level=4] [ref=f1e836]
+                - paragraph [ref=f1e837]: Trading above the previous close — money going in
+              - paragraph [ref=f1e838]: 2,275 stocks
+            - list [ref=f1e839]:
+              - listitem [ref=f1e840]:
+                - generic [ref=f1e841]:
+                  - generic [ref=f1e842]:
+                    - generic [ref=f1e843]:
+                      - img "Premier Energies (PREMIERENE) logo" [ref=f1e844]
+                      - generic [ref=f1e845]: "1"
+                    - generic [ref=f1e846]:
+                      - button "Open details for PREMIERENE" [ref=f1e847]:
+                        - paragraph [ref=f1e848]: Premier Energies Ltd
+                        - paragraph [ref=f1e849]: PREMIERENE · 544238
+                      - generic [ref=f1e850]:
+                        - generic [ref=f1e851]: Industrials
+                        - generic [ref=f1e856]: Mid cap
+                  - generic [ref=f1e857]:
+                    - paragraph [ref=f1e858]: ₹1,014.00
+                    - generic [ref=f1e859]: +1.01%
+                - generic [ref=f1e860]:
+                  - generic [ref=f1e861]:
+                    - term [ref=f1e862]: Turnover
+                    - definition [ref=f1e863]: ₹224 Cr
+                  - generic [ref=f1e864]:
+                    - term [ref=f1e865]: 1M return
+                    - definition [ref=f1e866]: "-0.58%"
+                  - generic [ref=f1e867]:
+                    - term [ref=f1e868]: Share of BSE
+                    - definition [ref=f1e869]: 2.42%
+                  - generic [ref=f1e870]:
+                    - term [ref=f1e871]: Avg trade
+                    - definition [ref=f1e872]: ₹3,91,944
+                  - generic [ref=f1e873]:
+                    - term [ref=f1e874]: Day range
+                    - definition [ref=f1e875]: ₹973.20 – ₹1,018.50
+              - listitem [ref=f1e876]:
+                - generic [ref=f1e877]:
+                  - generic [ref=f1e878]:
+                    - generic [ref=f1e879]:
+                      - img "CGCL (CGCL) logo" [ref=f1e880]
+                      - generic [ref=f1e881]: "2"
+                    - generic [ref=f1e882]:
+                      - button "Open details for CGCL" [ref=f1e883]:
+                        - paragraph [ref=f1e884]: Capri Global Capital Ltd
+                        - paragraph [ref=f1e885]: CGCL · 531595
+                      - generic [ref=f1e886]:
+                        - generic [ref=f1e887]: Financial Services
+                        - generic [ref=f1e891]: Small cap
+                  - generic [ref=f1e892]:
+                    - paragraph [ref=f1e893]: ₹257.65
+                    - generic [ref=f1e894]: +5.29%
+                - generic [ref=f1e895]:
+                  - generic [ref=f1e896]:
+                    - term [ref=f1e897]: Turnover
+                    - definition [ref=f1e898]: ₹189 Cr
+                  - generic [ref=f1e899]:
+                    - term [ref=f1e900]: 1M return
+                    - definition [ref=f1e901]: +10.82%
+                  - generic [ref=f1e902]:
+                    - term [ref=f1e903]: Share of BSE
+                    - definition [ref=f1e904]: 2.04%
+                  - generic [ref=f1e905]:
+                    - term [ref=f1e906]: Avg trade
+                    - definition [ref=f1e907]: ₹2,77,024
+                  - generic [ref=f1e908]:
+                    - term [ref=f1e909]: Day range
+                    - definition [ref=f1e910]: ₹244.50 – ₹263.55
+              - listitem [ref=f1e911]:
+                - generic [ref=f1e912]:
+                  - generic [ref=f1e913]:
+                    - generic [ref=f1e914]:
+                      - img "MVELECTRO (MVELECTRO) logo" [ref=f1e915]
+                      - generic [ref=f1e916]: "3"
+                    - generic [ref=f1e917]:
+                      - button "Open details for MVELECTRO" [ref=f1e918]:
+                        - paragraph [ref=f1e919]: MV Electrosystems Ltd
+                        - paragraph [ref=f1e920]: MVELECTRO · 544851
+                      - generic [ref=f1e921]:
+                        - generic [ref=f1e922]: Industrials
+                        - generic [ref=f1e927]: Small cap
+                  - generic [ref=f1e928]:
+                    - paragraph [ref=f1e929]: ₹721.85
+                    - generic [ref=f1e930]: +11.44%
+                - generic [ref=f1e931]:
+                  - generic [ref=f1e932]:
+                    - term [ref=f1e933]: Turnover
+                    - definition [ref=f1e934]: ₹174 Cr
+                  - generic [ref=f1e935]:
+                    - term [ref=f1e936]: 1M return
+                    - definition [ref=f1e937]: —
+                  - generic [ref=f1e938]:
+                    - term [ref=f1e939]: Share of BSE
+                    - definition [ref=f1e940]: 1.87%
+                  - generic [ref=f1e941]:
+                    - term [ref=f1e942]: Avg trade
+                    - definition [ref=f1e943]: ₹36,339
+                  - generic [ref=f1e944]:
+                    - term [ref=f1e945]: Day range
+                    - definition [ref=f1e946]: ₹638.40 – ₹768.60
+              - listitem [ref=f1e947]:
+                - generic [ref=f1e948]:
+                  - generic [ref=f1e949]:
+                    - generic [ref=f1e950]:
+                      - img "Titan Company (TITAN) logo" [ref=f1e951]
+                      - generic [ref=f1e952]: "4"
+                    - generic [ref=f1e953]:
+                      - button "Open details for TITAN" [ref=f1e954]:
+                        - paragraph [ref=f1e955]: Titan Company Ltd
+                        - paragraph [ref=f1e956]: TITAN · 500114
+                      - generic [ref=f1e957]:
+                        - generic [ref=f1e958]: Consumer Discretionary
+                        - generic [ref=f1e963]: Large cap
+                  - generic [ref=f1e964]:
+                    - paragraph [ref=f1e965]: ₹5,165.00
+                    - generic [ref=f1e966]: +1.17%
+                - generic [ref=f1e967]:
+                  - generic [ref=f1e968]:
+                    - term [ref=f1e969]: Turnover
+                    - definition [ref=f1e970]: ₹172 Cr
+                  - generic [ref=f1e971]:
+                    - term [ref=f1e972]: 1M return
+                    - definition [ref=f1e973]: +5.94%
+                  - generic [ref=f1e974]:
+                    - term [ref=f1e975]: Share of BSE
+                    - definition [ref=f1e976]: 1.85%
+                  - generic [ref=f1e977]:
+                    - term [ref=f1e978]: Avg trade
+                    - definition [ref=f1e979]: ₹7,28,321
+                  - generic [ref=f1e980]:
+                    - term [ref=f1e981]: Day range
+                    - definition [ref=f1e982]: ₹5,136.80 – ₹5,172.90
+              - listitem [ref=f1e983]:
+                - generic [ref=f1e984]:
+                  - generic [ref=f1e985]:
+                    - generic [ref=f1e986]:
+                      - img "TEJASNET (TEJASNET) logo" [ref=f1e987]
+                      - generic [ref=f1e988]: "5"
+                    - generic [ref=f1e989]:
+                      - button "Open details for TEJASNET" [ref=f1e990]:
+                        - paragraph [ref=f1e991]: Tejas Networks Ltd
+                        - paragraph [ref=f1e992]: TEJASNET · 540595
+                      - generic [ref=f1e993]:
+                        - generic [ref=f1e994]: Telecommunication
+                        - generic [ref=f1e999]: Small cap
+                  - generic [ref=f1e1000]:
+                    - paragraph [ref=f1e1001]: ₹551.50
+                    - generic [ref=f1e1002]: +7.96%
+                - generic [ref=f1e1003]:
+                  - generic [ref=f1e1004]:
+                    - term [ref=f1e1005]: Turnover
+                    - definition [ref=f1e1006]: ₹165 Cr
+                  - generic [ref=f1e1007]:
+                    - term [ref=f1e1008]: 1M return
+                    - definition [ref=f1e1009]: +7.38%
+                  - generic [ref=f1e1010]:
+                    - term [ref=f1e1011]: Share of BSE
+                    - definition [ref=f1e1012]: 1.78%
+                  - generic [ref=f1e1013]:
+                    - term [ref=f1e1014]: Avg trade
+                    - definition [ref=f1e1015]: ₹43,568
+                  - generic [ref=f1e1016]:
+                    - term [ref=f1e1017]: Day range
+                    - definition [ref=f1e1018]: ₹538.35 – ₹576.80
+            - navigation "stocks pages" [ref=f1e1019]:
+              - paragraph [ref=f1e1020]:
+                - text: Showing
+                - generic [ref=f1e1021]: 1–5
+                - text: of 2,275 stocks
+              - generic [ref=f1e1022]:
+                - button "← Prev" [disabled] [ref=f1e1023]
+                - button "Page 1" [ref=f1e1024]: "1"
+                - button "Page 2" [ref=f1e1025]: "2"
+                - button "Page 3" [ref=f1e1026]: "3"
+                - button "Page 4" [ref=f1e1027]: "4"
+                - button "Page 5" [ref=f1e1028]: "5"
+                - button "Next →" [ref=f1e1029]
+          - region "Most sold on BSE this session" [ref=f1e1030]:
+            - generic [ref=f1e1031]:
+              - generic [ref=f1e1032]:
+                - heading "Most sold" [level=4] [ref=f1e1033]
+                - paragraph [ref=f1e1034]: Trading below the previous close — money coming out
+              - paragraph [ref=f1e1035]: 2,012 stocks
+            - list [ref=f1e1036]:
+              - listitem [ref=f1e1037]:
+                - generic [ref=f1e1038]:
+                  - generic [ref=f1e1039]:
+                    - generic [ref=f1e1040]:
+                      - img "Coal India (COALINDIA) logo" [ref=f1e1041]
+                      - generic [ref=f1e1042]: "1"
+                    - generic [ref=f1e1043]:
+                      - button "Open details for COALINDIA" [ref=f1e1044]:
+                        - paragraph [ref=f1e1045]: Coal India Ltd
+                        - paragraph [ref=f1e1046]: COALINDIA · 533278
+                      - generic [ref=f1e1047]:
+                        - generic [ref=f1e1048]: Energy
+                        - generic [ref=f1e1053]: Large cap
+                  - generic [ref=f1e1054]:
+                    - paragraph [ref=f1e1055]: ₹401.00
+                    - generic [ref=f1e1056]: "-0.25%"
+                - generic [ref=f1e1057]:
+                  - generic [ref=f1e1058]:
+                    - term [ref=f1e1059]: Turnover
+                    - definition [ref=f1e1060]: ₹1,045 Cr
+                  - generic [ref=f1e1061]:
+                    - term [ref=f1e1062]: 1M return
+                    - definition [ref=f1e1063]: "-3.16%"
+                  - generic [ref=f1e1064]:
+                    - term [ref=f1e1065]: Share of BSE
+                    - definition [ref=f1e1066]: 11.25%
+                  - generic [ref=f1e1067]:
+                    - term [ref=f1e1068]: Avg trade
+                    - definition [ref=f1e1069]: ₹4,94,333
+                  - generic [ref=f1e1070]:
+                    - term [ref=f1e1071]: Day range
+                    - definition [ref=f1e1072]: ₹397.30 – ₹406.30
+              - listitem [ref=f1e1073]:
+                - generic [ref=f1e1074]:
+                  - generic [ref=f1e1075]:
+                    - generic [ref=f1e1076]:
+                      - img "Emcure Pharmaceuticals (EMCURE) logo" [ref=f1e1077]
+                      - generic [ref=f1e1078]: "2"
+                    - generic [ref=f1e1079]:
+                      - button "Open details for EMCURE" [ref=f1e1080]:
+                        - paragraph [ref=f1e1081]: Emcure Pharmaceuticals Ltd
+                        - paragraph [ref=f1e1082]: EMCURE · 544210
+                      - generic [ref=f1e1083]:
+                        - generic [ref=f1e1084]: Healthcare
+                        - generic [ref=f1e1088]: Small cap
+                  - generic [ref=f1e1089]:
+                    - paragraph [ref=f1e1090]: ₹1,871.25
+                    - generic [ref=f1e1091]: "-0.43%"
+                - generic [ref=f1e1092]:
+                  - generic [ref=f1e1093]:
+                    - term [ref=f1e1094]: Turnover
+                    - definition [ref=f1e1095]: ₹91.2 Cr
+                  - generic [ref=f1e1096]:
+                    - term [ref=f1e1097]: 1M return
+                    - definition [ref=f1e1098]: "-4.33%"
+                  - generic [ref=f1e1099]:
+                    - term [ref=f1e1100]: Share of BSE
+                    - definition [ref=f1e1101]: 0.98%
+                  - generic [ref=f1e1102]:
+                    - term [ref=f1e1103]: Avg trade
+                    - definition [ref=f1e1104]: ₹8,69,143
+                  - generic [ref=f1e1105]:
+                    - term [ref=f1e1106]: Day range
+                    - definition [ref=f1e1107]: ₹1,856.90 – ₹1,898.60
+              - listitem [ref=f1e1108]:
+                - generic [ref=f1e1109]:
+                  - generic [ref=f1e1110]:
+                    - generic [ref=f1e1111]:
+                      - img "Lenskart Solutions (LENSKART) logo" [ref=f1e1112]
+                      - generic [ref=f1e1113]: "3"
+                    - generic [ref=f1e1114]:
+                      - button "Open details for LENSKART" [ref=f1e1115]:
+                        - paragraph [ref=f1e1116]: Lenskart Solutions Ltd
+                        - paragraph [ref=f1e1117]: LENSKART · 544600
+                      - generic [ref=f1e1118]:
+                        - generic [ref=f1e1119]: Consumer Discretionary
+                        - generic [ref=f1e1124]: Mid cap
+                  - generic [ref=f1e1125]:
+                    - paragraph [ref=f1e1126]: ₹636.15
+                    - generic [ref=f1e1130]: "-0.69%"
+                    - paragraph [ref=f1e1131]: Close ₹636.15
+                - generic [ref=f1e1132]:
+                  - generic [ref=f1e1133]:
+                    - term [ref=f1e1134]: Turnover
+                    - definition [ref=f1e1135]: ₹63.1 Cr
+                  - generic [ref=f1e1136]:
+                    - term [ref=f1e1137]: 1M return
+                    - definition [ref=f1e1138]: +13.35%
+                  - generic [ref=f1e1139]:
+                    - term [ref=f1e1140]: Share of BSE
+                    - definition [ref=f1e1141]: 0.68%
+                  - generic [ref=f1e1142]:
+                    - term [ref=f1e1143]: Avg trade
+                    - definition [ref=f1e1144]: ₹62,692
+                  - generic [ref=f1e1145]:
+                    - term [ref=f1e1146]: Day range
+                    - definition [ref=f1e1147]: ₹630.10 – ₹647.95
+              - listitem [ref=f1e1148]:
+                - generic [ref=f1e1149]:
+                  - generic [ref=f1e1150]:
+                    - generic [ref=f1e1151]:
+                      - img "LG Electronics India (LGEINDIA) logo" [ref=f1e1152]
+                      - generic [ref=f1e1153]: "4"
+                    - generic [ref=f1e1154]:
+                      - button "Open details for LGEINDIA" [ref=f1e1155]:
+                        - paragraph [ref=f1e1156]: LG Electronics India Ltd
+                        - paragraph [ref=f1e1157]: LGEINDIA · 544576
+                      - generic [ref=f1e1158]:
+                        - generic [ref=f1e1159]: Consumer Discretionary
+                        - generic [ref=f1e1164]: Large cap
+                  - generic [ref=f1e1165]:
+                    - paragraph [ref=f1e1166]: ₹1,690.90
+                    - generic [ref=f1e1167]: "-0.60%"
+                - generic [ref=f1e1168]:
+                  - generic [ref=f1e1169]:
+                    - term [ref=f1e1170]: Turnover
+                    - definition [ref=f1e1171]: ₹57.7 Cr
+                  - generic [ref=f1e1172]:
+                    - term [ref=f1e1173]: 1M return
+                    - definition [ref=f1e1174]: +13.42%
+                  - generic [ref=f1e1175]:
+                    - term [ref=f1e1176]: Share of BSE
+                    - definition [ref=f1e1177]: 0.62%
+                  - generic [ref=f1e1178]:
+                    - term [ref=f1e1179]: Avg trade
+                    - definition [ref=f1e1180]: ₹1,54,376
+                  - generic [ref=f1e1181]:
+                    - term [ref=f1e1182]: Day range
+                    - definition [ref=f1e1183]: ₹1,683.45 – ₹1,718.80
+              - listitem [ref=f1e1184]:
+                - generic [ref=f1e1185]:
+                  - generic [ref=f1e1186]:
+                    - generic [ref=f1e1187]:
+                      - img "ICICI Bank (ICICIBANK) logo" [ref=f1e1188]
+                      - generic [ref=f1e1189]: "5"
+                    - generic [ref=f1e1190]:
+                      - button "Open details for ICICIBANK" [ref=f1e1191]:
+                        - paragraph [ref=f1e1192]: ICICI Bank Ltd
+                        - paragraph [ref=f1e1193]: ICICIBANK · 532174
+                      - generic [ref=f1e1194]:
+                        - generic [ref=f1e1195]: Financial Services
+                        - generic [ref=f1e1199]: Large cap
+                  - generic [ref=f1e1200]:
+                    - paragraph [ref=f1e1201]: ₹1,425.20
+                    - generic [ref=f1e1202]: "-1.30%"
+                - generic [ref=f1e1203]:
+                  - generic [ref=f1e1204]:
+                    - term [ref=f1e1205]: Turnover
+                    - definition [ref=f1e1206]: ₹56.8 Cr
+                  - generic [ref=f1e1207]:
+                    - term [ref=f1e1208]: 1M return
+                    - definition [ref=f1e1209]: "-0.70%"
+                  - generic [ref=f1e1210]:
+                    - term [ref=f1e1211]: Share of BSE
+                    - definition [ref=f1e1212]: 0.61%
+                  - generic [ref=f1e1213]:
+                    - term [ref=f1e1214]: Avg trade
+                    - definition [ref=f1e1215]: ₹85,638
+                  - generic [ref=f1e1216]:
+                    - term [ref=f1e1217]: Day range
+                    - definition [ref=f1e1218]: ₹1,419.00 – ₹1,439.20
+            - navigation "stocks pages" [ref=f1e1219]:
+              - paragraph [ref=f1e1220]:
+                - text: Showing
+                - generic [ref=f1e1221]: 1–5
+                - text: of 2,012 stocks
+              - generic [ref=f1e1222]:
+                - button "← Prev" [disabled] [ref=f1e1223]
+                - button "Page 1" [ref=f1e1224]: "1"
+                - button "Page 2" [ref=f1e1225]: "2"
+                - button "Page 3" [ref=f1e1226]: "3"
+                - button "Page 4" [ref=f1e1227]: "4"
+                - button "Page 5" [ref=f1e1228]: "5"
+                - button "Next →" [ref=f1e1229]
+        - paragraph [ref=f1e1230]: "Ranked from BSE's own end-of-session Bhavcopy across all ~4,900 listed scrips, for the session named above — today's file covers the whole exchange only after the close. While the market is open, the price and move on each row are live and the ranking behind them is the last completed session's. \"Bought\" and \"sold\" are the direction of that session's move, not order flow: no exchange or depository publishes a buy/sell split. Returns are measured against each company's own close in the reference session · not investment advice."
+      - generic [ref=f1e1233]:
+        - generic [ref=f1e1234]:
+          - paragraph [ref=f1e1235]: Stock accuracy lookup
+          - heading "Check any BSE-listed stock in the matrix" [level=4] [ref=f1e1236]
+          - paragraph [ref=f1e1237]: Search a company to verify catalogue completeness, latest exchange-tape coverage, performance windows and same-category competitor rank for that ticker.
+          - generic [ref=f1e1238]:
+            - generic [ref=f1e1239]:
+              - 'textbox "Example: RELIANCE, 500325, Tata Steel" [ref=f1e1240]'
+              - button "Check" [disabled] [ref=f1e1241]
+            - paragraph [ref=f1e1242]: Search by ticker, company name or BSE scrip code
+            - generic [ref=f1e1243]:
+              - button "AU Small Finance Bank (AUBANK) logo AU Bank" [ref=f1e1244]:
+                - img "AU Small Finance Bank (AUBANK) logo" [ref=f1e1245]
+                - generic [ref=f1e1246]: AU Bank
+              - button "Angel One (ANGELONE) logo Angel One" [ref=f1e1247]:
+                - img "Angel One (ANGELONE) logo" [ref=f1e1248]
+                - generic [ref=f1e1249]: Angel One
+              - button "Reliance Industries (RELIANCE) logo Reliance" [ref=f1e1250]:
+                - img "Reliance Industries (RELIANCE) logo" [ref=f1e1251]
+                - generic [ref=f1e1252]: Reliance
+              - button "Tata Consultancy Services (TCS) logo TCS" [ref=f1e1253]:
+                - img "Tata Consultancy Services (TCS) logo" [ref=f1e1254]
+                - generic [ref=f1e1255]: TCS
+              - button "State Bank of India (SBIN) logo SBI" [ref=f1e1256]:
+                - img "State Bank of India (SBIN) logo" [ref=f1e1257]
+                - generic [ref=f1e1258]: SBI
+              - button "HDFC Bank (HDFCBANK) logo HDFC Bank" [ref=f1e1259]:
+                - img "HDFC Bank (HDFCBANK) logo" [ref=f1e1260]
+                - generic [ref=f1e1261]: HDFC Bank
+        - generic [ref=f1e1263]:
+          - generic [ref=f1e1264]:
+            - generic [ref=f1e1265]:
+              - button "Top Gainers" [pressed] [ref=f1e1266]
+              - button "Top Losers" [ref=f1e1267]
+            - generic [ref=f1e1268]:
+              - button "1Y" [pressed] [ref=f1e1269]
+              - button "3Y" [ref=f1e1270]
+              - button "5Y" [ref=f1e1271]
+              - button "Overall" [ref=f1e1272]
+          - paragraph [ref=f1e1273]: Up more than 50% over the last one year
+          - combobox "Search any BSE-listed company" [ref=f1e1280]
+      - generic [ref=f1e1301]:
+        - paragraph [ref=f1e1302]: 01 - Stock performance
+        - heading "Single-stock performance across long windows" [level=2] [ref=f1e1303]
+        - paragraph [ref=f1e1304]: Rank individual companies by one-year, three-year, five-year and whole-history returns, then flip the same board to the deepest long-window losers.
+      - generic [ref=f1e1306]:
+        - generic [ref=f1e1307]:
+          - paragraph [ref=f1e1308]: Stock returns
+          - heading "Top stock performers and non-performers" [level=3] [ref=f1e1309]
+          - paragraph [ref=f1e1310]: Search a company or page through the ranked board to see measured returns by period, with the company logo, sector, cap tier and latest price on every row.
+        - generic [ref=f1e1311]:
+          - generic [ref=f1e1312]:
+            - generic [ref=f1e1313]:
+              - button "Top Gainers" [pressed] [ref=f1e1314]
+              - button "Top Losers" [ref=f1e1315]
+            - generic [ref=f1e1316]:
+              - button "1Y" [pressed] [ref=f1e1317]
+              - button "3Y" [ref=f1e1318]
+              - button "5Y" [ref=f1e1319]
+              - button "Overall" [ref=f1e1320]
+          - paragraph [ref=f1e1321]: Up more than 50% over the last one year
+          - combobox "Search any BSE-listed company" [ref=f1e1328]
+          - list [ref=f1e1329]:
+            - listitem [ref=f1e1330]:
+              - generic [ref=f1e1331]: "#1"
+              - img "Sterlite Technologies (STLTECH) logo" [ref=f1e1332]
+              - generic [ref=f1e1333]:
+                - generic [ref=f1e1334]:
+                  - generic [ref=f1e1335]: Sterlite Technologies
+                  - generic [ref=f1e1336]: STLTECH
+                - generic [ref=f1e1337]:
+                  - generic [ref=f1e1338]: Telecom
+                  - generic [ref=f1e1339]: Small cap
+              - generic [ref=f1e1340]:
+                - generic [ref=f1e1341]: +535.2%
+                - generic [ref=f1e1342]: ₹728.5
+            - listitem [ref=f1e1343]:
+              - generic [ref=f1e1344]: "#2"
+              - img "HFCL Limited (HFCL) logo" [ref=f1e1345]
+              - generic [ref=f1e1346]:
+                - generic [ref=f1e1347]:
+                  - generic [ref=f1e1348]: HFCL Limited
+                  - generic [ref=f1e1349]: HFCL
+                - generic [ref=f1e1350]:
+                  - generic [ref=f1e1351]: Telecom
+                  - generic [ref=f1e1352]: Small cap
+              - generic [ref=f1e1353]:
+                - generic [ref=f1e1354]: +259.1%
+                - generic [ref=f1e1355]: —
+            - listitem [ref=f1e1356]:
+              - generic [ref=f1e1357]: "#3"
+              - img "Ather Energy (ATHERENERG) logo" [ref=f1e1358]
+              - generic [ref=f1e1359]:
+                - generic [ref=f1e1360]:
+                  - generic [ref=f1e1361]: Ather Energy
+                  - generic [ref=f1e1362]: ATHERENERG
+                - generic [ref=f1e1363]:
+                  - generic [ref=f1e1364]: Automobile
+                  - generic [ref=f1e1365]: Mid cap
+              - generic [ref=f1e1366]:
+                - generic [ref=f1e1367]: +259.1%
+                - generic [ref=f1e1368]: —
+            - listitem [ref=f1e1369]:
+              - generic [ref=f1e1370]: "#4"
+              - img "Rubicon Research (RUBICON) logo" [ref=f1e1371]
+              - generic [ref=f1e1372]:
+                - generic [ref=f1e1373]:
+                  - generic [ref=f1e1374]: Rubicon Research
+                  - generic [ref=f1e1375]: RUBICON
+                - generic [ref=f1e1376]:
+                  - generic [ref=f1e1377]: Pharmaceuticals
+                  - generic [ref=f1e1378]: Small cap
+              - generic [ref=f1e1379]:
+                - generic [ref=f1e1380]: +191.1%
+                - generic [ref=f1e1381]: —
+            - listitem [ref=f1e1382]:
+              - generic [ref=f1e1383]: "#5"
+              - img "Aditya Infotech (CP Plus) (CPPLUS) logo" [ref=f1e1384]
+              - generic [ref=f1e1385]:
+                - generic [ref=f1e1386]:
+                  - generic [ref=f1e1387]: Aditya Infotech (CP Plus)
+                  - generic [ref=f1e1388]: CPPLUS
+                - generic [ref=f1e1389]:
+                  - generic [ref=f1e1390]: Consumer Durables
+                  - generic [ref=f1e1391]: Mid cap
+              - generic [ref=f1e1392]:
+                - generic [ref=f1e1393]: +182.5%
+                - generic [ref=f1e1394]: —
+          - generic [ref=f1e1395]:
+            - paragraph [ref=f1e1396]: 57 above 50% · as of 2026-08-31 · past performance is not a prediction.
+            - generic [ref=f1e1397]:
+              - button "Previous page" [disabled] [ref=f1e1398]
+              - generic [ref=f1e1401]: 1 / 12
+              - button "Next page" [ref=f1e1402]
+      - generic [ref=f1e1406]:
+        - paragraph [ref=f1e1407]: 02 - Who owns what
+        - heading "Every shareholder class, as the company files it" [level=2] [ref=f1e1408]
+        - paragraph [ref=f1e1409]: Promoters, foreign portfolio investors, domestic institutions, the government and several million individual shareholders. Search a company to see how its register splits, how many people are behind each slice, and how the promoter stake has moved over eight filed quarters.
+      - generic [ref=f1e1411]:
+        - generic [ref=f1e1412]:
+          - generic [ref=f1e1414]:
+            - paragraph [ref=f1e1415]: Shareholding pattern
+            - heading "Who is invested in a company, and how much of it they hold" [level=3] [ref=f1e1416]
+            - paragraph [ref=f1e1417]: Promoters, foreign portfolio investors, domestic institutions, the government and individual shareholders — as the company itself files each quarter with the exchange, not as anyone estimates it.
+          - generic [ref=f1e1420]:
+            - img "Reliance Industries (RELIANCE) logo" [ref=f1e1421]
+            - generic [ref=f1e1422]:
+              - combobox "Search any listed company" [ref=f1e1423]: RELIANCE
+              - generic [ref=f1e1424]: Reliance Industries · Energy & Petrochemicals
+            - generic [ref=f1e1425]: —
+            - button "Clear search" [ref=f1e1427]
+          - generic [ref=f1e1430]:
+            - button "PAYTM" [ref=f1e1431]:
+              - img "Paytm (One 97 Communications) (PAYTM) logo" [ref=f1e1432]
+              - generic [ref=f1e1433]:
+                - generic [ref=f1e1434]:
+                  - generic [ref=f1e1435]: Paytm (One 97 Communications)
+                  - generic [ref=f1e1436]: PAYTM
+                - generic [ref=f1e1437]:
+                  - generic [ref=f1e1441]: NBFC & Financial Services
+                  - generic [ref=f1e1442]: Mid
+            - button "TMCV" [ref=f1e1443]:
+              - img "Tata Motors (Commercial Vehicles) (TMCV) logo" [ref=f1e1444]
+              - generic [ref=f1e1445]:
+                - generic [ref=f1e1446]:
+                  - generic [ref=f1e1447]: Tata Motors (Commercial Vehicles)
+                  - generic [ref=f1e1448]: TMCV
+                - generic [ref=f1e1449]:
+                  - generic [ref=f1e1453]: Automobile
+                  - generic [ref=f1e1454]: Large
+            - button "ETERNAL" [ref=f1e1455]:
+              - img "Eternal (Zomato) (ETERNAL) logo" [ref=f1e1456]
+              - generic [ref=f1e1457]:
+                - generic [ref=f1e1458]:
+                  - generic [ref=f1e1459]: Eternal (Zomato)
+                  - generic [ref=f1e1460]: ETERNAL
+                - generic [ref=f1e1461]:
+                  - generic [ref=f1e1466]: Retail
+                  - generic [ref=f1e1467]: Large
+            - button "LENSKART" [ref=f1e1468]:
+              - img "Lenskart Solutions (LENSKART) logo" [ref=f1e1469]
+              - generic [ref=f1e1470]:
+                - generic [ref=f1e1471]:
+                  - generic [ref=f1e1472]: Lenskart Solutions
+                  - generic [ref=f1e1473]: LENSKART
+                - generic [ref=f1e1474]:
+                  - generic [ref=f1e1479]: Retail
+                  - generic [ref=f1e1480]: Mid
+            - button "BOSCHLTD" [ref=f1e1481]:
+              - img "Bosch Limited (BOSCHLTD) logo" [ref=f1e1482]
+              - generic [ref=f1e1483]:
+                - generic [ref=f1e1484]:
+                  - generic [ref=f1e1485]: Bosch Limited
+                  - generic [ref=f1e1486]: BOSCHLTD
+                - generic [ref=f1e1487]:
+                  - generic [ref=f1e1491]: Automobile
+                  - generic [ref=f1e1492]: Mid
+            - button "ATHERENERG" [ref=f1e1493]:
+              - img "Ather Energy (ATHERENERG) logo" [ref=f1e1494]
+              - generic [ref=f1e1495]:
+                - generic [ref=f1e1496]:
+                  - generic [ref=f1e1497]: Ather Energy
+                  - generic [ref=f1e1498]: ATHERENERG
+                - generic [ref=f1e1499]:
+                  - generic [ref=f1e1503]: Automobile
+                  - generic [ref=f1e1504]: Mid
+        - generic [ref=f1e1505]:
+          - generic [ref=f1e1506]:
+            - generic [ref=f1e1507]:
+              - img "Reliance Industries (RELIANCE) logo" [ref=f1e1508]
+              - generic [ref=f1e1509]:
+                - paragraph [ref=f1e1510]: Reliance Industries Limited
+                - paragraph [ref=f1e1511]: RELIANCE · as filed for the quarter ended 30-JUN-2026
+            - generic [ref=f1e1512]:
+              - generic [ref=f1e1513]:
+                - generic [ref=f1e1514]: 46.52 lakh
+                - generic [ref=f1e1515]: shareholders
+              - generic [ref=f1e1516]:
+                - generic [ref=f1e1517]: 17.76%
+                - generic [ref=f1e1518]: held abroad
+          - generic [ref=f1e1519]:
+            - generic [ref=f1e1520]:
+              - generic [ref=f1e1521]:
+                - paragraph [ref=f1e1522]: BSE market snapshot
+                - generic [ref=f1e1523]:
+                  - generic [ref=f1e1524]: Rs 1,284.40
+                  - generic [ref=f1e1525]: "-0.12%"
+                - paragraph [ref=f1e1526]: RELIANCE / BSE 500325 - session 2026-08-28
+              - generic [ref=f1e1527]:
+                - generic "1W measured from 2026-08-21" [ref=f1e1528]:
+                  - generic [ref=f1e1529]: 1W
+                  - generic [ref=f1e1530]: "-2.25%"
+                - generic "1M measured from 2026-07-31" [ref=f1e1531]:
+                  - generic [ref=f1e1532]: 1M
+                  - generic [ref=f1e1533]: "-1.75%"
+                - generic "3M measured from 2026-05-29" [ref=f1e1534]:
+                  - generic [ref=f1e1535]: 3M
+                  - generic [ref=f1e1536]: "-2.74%"
+                - generic "6M measured from 2026-02-27" [ref=f1e1537]:
+                  - generic [ref=f1e1538]: 6M
+                  - generic [ref=f1e1539]: "-7.88%"
+                - generic "1Y measured from 2025-08-29" [ref=f1e1540]:
+                  - generic [ref=f1e1541]: 1Y
+                  - generic [ref=f1e1542]: "-5.35%"
+                - generic "3Y measured from 2023-08-31" [ref=f1e1543]:
+                  - generic [ref=f1e1544]: 3Y
+                  - generic [ref=f1e1545]: "-46.64%"
+                - generic "5Y measured from 2021-08-30" [ref=f1e1546]:
+                  - generic [ref=f1e1547]: 5Y
+                  - generic [ref=f1e1548]: "-43.42%"
+                - generic "Overall measured from 2021-08-30" [ref=f1e1549]:
+                  - generic [ref=f1e1550]: Overall
+                  - generic [ref=f1e1551]: "-43.42%"
+            - paragraph [ref=f1e1552]: Price and returns are measured from BSE Bhavcopy; missing windows are left blank instead of estimated.
+          - generic [ref=f1e1553]:
+            - paragraph [ref=f1e1554]: What this filing tells you
+            - list [ref=f1e1555]:
+              - listitem [ref=f1e1556]:
+                - generic [ref=f1e1560]:
+                  - generic [ref=f1e1561]: Who controls it
+                  - generic [ref=f1e1562]:
+                    - text: Promoters hold
+                    - strong [ref=f1e1563]: 50.48%
+                    - text: — more than half the company. Control sits with the founding group, and the rest of the register cannot outvote them.
+              - listitem [ref=f1e1564]:
+                - generic [ref=f1e1568]:
+                  - generic [ref=f1e1569]: Professional money
+                  - generic [ref=f1e1570]:
+                    - text: Funds and institutions hold
+                    - strong [ref=f1e1571]: 38.39%
+                    - text: between them —
+                    - strong [ref=f1e1572]: 21.19%
+                    - text: Indian mutual funds, insurers and pension money, and
+                    - strong [ref=f1e1573]: 17.20%
+                    - text: from institutions outside India.
+              - listitem [ref=f1e1574]:
+                - generic [ref=f1e1580]:
+                  - generic [ref=f1e1581]: The public
+                  - generic [ref=f1e1582]:
+                    - strong [ref=f1e1583]: 45.69 lakh
+                    - text: individual investors hold
+                    - strong [ref=f1e1584]: 9.15%
+                    - text: between them.
+              - listitem [ref=f1e1585]:
+                - generic [ref=f1e1589]:
+                  - generic [ref=f1e1590]: Which way it is moving
+                  - generic [ref=f1e1591]:
+                    - text: Across the
+                    - strong [ref=f1e1592]: "8"
+                    - text: quarters filed here promoters have added
+                    - strong [ref=f1e1593]: 0.24 points
+                    - text: ", from 50.24% to 50.48%."
+          - 'img "The whole register: Promoters & insiders 50.48%, Domestic institutional investors 21.19%, Foreign institutional investors 17.20%, Retail & individual investors 9.15%, Corporate bodies & trusts 1.88%, Government 0.10%" [ref=f1e1594]':
+            - generic "Promoters & insiders — 50.48%" [ref=f1e1595]
+            - generic "Domestic institutional investors — 21.19%" [ref=f1e1596]
+            - generic "Foreign institutional investors — 17.20%" [ref=f1e1597]
+            - generic "Retail & individual investors — 9.15%" [ref=f1e1598]
+            - generic "Corporate bodies & trusts — 1.88%" [ref=f1e1599]
+            - generic "Government — 0.10%" [ref=f1e1600]
+          - list [ref=f1e1601]:
+            - listitem [ref=f1e1602]:
+              - generic [ref=f1e1604]: Promoters & insiders
+              - generic [ref=f1e1605]: 50.48%
+            - listitem [ref=f1e1606]:
+              - generic [ref=f1e1608]: Domestic institutional investors
+              - generic [ref=f1e1609]: 21.19%
+            - listitem [ref=f1e1610]:
+              - generic [ref=f1e1612]: Foreign institutional investors
+              - generic [ref=f1e1613]: 17.20%
+            - listitem [ref=f1e1614]:
+              - generic [ref=f1e1616]: Retail & individual investors
+              - generic [ref=f1e1617]: 9.15%
+            - listitem [ref=f1e1618]:
+              - generic [ref=f1e1620]: Corporate bodies & trusts
+              - generic [ref=f1e1621]: 1.88%
+            - listitem [ref=f1e1622]:
+              - generic [ref=f1e1624]: Government
+              - generic [ref=f1e1625]: 0.10%
+          - paragraph [ref=f1e1626]: Every class accounted for — 100.00% of shares
+          - generic [ref=f1e1629]:
+            - generic [ref=f1e1630]:
+              - generic [ref=f1e1631]:
+                - generic [ref=f1e1632]: Promoters & insiders
+                - generic [ref=f1e1637]: 50.48%
+              - paragraph [ref=f1e1638]: The founders, and the family or group that runs the company.
+              - paragraph [ref=f1e1639]: 47 shareholders
+              - button "Show 2 sub-categories" [ref=f1e1640]
+            - generic [ref=f1e1641]:
+              - generic [ref=f1e1642]:
+                - generic [ref=f1e1643]: Domestic institutional investors
+                - generic [ref=f1e1648]: 21.19%
+              - paragraph [ref=f1e1649]: Indian mutual funds, insurers, banks and pension funds.
+              - paragraph [ref=f1e1650]: 378 shareholders
+              - button "Show 7 sub-categories" [ref=f1e1651]
+            - generic [ref=f1e1652]:
+              - generic [ref=f1e1653]:
+                - generic [ref=f1e1654]: Foreign institutional investors
+                - generic [ref=f1e1660]: 17.20%
+              - paragraph [ref=f1e1661]: Funds and investors based outside India that have bought into it.
+              - paragraph [ref=f1e1662]: 1,542 shareholders
+              - button "Show 4 sub-categories" [ref=f1e1663]
+            - generic [ref=f1e1664]:
+              - generic [ref=f1e1665]:
+                - generic [ref=f1e1666]: Retail & individual investors
+                - generic [ref=f1e1673]: 9.15%
+              - paragraph [ref=f1e1674]: Ordinary individual investors, from a handful of shares upwards.
+              - paragraph [ref=f1e1675]: 45.69 lakh shareholders
+              - button "Show 3 sub-categories" [ref=f1e1676]
+            - generic [ref=f1e1677]:
+              - generic [ref=f1e1678]:
+                - generic [ref=f1e1679]: Corporate bodies & trusts
+                - generic [ref=f1e1685]: 1.88%
+              - paragraph [ref=f1e1686]: Other companies, trusts and corporate bodies on the register.
+              - paragraph [ref=f1e1687]: 80,638 shareholders
+              - button "Show 6 sub-categories" [ref=f1e1688]
+            - generic [ref=f1e1689]:
+              - generic [ref=f1e1690]:
+                - generic [ref=f1e1691]: Government
+                - generic [ref=f1e1696]: 0.10%
+              - paragraph [ref=f1e1697]: Central and state government holdings outside the promoter group.
+              - paragraph [ref=f1e1698]: 74 shareholders
+              - button "Show 2 sub-categories" [ref=f1e1699]
+          - generic [ref=f1e1700]:
+            - paragraph [ref=f1e1701]: Promoter stake, quarter by quarter
+            - generic [ref=f1e1702]:
+              - generic [ref=f1e1703]:
+                - generic [ref=f1e1704]:
+                  - paragraph [ref=f1e1705]: Promoter stake
+                  - paragraph [ref=f1e1706]: 50.48%
+                  - paragraph [ref=f1e1707]: Jun '26 filing
+                - generic [ref=f1e1708]:
+                  - paragraph [ref=f1e1709]: QoQ change
+                  - paragraph [ref=f1e1710]: +0.48 pp
+                  - paragraph [ref=f1e1711]: vs previous quarter
+              - generic [ref=f1e1712]:
+                - generic [ref=f1e1713]:
+                  - button "Oct '24" [ref=f1e1714]
+                  - button "Dec '24" [ref=f1e1715]
+                  - button "Mar '25" [ref=f1e1716]
+                  - button "Jun '25" [ref=f1e1717]
+                  - button "Sep '25" [ref=f1e1718]
+                  - button "Dec '25" [ref=f1e1719]
+                  - button "Mar '26" [ref=f1e1720]
+                  - button "Jun '26" [ref=f1e1721]
+                - generic [ref=f1e1722]:
+                  - generic [ref=f1e1723]:
+                    - img "Jun '26 ownership pie chart, promoter holding 50.48 percent" [ref=f1e1724]:
+                      - 'button "Promoters & insiders: 50.48 percent" [ref=f1e1726] [cursor=pointer]'
+                      - 'button "Domestic institutional investors: 21.19 percent" [ref=f1e1727] [cursor=pointer]'
+                      - 'button "Foreign institutional investors: 17.20 percent" [ref=f1e1728] [cursor=pointer]'
+                      - 'button "Retail & individual investors: 9.15 percent" [ref=f1e1729] [cursor=pointer]'
+                      - 'button "Corporate bodies & trusts: 1.88 percent" [ref=f1e1730] [cursor=pointer]'
+                      - 'button "Government: 0.10 percent" [ref=f1e1731] [cursor=pointer]'
+                      - generic [ref=f1e1733]: 50.5%
+                      - generic [ref=f1e1734]: Promoters
+                    - paragraph [ref=f1e1735]: Tap a slice or quarter to inspect the filing.
+                  - status [ref=f1e1736]:
+                    - generic [ref=f1e1737]:
+                      - paragraph [ref=f1e1738]: Jun '26 holder split
+                      - paragraph [ref=f1e1739]:
+                        - text: Largest
+                        - generic [ref=f1e1740]: 50.48%
+                    - generic [ref=f1e1741]:
+                      - button "Promoters & insiders 50.48%" [ref=f1e1742]:
+                        - generic [ref=f1e1743]: Promoters & insiders
+                        - generic [ref=f1e1746]: 50.48%
+                      - button "Domestic institutional investors 21.19%" [ref=f1e1747]:
+                        - generic [ref=f1e1748]: Domestic institutional investors
+                        - generic [ref=f1e1751]: 21.19%
+                      - button "Foreign institutional investors 17.20%" [ref=f1e1752]:
+                        - generic [ref=f1e1753]: Foreign institutional investors
+                        - generic [ref=f1e1756]: 17.20%
+                      - button "Retail & individual investors 9.15%" [ref=f1e1757]:
+                        - generic [ref=f1e1758]: Retail & individual investors
+                        - generic [ref=f1e1761]: 9.15%
+                      - button "Corporate bodies & trusts 1.88%" [ref=f1e1762]:
+                        - generic [ref=f1e1763]: Corporate bodies & trusts
+                        - generic [ref=f1e1766]: 1.88%
+                      - generic [ref=f1e1767]: +1 other holder type
+                    - paragraph [ref=f1e1768]: Promoters & insiders holds 50.48% in the selected quarter.
+          - paragraph [ref=f1e1769]: "Source: NSE - quarterly shareholding pattern filed under SEBI LODR, filed 16-JUL-2026. Categories and percentages are the filing's own. A state-wise split of a company's investors is not part of any exchange disclosure, so this board does not show one — nothing published maps shareholders to where they live."
+      - generic [ref=f1e1770]:
+        - generic [ref=f1e1771]:
+          - paragraph [ref=f1e1772]: Inside the dashboard
+          - heading "Every AI feature, and what each one actually does" [level=2] [ref=f1e1773]
+          - paragraph [ref=f1e1774]: 18 AI surfaces across the three plans. Every one opens on real BSE and NSE data — the same figures the boards on this page are built from. Sign in to open any of them; a new account gets all three tiers free for the length of the trial.
+        - generic [ref=f1e1775]:
+          - generic [ref=f1e1776]:
+            - generic [ref=f1e1777]:
+              - generic [ref=f1e1778]:
+                - heading "Starter" [level=3] [ref=f1e1779]
+                - generic [ref=f1e1780]: 6 features
+              - paragraph [ref=f1e1781]: The standing boards and calendars — the session as the exchanges published it, read back to you.
+            - list [ref=f1e1782]:
+              - listitem [ref=f1e1783]:
+                - link "AI market pulse Starter Live indices and breadth with an AI read on the day's mood. Open in dashboard" [ref=f1e1784] [cursor=pointer]:
+                  - /url: /market-pulse
+                  - generic [ref=f1e1785]:
+                    - heading "AI market pulse" [level=4] [ref=f1e1786]
+                    - generic [ref=f1e1787]: Starter
+                  - paragraph [ref=f1e1788]: Live indices and breadth with an AI read on the day's mood.
+                  - generic [ref=f1e1789]: Open in dashboard
+              - listitem [ref=f1e1792]:
+                - link "AI sector rotation Starter Every NSE sectoral index, ranked by today's move. Open in dashboard" [ref=f1e1793] [cursor=pointer]:
+                  - /url: /sector-trends
+                  - generic [ref=f1e1794]:
+                    - heading "AI sector rotation" [level=4] [ref=f1e1795]
+                    - generic [ref=f1e1796]: Starter
+                  - paragraph [ref=f1e1797]: Every NSE sectoral index, ranked by today's move.
+                  - generic [ref=f1e1798]: Open in dashboard
+              - listitem [ref=f1e1801]:
+                - link "AI dividend planner Starter Declared payouts and the ex-dates still ahead of you. Open in dashboard" [ref=f1e1802] [cursor=pointer]:
+                  - /url: /dividends
+                  - generic [ref=f1e1803]:
+                    - heading "AI dividend planner" [level=4] [ref=f1e1804]
+                    - generic [ref=f1e1805]: Starter
+                  - paragraph [ref=f1e1806]: Declared payouts and the ex-dates still ahead of you.
+                  - generic [ref=f1e1807]: Open in dashboard
+              - listitem [ref=f1e1810]:
+                - link "AI IPO watch Starter Open and upcoming issues with live subscription figures. Open in dashboard" [ref=f1e1811] [cursor=pointer]:
+                  - /url: /ipos
+                  - generic [ref=f1e1812]:
+                    - heading "AI IPO watch" [level=4] [ref=f1e1813]
+                    - generic [ref=f1e1814]: Starter
+                  - paragraph [ref=f1e1815]: Open and upcoming issues with live subscription figures.
+                  - generic [ref=f1e1816]: Open in dashboard
+              - listitem [ref=f1e1819]:
+                - link "AI ETF board Starter Every NSE ETF by asset class, ranked by money traded. Open in dashboard" [ref=f1e1820] [cursor=pointer]:
+                  - /url: /etf-board
+                  - generic [ref=f1e1821]:
+                    - heading "AI ETF board" [level=4] [ref=f1e1822]
+                    - generic [ref=f1e1823]: Starter
+                  - paragraph [ref=f1e1824]: Every NSE ETF by asset class, ranked by money traded.
+                  - generic [ref=f1e1825]: Open in dashboard
+              - listitem [ref=f1e1828]:
+                - link "AI market news Starter The day's headlines, summarised and scored for sentiment. Open in dashboard" [ref=f1e1829] [cursor=pointer]:
+                  - /url: /news
+                  - generic [ref=f1e1830]:
+                    - heading "AI market news" [level=4] [ref=f1e1831]
+                    - generic [ref=f1e1832]: Starter
+                  - paragraph [ref=f1e1833]: The day's headlines, summarised and scored for sentiment.
+                  - generic [ref=f1e1834]: Open in dashboard
+          - generic [ref=f1e1837]:
+            - generic [ref=f1e1838]:
+              - generic [ref=f1e1839]:
+                - heading "Pro" [level=3] [ref=f1e1840]
+                - generic [ref=f1e1841]: 6 features
+              - paragraph [ref=f1e1842]: The screeners and the research desk, where the AI takes a position rather than reporting one.
+            - list [ref=f1e1843]:
+              - listitem [ref=f1e1844]:
+                - link "Today's AI picks Pro The stocks our agent rates highest right now. Open in dashboard" [ref=f1e1845] [cursor=pointer]:
+                  - /url: /top-picks
+                  - generic [ref=f1e1846]:
+                    - heading "Today's AI picks" [level=4] [ref=f1e1847]
+                    - generic [ref=f1e1848]: Pro
+                  - paragraph [ref=f1e1849]: The stocks our agent rates highest right now.
+                  - generic [ref=f1e1850]: Open in dashboard
+              - listitem [ref=f1e1853]:
+                - link "Outperform tomorrow screener Pro Names set up for tomorrow's session, scored overnight. Open in dashboard" [ref=f1e1854] [cursor=pointer]:
+                  - /url: /outperform-tomorrow
+                  - generic [ref=f1e1855]:
+                    - heading "Outperform tomorrow screener" [level=4] [ref=f1e1856]
+                    - generic [ref=f1e1857]: Pro
+                  - paragraph [ref=f1e1858]: Names set up for tomorrow's session, scored overnight.
+                  - generic [ref=f1e1859]: Open in dashboard
+              - listitem [ref=f1e1862]:
+                - link "Today's dip screener Pro Pullbacks whose longer trend is still intact. Open in dashboard" [ref=f1e1863] [cursor=pointer]:
+                  - /url: /dip-winners
+                  - generic [ref=f1e1864]:
+                    - heading "Today's dip screener" [level=4] [ref=f1e1865]
+                    - generic [ref=f1e1866]: Pro
+                  - paragraph [ref=f1e1867]: Pullbacks whose longer trend is still intact.
+                  - generic [ref=f1e1868]: Open in dashboard
+              - listitem [ref=f1e1871]:
+                - link "AI stock research Pro One company in depth, with predictions and news sentiment. Open in dashboard" [ref=f1e1872] [cursor=pointer]:
+                  - /url: /stock-research
+                  - generic [ref=f1e1873]:
+                    - heading "AI stock research" [level=4] [ref=f1e1874]
+                    - generic [ref=f1e1875]: Pro
+                  - paragraph [ref=f1e1876]: One company in depth, with predictions and news sentiment.
+                  - generic [ref=f1e1877]: Open in dashboard
+              - listitem [ref=f1e1880]:
+                - link "AI stock compare Pro Two or three stocks head to head, with a call on each. Open in dashboard" [ref=f1e1881] [cursor=pointer]:
+                  - /url: /compare-stocks
+                  - generic [ref=f1e1882]:
+                    - heading "AI stock compare" [level=4] [ref=f1e1883]
+                    - generic [ref=f1e1884]: Pro
+                  - paragraph [ref=f1e1885]: Two or three stocks head to head, with a call on each.
+                  - generic [ref=f1e1886]: Open in dashboard
+              - listitem [ref=f1e1889]:
+                - link "AI portfolio review Pro Your own holdings, tracked live, with an AI read on the mix and a call on each name. Open in dashboard" [ref=f1e1890] [cursor=pointer]:
+                  - /url: /portfolio
+                  - generic [ref=f1e1891]:
+                    - heading "AI portfolio review" [level=4] [ref=f1e1892]
+                    - generic [ref=f1e1893]: Pro
+                  - paragraph [ref=f1e1894]: Your own holdings, tracked live, with an AI read on the mix and a call on each name.
+                  - generic [ref=f1e1895]: Open in dashboard
+          - generic [ref=f1e1898]:
+            - generic [ref=f1e1899]:
+              - generic [ref=f1e1900]:
+                - heading "Elite" [level=3] [ref=f1e1901]
+                - generic [ref=f1e1902]: 6 features
+              - paragraph [ref=f1e1903]: "The deep reads: filings, ownership, comparisons and a search box you can ask in plain English."
+            - list [ref=f1e1904]:
+              - listitem [ref=f1e1905]:
+                - link "AI intelligence search Elite Ask anything about a BSE stock; get the answer in points, with sources. Open in dashboard" [ref=f1e1906] [cursor=pointer]:
+                  - /url: /intelligence-search
+                  - generic [ref=f1e1907]:
+                    - heading "AI intelligence search" [level=4] [ref=f1e1908]
+                    - generic [ref=f1e1909]: Elite
+                  - paragraph [ref=f1e1910]: Ask anything about a BSE stock; get the answer in points, with sources.
+                  - generic [ref=f1e1911]: Open in dashboard
+              - listitem [ref=f1e1914]:
+                - link "AI ETF research Elite Every major Indian ETF, decoded by AI. Open in dashboard" [ref=f1e1915] [cursor=pointer]:
+                  - /url: /etf-research
+                  - generic [ref=f1e1916]:
+                    - heading "AI ETF research" [level=4] [ref=f1e1917]
+                    - generic [ref=f1e1918]: Elite
+                  - paragraph [ref=f1e1919]: Every major Indian ETF, decoded by AI.
+                  - generic [ref=f1e1920]: Open in dashboard
+              - listitem [ref=f1e1923]:
+                - link "AI company directory Elite All 4,900+ listed companies by name, ticker, code or ISIN. Open in dashboard" [ref=f1e1924] [cursor=pointer]:
+                  - /url: /company-directory
+                  - generic [ref=f1e1925]:
+                    - heading "AI company directory" [level=4] [ref=f1e1926]
+                    - generic [ref=f1e1927]: Elite
+                  - paragraph [ref=f1e1928]: All 4,900+ listed companies by name, ticker, code or ISIN.
+                  - generic [ref=f1e1929]: Open in dashboard
+              - listitem [ref=f1e1932]:
+                - link "AI most-traded read Elite Where the day's money actually went, by turnover. Open in dashboard" [ref=f1e1933] [cursor=pointer]:
+                  - /url: /most-traded
+                  - generic [ref=f1e1934]:
+                    - heading "AI most-traded read" [level=4] [ref=f1e1935]
+                    - generic [ref=f1e1936]: Elite
+                  - paragraph [ref=f1e1937]: Where the day's money actually went, by turnover.
+                  - generic [ref=f1e1938]: Open in dashboard
+              - listitem [ref=f1e1941]:
+                - link "AI MTF watch Elite Most-traded names you can outperform on margin, and the cost. Open in dashboard" [ref=f1e1942] [cursor=pointer]:
+                  - /url: /mtf-watch
+                  - generic [ref=f1e1943]:
+                    - heading "AI MTF watch" [level=4] [ref=f1e1944]
+                    - generic [ref=f1e1945]: Elite
+                  - paragraph [ref=f1e1946]: Most-traded names you can outperform on margin, and the cost.
+                  - generic [ref=f1e1947]: Open in dashboard
+              - listitem [ref=f1e1950]:
+                - link "AI filings digest Elite Today's corporate filings, grouped by sector. Open in dashboard" [ref=f1e1951] [cursor=pointer]:
+                  - /url: /stocks-in-news
+                  - generic [ref=f1e1952]:
+                    - heading "AI filings digest" [level=4] [ref=f1e1953]
+                    - generic [ref=f1e1954]: Elite
+                  - paragraph [ref=f1e1955]: Today's corporate filings, grouped by sector.
+                  - generic [ref=f1e1956]: Open in dashboard
+        - generic [ref=f1e1959]:
+          - link "Start the free trial" [ref=f1e1960] [cursor=pointer]:
+            - /url: /signup
+          - link "Compare the plans" [ref=f1e1961] [cursor=pointer]:
+            - /url: /pricing
+      - generic [ref=f1e1962]:
+        - generic [ref=f1e1963]:
+          - generic [ref=f1e1964]:
+            - paragraph [ref=f1e1965]: Pricing
+            - heading "Plans, and what each one unlocks" [level=3] [ref=f1e1966]
+            - paragraph [ref=f1e1967]: Priced for the Indian market and quoted per month on both cycles, so the only thing that changes when you switch is what you pay — not what you are comparing. Every plan reads the same exchange data; what a plan buys is the AI layer over it, listed inside each card. Pro includes every Starter AI tool, and Elite includes every Starter and Pro AI tool on top of its own.
+          - generic [ref=f1e1968]:
+            - button "Monthly" [ref=f1e1969]
+            - button "Yearly3 months free" [pressed] [ref=f1e1970]
+        - generic [ref=f1e1971]:
+          - generic [ref=f1e1972]:
+            - generic [ref=f1e1973]:
+              - paragraph [ref=f1e1974]: Starter
+              - generic "6 Starter AI features. Starter AI features" [ref=f1e1975]:
+                - generic [ref=f1e1977]:
+                  - strong [ref=f1e1978]: "6"
+                  - text: Starter AI features
+                - generic [ref=f1e1979]: Starter AI features
+            - paragraph [ref=f1e1980]: For someone tracking a handful of holdings.
+            - generic [ref=f1e1981]:
+              - generic [ref=f1e1982]: ₹112
+              - generic [ref=f1e1983]: /month
+            - paragraph [ref=f1e1984]: ₹1,341 billed yearly · saves ₹447
+            - button "Choose Starter" [ref=f1e1987]
+            - list [ref=f1e1988]:
+              - listitem [ref=f1e1989]:
+                - generic [ref=f1e1991]:
+                  - generic [ref=f1e1992]:
+                    - generic [ref=f1e1993]: AI market pulse
+                    - generic [ref=f1e1994]: Starter
+                    - generic "3 star Rank 1" [ref=f1e1995]: Rank 1
+                  - generic [ref=f1e2004]: Live indices and breadth with an AI read on the day's mood.
+              - listitem [ref=f1e2005]:
+                - generic [ref=f1e2007]:
+                  - generic [ref=f1e2008]:
+                    - generic [ref=f1e2009]: AI sector rotation
+                    - generic [ref=f1e2010]: Starter
+                    - generic "2 star Rank 2" [ref=f1e2011]: Rank 2
+                  - generic [ref=f1e2018]: Every NSE sectoral index, ranked by today's move.
+              - listitem [ref=f1e2019]:
+                - generic [ref=f1e2021]:
+                  - generic [ref=f1e2022]:
+                    - generic [ref=f1e2023]: AI dividend planner
+                    - generic [ref=f1e2024]: Starter
+                    - generic "1 star Rank 3" [ref=f1e2025]: Rank 3
+                  - generic [ref=f1e2030]: Declared payouts and the ex-dates still ahead of you.
+              - listitem [ref=f1e2031]:
+                - generic [ref=f1e2033]:
+                  - generic [ref=f1e2034]:
+                    - generic [ref=f1e2035]: AI IPO watch
+                    - generic [ref=f1e2036]: Starter
+                  - generic [ref=f1e2037]: Open and upcoming issues with live subscription figures.
+              - listitem [ref=f1e2038]:
+                - generic [ref=f1e2040]:
+                  - generic [ref=f1e2041]:
+                    - generic [ref=f1e2042]: AI ETF board
+                    - generic [ref=f1e2043]: Starter
+                  - generic [ref=f1e2044]: Every NSE ETF by asset class, ranked by money traded.
+              - listitem [ref=f1e2045]:
+                - generic [ref=f1e2047]:
+                  - generic [ref=f1e2048]:
+                    - generic [ref=f1e2049]: AI market news
+                    - generic [ref=f1e2050]: Starter
+                  - generic [ref=f1e2051]: The day's headlines, summarised and scored for sentiment.
+          - generic [ref=f1e2052]:
+            - generic [ref=f1e2053]: Most popular
+            - generic [ref=f1e2054]:
+              - paragraph [ref=f1e2055]: Pro
+              - generic "6 Pro AI features. All Starter AI features included" [ref=f1e2056]:
+                - generic [ref=f1e2058]:
+                  - strong [ref=f1e2059]: "6"
+                  - text: Pro AI features
+                - generic [ref=f1e2060]: All Starter AI features included
+            - paragraph [ref=f1e2061]: For an active investor running their own screens.
+            - generic [ref=f1e2062]:
+              - generic [ref=f1e2063]: ₹299
+              - generic [ref=f1e2064]: /month
+            - paragraph [ref=f1e2065]: ₹3,591 billed yearly · saves ₹1,197
+            - button "Choose Pro" [ref=f1e2068]
+            - list [ref=f1e2069]:
+              - listitem [ref=f1e2070]:
+                - generic [ref=f1e2072]:
+                  - generic [ref=f1e2073]:
+                    - generic [ref=f1e2074]: Today's AI picks
+                    - generic [ref=f1e2075]: Pro
+                    - generic "3 star Rank 1" [ref=f1e2076]: Rank 1
+                  - generic [ref=f1e2085]: The stocks our agent rates highest right now.
+              - listitem [ref=f1e2086]:
+                - generic [ref=f1e2088]:
+                  - generic [ref=f1e2089]:
+                    - generic [ref=f1e2090]: Outperform tomorrow screener
+                    - generic [ref=f1e2091]: Pro
+                  - generic [ref=f1e2092]: Names set up for tomorrow's session, scored overnight.
+              - listitem [ref=f1e2093]:
+                - generic [ref=f1e2095]:
+                  - generic [ref=f1e2096]:
+                    - generic [ref=f1e2097]: Today's dip screener
+                    - generic [ref=f1e2098]: Pro
+                  - generic [ref=f1e2099]: Pullbacks whose longer trend is still intact.
+              - listitem [ref=f1e2100]:
+                - generic [ref=f1e2102]:
+                  - generic [ref=f1e2103]:
+                    - generic [ref=f1e2104]: AI stock research
+                    - generic [ref=f1e2105]: Pro
+                    - generic "2 star Rank 2" [ref=f1e2106]: Rank 2
+                  - generic [ref=f1e2113]: One company in depth, with predictions and news sentiment.
+              - listitem [ref=f1e2114]:
+                - generic [ref=f1e2116]:
+                  - generic [ref=f1e2117]:
+                    - generic [ref=f1e2118]: AI stock compare
+                    - generic [ref=f1e2119]: Pro
+                    - generic "1 star Rank 3" [ref=f1e2120]: Rank 3
+                  - generic [ref=f1e2125]: Two or three stocks head to head, with a call on each.
+              - listitem [ref=f1e2126]:
+                - generic [ref=f1e2128]:
+                  - generic [ref=f1e2129]:
+                    - generic [ref=f1e2130]: AI portfolio review
+                    - generic [ref=f1e2131]: Pro
+                  - generic [ref=f1e2132]: Your own holdings, tracked live, with an AI read on the mix and a call on each name.
+          - generic [ref=f1e2133]:
+            - generic [ref=f1e2134]:
+              - paragraph [ref=f1e2135]: Elite
+              - generic "6 Elite AI features. All Starter + Pro AI features included." [ref=f1e2136]:
+                - generic [ref=f1e2138]:
+                  - strong [ref=f1e2139]: "6"
+                  - text: Elite AI features
+                - generic [ref=f1e2140]: All Starter + Pro AI features included.
+            - paragraph [ref=f1e2141]: For anyone managing money across many positions.
+            - generic [ref=f1e2142]:
+              - generic [ref=f1e2143]: ₹674
+              - generic [ref=f1e2144]: /month
+            - paragraph [ref=f1e2145]: ₹8,091 billed yearly · saves ₹2,697
+            - button "Choose Elite" [ref=f1e2148]
+            - list [ref=f1e2149]:
+              - listitem [ref=f1e2150]:
+                - generic [ref=f1e2152]:
+                  - generic [ref=f1e2153]:
+                    - generic [ref=f1e2154]: AI intelligence search
+                    - generic [ref=f1e2155]: Elite
+                    - generic "3 star Rank 1" [ref=f1e2156]: Rank 1
+                  - generic [ref=f1e2165]: Ask anything about a BSE stock; get the answer in points, with sources.
+              - listitem [ref=f1e2166]:
+                - generic [ref=f1e2168]:
+                  - generic [ref=f1e2169]:
+                    - generic [ref=f1e2170]: AI ETF research
+                    - generic [ref=f1e2171]: Elite
+                    - generic "1 star Rank 3" [ref=f1e2172]: Rank 3
+                  - generic [ref=f1e2177]: Every major Indian ETF, decoded by AI.
+              - listitem [ref=f1e2178]:
+                - generic [ref=f1e2180]:
+                  - generic [ref=f1e2181]:
+                    - generic [ref=f1e2182]: AI company directory
+                    - generic [ref=f1e2183]: Elite
+                    - generic "2 star Rank 2" [ref=f1e2184]: Rank 2
+                  - generic [ref=f1e2191]: All 4,900+ listed companies by name, ticker, code or ISIN.
+              - listitem [ref=f1e2192]:
+                - generic [ref=f1e2194]:
+                  - generic [ref=f1e2195]:
+                    - generic [ref=f1e2196]: AI most-traded read
+                    - generic [ref=f1e2197]: Elite
+                  - generic [ref=f1e2198]: Where the day's money actually went, by turnover.
+              - listitem [ref=f1e2199]:
+                - generic [ref=f1e2201]:
+                  - generic [ref=f1e2202]:
+                    - generic [ref=f1e2203]: AI MTF watch
+                    - generic [ref=f1e2204]: Elite
+                  - generic [ref=f1e2205]: Most-traded names you can outperform on margin, and the cost.
+              - listitem [ref=f1e2206]:
+                - generic [ref=f1e2208]:
+                  - generic [ref=f1e2209]:
+                    - generic [ref=f1e2210]: AI filings digest
+                    - generic [ref=f1e2211]: Elite
+                  - generic [ref=f1e2212]: Today's corporate filings, grouped by sector.
+        - paragraph [ref=f1e2213]: Payments are taken by Razorpay — cards, UPI and netbanking — and settle to StockersAI's own bank account. Prices in Indian rupees, inclusive of GST. Exchange data is the same on every plan — what a plan buys is the AI layer on top of it. Cancel any time; annual plans are refunded pro rata.
+      - generic [ref=f1e2214]:
+        - generic [ref=f1e2217]:
+          - generic [ref=f1e2218]:
+            - link "StockersAI StockersAI" [ref=f1e2219] [cursor=pointer]:
+              - /url: /
+              - generic [ref=f1e2220]:
+                - img "StockersAI" [ref=f1e2221]
+                - generic [ref=f1e2230]: StockersAI
+            - paragraph [ref=f1e2232]: AI-powered research for Indian equities, IPOs, and ETFs — market context, sentiment, and predictions in one place.
+            - generic [ref=f1e2233]:
+              - generic [ref=f1e2234]: BSE and NSE market data
+              - generic [ref=f1e2235]: Plan-gated AI research
+              - generic [ref=f1e2236]: Razorpay-secured payments
+            - generic [ref=f1e2237]: For research purposes only — not investment advice
+          - generic [ref=f1e2239]:
+            - generic [ref=f1e2240]:
+              - paragraph [ref=f1e2241]: Company
+              - list [ref=f1e2242]:
+                - listitem [ref=f1e2243]:
+                  - link "AI stock research pricing" [ref=f1e2244] [cursor=pointer]:
+                    - /url: /pricing
+                - listitem [ref=f1e2245]:
+                  - link "Getting Started" [ref=f1e2246] [cursor=pointer]:
+                    - /url: /getting-started
+                - listitem [ref=f1e2247]:
+                  - link "Contact Us" [ref=f1e2248] [cursor=pointer]:
+                    - /url: /contact
+                - listitem [ref=f1e2249]:
+                  - link "About Us" [ref=f1e2250] [cursor=pointer]:
+                    - /url: /about
+                - listitem [ref=f1e2251]:
+                  - link "Sign up" [ref=f1e2252] [cursor=pointer]:
+                    - /url: /signup
+                - listitem [ref=f1e2253]:
+                  - link "Sign in" [ref=f1e2254] [cursor=pointer]:
+                    - /url: /signin
+            - generic [ref=f1e2255]:
+              - paragraph [ref=f1e2256]: Markets & Data
+              - list [ref=f1e2257]:
+                - listitem [ref=f1e2258]:
+                  - link "Live BSE market" [ref=f1e2259] [cursor=pointer]:
+                    - /url: /live-market
+                - listitem [ref=f1e2260]:
+                  - link "BSE gainers & losers" [ref=f1e2261] [cursor=pointer]:
+                    - /url: /bse-gainers-losers
+                - listitem [ref=f1e2262]:
+                  - link "BSE sector movers" [ref=f1e2263] [cursor=pointer]:
+                    - /url: /bse-sectors
+                - listitem [ref=f1e2264]:
+                  - link "BSE shareholding" [ref=f1e2265] [cursor=pointer]:
+                    - /url: /shareholding
+                - listitem [ref=f1e2266]:
+                  - link "Indian market news" [ref=f1e2267] [cursor=pointer]:
+                    - /url: /news
+                - listitem [ref=f1e2268]:
+                  - link "AI market pulse" [ref=f1e2269] [cursor=pointer]:
+                    - /url: /market-pulse
+                - listitem [ref=f1e2270]:
+                  - link "AI top stock picks" [ref=f1e2271] [cursor=pointer]:
+                    - /url: /top-picks
+                - listitem [ref=f1e2272]:
+                  - link "Indian IPO watch" [ref=f1e2273] [cursor=pointer]:
+                    - /url: /ipos
+                - listitem [ref=f1e2274]:
+                  - link "Indian ETF board" [ref=f1e2275] [cursor=pointer]:
+                    - /url: /etf-board
+            - generic [ref=f1e2276]:
+              - paragraph [ref=f1e2277]: Legal
+              - list [ref=f1e2278]:
+                - listitem [ref=f1e2279]:
+                  - link "Refund Policy" [ref=f1e2280] [cursor=pointer]:
+                    - /url: /refund-policy
+                - listitem [ref=f1e2281]:
+                  - link "Return Policy" [ref=f1e2282] [cursor=pointer]:
+                    - /url: /return-policy
+                - listitem [ref=f1e2283]:
+                  - link "Privacy Policy" [ref=f1e2284] [cursor=pointer]:
+                    - /url: /privacy-policy
+                - listitem [ref=f1e2285]:
+                  - link "Disclaimer" [ref=f1e2286] [cursor=pointer]:
+                    - /url: /disclaimer
+        - generic [ref=f1e2287]:
+          - generic [ref=f1e2288]:
+            - paragraph [ref=f1e2289]: © 2026 StockersAI — AI-powered Indian stock research.
+            - paragraph [ref=f1e2290]:
+              - text: Not a SEBI-registered investment adviser or research analyst. Market risk applies —
+              - link "read the disclaimer" [ref=f1e2291] [cursor=pointer]:
+                - /url: /disclaimer
+              - text: .
+          - link "Back to top" [ref=f1e2292] [cursor=pointer]:
+            - /url: "#"
+            - text: Back to top
+            - generic [ref=f1e2293]: ↑
+    - button "Back to top"
+  - generic [ref=f1e2298] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f1e2299]
+    - generic [ref=f1e2303]:
+      - button "Open issues overlay" [ref=f1e2304]:
+        - generic [ref=f1e2305]:
+          - generic [ref=f1e2306]: "0"
+          - generic [ref=f1e2307]: "1"
+        - generic [ref=f1e2308]: Issue
+      - button "Collapse issues badge" [ref=f1e2309]
+  - alert [ref=f1e2312]

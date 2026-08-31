@@ -379,9 +379,10 @@ export async function healthcareInvestorTrio(): Promise<DynamicTrio | null> {
           turnoverCr: row.turnoverCr,
         },
       })),
-    );
+    ) ?? (await leaderTrio((stock) => wanted.has(stock.sector), "healthcare"));
   } catch {
-    return null;
+    const wanted = new Set<string>(HEALTHCARE_SECTORS);
+    return leaderTrio((stock) => wanted.has(stock.sector), "healthcare");
   }
 }
 
