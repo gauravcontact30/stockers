@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -153,14 +154,24 @@ export default function RootLayout({
               {children}
               <SubscriptionReminderLazy />
               {/* Renders nothing — reports one page view per page per tab, so the admin dashboard
-                  can say how many people arrived today rather than how many accounts exist. */}
-              <VisitTracker />
+                  can say how many people arrived today rather than how many accounts exist.
+                  Wrapped in Suspense because it reads `usePathname()`: with Cache Components, a
+                  route whose pathname isn't fully known at build time (any dynamic-segment page,
+                  e.g. /blog/[slug]) needs every `usePathname()` reader in its shared layout inside
+                  a Suspense boundary, or the prerender build fails outright. It renders nothing, so
+                  a `null` fallback costs nothing while the App Shell resolves. */}
+              <Suspense fallback={null}>
+                <VisitTracker />
+              </Suspense>
               <ClientLogCapture />
               <WebVitalsReporter />
               {/* Renders nothing either — says once a minute that this tab is still open, which is
                   what lets the admin dashboard answer how many people are on the site right now
-                  rather than how many arrived today. */}
-              <PresenceTracker />
+                  rather than how many arrived today. Same `usePathname()` / Suspense requirement as
+                  VisitTracker above. */}
+              <Suspense fallback={null}>
+                <PresenceTracker />
+              </Suspense>
             </StockDetailProvider>
           </SubscriptionProvider>
         </ThemeProvider>
