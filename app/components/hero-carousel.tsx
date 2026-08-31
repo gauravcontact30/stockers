@@ -5,10 +5,10 @@ import type { DynamicTrio } from "../lib/hero-trios";
 import type { MostBoughtBoard } from "../lib/most-bought";
 import { MostBoughtRibbon } from "./most-bought-ribbon";
 import {
-  DefenceLeadersScene,
-  InvestorBuyingScene,
-  RetailLeadersScene,
-  ThreeYearGainersScene,
+  AgricultureLeadersScene,
+  FinancialLeadersScene,
+  HealthcareInvestorScene,
+  ThreeMonthGainersScene,
   type Trio,
 } from "./hero-scenes";
 import type { StockPerformance } from "./use-stock-performance";
@@ -32,13 +32,13 @@ export type HeroCarouselProps = {
    * would differ from the one already in the markup. Null when the board could not be built, which
    * the scene renders as "reading" rather than as an error.
    */
-  defence?: DynamicTrio | null;
+  agriculture?: DynamicTrio | null;
   /** The same over retail — chains, quick commerce and restaurants together. Same contract. */
-  retail?: DynamicTrio | null;
+  financial?: DynamicTrio | null;
   /** The three biggest three-year runs in the tracked universe. Same contract. */
-  threeYearGainers?: DynamicTrio | null;
+  threeMonthGainers?: DynamicTrio | null;
   /** The three the week's buyers have crowded into, from broker lists and the tape. Same contract. */
-  investorBuying?: DynamicTrio | null;
+  healthcareInvesting?: DynamicTrio | null;
   /**
    * Today's buying board, for the ribbon under the slider.
    *
@@ -75,40 +75,40 @@ export type HeroCarouselProps = {
  */
 export function slidesFor({
   initialPerformance,
-  defence,
-  retail,
-  threeYearGainers,
-  investorBuying,
+  agriculture,
+  financial,
+  threeMonthGainers,
+  healthcareInvesting,
 }: Required<Omit<HeroCarouselProps, "mostBought">>): Slide[] {
   return [
     {
-      caption: "Defence: the sector's three strongest stocks",
-      scene: <DefenceLeadersScene trio={defence as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Agriculture: the sector's three strongest stocks",
+      scene: <AgricultureLeadersScene trio={agriculture as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Retail: the sector's three strongest stocks",
-      scene: <RetailLeadersScene trio={retail as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Financial: the sector's three strongest stocks",
+      scene: <FinancialLeadersScene trio={financial as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Most gainers: the three biggest three-year runs",
-      scene: <ThreeYearGainersScene trio={threeYearGainers as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Most gainers: the three biggest three-month runs",
+      scene: <ThreeMonthGainersScene trio={threeMonthGainers as Trio | null} initialPerformances={initialPerformance} />,
     },
     {
-      caption: "Where investors are buying: the three most bought this week",
-      scene: <InvestorBuyingScene trio={investorBuying as Trio | null} initialPerformances={initialPerformance} />,
+      caption: "Healthcare: the three most bought this week",
+      scene: <HealthcareInvestorScene trio={healthcareInvesting as Trio | null} initialPerformances={initialPerformance} />,
     },
   ];
 }
 
 export function HeroCarousel({
   initialPerformance = [],
-  defence = null,
-  retail = null,
-  threeYearGainers = null,
-  investorBuying = null,
+  agriculture = null,
+  financial = null,
+  threeMonthGainers = null,
+  healthcareInvesting = null,
   mostBought = null,
 }: HeroCarouselProps) {
-  const slides = slidesFor({ initialPerformance, defence, retail, threeYearGainers, investorBuying });
+  const slides = slidesFor({ initialPerformance, agriculture, financial, threeMonthGainers, healthcareInvesting });
   const [activeSlide, setActiveSlide] = useState(0);
   /**
    * Which scenes have earned the right to exist yet.

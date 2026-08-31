@@ -14,6 +14,8 @@ function Host({
   browseAll,
   initial = "",
   logoSymbol,
+  selectedSuggestion,
+  showSelectedNameInField,
 }: {
   onSelect?: (symbol: string) => void;
   className?: string;
@@ -21,6 +23,8 @@ function Host({
   /** What the panel pre-filled the box with, for the cases where nobody has picked a row. */
   initial?: string;
   logoSymbol?: string | null;
+  selectedSuggestion?: Suggestion | null;
+  showSelectedNameInField?: boolean;
 }) {
   const [value, setValue] = useState(initial);
   return (
@@ -30,6 +34,8 @@ function Host({
       onSelect={onSelect}
       browseAll={browseAll}
       logoSymbol={logoSymbol}
+      selectedSuggestion={selectedSuggestion}
+      showSelectedNameInField={showSelectedNameInField}
       className={className}
       placeholder="Try HDFC BANK or TCS"
     />
@@ -387,6 +393,22 @@ describe("StockCombobox", () => {
     expect(screen.getByText("Reliance Industries · Energy & Petrochemicals")).toBeInTheDocument();
     expect(screen.getByText("₹1,487.60")).toBeInTheDocument();
     expect(screen.getByText("+1.24%")).toBeInTheDocument();
+  });
+
+  it("can put the selected company's full name in the field while keeping the ticker underneath", () => {
+    mockSuggestions({ suggestions: [RELIANCE], total: 1 });
+    render(
+      <Host
+        initial="RELIANCE"
+        logoSymbol="RELIANCE"
+        selectedSuggestion={RELIANCE}
+        showSelectedNameInField
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("Try HDFC BANK or TCS")).toHaveValue("Reliance Industries");
+    expect(screen.getByText("RELIANCE · Energy & Petrochemicals")).toBeInTheDocument();
+    expect(screen.getByAltText(/\(RELIANCE\) logo$/)).toBeInTheDocument();
   });
 
   // The section this box leads pre-fills it with today's top gainer, which nobody picked from the

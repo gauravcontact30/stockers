@@ -287,7 +287,9 @@ describe("BSE trending board", () => {
 
     const card = (await screen.findByText("HDFC Bank Ltd")).closest("li") as HTMLElement;
     expect(within(card).getByText("HDFCBANK · 500180")).toBeInTheDocument();
-    expect(within(card).getByText("Financial Services")).toBeInTheDocument();
+    const sector = within(card).getByText("Financial Services").closest("span") as HTMLElement;
+    expect(sector).toBeInTheDocument();
+    expect(card.querySelector("svg")).not.toBeNull();
     expect(within(card).getByText("Large cap")).toBeInTheDocument();
 
     // The exchange-wide count, not the page's — it describes the session rather than the board.

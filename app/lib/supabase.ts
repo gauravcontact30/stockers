@@ -182,8 +182,14 @@ export async function supabaseRequest<T>(options: RequestOptions): Promise<T[]> 
 
   const headers: Record<string, string> = {
     apikey: config.serviceKey,
-    Authorization: `Bearer ${config.serviceKey}`,
   };
+
+  // Supabase's newer `sb_secret_...` keys are opaque API keys, not JWTs. Sending one as
+  // `Authorization: Bearer ...` makes PostgREST try to parse it as a JWT and reject it; legacy
+  // service_role JWTs still need the bearer header.
+  if (!config.serviceKey.startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${config.serviceKey}`;
+  }
 
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 

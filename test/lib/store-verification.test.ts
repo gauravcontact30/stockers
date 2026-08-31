@@ -8,6 +8,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import {
   createUser,
+  deleteUnverifiedUsers,
   listUsers,
   newVerificationToken,
   refreshVerificationToken,
@@ -133,5 +134,28 @@ describe("listUsers", () => {
     await signUp("newer@example.com");
 
     expect((await listUsers()).map((user) => user.email)).toEqual(["newer@example.com", "older@example.com"]);
+  });
+});
+
+describe("deleteUnverifiedUsers", () => {
+  it("removes every unverified account and leaves verified accounts intact", async () => {
+    await signUp("unverified-a@example.com");
+    await signUp("unverified-b@example.com");
+    const verified = await signUp("verified@example.com");
+    await verifyEmailToken(verified!.verificationToken!);
+
+    await expect(deleteUnverifiedUsers()).resolves.toBe(2);
+
+    const users = await listUsers();
+    expect(users.map((user) => user.email)).toEqual(["verified@example.com"]);
+    expect(users[0].emailVerified).toBe(true);
+  });
+
+  it("reports zero when there is nothing to remove", async () => {
+    const verified = await signUp("only-verified@example.com");
+    await verifyEmailToken(verified!.verificationToken!);
+
+    await expect(deleteUnverifiedUsers()).resolves.toBe(0);
+    expect((await listUsers()).map((user) => user.email)).toEqual(["only-verified@example.com"]);
   });
 });

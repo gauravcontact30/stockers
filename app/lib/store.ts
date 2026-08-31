@@ -166,6 +166,8 @@ type StoreBackend = {
   /** Returns null when the id is unknown. */
   patch(id: string, patch: Partial<AppUser>): Promise<AppUser | null>;
   remove(id: string): Promise<boolean>;
+  /** Deletes every account whose email address has not been confirmed. */
+  removeUnverified(): Promise<number>;
   /**
    * Spends a verification token: confirms the address and clears the token, in one step.
    *
@@ -251,6 +253,14 @@ const fileBackend: StoreBackend = {
 
     await writeUsers(next);
     return true;
+  },
+
+  async removeUnverified() {
+    const users = await readUsers();
+    const next = users.filter((user) => Boolean(user.emailVerifiedAt));
+    const removed = users.length - next.length;
+    if (removed > 0) await writeUsers(next);
+    return removed;
   },
 
   async spendVerificationToken(token) {
@@ -477,6 +487,15 @@ const supabaseBackend: StoreBackend = {
     return rows.length > 0;
   },
 
+  async removeUnverified() {
+    const rows = await supabaseRequest<UserRow>({
+      method: "DELETE",
+      path: "users?email_verified_at=is.null",
+      returnRepresentation: true,
+    });
+    return rows.length;
+  },
+
   async spendVerificationToken(token) {
     // Filtered on the token, not the id: the row is found and cleared in one statement, so a link
     // clicked twice at once verifies once. The second UPDATE matches nothing, because the first
@@ -647,6 +666,11 @@ export async function updateUser(id: string, patch: Partial<AppUser>): Promise<A
 /** Deletes one user by id. Returns false when the account is not present. */
 export async function deleteUser(id: string): Promise<boolean> {
   return backend().remove(id);
+}
+
+/** Deletes every account whose email address has not been confirmed. */
+export async function deleteUnverifiedUsers(): Promise<number> {
+  return backend().removeUnverified();
 }
 
 export async function findUserByEmail(email: string) {

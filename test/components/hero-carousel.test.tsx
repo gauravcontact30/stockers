@@ -59,12 +59,12 @@ function performanceFor(symbol: string, price: number): StockPerformance {
 }
 
 const PERFORMANCES = [
-  performanceFor("BEL", 4100),
-  performanceFor("HAL", 2900),
-  performanceFor("MAZDOCK", 3300),
-  performanceFor("DMART", 4200),
-  performanceFor("TRENT", 5600),
-  performanceFor("ETERNAL", 320),
+  performanceFor("UPL", 4100),
+  performanceFor("PIIND", 2900),
+  performanceFor("SUMICHEM", 3300),
+  performanceFor("HDFCBANK", 4200),
+  performanceFor("ICICIBANK", 5600),
+  performanceFor("SBIN", 320),
 ];
 
 function trioOf(symbols: [string, string, string], sector: string): Trio {
@@ -82,9 +82,9 @@ function trioOf(symbols: [string, string, string], sector: string): Trio {
   })) as unknown as Trio;
 }
 
-const DEFENCE = trioOf(["BEL", "HAL", "MAZDOCK"], "Capital Goods & Industrials");
-const RETAIL = trioOf(["DMART", "TRENT", "ETERNAL"], "Retail");
-const THREE_YEAR_GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
+const AGRICULTURE = trioOf(["UPL", "PIIND", "SUMICHEM"], "Chemicals");
+const FINANCIAL = trioOf(["HDFCBANK", "ICICIBANK", "SBIN"], "Financial Services");
+const THREE_MONTH_GAINERS = trioOf(["STLTECH", "HFCL", "SKYGOLD"], "Telecom - Equipment");
 
 /** The investor slide is the only one whose cards carry the week's buying evidence. */
 const BUYING = [
@@ -109,10 +109,10 @@ const BUYING = [
 })) as unknown as Trio;
 
 const ALL = {
-  defence: DEFENCE,
-  retail: RETAIL,
-  threeYearGainers: THREE_YEAR_GAINERS,
-  investorBuying: BUYING,
+  agriculture: AGRICULTURE,
+  financial: FINANCIAL,
+  threeMonthGainers: THREE_MONTH_GAINERS,
+  healthcareInvesting: BUYING,
 };
 
 const MOST_BOUGHT = {
@@ -174,16 +174,16 @@ describe("HeroCarousel", () => {
   it("opens on the two sectors, then the three-year gainers and the buying board", () => {
     render(<HeroCarousel {...ALL} />);
 
-    expect(screen.getByText("The three strongest defence stocks")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 agricultural stocks")).toBeInTheDocument();
 
     tick();
-    expect(screen.getByText("The three strongest retail stocks")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 financial stocks")).toBeInTheDocument();
 
     tick();
-    expect(screen.getByText("The three biggest three-year runs on the board")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 most gainers in the last 3 months")).toBeInTheDocument();
 
     tick();
-    expect(screen.getByText("The three stocks investors are putting money into this week")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 healthcare stocks investors are buying")).toBeInTheDocument();
   });
 
   it("names the arrow controls with their destination slides", () => {
@@ -191,12 +191,10 @@ describe("HeroCarousel", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Previous slide: Where investors are buying: the three most bought this week",
+        name: "Previous slide: Healthcare: the three most bought this week",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Next slide: Retail: the sector's three strongest stocks" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next slide: Financial: the sector's three strongest stocks" })).toBeInTheDocument();
   });
 
   // Nothing is laid over the scenes: no headline, no marketing ribbon under the frame.
@@ -247,18 +245,18 @@ describe("HeroCarousel", () => {
 
     // Three of the four used to hydrate immediately for a reader looking at the first — work that
     // landed straight in the page's blocking time.
-    expect(screen.queryByText("The three strongest retail stocks")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top 3 financial stocks")).not.toBeInTheDocument();
 
     tick();
-    expect(screen.getByText("The three strongest retail stocks")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 financial stocks")).toBeInTheDocument();
   });
 
   it("keeps a scene mounted once seen, so the crossfade has something to fade out of", () => {
     render(<HeroCarousel {...ALL} />);
     tick();
 
-    expect(screen.getByText("The three strongest defence stocks")).toBeInTheDocument();
-    expect(screen.getByText("The three strongest retail stocks")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 agricultural stocks")).toBeInTheDocument();
+    expect(screen.getByText("Top 3 financial stocks")).toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------
@@ -268,12 +266,12 @@ describe("HeroCarousel", () => {
   it("gives every company its own mark and the sector the exchange files it under", () => {
     const { container } = render(<HeroCarousel {...ALL} initialPerformance={PERFORMANCES} />);
 
-    for (const symbol of ["BEL", "HAL", "MAZDOCK"]) {
+    for (const symbol of ["UPL", "PIIND", "SUMICHEM"]) {
       expect(screen.getByAltText(new RegExp(String.raw`\(${symbol}\) logo$`))).toBeInTheDocument();
     }
 
     // The sector pill draws its family's own glyph beside the name, so a sector is never text alone.
-    const pill = container.querySelector('[title="Capital Goods & Industrials"]')!;
+    const pill = container.querySelector('[title="Chemicals"]')!;
     expect(pill).toBeInTheDocument();
     expect(pill.querySelector("svg")).not.toBeNull();
   });
@@ -296,18 +294,18 @@ describe("HeroCarousel", () => {
     const { container } = render(<HeroCarousel {...ALL} />);
 
     const first = panes(container)[0] as HTMLElement;
-    for (const symbol of ["BEL", "HAL", "MAZDOCK"]) {
+    for (const symbol of ["UPL", "PIIND", "SUMICHEM"]) {
       expect(within(first).getByText(symbol)).toBeInTheDocument();
     }
 
     tick();
     const second = panes(container)[1] as HTMLElement;
-    for (const symbol of ["DMART", "TRENT", "ETERNAL"]) {
+    for (const symbol of ["HDFCBANK", "ICICIBANK", "SBIN"]) {
       expect(within(second).getByText(symbol)).toBeInTheDocument();
     }
   });
 
-  it("shows the companies the three-year ranking resolved to, over the long windows", () => {
+  it("shows the companies the three-month ranking resolved to", () => {
     const { container } = render(<HeroCarousel {...ALL} />);
     tick();
     tick();
@@ -316,9 +314,7 @@ describe("HeroCarousel", () => {
     for (const symbol of ["STLTECH", "HFCL", "SKYGOLD"]) {
       expect(within(slide).getByText(symbol)).toBeInTheDocument();
     }
-    // Three years, so the card reports the long windows rather than a single week.
-    expect(within(slide).getAllByText("Overall")).toHaveLength(3);
-    expect(within(slide).queryByText("1W")).not.toBeInTheDocument();
+    expect(within(slide).getAllByText("3M")).toHaveLength(3);
   });
 
   it("draws the week's buying evidence on the investor slide, and attributes it", () => {
@@ -341,12 +337,12 @@ describe("HeroCarousel", () => {
     expect(within(slide).queryByText("RELIANCE is widely bought.")).not.toBeInTheDocument();
     // Attributed, not asserted: no venue publishes a net buy figure, and the footnote says what
     // stands in for one.
-    expect(screen.getByText(/brokers' own published most-bought lists/)).toBeInTheDocument();
+    expect(screen.getByText(/Healthcare and pharma names ranked on brokers'/)).toBeInTheDocument();
   });
 
   it("says it is reading rather than throwing when a ranking could not be built", () => {
     // A returns file that could not be read costs one slide its companies, not the whole hero.
-    render(<HeroCarousel defence={null} retail={null} threeYearGainers={null} investorBuying={null} />);
+    render(<HeroCarousel agriculture={null} financial={null} threeMonthGainers={null} healthcareInvesting={null} />);
     tick();
     tick();
     tick();

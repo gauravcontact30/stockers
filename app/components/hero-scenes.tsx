@@ -467,15 +467,18 @@ export type TrioStock = {
 export type Trio = readonly [TrioStock, TrioStock, TrioStock];
 
 /** The windows each card reports, shortest first — a single day says almost nothing on its own. */
-type TrioPeriodKey = keyof Pick<StockPerformance, "oneWeek" | "oneMonth" | "sixMonth" | "oneYear" | "threeYear" | "fiveYear" | "overall">;
+type TrioPeriodKey = keyof Pick<
+  StockPerformance,
+  "oneWeek" | "oneMonth" | "threeMonth" | "sixMonth" | "oneYear" | "threeYear" | "fiveYear" | "overall"
+>;
 type TrioPeriod = { label: string; key: TrioPeriodKey };
 
 const TRIO_PERIODS: readonly TrioPeriod[] = [
   { label: "1W", key: "oneWeek" },
   { label: "1M", key: "oneMonth" },
+  { label: "3M", key: "threeMonth" },
   { label: "6M", key: "sixMonth" },
   { label: "1Y", key: "oneYear" },
-  { label: "3Y", key: "threeYear" },
 ] as const;
 
 const LONG_RETURN_TRIO_PERIODS: readonly TrioPeriod[] = [
@@ -1254,7 +1257,7 @@ function RankingScene({
  * the data's. Each card still shows the sector the exchange actually files that company under,
  * which is why a chemicals pill can appear on a defence slide and is not a mistake.
  */
-export function DefenceLeadersScene({
+export function AgricultureLeadersScene({
   trio = null,
   initialPerformances = [],
 }: {
@@ -1264,11 +1267,11 @@ export function DefenceLeadersScene({
   return (
     <RankingScene
       palette={MINT}
-      eyebrow="Defence"
-      title="The three strongest defence stocks"
+      eyebrow="Agriculture"
+      title="Top 3 agricultural stocks"
       badge="RANKED BY 1Y"
       periods={LONG_RETURN_TRIO_PERIODS}
-      footnote="Ranked on measured one-year returns across India's listed defence companies — aircraft, warships, missiles, electronics and explosives — from the same price history the returns tables use. Prices are live · not investment advice."
+      footnote="Ranked on measured one-year returns across listed farm-inputs and agriculture-linked companies. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />
@@ -1280,7 +1283,7 @@ export function DefenceLeadersScene({
  * and the restaurant groups, which is one sector as the catalogue files it and one shopping basket
  * as a reader means it.
  */
-export function RetailLeadersScene({
+export function FinancialLeadersScene({
   trio = null,
   initialPerformances = [],
 }: {
@@ -1290,11 +1293,11 @@ export function RetailLeadersScene({
   return (
     <RankingScene
       palette={LILAC}
-      eyebrow="Retail"
-      title="The three strongest retail stocks"
+      eyebrow="Financial"
+      title="Top 3 financial stocks"
       badge="RANKED BY 1Y"
       periods={LONG_RETURN_TRIO_PERIODS}
-      footnote="Organised retail chains, quick-commerce platforms and restaurant operators together, ranked on measured one-year returns. Prices are live · not investment advice."
+      footnote="Banks, insurers, lenders and financial-services groups together, ranked on measured one-year returns. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />
@@ -1308,7 +1311,7 @@ export function RetailLeadersScene({
  * single week says least, and the five-year and overall columns beside it are what show whether the
  * run is a cycle or a re-rating.
  */
-export function ThreeYearGainersScene({
+export function ThreeMonthGainersScene({
   trio = null,
   initialPerformances = [],
 }: {
@@ -1318,11 +1321,11 @@ export function ThreeYearGainersScene({
   return (
     <RankingScene
       palette={SKY}
-      eyebrow="Most gainers, last 3 years"
-      title="The three biggest three-year runs on the board"
-      badge="RANKED BY 3Y"
-      periods={LONG_RETURN_TRIO_PERIODS}
-      footnote="Ranked on measured three-year returns from the same price history the returns tables use. Prices are live · not investment advice."
+      eyebrow="Most gainers, last 3 months"
+      title="Top 3 most gainers in the last 3 months"
+      badge="RANKED BY 3M"
+      periods={TRIO_PERIODS}
+      footnote="Ranked on measured three-month returns from the BSE mover board. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />
@@ -1341,7 +1344,7 @@ export function ThreeYearGainersScene({
  * "bought" here means listed by a broker's customers, or trading above its previous close on a
  * many-handed tape — and the reader is told exactly that.
  */
-export function InvestorBuyingScene({
+export function HealthcareInvestorScene({
   trio = null,
   initialPerformances = [],
 }: {
@@ -1351,13 +1354,13 @@ export function InvestorBuyingScene({
   return (
     <RankingScene
       palette={SAND}
-      eyebrow="Where investors are buying, last 1 week"
-      title="The three stocks investors are putting money into this week"
+      eyebrow="Healthcare investor buying"
+      title="Top 3 healthcare stocks investors are buying"
       badge="THIS WEEK"
       periods={TRIO_PERIODS}
       // Attributed, not asserted: no exchange publishes a net buy figure, and this says what stands
       // in for one instead of hiding behind the word "bought".
-      footnote="Ranked on the brokers' own published most-bought lists, then on the exchange's trade counts for scrips trading above their previous close. One-week returns are measured. Prices are live · not investment advice."
+      footnote="Healthcare and pharma names ranked on brokers' published most-bought lists, then on exchange trade counts for scrips trading above their previous close. One-week returns are measured. Prices are live · not investment advice."
       trio={trio}
       initialPerformances={initialPerformances}
     />

@@ -5,7 +5,7 @@ import type { AlternativePick, BuyCall, ScoredStock, StockBuyReport } from "../l
 import { CompanyLogo } from "./company-logo";
 import { formatCrore, formatQuantity, formatRupee, formatSignedPercent, sectorTone, toneFor } from "./market-format";
 import { MarketSection, Pager, SectionError, SectionFootnote, usePaged } from "./market-section";
-import { StockCombobox } from "./stock-combobox";
+import { StockCombobox, type Suggestion } from "./stock-combobox";
 
 const ENDPOINT = "/api/ai/stock-analysis";
 
@@ -21,7 +21,7 @@ const LEADER_ENDPOINT = "/api/market/bse/movers?direction=gainers&period=1d&page
 const DEFAULT_SYMBOL = "RELIANCE";
 
 /** The session's biggest gainer, as the search box advertises it. */
-type Leader = { symbol: string; changePercent: number | null };
+type Leader = Suggestion;
 
 /**
  * Today's top performer on the BSE, or null when the movers feed cannot say.
@@ -36,9 +36,29 @@ async function fetchLeader(): Promise<Leader | null> {
     const response = await fetch(LEADER_ENDPOINT);
     if (!response.ok) return null;
 
-    const payload = (await response.json()) as { rows?: { ticker?: string; changePercent?: number | null }[] };
+    const payload = (await response.json()) as {
+      rows?: {
+        ticker?: string;
+        name?: string;
+        sector?: string | null;
+        capTier?: string | null;
+        code?: string | null;
+        price?: number | null;
+        changePercent?: number | null;
+      }[];
+    };
     const row = payload.rows?.[0];
-    return row?.ticker ? { symbol: row.ticker, changePercent: row.changePercent ?? null } : null;
+    return row?.ticker
+      ? {
+          symbol: row.ticker,
+          name: row.name ?? row.ticker,
+          sector: row.sector ?? "Unclassified",
+          capTier: row.capTier ?? "Unclassified",
+          scripCode: row.code ?? "",
+          price: row.price ?? null,
+          changePercent: row.changePercent ?? null,
+        }
+      : null;
   } catch {
     return null;
   }
@@ -474,7 +494,23 @@ export function StockAnalysisSection() {
           value={symbol}
           onChange={onQueryChange}
           onSelect={onSelect}
+          selectedSuggestion={
+            status.kind === "ready"
+              ? {
+                  symbol: status.report.stock.symbol,
+                  name: status.report.stock.name,
+                  sector: status.report.stock.sector,
+                  capTier: status.report.stock.capTier ?? "Unclassified",
+                  scripCode: "",
+                  price: status.report.stock.price,
+                  changePercent: status.report.stock.changePercent,
+                }
+              : leader && leader.symbol === symbol
+                ? leader
+                : null
+          }
           logoSymbol={subject}
+          showSelectedNameInField
           browseAll
           className="flex-1"
           placeholder="Search any of the ~4,950 BSE listed stocks - try TCS, HDFC BANK or 500325"

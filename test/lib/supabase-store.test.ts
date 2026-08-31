@@ -12,6 +12,7 @@
 import {
   authenticateUser,
   createUser,
+  deleteUnverifiedUsers,
   deleteUser,
   findUserById,
   listUsers,
@@ -108,6 +109,17 @@ describe("configuration", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = URL_BASE;
     expect(supabaseConfig()?.url).toBe(URL_BASE);
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  });
+
+  it("sends new opaque secret keys only as the apikey header, not as a bearer JWT", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_test_key";
+    fetchMock.mockResolvedValueOnce(reply([]));
+
+    await listUsers();
+
+    const [call] = calls();
+    expect(call.headers.apikey).toBe("sb_secret_test_key");
+    expect(call.headers.Authorization).toBeUndefined();
   });
 });
 
@@ -389,6 +401,19 @@ describe("deleteUser", () => {
 
     fetchMock.mockResolvedValueOnce(reply([]));
     await expect(deleteUser("user_nope")).resolves.toBe(false);
+  });
+});
+
+describe("deleteUnverifiedUsers", () => {
+  it("deletes every row with no verified email timestamp", async () => {
+    fetchMock.mockResolvedValueOnce(reply([ROW, { ...ROW, id: "user_second", email: "second@example.com" }]));
+
+    await expect(deleteUnverifiedUsers()).resolves.toBe(2);
+
+    const [call] = calls();
+    expect(call.method).toBe("DELETE");
+    expect(call.url).toBe(`${URL_BASE}/rest/v1/users?email_verified_at=is.null`);
+    expect(call.headers.Prefer).toBe("return=representation");
   });
 });
 

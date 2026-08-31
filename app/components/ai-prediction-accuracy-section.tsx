@@ -79,6 +79,151 @@ function capRowsFrom(
   return groups?.[cap] ?? rowsForCap(fallback, cap);
 }
 
+function numericMove(row: PredictionPerformance | null | undefined) {
+  return typeof row?.changePercent === "number" && Number.isFinite(row.changePercent) ? row.changePercent : -Infinity;
+}
+
+function strongestAiPick(rows: PredictionPerformance[]) {
+  return [...rows].sort((left, right) => {
+    const confidence = (right.confidence ?? 0) - (left.confidence ?? 0);
+    if (confidence !== 0) return confidence;
+    return numericMove(right) - numericMove(left);
+  })[0] ?? null;
+}
+
+type Fight = {
+  cap: CapTier;
+  ai: PredictionPerformance;
+  market: PredictionPerformance;
+  edge: number;
+  score: BseAiPredictionAccuracy["scorecard"]["byCap"][CapTier];
+};
+
+function toughestFight(data: BseAiPredictionAccuracy): Fight | null {
+  const fights = CAP_TIERS.flatMap((cap) => {
+    const ai = strongestAiPick(capRowsFrom(data.predictionsByCap, data.predictions, cap));
+    const market = capRowsFrom(data.actualTopByCap, data.actualTop, cap)[0] ?? null;
+    if (!ai || !market) return [];
+
+    const aiMove = numericMove(ai);
+    const marketMove = numericMove(market);
+    if (!Number.isFinite(aiMove) || !Number.isFinite(marketMove)) return [];
+
+    return [{ cap, ai, market, edge: aiMove - marketMove, score: data.scorecard.byCap[cap] }];
+  });
+
+  return fights.sort((left, right) => Math.abs(left.edge) - Math.abs(right.edge))[0] ?? null;
+}
+
+function FightStock({
+  label,
+  row,
+  accent,
+}: {
+  label: string;
+  row: PredictionPerformance;
+  accent: "violet" | "emerald";
+}) {
+  const tone =
+    accent === "violet"
+      ? "border-violet-200 bg-violet-50/80 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300"
+      : "border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300";
+
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/50">
+      <div className="flex items-start gap-3">
+        <CompanyLogo symbol={row.symbol} size={42} preferReal />
+        <div className="min-w-0 flex-1">
+          <p className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${tone}`}>
+            {label}
+          </p>
+          <div className="mt-2 flex min-w-0 items-baseline gap-2">
+            <p className="truncate text-lg font-black text-slate-900 dark:text-white">{row.symbol}</p>
+            {typeof row.confidence === "number" && (
+              <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                {row.confidence}% confidence
+              </span>
+            )}
+          </div>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{row.stockName}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-xl font-black tabular-nums ${toneFor(row.changePercent)}`}>{formatSignedPercent(row.changePercent)}</p>
+          <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{row.live ? "Live move" : "Session move"}</p>
+        </div>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-3 gap-1.5">
+        {[
+          { label: row.live ? "Live price" : "Last price", value: formatRupee(row.price) },
+          { label: "Volume", value: formatQuantity(row.volume) },
+          { label: "Turnover", value: formatTurnover(row.turnoverCr) },
+        ].map((metric) => (
+          <div key={metric.label} className="min-w-0 rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-white/5">
+            <dt className="truncate text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{metric.label}</dt>
+            <dd className="mt-0.5 truncate text-[11px] font-black tabular-nums text-slate-700 dark:text-slate-200">{metric.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function ToughestFightCard({ data, fight }: { data: BseAiPredictionAccuracy; fight: Fight | null }) {
+  if (!fight) {
+    return (
+      <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
+        {data.message}
+      </section>
+    );
+  }
+
+  const aiAhead = fight.edge > 0;
+  const level = Math.abs(fight.edge) < 0.05;
+  const headline = level
+    ? "The toughest live fight is level"
+    : aiAhead
+      ? `AI pick leads the live leader by ${Math.abs(fight.edge).toFixed(2)} points`
+      : `Live market leader leads the AI pick by ${Math.abs(fight.edge).toFixed(2)} points`;
+
+  return (
+    <section className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50" aria-label="Toughest AI versus live market fight">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-black text-slate-900 dark:text-white">{headline}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+            Showing the closest live contest: the highest-confidence AI pick against the current BSE leader in the tightest cap-tier matchup.
+          </p>
+        </div>
+        <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          {fight.cap} cap · {SESSION_LABEL[data.marketSession]}
+          {data.sessionDate ? ` · ${data.sessionDate}` : ""}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
+        <FightStock label="AI prediction" row={fight.ai} accent="violet" />
+        <div className="flex items-center justify-center">
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+            vs
+          </span>
+        </div>
+        <FightStock label="Live market" row={fight.market} accent="emerald" />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+        <span className="rounded-full bg-violet-100 px-2.5 py-1 font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+          AI avg {formatSignedPercent(fight.score.avgPickMovePercent)}
+        </span>
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          Market avg {formatSignedPercent(fight.score.avgMarketMovePercent)}
+        </span>
+        <span>{data.source === "ai" && data.model ? `Picked by ${data.model}.` : "Picked by the fallback ranking."}</span>
+      </div>
+    </section>
+  );
+}
+
 function StockLine({ row, side }: { row: PredictionPerformance; side: "predicted" | "actual" }) {
   const matched = row.matchedActualRank !== null;
   const isPredicted = side === "predicted";
@@ -518,10 +663,6 @@ export function AiPredictionAccuracySection() {
   const [data, setData] = useState<BseAiPredictionAccuracy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // One cap tier for both boards. Scoring the AI's large caps against the market's small caps
-  // compares nothing, so the two selects are two handles on the same choice: changing either one
-  // moves both lists and the three cards with them.
-  const [cap, setCap] = useState<CapTier>("Large");
 
   const load = useCallback(async () => {
     try {
@@ -558,18 +699,13 @@ export function AiPredictionAccuracySection() {
     };
   }, [load]);
 
-  const predictedRows = data?.predictions ?? [];
-  const actualRows = data?.actualTop ?? [];
-  const predictedCapRows = capRowsFrom(data?.predictionsByCap, predictedRows, cap);
-  const actualCapRows = capRowsFrom(data?.actualTopByCap, actualRows, cap);
-
   return (
     <MarketSection
       id="ai-prediction-accuracy"
       eyebrow="AI prediction accuracy"
       eyebrowClass="text-violet-600 dark:text-violet-400"
-      title="Locked AI picks versus real BSE top performers"
-      blurb="Every trading morning at 8:50, 25 minutes before the market opens, the AI reads the day's positive news and names 10 stocks. The list is then locked for the day. Below: those 10 against the 10 that actually did best."
+      title="Toughest AI prediction versus the live BSE session"
+      blurb="Every trading morning at 8:50, 25 minutes before the market opens, the AI reads positive news, market context and cap-tier data, then locks its picks for the day. This view shows only the closest live fight against the current BSE leader."
       aside={
         <div className="rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-bold text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-300">
           {data?.status === "locked" ? `${data.accuracy.matched} of ${data.accuracy.total} picks landed` : metaLabel(data)}
@@ -581,7 +717,7 @@ export function AiPredictionAccuracySection() {
 
       {!loading && data && (
         <>
-          <PlainSummary data={data} cap={cap} predicted={predictedCapRows} actual={actualCapRows} />
+          <ToughestFightCard data={data} fight={toughestFight(data)} />
 
           {data.holdover && (
             <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
@@ -589,34 +725,6 @@ export function AiPredictionAccuracySection() {
             </p>
           )}
 
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            <ListCard
-              title="AI locked picks before open"
-              blurb={
-                data.holdover
-                  ? `Locked at 8:50 AM IST on ${data.lockDate} and held until the next 8:50 AM lock replaces all 10.`
-                  : "Locked at 8:50 AM IST, 25 minutes before the open. The stock list is fixed for the day; only live price, move and return fields refresh."
-              }
-              rows={predictedCapRows}
-              empty={data.message}
-              side="predicted"
-              cap={cap}
-              onCapChange={setCap}
-            />
-            <ListCard
-              title="Actual top performers live today"
-              blurb={
-                data.persistedSession
-                  ? "Showing the saved market-close performers until the next session begins."
-                  : SESSION_BLURB[data.marketSession]
-              }
-              rows={actualCapRows}
-              empty={`No ${cap} cap row is present in the current real top performers feed.`}
-              side="actual"
-              cap={cap}
-              onCapChange={setCap}
-            />
-          </div>
         </>
       )}
 

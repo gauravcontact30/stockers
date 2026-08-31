@@ -25,8 +25,9 @@
 import "server-only";
 
 import { getBseMovers, getBseTrending, type BseTrendingRow, type TrendingRank } from "./bse-market";
-import { getOneYearReturns, getReturnsForPeriod, type PeriodReturnsCache } from "./historical-returns";
-import { indianStocks, type StockMeta } from "./indian-stocks";
+import { getOneYearReturns, getReturnsOnDemand, type PeriodReturnsCache, type ReturnPeriod } from "./historical-returns";
+import { bseCatalogue } from "./bse-catalogue";
+import { indianStocks, sectors, type StockMeta } from "./indian-stocks";
 import { getCachedPerformanceSummaries, type PerformanceSummary } from "./stock-performance";
 
 /**
@@ -111,19 +112,33 @@ const TICKER_SUMMARY_DEADLINE_MS = 1200;
  * warships, the missiles, the optics and electronics that go inside them, and the explosives they
  * carry. Which three of them lead is still the data's to decide.
  */
-export const DEFENCE_POOL = [
-  "HAL",
-  "BEL",
-  "BDL",
-  "MAZDOCK",
-  "COCHINSHIP",
-  "GRSE",
-  "PARAS",
-  "SOLARINDS",
+export const AGRICULTURE_POOL = [
+  "UPL",
+  "PIIND",
+  "SUMICHEM",
+  "CHAMBLFERT",
+  "DEEPAKFERT",
+  "GNFC",
+  "GSFC",
+  "RALLIS",
+  "FACT",
+  "BHARATRAS",
+  "MADRASFERT",
+  "GSPCROP",
 ] as const;
 
-/** The catalogue's own sector name for the retail slide. */
-export const RETAIL_SECTORS = ["Retail"] as const;
+export const FINANCIAL_SECTORS = ["Banking", "NBFC & Financial Services", "Insurance"] as const;
+export const HEALTHCARE_SECTORS = ["Pharmaceuticals", "Healthcare Services"] as const;
+
+function sectorLabelFallback(value: string | null | undefined): string {
+  const text = value?.trim();
+  if (!text) return "Unclassified";
+  return text.replace(/[-_]+/g, " ").replace(/\s+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function sectorNameFor(key: string | null | undefined): string {
+  return sectors.find((sector) => sector.key === key)?.name ?? sectorLabelFallback(key);
+}
 
 /**
  * The tracked companies with a measured return over this period, strongest first.
@@ -175,15 +190,44 @@ async function leaderTrio(keep: (stock: StockMeta) => boolean, label: string): P
 }
 
 /** The three strongest defence names of the last year. */
-export function defenceTrio(): Promise<DynamicTrio | null> {
-  const pool = new Set<string>(DEFENCE_POOL);
-  return leaderTrio((stock) => pool.has(stock.symbol), "defence");
+async function cataloguePoolTrio(
+  symbols: readonly string[],
+  period: ReturnPeriod,
+  label: string,
+): Promise<DynamicTrio | null> {
+  try {
+    const wanted = new Set(symbols);
+    const entries = bseCatalogue().filter((entry) => wanted.has(entry.symbol));
+    const returns = await getReturnsOnDemand(entries, period);
+    const ranked = entries
+      .flatMap((entry) => {
+        const gain = returns[entry.symbol];
+        return typeof gain === "number" && Number.isFinite(gain) ? [{ entry, gain }] : [];
+      })
+      .sort((a, b) => b.gain - a.gain);
+
+    return trioOf(
+      ranked.map(({ entry, gain }, index) => ({
+        symbol: entry.symbol,
+        company: entry.name,
+        blurb: `#${index + 1} ${label} stock on one-year return, up ${Math.round(gain)}%.`,
+        tier: tierOf(entry.capTier),
+        sector: sectorNameFor(entry.sector),
+      })),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function agriculturalTrio(): Promise<DynamicTrio | null> {
+  return cataloguePoolTrio(AGRICULTURE_POOL, "1y", "agriculture-linked");
 }
 
 /** The same, across the organised retail chains, quick-commerce platforms and restaurant groups. */
-export function retailTrio(): Promise<DynamicTrio | null> {
-  const wanted = new Set<string>(RETAIL_SECTORS);
-  return leaderTrio((stock) => wanted.has(stock.sector), "retail");
+export function financialTrio(): Promise<DynamicTrio | null> {
+  const wanted = new Set<string>(FINANCIAL_SECTORS);
+  return leaderTrio((stock) => wanted.has(stock.sector), "financial");
 }
 
 /**
@@ -193,19 +237,38 @@ export function retailTrio(): Promise<DynamicTrio | null> {
  * that spans a whole cycle names very different companies from one that spans a rally — which is
  * the point of showing both.
  */
-export async function threeYearGainerTrio(): Promise<DynamicTrio | null> {
-  try {
-    const ranked = rankedByReturn(await getReturnsForPeriod("3y"));
+function trioFromMoverRows(
+  rows: {
+    ticker: string;
+    name: string;
+    returnPercent: number | null;
+    capTier: string | null;
+    sector: string | null;
+    industry: string | null;
+  }[],
+  label: string,
+): DynamicTrio | null {
+  return trioOf(
+    rows.flatMap((row) => {
+      const gain = row.returnPercent;
+      if (typeof gain !== "number" || !Number.isFinite(gain)) return [];
+      return [
+        {
+          symbol: row.ticker,
+          company: row.name,
+          blurb: `Up ${Math.round(gain)}% over ${label}, from the BSE mover board.`,
+          tier: tierOf(row.capTier),
+          sector: row.sector || row.industry || "Unclassified",
+        },
+      ];
+    }),
+  );
+}
 
-    return trioOf(
-      ranked.map(({ symbol, gain, stock }) => ({
-        symbol,
-        company: stock.name,
-        blurb: `Up ${Math.round(gain)}% over three years — the ${stock.sector.toLowerCase()} name that compounded hardest.`,
-        tier: tierOf(stock.capTier),
-        sector: stock.sector,
-      })),
-    );
+export async function threeMonthGainerTrio(): Promise<DynamicTrio | null> {
+  try {
+    const board = await getBseMovers({ direction: "gainers", period: "3m", page: 1, pageSize: 3 });
+    return trioFromMoverRows(board.rows, "the last three months");
   } catch {
     return null;
   }
@@ -284,17 +347,21 @@ function buyingBlurb(row: BseTrendingRow): string {
  * `allSettled` rather than `all`: the broker lists are somebody else's marketing page rather than a
  * contract, and one of them refusing should cost itself its rows, not the whole slide.
  */
-export async function investorBuyingTrio(): Promise<DynamicTrio | null> {
+export async function healthcareInvestorTrio(): Promise<DynamicTrio | null> {
   try {
+    const wanted = new Set<string>(HEALTHCARE_SECTORS);
     const [listed, crowded] = await Promise.allSettled([buyingCandidates("brokers"), buyingCandidates("trades")]);
     const onList = (listed.status === "fulfilled" ? listed.value : [])
+      .filter((candidate) => wanted.has(candidate.stock.sector))
       .filter((candidate) => candidate.row.brokerRank !== null)
       .sort((left, right) => (left.row.brokerRank ?? 0) - (right.row.brokerRank ?? 0));
 
     const seen = new Set(onList.map((candidate) => candidate.stock.symbol));
     const ordered = [
       ...onList,
-      ...(crowded.status === "fulfilled" ? crowded.value : []).filter((candidate) => !seen.has(candidate.stock.symbol)),
+      ...(crowded.status === "fulfilled" ? crowded.value : []).filter(
+        (candidate) => wanted.has(candidate.stock.sector) && !seen.has(candidate.stock.symbol),
+      ),
     ];
 
     return trioOf(

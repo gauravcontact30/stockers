@@ -27,10 +27,10 @@ import { cacheLife, cacheTag } from "next/cache";
 import { HeroCarousel } from "./hero-carousel";
 import { CACHE_TAGS } from "../lib/cache";
 import {
-  defenceTrio,
-  investorBuyingTrio,
-  retailTrio,
-  threeYearGainerTrio,
+  agriculturalTrio,
+  financialTrio,
+  healthcareInvestorTrio,
+  threeMonthGainerTrio,
   type DynamicTrio,
 } from "../lib/hero-trios";
 import { getMostBoughtToday, type MostBoughtBoard } from "../lib/most-bought";
@@ -127,26 +127,26 @@ export async function HeroPayload() {
   cacheLife("market");
   cacheTag(CACHE_TAGS.bse, CACHE_TAGS.quotes, CACHE_TAGS.nse);
 
-  const [defence, retail, threeYearGainers, investorBuying, mostBought] = await Promise.all([
-    withDeadline<DynamicTrio | null>(defenceTrio(), null),
-    withDeadline<DynamicTrio | null>(retailTrio(), null),
-    withDeadline<DynamicTrio | null>(threeYearGainerTrio(), null),
-    withDeadline<DynamicTrio | null>(investorBuyingTrio(), null),
+  const [agriculture, financial, threeMonthGainers, healthcareInvesting, mostBought] = await Promise.all([
+    withDeadline<DynamicTrio | null>(agriculturalTrio(), null),
+    withDeadline<DynamicTrio | null>(financialTrio(), null),
+    withDeadline<DynamicTrio | null>(threeMonthGainerTrio(), null),
+    withDeadline<DynamicTrio | null>(healthcareInvestorTrio(), null),
     // The ribbon's opening board. It polls for itself after hydration, so a deadline miss here
     // costs the first paint its rows and nothing more.
     withDeadline<MostBoughtBoard | null>(getMostBoughtToday(), null),
   ]);
 
-  const symbols = heroPerformanceSymbols([defence, retail, threeYearGainers, investorBuying]);
+  const symbols = heroPerformanceSymbols([agriculture, financial, threeMonthGainers, healthcareInvesting]);
   const initialPerformance = await withDeadline<PerformanceSummary[]>(getCachedPerformanceSummaries(symbols), []);
 
   return (
     <HeroCarousel
       initialPerformance={initialPerformance}
-      defence={defence}
-      retail={retail}
-      threeYearGainers={threeYearGainers}
-      investorBuying={investorBuying}
+      agriculture={agriculture}
+      financial={financial}
+      threeMonthGainers={threeMonthGainers}
+      healthcareInvesting={healthcareInvesting}
       mostBought={mostBought}
     />
   );

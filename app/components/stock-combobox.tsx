@@ -45,6 +45,7 @@ export function StockCombobox({
   selectedSuggestion = null,
   logoSymbol = null,
   browseAll = false,
+  showSelectedNameInField = false,
   placeholder,
   className = "",
 }: {
@@ -71,8 +72,10 @@ export function StockCombobox({
    *
    * For a box that is the whole point of the panel around it. A typed query searches every listed
    * company either way — see `suggestStocks` in ../lib/stock-search.
-   */
+  */
   browseAll?: boolean;
+  /** Shows the selected company's full name as the main field text while preserving ticker output. */
+  showSelectedNameInField?: boolean;
   placeholder?: string;
   className?: string;
 }) {
@@ -131,6 +134,7 @@ export function StockCombobox({
       : logoSymbol && normaliseTicker(logoSymbol) === typed
         ? typed
         : (listed?.symbol ?? null);
+  const displayValue = selected && showSelectedNameInField && !open ? selected.name : value;
 
   useEffect(() => {
     if (!open) return;
@@ -263,7 +267,7 @@ export function StockCombobox({
         <span className="min-w-0 flex-1">
           <input
             ref={field}
-            value={value}
+            value={displayValue}
             onChange={(event) => update(event.target.value)}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
@@ -276,12 +280,12 @@ export function StockCombobox({
             aria-activedescendant={open && suggestions[active] ? `${listId}-${active}` : undefined}
             autoComplete="off"
             className={`w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 ${
-              selected ? "text-sm font-bold uppercase tracking-wide" : "py-3"
+              selected ? "text-sm font-bold" : "py-3"
             }`}
           />
           {selected && (
             <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-              {selected.name} · {selected.sector}
+              {showSelectedNameInField ? `${selected.symbol} · ${selected.sector}` : `${selected.name} · ${selected.sector}`}
             </span>
           )}
         </span>

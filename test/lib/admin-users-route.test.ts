@@ -133,6 +133,23 @@ describe("DELETE /api/admin/users", () => {
     expect(payload.users.map((user: { id: string }) => user.id)).toEqual([superAdmin.id]);
     expect(payload.permissions.canDeleteUsers).toBe(true);
   });
+
+  it("lets the super admin remove every unverified account at once", async () => {
+    const verified = account({
+      id: "user_verified",
+      email: "verified@example.com",
+      emailVerifiedAt: "2026-08-03T00:00:00.000Z",
+    });
+    await writeRoster([superAdmin, normalAdmin, regular, verified]);
+
+    const response = await DELETE(request(superAdmin, { unverified: true }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.removed).toBe(1);
+    expect(payload.users.map((user: { id: string }) => user.id).sort()).toEqual([normalAdmin.id, superAdmin.id, verified.id].sort());
+    expect(payload.summary.verified).toBe(3);
+  });
 });
 
 describe("PATCH /api/admin/users password reset", () => {

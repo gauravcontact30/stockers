@@ -3,6 +3,7 @@ import { isSuperAdminEmail } from "../../../lib/admin-access";
 import { logAuditEvent, logSecurityEvent } from "../../../lib/application-logger";
 import { appOrigin, passwordResetEmail, sendMail } from "../../../lib/mailer";
 import {
+  deleteUnverifiedUsers,
   deleteUser,
   findUserById,
   issuePasswordResetToken,
@@ -271,11 +272,26 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Only the super admin can delete users." }, { status: 403 });
   }
 
-  let body: { id?: unknown } = {};
+  let body: { id?: unknown; unverified?: unknown } = {};
   try {
-    body = (await request.json()) as { id?: unknown };
+    body = (await request.json()) as { id?: unknown; unverified?: unknown };
   } catch {
     body = {};
+  }
+
+  if (body.unverified === true) {
+    const removed = await deleteUnverifiedUsers();
+    logAuditEvent({
+      useCase: "User account administration",
+      operation: "user.delete_unverified",
+      message: "Super admin deleted all unverified user accounts.",
+      userId: admin.id,
+      statusCode: 200,
+      path,
+      method: request.method,
+      metadata: { removed },
+    });
+    return rosterResponse(admin, { ok: true, removed, message: `${removed} unverified account${removed === 1 ? "" : "s"} removed.` });
   }
 
   const id = typeof body.id === "string" ? body.id : new URL(request.url).searchParams.get("id");
