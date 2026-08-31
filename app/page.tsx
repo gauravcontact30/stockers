@@ -14,7 +14,6 @@ import { PricingPlans } from "./components/pricing-plans";
 import { SiteFooter } from "./components/site-footer";
 import { JsonLd } from "./components/json-ld";
 import { AccuracyMatrixSection } from "./components/accuracy-matrix-section";
-import { StreamedClientReviews } from "./components/streamed-client-reviews";
 import { StreamedMoversBoard, StreamedSectorMovers } from "./components/streamed-boards";
 import { AccountMenu } from "./components/account-menu";
 import { StreamedHero } from "./components/streamed-hero";
@@ -64,10 +63,13 @@ const visitorNavOrder: HomeSectionId[] = [
   "pricing",
 ];
 const homeSectionById = new Map(HOME_SECTION_ROUTES.map((route) => [route.id, route]));
-const navLinks = visitorNavOrder.flatMap((id) => {
-  const route = homeSectionById.get(id);
-  return route ? [{ href: route.path, label: route.label }] : [];
-});
+const navLinks = [
+  ...visitorNavOrder.flatMap((id) => {
+    const route = homeSectionById.get(id);
+    return route ? [{ href: route.path, label: route.label }] : [];
+  }),
+  { href: "/blog", label: "Blog" },
+];
 
 /**
  * The divider between groups of sections.
@@ -222,9 +224,6 @@ function LandingStack() {
       <StreamedAiFeatures />
 
       <PricingPlans />
-
-      {/* Last thing before the footer: the boards make the case, the reviews close it. */}
-      <StreamedClientReviews />
 
       <SiteFooter />
     </>
