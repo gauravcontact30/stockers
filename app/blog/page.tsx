@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AuthHeader } from "../components/auth-header";
+import { BackToTop } from "../components/back-to-top";
+import { JsonLd } from "../components/json-ld";
+import { SiteFooter } from "../components/site-footer";
 import { listPublishedPosts } from "../lib/blog";
-import { pageMetadata } from "../lib/seo";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../lib/seo";
+import type { BlogPost } from "../lib/blog-post";
+
+const BLOG_DESCRIPTION = "StockersAI research notes, product updates and market commentary on Indian equities.";
 
 export const metadata: Metadata = pageMetadata({
   title: "Blog",
-  description: "StockersAI research notes, product updates and market commentary on Indian equities.",
+  description: BLOG_DESCRIPTION,
   path: "/blog",
   keywords: ["StockersAI blog", "Indian stock market blog", "AI stock research articles"],
 });
@@ -15,11 +22,34 @@ function formatDate(iso: string): string {
 }
 
 export default async function BlogIndexPage() {
-  const posts = await listPublishedPosts();
+  // A deployment that has not yet applied `supabase/schema.sql` (or has no Supabase configured at
+  // all) throws here. There is nothing a visitor can do about that, so it is treated the same as
+  // "no posts exist yet" rather than surfaced as an error page.
+  let posts: BlogPost[] = [];
+  try {
+    posts = await listPublishedPosts();
+  } catch {
+    posts = [];
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 px-safe py-12 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: "Blog",
+            description: BLOG_DESCRIPTION,
+            path: "/blog",
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Blog", path: "/blog" },
+            ]),
+          }),
+        )}
+      />
       <div className="gutter">
+        <AuthHeader />
+
         <div className="mx-auto max-w-4xl">
           <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400">StockersAI</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl dark:text-white">Blog</h1>
@@ -55,7 +85,11 @@ export default async function BlogIndexPage() {
             </div>
           )}
         </div>
+
+        <SiteFooter />
       </div>
+
+      <BackToTop />
     </main>
   );
 }

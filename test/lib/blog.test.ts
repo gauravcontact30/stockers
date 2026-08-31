@@ -13,7 +13,6 @@ import {
   transitionBlogPost,
   updatePost,
 } from "../../app/lib/blog";
-import { SupabaseError } from "../../app/lib/supabase";
 
 const URL_BASE = "https://project-under-test.supabase.co";
 const SERVICE_KEY = "service-role-key-under-test";
@@ -168,9 +167,7 @@ describe("createPost", () => {
 
   it("retries with a numeric suffix when the slug collides", async () => {
     fetchMock
-      .mockImplementationOnce(async () => {
-        throw new SupabaseError("duplicate key value violates unique constraint", 409, "23505");
-      })
+      .mockResolvedValueOnce(reply({ message: "duplicate key value violates unique constraint", code: "23505" }, 409))
       .mockImplementationOnce(async (_url: string, init: RequestInit) => reply([JSON.parse(init.body as string)]));
 
     const post = await createPost({

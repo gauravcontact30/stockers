@@ -14,6 +14,7 @@ jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
 
 import { DELETE, GET, PATCH, POST } from "../../app/api/admin/blog/route";
 import { userFromRequest, type AppUser } from "../../app/lib/store";
+import { missingTableMessage } from "../../app/lib/supabase";
 
 const mockedUserFromRequest = userFromRequest as jest.MockedFunction<typeof userFromRequest>;
 
@@ -97,6 +98,19 @@ describe("GET /api/admin/blog", () => {
     expect(response.status).toBe(200);
     expect(payload.posts).toHaveLength(1);
     expect(payload.posts[0].slug).toBe("how-bse-gainers-actually-work");
+  });
+
+  it("reports a missing blog_posts table as a 503 with an actionable message, not a bare 500", async () => {
+    mockedUserFromRequest.mockResolvedValue(admin);
+    fetchMock.mockResolvedValueOnce(
+      reply({ message: "Could not find the table 'public.blog_posts' in the schema cache", code: "PGRST205" }, 404),
+    );
+
+    const response = await GET(request("GET"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error).toBe(missingTableMessage("blog_posts"));
   });
 });
 

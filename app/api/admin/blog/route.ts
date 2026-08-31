@@ -4,6 +4,7 @@ import { createPost, deletePost, listAllPosts, transitionBlogPost, updatePost, t
 import { BLOG_TRANSITION_ACTIONS, type BlogTransitionAction } from "../../../lib/blog-post";
 import { logAuditEvent } from "../../../lib/application-logger";
 import { userFromRequest, type AppUser } from "../../../lib/store";
+import { isMissingTable, missingTableMessage } from "../../../lib/supabase";
 
 async function requireAdmin(request: Request): Promise<AppUser | null> {
   const user = await userFromRequest(request);
@@ -19,7 +20,15 @@ function revalidatePublicPages(slug: string) {
 
 export async function GET(request: Request) {
   if (!(await requireAdmin(request))) return forbidden();
-  return NextResponse.json({ posts: await listAllPosts() });
+
+  try {
+    return NextResponse.json({ posts: await listAllPosts() });
+  } catch (error) {
+    if (isMissingTable(error)) {
+      return NextResponse.json({ error: missingTableMessage("blog_posts") }, { status: 503 });
+    }
+    throw error;
+  }
 }
 
 type CreateBody = { title?: unknown; excerpt?: unknown; coverImageUrl?: unknown; bodyMarkdown?: unknown; authorName?: unknown };

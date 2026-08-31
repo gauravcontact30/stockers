@@ -1,15 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuthHeader } from "../../components/auth-header";
+import { BackToTop } from "../../components/back-to-top";
+import { JsonLd } from "../../components/json-ld";
+import { SiteFooter } from "../../components/site-footer";
 import { getPublishedPostBySlug } from "../../lib/blog";
 import { renderPostHtml } from "../../lib/blog-markdown";
-import { pageMetadata } from "../../lib/seo";
+import { breadcrumbSchema, graph, pageMetadata, webPageSchema } from "../../lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublishedPostBySlug(slug);
+
+  // Same reasoning as the page body below: a Supabase misconfiguration or a schema that has not
+  // been applied yet must not throw here, it must just fall through to the not-found metadata.
+  let post = null;
+  try {
+    post = await getPublishedPostBySlug(slug);
+  } catch {
+    post = null;
+  }
+
   if (!post) {
     return pageMetadata({ title: "Blog", description: "StockersAI blog.", path: `/blog/${slug}`, indexable: false });
   }
@@ -25,14 +38,39 @@ const ARTICLE_BODY_CLASS =
 
 export default async function BlogPostPage({ params }: Params) {
   const { slug } = await params;
-  const post = await getPublishedPostBySlug(slug);
+
+  // A Supabase misconfiguration or an unapplied schema throws here. There is nothing a visitor can
+  // do about that either, and it is indistinguishable from the post simply not existing, so it is
+  // treated the same as the null case just below.
+  let post = null;
+  try {
+    post = await getPublishedPostBySlug(slug);
+  } catch {
+    post = null;
+  }
   if (!post) notFound();
 
   const html = renderPostHtml(post.bodyMarkdown);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 px-safe py-12 text-slate-700 transition-colors dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-300">
+      <JsonLd
+        schema={graph(
+          webPageSchema({
+            name: post.title,
+            description: post.excerpt,
+            path: `/blog/${post.slug}`,
+            breadcrumb: breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Blog", path: "/blog" },
+              { name: post.title, path: `/blog/${post.slug}` },
+            ]),
+          }),
+        )}
+      />
       <div className="gutter">
+        <AuthHeader />
+
         <article className="mx-auto max-w-3xl">
           <Link href="/blog" className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             ← Blog
@@ -47,7 +85,11 @@ export default async function BlogPostPage({ params }: Params) {
           )}
           <div className={ARTICLE_BODY_CLASS} dangerouslySetInnerHTML={{ __html: html }} />
         </article>
+
+        <SiteFooter />
       </div>
+
+      <BackToTop />
     </main>
   );
 }

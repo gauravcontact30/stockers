@@ -116,10 +116,7 @@ export async function createPost(input: CreateBlogPostInput): Promise<BlogPost> 
       });
       return fromRow(rows[0]);
     } catch (error) {
-      // Check for unique constraint violation either by the error code/status or by message content
-      // (the error message may contain "duplicate key" when thrown from fetch and wrapped)
-      const isUnique = isUniqueViolation(error) || String(error).includes("duplicate key");
-      if (!isUnique) throw error;
+      if (!isUniqueViolation(error)) throw error;
       slug = `${base}-${suffix}`;
     }
   }
